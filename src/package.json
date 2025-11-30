@@ -42,7 +42,7 @@
     "express-session": "^1.18.2",
     "find-root": "1.1.0",
     "formidable": "^3.5.4",
-    "http-errors": "^2.0.0",
+    "http-errors": "^2.0.1",
     "jose": "^6.1.2",
     "js-cookie": "^3.0.5",
     "jsdom": "^27.2.0",
