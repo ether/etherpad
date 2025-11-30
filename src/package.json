@@ -55,7 +55,7 @@
     "log4js": "^6.9.1",
     "lru-cache": "^11.2.2",
     "measured-core": "^2.0.0",
-    "mime-types": "^3.0.1",
+    "mime-types": "^3.0.2",
     "oidc-provider": "9.5.1",
     "openapi-backend": "^5.15.0",
     "prom-client": "^15.1.3",
