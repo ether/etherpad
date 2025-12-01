@@ -48,7 +48,7 @@ importers:
         version: 8.48.0(eslint@9.39.1)(typescript@5.9.3)
       '@vitejs/plugin-react':
         specifier: ^5.1.1
-        version: 5.1.1(rolldown-vite@7.2.8(@types/node@24.10.1)(esbuild@0.25.12)(tsx@4.20.6))
+        version: 5.1.1(rolldown-vite@7.2.9(@types/node@24.10.1)(esbuild@0.25.12)(tsx@4.20.6))
       babel-plugin-react-compiler:
         specifier: 19.1.0-rc.3
         version: 19.1.0-rc.3
@@ -62,8 +62,8 @@ importers:
         specifier: ^0.4.24
         version: 0.4.24(eslint@9.39.1)
       i18next:
-        specifier: ^25.6.3
-        version: 25.6.3(typescript@5.9.3)
+        specifier: ^25.7.0
+        version: 25.7.0(typescript@5.9.3)
       i18next-browser-languagedetector:
         specifier: ^8.2.0
         version: 8.2.0
@@ -77,11 +77,11 @@ importers:
         specifier: ^19.2.0
         version: 19.2.0(react@19.2.0)
       react-hook-form:
-        specifier: ^7.66.1
-        version: 7.66.1(react@19.2.0)
+        specifier: ^7.67.0
+        version: 7.67.0(react@19.2.0)
       react-i18next:
         specifier: ^16.3.5
-        version: 16.3.5(i18next@25.6.3(typescript@5.9.3))(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.9.3)
+        version: 16.3.5(i18next@25.7.0(typescript@5.9.3))(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.9.3)
       react-router-dom:
         specifier: ^7.9.6
         version: 7.9.6(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
@@ -93,16 +93,16 @@ importers:
         version: 5.9.3
       vite:
         specifier: npm:rolldown-vite@latest
-        version: rolldown-vite@7.2.8(@types/node@24.10.1)(esbuild@0.25.12)(tsx@4.20.6)
+        version: rolldown-vite@7.2.9(@types/node@24.10.1)(esbuild@0.25.12)(tsx@4.20.6)
       vite-plugin-babel:
         specifier: ^1.3.2
-        version: 1.3.2(@babel/core@7.28.5)(rolldown-vite@7.2.8(@types/node@24.10.1)(esbuild@0.25.12)(tsx@4.20.6))
+        version: 1.3.2(@babel/core@7.28.5)(rolldown-vite@7.2.9(@types/node@24.10.1)(esbuild@0.25.12)(tsx@4.20.6))
       vite-plugin-static-copy:
         specifier: ^3.1.4
-        version: 3.1.4(rolldown-vite@7.2.8(@types/node@24.10.1)(esbuild@0.25.12)(tsx@4.20.6))
+        version: 3.1.4(rolldown-vite@7.2.9(@types/node@24.10.1)(esbuild@0.25.12)(tsx@4.20.6))
       zustand:
-        specifier: ^5.0.8
-        version: 5.0.8(@types/react@19.2.7)(react@19.2.0)(use-sync-external-store@1.6.0(react@19.2.0))
+        specifier: ^5.0.9
+        version: 5.0.9(@types/react@19.2.7)(react@19.2.0)(use-sync-external-store@1.6.0(react@19.2.0))
 
   bin:
     dependencies:
@@ -410,7 +410,7 @@ importers:
         version: 5.9.3
       vite:
         specifier: npm:rolldown-vite@latest
-        version: rolldown-vite@7.2.8(@types/node@24.10.1)(esbuild@0.25.12)(tsx@4.20.6)
+        version: rolldown-vite@7.2.9(@types/node@24.10.1)(esbuild@0.25.12)(tsx@4.20.6)
 
 packages:
 
@@ -3393,8 +3393,8 @@ packages:
   i18next-browser-languagedetector@8.2.0:
     resolution: {integrity: sha512-P+3zEKLnOF0qmiesW383vsLdtQVyKtCNA9cjSoKCppTKPQVfKd2W8hbVo5ZhNJKDqeM7BOcvNoKJOjpHh4Js9g==}
 
-  i18next@25.6.3:
-    resolution: {integrity: sha512-AEQvoPDljhp67a1+NsnG/Wb1Nh6YoSvtrmeEd24sfGn3uujCtXCF3cXpr7ulhMywKNFF7p3TX1u2j7y+caLOJg==}
+  i18next@25.7.0:
+    resolution: {integrity: sha512-cpUOqkVTQe3/uCVtpfpC3J1Ejn1y8KiVbqVEW4WW6Yr8wMYw+Wvb2/+lL4e1sM9AbzKTYXyYkn8zCRlTf5XTcA==}
     peerDependencies:
       typescript: ^5
     peerDependenciesMeta:
@@ -4260,8 +4260,8 @@ packages:
     peerDependencies:
       react: ^19.2.0
 
-  react-hook-form@7.66.1:
-    resolution: {integrity: sha512-2KnjpgG2Rhbi+CIiIBQQ9Df6sMGH5ExNyFl4Hw9qO7pIqMBR8Bvu9RQyjl3JM4vehzCh9soiNUM/xYMswb2EiA==}
+  react-hook-form@7.67.0:
+    resolution: {integrity: sha512-E55EOwKJHHIT/I6J9DmQbCWToAYSw9nN5R57MZw9rMtjh+YQreMDxRLfdjfxQbiJ3/qbg3Z02wGzBX4M+5fMtQ==}
     engines: {node: '>=18.0.0'}
     peerDependencies:
       react: ^16.8.0 || ^17 || ^18 || ^19
@@ -4405,8 +4405,8 @@ packages:
   rfdc@1.4.1:
     resolution: {integrity: sha512-q1b3N5QkRUWUl7iyylaaj3kOpIT0N2i9MqIEQXP73GVsN9cw3fdx8X63cEmWhJGi2PPCF23Ijp7ktmd39rawIA==}
 
-  rolldown-vite@7.2.8:
-    resolution: {integrity: sha512-8wKihlF6EDF8grimwd7GPOhLkQkSIgj6Hlcp0CXhtO3HAXeUUqhgZmJmn07OF8e4PbTusMX6Yxmy1BptVRZsdw==}
+  rolldown-vite@7.2.9:
+    resolution: {integrity: sha512-Y+Q1FpIgAkK2RiAdeS1SxcvDsJaru1JUANFo1aiFFtuGCckhltIowoC/JMU740tFZDTJA5vg5CAl1RzHExNR/w==}
     engines: {node: ^20.19.0 || >=22.12.0}
     hasBin: true
     peerDependencies:
@@ -5031,8 +5031,8 @@ packages:
     peerDependencies:
       vite: ^5.0.0 || ^6.0.0 || ^7.0.0
 
-  vite@7.2.4:
-    resolution: {integrity: sha512-NL8jTlbo0Tn4dUEXEsUg8KeyG/Lkmc4Fnzb8JXN/Ykm9G4HNImjtABMJgkQoVjOBN/j2WAwDTRytdqJbZsah7w==}
+  vite@7.2.6:
+    resolution: {integrity: sha512-tI2l/nFHC5rLh7+5+o7QjKjSR04ivXDF4jcgV0f/bTQ+OJiITy5S6gaynVsEM+7RqzufMnVbIon6Sr5x1SDYaQ==}
     engines: {node: ^20.19.0 || >=22.12.0}
     hasBin: true
     peerDependencies:
@@ -5278,8 +5278,8 @@ packages:
   zod@4.1.12:
     resolution: {integrity: sha512-JInaHOamG8pt5+Ey8kGmdcAcg3OL9reK8ltczgHTAwNhMys/6ThXHityHxVV2p3fkw/c+MAvBHFVYHFZDmjMCQ==}
 
-  zustand@5.0.8:
-    resolution: {integrity: sha512-gyPKpIaxY9XcO2vSMrLbiER7QMAMGOQZVRdJ6Zi782jkbzZygq5GI9nG8g+sMgitRtndwaBSl7uiqC49o1SSiw==}
+  zustand@5.0.9:
+    resolution: {integrity: sha512-ALBtUj0AfjJt3uNRQoL1tL2tMvj6Gp/6e39dnfT6uzpelGru8v1tPOGBzayOWbPJvujM8JojDk3E1LxeFisBNg==}
     engines: {node: '>=12.20.0'}
     peerDependencies:
       '@types/react': '>=18.0.0'
@@ -6771,7 +6771,7 @@ snapshots:
   '@unrs/resolver-binding-win32-x64-msvc@1.3.3':
     optional: true
 
-  '@vitejs/plugin-react@5.1.1(rolldown-vite@7.2.8(@types/node@24.10.1)(esbuild@0.25.12)(tsx@4.20.6))':
+  '@vitejs/plugin-react@5.1.1(rolldown-vite@7.2.9(@types/node@24.10.1)(esbuild@0.25.12)(tsx@4.20.6))':
     dependencies:
       '@babel/core': 7.28.5
       '@babel/plugin-transform-react-jsx-self': 7.27.1(@babel/core@7.28.5)
@@ -6779,14 +6779,14 @@ snapshots:
       '@rolldown/pluginutils': 1.0.0-beta.47
       '@types/babel__core': 7.20.5
       react-refresh: 0.18.0
-      vite: rolldown-vite@7.2.8(@types/node@24.10.1)(esbuild@0.25.12)(tsx@4.20.6)
+      vite: rolldown-vite@7.2.9(@types/node@24.10.1)(esbuild@0.25.12)(tsx@4.20.6)
     transitivePeerDependencies:
       - supports-color
 
-  '@vitejs/plugin-vue@6.0.2(vite@7.2.4(@types/node@24.10.1)(lightningcss@1.30.2)(tsx@4.20.6))(vue@3.5.25(typescript@5.9.3))':
+  '@vitejs/plugin-vue@6.0.2(vite@7.2.6(@types/node@24.10.1)(lightningcss@1.30.2)(tsx@4.20.6))(vue@3.5.25(typescript@5.9.3))':
     dependencies:
       '@rolldown/pluginutils': 1.0.0-beta.50
-      vite: 7.2.4(@types/node@24.10.1)(lightningcss@1.30.2)(tsx@4.20.6)
+      vite: 7.2.6(@types/node@24.10.1)(lightningcss@1.30.2)(tsx@4.20.6)
       vue: 3.5.25(typescript@5.9.3)
 
   '@vitest/expect@4.0.14':
@@ -6798,13 +6798,13 @@ snapshots:
       chai: 6.2.1
       tinyrainbow: 3.0.3
 
-  '@vitest/mocker@4.0.14(vite@7.2.4(@types/node@24.10.1)(lightningcss@1.30.2)(tsx@4.20.6))':
+  '@vitest/mocker@4.0.14(vite@7.2.6(@types/node@24.10.1)(lightningcss@1.30.2)(tsx@4.20.6))':
     dependencies:
       '@vitest/spy': 4.0.14
       estree-walker: 3.0.3
       magic-string: 0.30.21
     optionalDependencies:
-      vite: 7.2.4(@types/node@24.10.1)(lightningcss@1.30.2)(tsx@4.20.6)
+      vite: 7.2.6(@types/node@24.10.1)(lightningcss@1.30.2)(tsx@4.20.6)
 
   '@vitest/pretty-format@4.0.14':
     dependencies:
@@ -8338,7 +8338,7 @@ snapshots:
     dependencies:
       '@babel/runtime': 7.27.6
 
-  i18next@25.6.3(typescript@5.9.3):
+  i18next@25.7.0(typescript@5.9.3):
     dependencies:
       '@babel/runtime': 7.28.4
     optionalDependencies:
@@ -9230,15 +9230,15 @@ snapshots:
       react: 19.2.0
       scheduler: 0.27.0
 
-  react-hook-form@7.66.1(react@19.2.0):
+  react-hook-form@7.67.0(react@19.2.0):
     dependencies:
       react: 19.2.0
 
-  react-i18next@16.3.5(i18next@25.6.3(typescript@5.9.3))(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.9.3):
+  react-i18next@16.3.5(i18next@25.7.0(typescript@5.9.3))(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.9.3):
     dependencies:
       '@babel/runtime': 7.28.4
       html-parse-stringify: 3.0.1
-      i18next: 25.6.3(typescript@5.9.3)
+      i18next: 25.7.0(typescript@5.9.3)
       react: 19.2.0
       use-sync-external-store: 1.6.0(react@19.2.0)
     optionalDependencies:
@@ -9370,7 +9370,7 @@ snapshots:
 
   rfdc@1.4.1: {}
 
-  rolldown-vite@7.2.8(@types/node@24.10.1)(esbuild@0.25.12)(tsx@4.20.6):
+  rolldown-vite@7.2.9(@types/node@24.10.1)(esbuild@0.25.12)(tsx@4.20.6):
     dependencies:
       '@oxc-project/runtime': 0.99.0
       fdir: 6.5.0(picomatch@4.0.3)
@@ -10087,20 +10087,20 @@ snapshots:
       '@types/unist': 3.0.3
       vfile-message: 4.0.2
 
-  vite-plugin-babel@1.3.2(@babel/core@7.28.5)(rolldown-vite@7.2.8(@types/node@24.10.1)(esbuild@0.25.12)(tsx@4.20.6)):
+  vite-plugin-babel@1.3.2(@babel/core@7.28.5)(rolldown-vite@7.2.9(@types/node@24.10.1)(esbuild@0.25.12)(tsx@4.20.6)):
     dependencies:
       '@babel/core': 7.28.5
-      vite: rolldown-vite@7.2.8(@types/node@24.10.1)(esbuild@0.25.12)(tsx@4.20.6)
+      vite: rolldown-vite@7.2.9(@types/node@24.10.1)(esbuild@0.25.12)(tsx@4.20.6)
 
-  vite-plugin-static-copy@3.1.4(rolldown-vite@7.2.8(@types/node@24.10.1)(esbuild@0.25.12)(tsx@4.20.6)):
+  vite-plugin-static-copy@3.1.4(rolldown-vite@7.2.9(@types/node@24.10.1)(esbuild@0.25.12)(tsx@4.20.6)):
     dependencies:
       chokidar: 3.6.0
       p-map: 7.0.3
       picocolors: 1.1.1
       tinyglobby: 0.2.15
-      vite: rolldown-vite@7.2.8(@types/node@24.10.1)(esbuild@0.25.12)(tsx@4.20.6)
+      vite: rolldown-vite@7.2.9(@types/node@24.10.1)(esbuild@0.25.12)(tsx@4.20.6)
 
-  vite@7.2.4(@types/node@24.10.1)(lightningcss@1.30.2)(tsx@4.20.6):
+  vite@7.2.6(@types/node@24.10.1)(lightningcss@1.30.2)(tsx@4.20.6):
     dependencies:
       esbuild: 0.25.12
       fdir: 6.5.0(picomatch@4.0.3)
@@ -10123,7 +10123,7 @@ snapshots:
       '@shikijs/transformers': 3.17.0
       '@shikijs/types': 3.17.0
       '@types/markdown-it': 14.1.2
-      '@vitejs/plugin-vue': 6.0.2(vite@7.2.4(@types/node@24.10.1)(lightningcss@1.30.2)(tsx@4.20.6))(vue@3.5.25(typescript@5.9.3))
+      '@vitejs/plugin-vue': 6.0.2(vite@7.2.6(@types/node@24.10.1)(lightningcss@1.30.2)(tsx@4.20.6))(vue@3.5.25(typescript@5.9.3))
       '@vue/devtools-api': 8.0.5
       '@vue/shared': 3.5.25
       '@vueuse/core': 14.1.0(vue@3.5.25(typescript@5.9.3))
@@ -10132,7 +10132,7 @@ snapshots:
       mark.js: 8.11.1
       minisearch: 7.2.0
       shiki: 3.17.0
-      vite: 7.2.4(@types/node@24.10.1)(lightningcss@1.30.2)(tsx@4.20.6)
+      vite: 7.2.6(@types/node@24.10.1)(lightningcss@1.30.2)(tsx@4.20.6)
       vue: 3.5.25(typescript@5.9.3)
     optionalDependencies:
       postcss: 8.5.6
@@ -10164,7 +10164,7 @@ snapshots:
   vitest@4.0.14(@opentelemetry/api@1.9.0)(@types/node@24.10.1)(jsdom@27.2.0)(lightningcss@1.30.2)(tsx@4.20.6):
     dependencies:
       '@vitest/expect': 4.0.14
-      '@vitest/mocker': 4.0.14(vite@7.2.4(@types/node@24.10.1)(lightningcss@1.30.2)(tsx@4.20.6))
+      '@vitest/mocker': 4.0.14(vite@7.2.6(@types/node@24.10.1)(lightningcss@1.30.2)(tsx@4.20.6))
       '@vitest/pretty-format': 4.0.14
       '@vitest/runner': 4.0.14
       '@vitest/snapshot': 4.0.14
@@ -10181,7 +10181,7 @@ snapshots:
       tinyexec: 0.3.2
       tinyglobby: 0.2.15
       tinyrainbow: 3.0.3
-      vite: 7.2.4(@types/node@24.10.1)(lightningcss@1.30.2)(tsx@4.20.6)
+      vite: 7.2.6(@types/node@24.10.1)(lightningcss@1.30.2)(tsx@4.20.6)
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@opentelemetry/api': 1.9.0
@@ -10346,7 +10346,7 @@ snapshots:
 
   zod@4.1.12: {}
 
-  zustand@5.0.8(@types/react@19.2.7)(react@19.2.0)(use-sync-external-store@1.6.0(react@19.2.0)):
+  zustand@5.0.9(@types/react@19.2.7)(react@19.2.0)(use-sync-external-store@1.6.0(react@19.2.0)):
     optionalDependencies:
       '@types/react': 19.2.7
       react: 19.2.0
