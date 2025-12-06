@@ -5,9 +5,6 @@ import { defineConfig } from 'vite'
 export default defineConfig({
   base: '/views/',
     build: {
-    commonjsOptions:{
-      transformMixedEsModules: true,
-    },
         outDir: resolve(__dirname, '../src/static/oidc'),
         rolldownOptions: {
             input: {
