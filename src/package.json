@@ -72,7 +72,7 @@
     "superagent": "10.2.3",
     "swagger-ui-express": "^5.0.1",
     "tinycon": "0.6.8",
-    "tsx": "4.20.6",
+    "tsx": "4.21.0",
     "ueberdb2": "^5.0.22",
     "underscore": "1.13.7",
     "unorm": "1.6.0",
