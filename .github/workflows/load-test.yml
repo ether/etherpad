@@ -29,7 +29,7 @@ jobs:
       -
         name: Checkout repository
         uses: actions/checkout@v6
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         name: Setup gnpm cache
         if: always()
         with:
@@ -72,7 +72,7 @@ jobs:
       -
         name: Checkout repository
         uses: actions/checkout@v6
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         name: Setup gnpm cache
         if: always()
         with:
@@ -140,7 +140,7 @@ jobs:
       -
         name: Checkout repository
         uses: actions/checkout@v6
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         name: Setup gnpm cache
         if: always()
         with:
