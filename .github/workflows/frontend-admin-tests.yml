@@ -141,7 +141,7 @@ jobs:
           gnpm exec playwright install --runtimeVersion="${{ matrix.node }}"
           gnpm exec playwright install-deps --runtimeVersion="${{ matrix.node }}"
           gnpm run test-admin --runtimeVersion="${{ matrix.node }}"
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v6
         if: always()
         with:
           name: playwright-report-${{ matrix.node }}

@@ -69,7 +69,7 @@ jobs:
           cd src
           gnpm exec playwright install chromium  --with-deps
           gnpm run test-ui --project=chromium
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v6
         if: always()
         with:
           name: playwright-report-${{ matrix.node }}-chrome
@@ -129,7 +129,7 @@ jobs:
           cd src
           gnpm exec playwright install firefox  --with-deps
           gnpm run test-ui --project=firefox
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v6
         if: always()
         with:
           name: playwright-report-${{ matrix.node }}-firefox
@@ -193,7 +193,7 @@ jobs:
           cd src
           gnpm exec playwright install webkit --with-deps
           gnpm run test-ui --project=webkit || true
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v6
         if: always()
         with:
           name: playwright-report-${{ matrix.node }}-webkit
