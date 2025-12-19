@@ -96,7 +96,7 @@ const State = {
 
 let state = State.INITIAL;
 
-const removeSignalListener = (signal: NodeJS.Signals, listener: NodeJS.SignalsListener) => {
+const removeSignalListener = (signal: NodeJS.Signals, listener: any) => {
   logger.debug(`Removing ${signal} listener because it might interfere with shutdown tasks. ` +
                `Function code:\n${listener.toString()}\n` +
                `Current stack:\n${new Error()!.stack!.split('\n').slice(1).join('\n')}`);
