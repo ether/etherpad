@@ -1,6 +1,6 @@
 services:
   app:
-    user: "0:0"
+    user: "5001:0"
     image: etherpad/etherpad:latest
     tty: true
     stdin_open: true
