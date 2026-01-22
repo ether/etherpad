@@ -171,8 +171,8 @@ importers:
         specifier: ^8.2.1
         version: 8.2.1(express@5.2.1)
       express-session:
-        specifier: ^1.18.2
-        version: 1.18.2
+        specifier: ^1.19.0
+        version: 1.19.0
       find-root:
         specifier: 1.1.0
         version: 1.1.0
@@ -3187,8 +3187,8 @@ packages:
     peerDependencies:
       express: '>= 4.11'
 
-  express-session@1.18.2:
-    resolution: {integrity: sha512-SZjssGQC7TzTs9rpPDuUrR23GNZ9+2+IkA/+IJWmvQilTr5OSliEHGF+D9scbIpdC6yGtTI0/VhaHoVes2AN/A==}
+  express-session@1.19.0:
+    resolution: {integrity: sha512-0csaMkGq+vaiZTmSMMGkfdCOabYv192VbytFypcvI0MANrp+4i/7yEkJ0sbAEhycQjntaKGzYfjfXQyVb7BHMA==}
     engines: {node: '>= 0.8.0'}
 
   express@5.2.1:
@@ -8134,7 +8134,7 @@ snapshots:
       express: 5.2.1
       ip-address: 10.0.1
 
-  express-session@1.18.2:
+  express-session@1.19.0:
     dependencies:
       cookie: 0.7.2
       cookie-signature: 1.0.7

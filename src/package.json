@@ -39,7 +39,7 @@
     "esbuild": "^0.27.2",
     "express": "^5.2.1",
     "express-rate-limit": "^8.2.1",
-    "express-session": "^1.18.2",
+    "express-session": "^1.19.0",
     "find-root": "1.1.0",
     "formidable": "^3.5.4",
     "http-errors": "^2.0.1",
