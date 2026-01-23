@@ -16,7 +16,7 @@
   "devDependencies": {
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-toast": "^1.2.15",
-    "@types/react": "^19.2.8",
+    "@types/react": "^19.2.9",
     "@types/react-dom": "^19.2.3",
     "@typescript-eslint/eslint-plugin": "^8.53.1",
     "@typescript-eslint/parser": "^8.53.1",
@@ -25,9 +25,9 @@
     "eslint": "^9.39.2",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.26",
-    "i18next": "^25.7.4",
+    "i18next": "^25.8.0",
     "i18next-browser-languagedetector": "^8.2.0",
-    "lucide-react": "^0.562.0",
+    "lucide-react": "^0.563.0",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
     "react-hook-form": "^7.71.1",
@@ -37,7 +37,7 @@
     "typescript": "^5.9.3",
     "vite": "npm:rolldown-vite@7.2.10",
     "vite-plugin-babel": "^1.4.1",
-    "vite-plugin-static-copy": "^3.1.5",
+    "vite-plugin-static-copy": "^3.1.6",
     "zustand": "^5.0.10"
   },
   "overrides": {

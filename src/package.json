@@ -83,7 +83,7 @@
     "etherpad-lite": "node/server.ts"
   },
   "devDependencies": {
-    "@playwright/test": "^1.57.0",
+    "@playwright/test": "^1.58.0",
     "@types/async": "^3.2.25",
     "@types/cookie-parser": "^1.4.10",
     "@types/cross-spawn": "^6.0.6",
@@ -99,7 +99,7 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/mime-types": "^3.0.1",
     "@types/mocha": "^10.0.9",
-    "@types/node": "^25.0.9",
+    "@types/node": "^25.0.10",
     "@types/oidc-provider": "^9.5.0",
     "@types/semver": "^7.7.1",
     "@types/sinon": "^21.0.0",
@@ -120,7 +120,7 @@
     "split-grid": "^1.0.11",
     "supertest": "^7.2.2",
     "typescript": "^5.9.3",
-    "vitest": "^4.0.17"
+    "vitest": "^4.0.18"
   },
   "engines": {
     "node": ">=18.18.2",
