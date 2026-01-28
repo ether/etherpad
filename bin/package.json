@@ -7,7 +7,7 @@
     "doc": "doc"
   },
   "dependencies": {
-    "axios": "^1.13.3",
+    "axios": "^1.13.4",
     "ep_etherpad-lite": "workspace:../src",
     "log4js": "^6.9.1",
     "semver": "^7.7.3",
