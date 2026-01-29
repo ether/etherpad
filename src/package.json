@@ -99,7 +99,7 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/mime-types": "^3.0.1",
     "@types/mocha": "^10.0.9",
-    "@types/node": "^25.0.10",
+    "@types/node": "^25.1.0",
     "@types/oidc-provider": "^9.5.0",
     "@types/semver": "^7.7.1",
     "@types/sinon": "^21.0.0",
