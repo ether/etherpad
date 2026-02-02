@@ -234,8 +234,8 @@ importers:
         specifier: ^2.0.7
         version: 2.0.7
       rate-limiter-flexible:
-        specifier: ^9.0.1
-        version: 9.0.1
+        specifier: ^9.1.0
+        version: 9.1.0
       rehype:
         specifier: ^13.0.2
         version: 13.0.2
@@ -4376,8 +4376,8 @@ packages:
     resolution: {integrity: sha512-Hrgsx+orqoygnmhFbKaHE6c296J+HTAQXoxEF6gNupROmmGJRoyzfG3ccAveqCBrwr/2yxQ5BVd/GTl5agOwSg==}
     engines: {node: '>= 0.6'}
 
-  rate-limiter-flexible@9.0.1:
-    resolution: {integrity: sha512-sO+QdoGPCxroi4VkO2FIVjfUGuexhRkBc9ROHqu5eVEEz+oPHzQqvCc25ajFfMUBosbNGb6qpNa8xmxH9YNZsg==}
+  rate-limiter-flexible@9.1.0:
+    resolution: {integrity: sha512-0jjTtKWlF4UnMLr64chsKfyQsRlT3lc6KXK2B+N8wPkw2+QMbYN6ft4jNnZuHfllKpk3R5Vr4g7EM+Ms8H1aBw==}
 
   raw-body@3.0.2:
     resolution: {integrity: sha512-K5zQjDllxWkf7Z5xJdV0/B0WTNqx6vxG70zJE4N0kBs4LovmEYWJzQGxC9bS9RAKu3bgM40lrd5zoLJ12MQ5BA==}
@@ -9445,7 +9445,7 @@ snapshots:
 
   range-parser@1.2.1: {}
 
-  rate-limiter-flexible@9.0.1: {}
+  rate-limiter-flexible@9.1.0: {}
 
   raw-body@3.0.2:
     dependencies:
