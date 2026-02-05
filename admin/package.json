@@ -16,7 +16,7 @@
   "devDependencies": {
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-toast": "^1.2.15",
-    "@types/react": "^19.2.11",
+    "@types/react": "^19.2.13",
     "@types/react-dom": "^19.2.3",
     "@typescript-eslint/eslint-plugin": "^8.54.0",
     "@typescript-eslint/parser": "^8.54.0",
@@ -25,7 +25,7 @@
     "eslint": "^9.39.2",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.5.0",
-    "i18next": "^25.8.1",
+    "i18next": "^25.8.4",
     "i18next-browser-languagedetector": "^8.2.0",
     "lucide-react": "^0.563.0",
     "react": "^19.2.4",
