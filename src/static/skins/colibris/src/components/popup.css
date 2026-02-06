@@ -86,6 +86,16 @@
   background-color: #ff7b72;
 }
 
+#exit-pad {
+  background-color: #58a6ff;
+  margin-left: 8px;
+}
+
+#logout-pad {
+  background-color: #f85149;
+  margin-left: 8px;
+}
+
 #theme-switcher div {
   position: relative;
   width: 30px;

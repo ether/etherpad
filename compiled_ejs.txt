@@ -1,0 +1,10 @@
+function anonymous(data) {
+            var include = function (path, includeData) {
+                var d = utils_js_1.default.shallowCopy(utils_js_1.default.createNullProtoObjWherePossible(), data);
+                if (includeData) {
+                    d = utils_js_1.default.shallowCopy(d, includeData);
+                }
+                return includeFile(path, opts)(d);
+            };
+            return fn.apply(opts.context, [data || utils_js_1.default.createNullProtoObjWherePossible(), escapeFn, include, rethrow]);
+        }

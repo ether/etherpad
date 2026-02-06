@@ -22,7 +22,7 @@
  * limitations under the License.
  */
 
-import padutils,{Cookies} from "./pad_utils";
+import padutils, { Cookies } from "./pad_utils";
 const padcookie = require('./pad_cookie').padcookie;
 const Ace2Editor = require('./ace').Ace2Editor;
 import html10n from '../js/vendors/html10n'
@@ -86,21 +86,35 @@ const padeditor = (() => {
       // delete pad
       $('#delete-pad').on('click', () => {
         if (window.confirm(html10n.get('pad.delete.confirm'))) {
-          pad.collabClient.sendMessage({type: 'PAD_DELETE', data:{padId: pad.getPadId()}});
+          pad.collabClient.sendMessage({ type: 'PAD_DELETE', data: { padId: pad.getPadId() } });
           // redirect to home page after deletion
           window.location.href = '/';
         }
       })
 
+      // exit button - redirect to home without clearing cookies
+      $('#exit-pad').on('click', () => {
+        window.location.href = '/';
+      });
+
+      // logout button - clear cookies and redirect to home
+      $('#logout-pad').on('click', () => {
+        if (window.confirm(html10n.get('pad.logout.confirm'))) {
+          Cookies.remove('token');
+          Cookies.remove('language');
+          window.location.href = '/';
+        }
+      });
+
       // theme switch
-      $('#theme-switcher').on('click',()=>{
-          if (skinVariants.isDarkMode()) {
-            skinVariants.setDarkModeInLocalStorage(false);
-            skinVariants.updateSkinVariantsClasses(['super-light-toolbar super-light-editor light-background']);
-          } else {
-            skinVariants.setDarkModeInLocalStorage(true);
-            skinVariants.updateSkinVariantsClasses(['super-dark-editor', 'dark-background', 'super-dark-toolbar']);
-          }
+      $('#theme-switcher').on('click', () => {
+        if (skinVariants.isDarkMode()) {
+          skinVariants.setDarkModeInLocalStorage(false);
+          skinVariants.updateSkinVariantsClasses(['super-light-toolbar super-light-editor light-background']);
+        } else {
+          skinVariants.setDarkModeInLocalStorage(true);
+          skinVariants.updateSkinVariantsClasses(['super-dark-editor', 'dark-background', 'super-dark-toolbar']);
+        }
       })
 
       // Language
@@ -194,7 +208,7 @@ exports.focusOnLine = (ace) => {
       const lineNumberInt = parseInt(lineNumber.substr(1));
       if (lineNumberInt) {
         const $inner = $('iframe[name="ace_outer"]').contents().find('iframe')
-            .contents().find('#innerdocbody');
+          .contents().find('#innerdocbody');
         const line = $inner.find(`div:nth-child(${lineNumberInt})`);
         if (line.length !== 0) {
           let offsetTop = line.offset().top;
@@ -204,9 +218,9 @@ exports.focusOnLine = (ace) => {
             offsetTop += parseInt($inner.css('padding-top').replace('px', ''));
           }
           const $outerdocHTML = $('iframe[name="ace_outer"]').contents()
-              .find('#outerdocbody').parent();
-          $outerdoc.css({top: `${offsetTop}px`}); // Chrome
-          $outerdocHTML.animate({scrollTop: offsetTop}); // needed for FF
+            .find('#outerdocbody').parent();
+          $outerdoc.css({ top: `${offsetTop}px` }); // Chrome
+          $outerdocHTML.animate({ scrollTop: offsetTop }); // needed for FF
           const node = line[0];
           ace.callWithAce((ace) => {
             const selection = {
