@@ -12,7 +12,7 @@ capabilities, and runs on _your_ server, under _your_ control.
 
 ## Try it out
 
-Wikimedia provide a [public Etherpad instance for you to Try Etherpad out.](https://etherpad.wikimedia.org) or [use another public Etherpad instance to see other features](https://github.com/ether/etherpad-lite/wiki/Sites-That-Run-Etherpad#sites-that-run-etherpad)
+[Try out a public Etherpad instance](https://github.com/ether/etherpad-lite/wiki/Sites-That-Run-Etherpad#sites-that-run-etherpad)
 
 ## Project Status
 
