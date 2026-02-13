@@ -83,7 +83,7 @@
     "etherpad-lite": "node/server.ts"
   },
   "devDependencies": {
-    "@playwright/test": "^1.58.1",
+    "@playwright/test": "^1.58.2",
     "@types/async": "^3.2.25",
     "@types/cookie-parser": "^1.4.10",
     "@types/cross-spawn": "^6.0.6",
@@ -99,7 +99,7 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/mime-types": "^3.0.1",
     "@types/mocha": "^10.0.9",
-    "@types/node": "^25.2.0",
+    "@types/node": "^25.2.3",
     "@types/oidc-provider": "^9.5.0",
     "@types/semver": "^7.7.1",
     "@types/sinon": "^21.0.0",
@@ -108,7 +108,7 @@
     "@types/underscore": "^1.13.0",
     "@types/whatwg-mimetype": "^3.0.2",
     "chokidar": "^5.0.0",
-    "eslint": "^9.39.2",
+    "eslint": "^10.0.0",
     "eslint-config-etherpad": "^4.0.4",
     "etherpad-cli-client": "^3.0.5",
     "mocha": "^11.7.5",
