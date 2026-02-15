@@ -107,8 +107,8 @@ importers:
   bin:
     dependencies:
       axios:
-        specifier: ^1.13.4
-        version: 1.13.4
+        specifier: ^1.13.5
+        version: 1.13.5
       ep_etherpad-lite:
         specifier: workspace:../src
         version: link:../src
@@ -139,7 +139,7 @@ importers:
     devDependencies:
       vitepress:
         specifier: ^2.0.0-alpha.16
-        version: 2.0.0-alpha.16(@types/node@25.2.3)(axios@1.13.4)(jwt-decode@4.0.0)(lightningcss@1.30.2)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)
+        version: 2.0.0-alpha.16(@types/node@25.2.3)(axios@1.13.5)(jwt-decode@4.0.0)(lightningcss@1.30.2)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)
 
   src:
     dependencies:
@@ -147,8 +147,8 @@ importers:
         specifier: ^3.2.6
         version: 3.2.6
       axios:
-        specifier: ^1.13.4
-        version: 1.13.4
+        specifier: ^1.13.5
+        version: 1.13.5
       cookie-parser:
         specifier: ^1.4.7
         version: 1.4.7
@@ -2266,8 +2266,8 @@ packages:
     resolution: {integrity: sha512-wvUjBtSGN7+7SjNpq/9M2Tg350UZD3q62IFZLbRAR1bSMlCo1ZaeW+BJ+D090e4hIIZLBcTDWe4Mh4jvUDajzQ==}
     engines: {node: '>= 0.4'}
 
-  axios@1.13.4:
-    resolution: {integrity: sha512-1wVkUaAO6WyaYtCkcYCOx12ZgpGf9Zif+qXa4n+oYzK558YryKqiL6UWwd5DqiH3VRW0GYhTZQ/vlgJrCoNQlg==}
+  axios@1.13.5:
+    resolution: {integrity: sha512-cz4ur7Vb0xS4/KUN0tPWe44eqxrIu31me+fbang3ijiNscE129POzipJJA6zniq2C/Z6sJCjMimjS8Lc/GAs8Q==}
 
   babel-plugin-react-compiler@19.1.0-rc.3:
     resolution: {integrity: sha512-mjRn69WuTz4adL0bXGx8Rsyk1086zFJeKmes6aK0xPuK3aaXmDJdLHqwKKMrpm6KAI1MCoUK72d2VeqQbu8YIA==}
@@ -6800,13 +6800,13 @@ snapshots:
       '@vueuse/shared': 14.2.0(vue@3.5.27(typescript@5.9.3))
       vue: 3.5.27(typescript@5.9.3)
 
-  '@vueuse/integrations@14.2.0(axios@1.13.4)(focus-trap@7.8.0)(jwt-decode@4.0.0)(vue@3.5.27(typescript@5.9.3))':
+  '@vueuse/integrations@14.2.0(axios@1.13.5)(focus-trap@7.8.0)(jwt-decode@4.0.0)(vue@3.5.27(typescript@5.9.3))':
     dependencies:
       '@vueuse/core': 14.2.0(vue@3.5.27(typescript@5.9.3))
       '@vueuse/shared': 14.2.0(vue@3.5.27(typescript@5.9.3))
       vue: 3.5.27(typescript@5.9.3)
     optionalDependencies:
-      axios: 1.13.4
+      axios: 1.13.5
       focus-trap: 7.8.0
       jwt-decode: 4.0.0
 
@@ -6943,7 +6943,7 @@ snapshots:
     dependencies:
       possible-typed-array-names: 1.1.0
 
-  axios@1.13.4:
+  axios@1.13.5:
     dependencies:
       follow-redirects: 1.15.11
       form-data: 4.0.5
@@ -9981,7 +9981,7 @@ snapshots:
       lightningcss: 1.30.2
       tsx: 4.21.0
 
-  vitepress@2.0.0-alpha.16(@types/node@25.2.3)(axios@1.13.4)(jwt-decode@4.0.0)(lightningcss@1.30.2)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3):
+  vitepress@2.0.0-alpha.16(@types/node@25.2.3)(axios@1.13.5)(jwt-decode@4.0.0)(lightningcss@1.30.2)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3):
     dependencies:
       '@docsearch/css': 4.5.3
       '@docsearch/js': 4.5.3
@@ -9995,7 +9995,7 @@ snapshots:
       '@vue/devtools-api': 8.0.6
       '@vue/shared': 3.5.27
       '@vueuse/core': 14.2.0(vue@3.5.27(typescript@5.9.3))
-      '@vueuse/integrations': 14.2.0(axios@1.13.4)(focus-trap@7.8.0)(jwt-decode@4.0.0)(vue@3.5.27(typescript@5.9.3))
+      '@vueuse/integrations': 14.2.0(axios@1.13.5)(focus-trap@7.8.0)(jwt-decode@4.0.0)(vue@3.5.27(typescript@5.9.3))
       focus-trap: 7.8.0
       mark.js: 8.11.1
       minisearch: 7.2.0

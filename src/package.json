@@ -31,7 +31,7 @@
   ],
   "dependencies": {
     "async": "^3.2.6",
-    "axios": "^1.13.4",
+    "axios": "^1.13.5",
     "cookie-parser": "^1.4.7",
     "cross-env": "^10.1.0",
     "cross-spawn": "^7.0.6",
