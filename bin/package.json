@@ -10,7 +10,7 @@
     "axios": "^1.13.4",
     "ep_etherpad-lite": "workspace:../src",
     "log4js": "^6.9.1",
-    "semver": "^7.7.3",
+    "semver": "^7.7.4",
     "tsx": "^4.21.0",
     "ueberdb2": "^5.0.23"
   },
