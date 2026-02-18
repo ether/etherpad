@@ -7,15 +7,15 @@
     "doc": "doc"
   },
   "dependencies": {
-    "axios": "^1.13.4",
+    "axios": "^1.13.5",
     "ep_etherpad-lite": "workspace:../src",
     "log4js": "^6.9.1",
-    "semver": "^7.7.3",
+    "semver": "^7.7.4",
     "tsx": "^4.21.0",
     "ueberdb2": "^5.0.23"
   },
   "devDependencies": {
-    "@types/node": "^25.2.0",
+    "@types/node": "^25.2.3",
     "@types/semver": "^7.7.1",
     "typescript": "^5.9.3"
   },

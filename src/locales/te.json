@@ -9,6 +9,7 @@
 			"Veeven"
 		]
 	},
+	"admin_plugins.name": "పేరు",
 	"index.newPad": "కొత్త పలక",
 	"index.createOpenPad": "ఒక పేరుతో పలకని సృష్టించండి లేదా అదే పేరుతో ఉన్న పలకని తెరవండి",
 	"pad.toolbar.bold.title": "బొద్దు (Ctrl+B)",
