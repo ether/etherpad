@@ -19,18 +19,18 @@
  * limitations under the License.
  */
 
-import {MapArrayType} from "../types/MapType";
+import { MapArrayType } from "../types/MapType";
 import { jwtDecode } from "jwt-decode";
 const api = require('../db/API');
 const padManager = require('../db/PadManager');
 import settings from '../utils/Settings';
 import createHTTPError from 'http-errors';
-import {Http2ServerRequest} from "node:http2";
-import {publicKeyExported} from "../security/OAuth2Provider";
-import {jwtVerify} from "jose";
-import {APIFields, apikey} from './APIKeyHandler'
+import { Http2ServerRequest } from "node:http2";
+import { publicKeyExported } from "../security/OAuth2Provider";
+import { jwtVerify } from "jose";
+import { APIFields, apikey } from './APIKeyHandler'
 // a list of all functions
-const version:MapArrayType<any> = {};
+const version: MapArrayType<any> = {};
 
 version['1'] = {
   createGroup: [],
@@ -50,6 +50,7 @@ version['1'] = {
   getText: ['padID', 'rev'],
   setText: ['padID', 'text'],
   getHTML: ['padID', 'rev'],
+  appendHTML: ['padID', 'html'],
   setHTML: ['padID', 'html'],
   getRevisionsCount: ['padID'],
   getLastEdited: ['padID'],
@@ -134,6 +135,7 @@ version['1.2.15'] = {
 version['1.3.0'] = {
   ...version['1.2.15'],
   appendText: ['padID', 'text', 'authorId'],
+  appendHTML: ['padID', 'html', 'authorId'],
   copyPadWithoutHistory: ['sourceID', 'destinationID', 'force', 'authorId'],
   createGroupPad: ['groupID', 'padName', 'text', 'authorId'],
   createPad: ['padID', 'text', 'authorId'],
@@ -159,7 +161,7 @@ exports.version = version;
  * @param req express request object
  */
 exports.handle = async function (apiVersion: string, functionName: string, fields: APIFields,
-                                 req: Http2ServerRequest) {
+  req: Http2ServerRequest) {
   // say goodbye if this is an unknown API version
   if (!(apiVersion in version)) {
     throw new createHTTPError.NotFound('no such api version');
@@ -179,20 +181,22 @@ exports.handle = async function (apiVersion: string, functionName: string, field
       throw new createHTTPError.Unauthorized('no or wrong API Key');
     }
   } else {
-    if(!req.headers.authorization) {
+    if (!req.headers.authorization) {
       throw new createHTTPError.Unauthorized('no or wrong API Key');
     }
     try {
-      const clientIds: string[] = settings.sso.clients?.map((client: {client_id: string}) => client.client_id) ?? [];
+      const clientIds: string[] = settings.sso.clients?.map((client: { client_id: string }) => client.client_id) ?? [];
       const jwtToCheck = req.headers.authorization.replace("Bearer ", "")
       const payload = jwtDecode(jwtToCheck)
       // client_credentials
       if (clientIds.includes(<string>payload.sub)) {
-        await jwtVerify(jwtToCheck, publicKeyExported!, {algorithms: ['RS256']})
+        await jwtVerify(jwtToCheck, publicKeyExported!, { algorithms: ['RS256'] })
       } else {
         // authorization_code
-        await jwtVerify(jwtToCheck, publicKeyExported!, {algorithms: ['RS256'],
-          requiredClaims: ["admin"]})
+        await jwtVerify(jwtToCheck, publicKeyExported!, {
+          algorithms: ['RS256'],
+          requiredClaims: ["admin"]
+        })
       }
     } catch (e) {
       throw new createHTTPError.Unauthorized('no or wrong OAuth token');
