@@ -29,7 +29,7 @@ const hooks = require('./pluginfw/hooks');
 const makeCSSManager = require('./cssmanager').makeCSSManager;
 const pluginUtils = require('./pluginfw/shared');
 const ace2_inner = require('ep_etherpad-lite/static/js/ace2_inner')
-const debugLog = (...args) => {};
+const debugLog = (...args) => { };
 const cl_plugins = require('ep_etherpad-lite/static/js/pluginfw/client_plugins')
 const rJQuery = require('ep_etherpad-lite/static/js/rjquery')
 // The inner and outer iframe's locations are about:blank, so relative URLs are relative to that.
@@ -50,14 +50,19 @@ const eventFired = async (obj, event, cleanups = [], predicate = () => true) => 
       cleanup();
       resolve();
     };
-    const errorCb = () => {
+    const errorCb = (e) => {
+      // Ignore errors originating from browser extensions (e.g. BitWarden FIDO2).
+      // These are not Etherpad errors and should not block pad initialization. (Issue #6802)
+      const errorSource = (e instanceof ErrorEvent) ? (e.filename || '') : '';
+      if (/^(chrome|moz|safari)-extension:\/\//.test(errorSource)) return;
+      if (typeof obj?.src === 'string' && /^(chrome|moz|safari)-extension:\/\//.test(obj.src)) return;
       const err = new Error(`Ace2Editor.init() error event while waiting for ${event} event`);
       debugLog(`${err} on object`, obj);
       cleanup();
       reject(err);
     };
     cleanup = () => {
-      cleanup = () => {};
+      cleanup = () => { };
       obj.removeEventListener(event, successCb);
       obj.removeEventListener('error', errorCb);
     };
@@ -89,7 +94,7 @@ const frameReady = async (frame) => {
 };
 
 const Ace2Editor = function () {
-  let info = {editor: this};
+  let info = { editor: this };
   let loaded = false;
 
   let actionsPendingInit = [];
@@ -139,7 +144,7 @@ const Ace2Editor = function () {
   this.exportText = () => loaded ? info.ace_exportText() : '(awaiting init)\n';
 
   this.getInInternationalComposition =
-      () => loaded ? info.ace_getInInternationalComposition() : null;
+    () => loaded ? info.ace_getInInternationalComposition() : null;
 
   // prepareUserChangeset:
   // Returns null if no new changes or ACE not ready.  Otherwise, bundles up all user changes
@@ -175,8 +180,8 @@ const Ace2Editor = function () {
       `../static/css/iframe_editor.css?v=${clientVars.randomVersionString}`,
       `../static/css/pad.css?v=${clientVars.randomVersionString}`,
       ...hooks.callAll('aceEditorCSS').map(
-          // Allow urls to external CSS - http(s):// and //some/path.css
-          (p) => /\/\//.test(p) ? p : `../static/plugins/${p}`),
+        // Allow urls to external CSS - http(s):// and //some/path.css
+        (p) => /\/\//.test(p) ? p : `../static/plugins/${p}`),
       `../static/skins/${clientVars.skinName}/pad.css?v=${clientVars.randomVersionString}`,
     ];
 
@@ -185,7 +190,9 @@ const Ace2Editor = function () {
     const outerFrame = document.createElement('iframe');
     outerFrame.name = 'ace_outer';
     outerFrame.frameBorder = 0; // for IE
-    outerFrame.title = 'Ether';
+    outerFrame.title = 'Etherpad editor';
+    outerFrame.setAttribute('role', 'application');
+    outerFrame.setAttribute('aria-label', 'Etherpad editor');
     // Some browsers do strange things unless the iframe has a src or srcdoc property:
     //   - Firefox replaces the frame's contentWindow.document object with a different object after
     //     the frame is created. This can be worked around by waiting for the window's load event
@@ -224,6 +231,7 @@ const Ace2Editor = function () {
     const sideDiv = outerDocument.createElement('div');
     sideDiv.id = 'sidediv';
     sideDiv.classList.add('sidediv');
+    sideDiv.setAttribute('aria-hidden', 'true'); // Hide line numbers from screen readers (#7255)
     outerDocument.body.appendChild(sideDiv);
     const sideDivInner = outerDocument.createElement('div');
     sideDivInner.id = 'sidedivinner';
@@ -236,7 +244,9 @@ const Ace2Editor = function () {
 
     const innerFrame = outerDocument.createElement('iframe');
     innerFrame.name = 'ace_inner';
-    innerFrame.title = 'pad';
+    innerFrame.title = 'Pad content';
+    innerFrame.setAttribute('role', 'document');
+    innerFrame.setAttribute('aria-label', 'Pad content');
     innerFrame.scrolling = 'no';
     innerFrame.frameBorder = 0;
     innerFrame.allowTransparency = true; // for IE
@@ -262,7 +272,7 @@ const Ace2Editor = function () {
     //const requireKernel = innerDocument.createElement('script');
     //requireKernel.type = 'text/javascript';
     //requireKernel.src =
-     //   absUrl(`../static/js/require-kernel.js?v=${clientVars.randomVersionString}`);
+    //   absUrl(`../static/js/require-kernel.js?v=${clientVars.randomVersionString}`);
     //innerDocument.head.appendChild(requireKernel);
     // Pre-fetch modules to improve load performance.
     /*for (const module of ['ace2_inner', 'ace2_common']) {
@@ -277,24 +287,28 @@ const Ace2Editor = function () {
     innerStyle.title = 'dynamicsyntax';
     innerDocument.head.appendChild(innerStyle);
     const headLines = [];
-    hooks.callAll('aceInitInnerdocbodyHead', {iframeHTML: headLines});
+    hooks.callAll('aceInitInnerdocbodyHead', { iframeHTML: headLines });
     innerDocument.head.appendChild(
-        innerDocument.createRange().createContextualFragment(headLines.join('\n')));
+      innerDocument.createRange().createContextualFragment(headLines.join('\n')));
 
     // <body> tag
     innerDocument.body.id = 'innerdocbody';
     innerDocument.body.classList.add('innerdocbody');
     innerDocument.body.setAttribute('spellcheck', 'false');
+    // Accessibility: mark the editor body as a multiline textbox for screen readers (#7255)
+    innerDocument.body.setAttribute('role', 'textbox');
+    innerDocument.body.setAttribute('aria-multiline', 'true');
+    innerDocument.body.setAttribute('aria-label', 'Pad content');
     innerDocument.body.appendChild(innerDocument.createTextNode('\u00A0')); // &nbsp;
-/*
-    debugLog('Ace2Editor.init() waiting for require kernel load');
-    await eventFired(requireKernel, 'load');
-    debugLog('Ace2Editor.init() require kernel loaded');
-    const require = innerWindow.require;
-    require.setRootURI(absUrl('../javascripts/src'));
-    require.setLibraryURI(absUrl('../javascripts/lib'));
-    require.setGlobalKeyPath('require');
-*/
+    /*
+        debugLog('Ace2Editor.init() waiting for require kernel load');
+        await eventFired(requireKernel, 'load');
+        debugLog('Ace2Editor.init() require kernel loaded');
+        const require = innerWindow.require;
+        require.setRootURI(absUrl('../javascripts/src'));
+        require.setLibraryURI(absUrl('../javascripts/lib'));
+        require.setGlobalKeyPath('require');
+    */
     // intentially moved before requiring client_plugins to save a 307
     innerWindow.Ace2Inner = ace2_inner;
     innerWindow.plugins = cl_plugins;

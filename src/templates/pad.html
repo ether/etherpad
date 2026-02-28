@@ -1,461 +1,547 @@
-<%
-  var langs = require("ep_etherpad-lite/node/hooks/i18n").availableLangs
-    , pluginUtils = require('ep_etherpad-lite/static/js/pluginfw/shared')
-    ;
-%>
-<!doctype html>
-<html translate="no" class="pad <%=pluginUtils.clientPluginNames().join(' '); %> <%=settings.skinVariants%>">
-<head>
-  <% e.begin_block("htmlHead"); %>
-  <% e.end_block(); %>
-  <title><%=settings.title%></title>
-  <link rel="manifest" href="../../manifest.json" />
-  <script>
-    /*
-    |@licstart  The following is the entire license notice for the
-    JavaScript code in this page.|
+<% var langs=require("ep_etherpad-lite/node/hooks/i18n").availableLangs ,
+  pluginUtils=require('ep_etherpad-lite/static/js/pluginfw/shared') ; %>
+  <!doctype html>
+  <html translate="no" class="pad <%=pluginUtils.clientPluginNames().join(' '); %> <%=settings.skinVariants%>">
 
-    Copyright 2011 Peter Martischka, Primary Technology.
-
-    Licensed under the Apache License, Version 2.0 (the "License");
-    you may not use this file except in compliance with the License.
-    You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-    Unless required by applicable law or agreed to in writing, software
-    distributed under the License is distributed on an "AS IS" BASIS,
-    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    See the License for the specific language governing permissions and
-    limitations under the License.
-
-    |@licend  The above is the entire license notice
-    for the JavaScript code in this page.|
-    */
-  </script>
-
-  <meta charset="utf-8">
-  <meta name="robots" content="noindex, nofollow">
-  <meta name="referrer" content="no-referrer">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
-  <link rel="shortcut icon" href="../favicon.ico">
-
-  <% e.begin_block("styles"); %>
-  <link href="../static/css/pad.css?v=<%=settings.randomVersionString%>" rel="stylesheet">
-
-  <% e.begin_block("customStyles"); %>
-  <link href="../static/skins/<%=encodeURI(settings.skinName)%>/pad.css?v=<%=settings.randomVersionString%>" rel="stylesheet">
-  <% e.end_block(); %>
-
-  <style title="dynamicsyntax"></style>
-  <% e.end_block(); %>
-
-  <link rel="localizations" type="application/l10n+json" href="../locales.json" />
-</head>
-<body>
-  <% e.begin_block("body"); %>
-
-  <!----------------------------->
-  <!--------- TOOLBAR ----------->
-  <!----------------------------->
-  <div id="editbar" class="toolbar">
-      <div id="toolbar-overlay"></div>
-
-      <ul class="menu_left" role="toolbar">
-          <% e.begin_block("editbarMenuLeft"); %>
-          <%- toolbar.menu(settings.toolbar.left, isReadOnly, 'left', 'pad') %>
-          <% e.end_block(); %>
-      </ul>
-      <ul class="menu_right" role="toolbar">
-          <% e.begin_block("editbarMenuRight"); %>
-          <%- toolbar.menu(settings.toolbar.right, isReadOnly, 'right', 'pad') %>
-          <% e.end_block(); %>
-      </ul>
-      <span class="show-more-icon-btn"></span> <!-- use on small screen to display hidden toolbar buttons -->
-  </div>
-
-  <% e.begin_block("afterEditbar"); %><% e.end_block(); %>
-
-  <div id="editorcontainerbox" class="flex-layout">
-
-      <% e.begin_block("editorContainerBox"); %>
-
-      <!----------------------------->
-      <!--- PAD EDITOR (in iframe) -->
-      <!----------------------------->
-
-      <div id="editorcontainer" class="editorcontainer"></div>
-
-      <div id="editorloadingbox">
-        <% e.begin_block("permissionDenied"); %>
-        <div id="permissionDenied">
-          <p data-l10n-id="pad.permissionDenied" class="editorloadingbox-message">
-            You do not have permission to access this pad
-          </p>
-        </div>
-        <% e.end_block(); %>
-        <% e.begin_block("loading"); %>
-        <p data-l10n-id="pad.loading" id="loading" class="editorloadingbox-message">
-          <img src='../static/img/brand.svg' class='etherpadBrand'><br/>
-          Loading...
-        </p>
-        <% e.end_block(); %>
-        <noscript>
-          <p class="editorloadingbox-message">
-            <strong>
-              Sorry, you have to enable Javascript in order to use this.
-            </strong>
-          </p>
-        </noscript>
-      </div>
-
-
-      <!------------------------------------------------------------->
-      <!-- SETTINGS POPUP (change font, language, chat parameters) -->
-      <!------------------------------------------------------------->
-
-      <div id="settings" class="popup"><div class="popup-content">
-          <h1 data-l10n-id="pad.settings.padSettings"></h1>
-          <% e.begin_block("mySettings"); %>
-          <h2 data-l10n-id="pad.settings.myView"></h2>
-          <p class="hide-for-mobile">
-              <input type="checkbox" id="options-stickychat">
-              <label for="options-stickychat" data-l10n-id="pad.settings.stickychat"></label>
-          </p>
-          <p class="hide-for-mobile">
-              <input type="checkbox" id="options-chatandusers" onClick="chat.chatAndUsers();">
-              <label for="options-chatandusers" data-l10n-id="pad.settings.chatandusers"></label>
-          </p>
-          <p>
-              <input type="checkbox" id="options-colorscheck">
-              <label for="options-colorscheck" data-l10n-id="pad.settings.colorcheck"></label>
-          </p>
-          <p>
-              <input type="checkbox" id="options-linenoscheck" checked>
-              <label for="options-linenoscheck" data-l10n-id="pad.settings.linenocheck"></label>
-          </p>
-          <p>
-              <input type="checkbox" id="options-rtlcheck">
-              <label for="options-rtlcheck" data-l10n-id="pad.settings.rtlcheck"></label>
-          </p>
-          <% e.end_block(); %>
-
-          <div class="dropdowns-container">
-            <% e.begin_block("mySettings.dropdowns"); %>
-            <p class="dropdown-line">
-              <label for="viewfontmenu" data-l10n-id="pad.settings.fontType">Font type:</label>
-              <select id="viewfontmenu">
-                <option value="" data-l10n-id="pad.settings.fontType.normal">Normal</option>
-                <%= fonts = ["Quicksand", "Roboto", "Alegreya", "PlayfairDisplay", "Montserrat", "OpenDyslexic", "RobotoMono"] %>
-                <% for(var i=0; i < fonts.length; i++) { %>
-                  <option value="<%=fonts[i]%>"><%=fonts[i]%></option>
-                <% } %>
-              </select>
-            </p>
-
-            <p class="dropdown-line">
-              <label for="languagemenu" data-l10n-id="pad.settings.language">Language:</label>
-              <select id="languagemenu">
-                  <% for (lang in langs) { %>
-                  <option value="<%=lang%>"><%=langs[lang].nativeName%></option>
-                  <% } %>
-              </select>
-            </p>
-            <% e.end_block(); %>
-          </div>
-          <button data-l10n-id="pad.settings.deletePad" id="delete-pad">Delete pad</button>
-        <div id="theme-switcher" style="display: none;">
-          <svg width="2rem" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z" />
-          </svg>
-          <div>
-            <span aria-label="theme-switcher-knob"></span>
-          </div>
-          <svg width="2rem" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z" />
-          </svg>
-        </div>
-
-
-        <h2 data-l10n-id="pad.settings.about">About</h2>
-          <span data-l10n-id="pad.settings.poweredBy">Powered by</span>
-          <a href="https://etherpad.org" target="_blank" referrerpolicy="no-referrer" rel="noopener">Etherpad</a>
-        <% if (settings.exposeVersion) { %>(commit <%= settings.gitVersion %>)<% } %>      </div></div>
-
-
-      <!------------------------->
-      <!-- IMPORT EXPORT POPUP -->
-      <!------------------------->
-
-      <div id="import_export" class="popup"><div class="popup-content">
-          <h1 data-l10n-id="pad.importExport.import_export"></h1>
-          <div class="acl-write">
-              <% e.begin_block("importColumn"); %>
-              <h2 data-l10n-id="pad.importExport.import"></h2>
-              <div class="importmessage" id="importmessageabiword" data-l10n-id="pad.importExport.abiword.innerHTML"></div><br>
-              <form id="importform" method="post" action="" target="importiframe" enctype="multipart/form-data">
-                  <div class="importformdiv" id="importformfilediv">
-                      <input type="file" name="file" size="10" id="importfileinput">
-                      <div class="importmessage" id="importmessagefail"></div>
-                  </div>
-                  <div id="import"></div>
-                  <div class="importmessage" id="importmessagesuccess" data-l10n-id="pad.importExport.importSuccessful"></div>
-                  <div class="importformdiv" id="importformsubmitdiv">
-                      <span class="nowrap">
-                          <input type="submit" class="btn btn-primary" name="submit" value="Import Now" disabled="disabled" id="importsubmitinput">
-                          <div alt="" id="importstatusball" class="loadingAnimation" align="top"></div>
-                      </span>
-                  </div>
-              </form>
-              <% e.end_block(); %>
-          </div>
-          <div id="exportColumn">
-              <h2 data-l10n-id="pad.importExport.export"></h2>
-              <% e.begin_block("exportColumn"); %>
-              <a id="exportetherpada" target="_blank" class="exportlink">
-                <span class="exporttype buttonicon buttonicon-file-powerpoint" id="exportetherpad" data-l10n-id="pad.importExport.exportetherpad"></span>
-              </a>
-              <a id="exporthtmla" target="_blank" class="exportlink">
-                <span class="exporttype buttonicon buttonicon-file-code" id="exporthtml" data-l10n-id="pad.importExport.exporthtml"></span>
-              </a>
-              <a id="exportplaina" target="_blank" class="exportlink">
-                <span class="exporttype buttonicon buttonicon-file" id="exportplain" data-l10n-id="pad.importExport.exportplain"></span>
-              </a>
-              <a id="exportworda" target="_blank" class="exportlink">
-                <span class="exporttype buttonicon buttonicon-file-word" id="exportword" data-l10n-id="pad.importExport.exportword"></span>
-              </a>
-              <a id="exportpdfa" target="_blank" class="exportlink">
-                <span class="exporttype buttonicon buttonicon-file-pdf" id="exportpdf" data-l10n-id="pad.importExport.exportpdf"></span>
-              </a>
-              <a id="exportopena" target="_blank" class="exportlink">
-                <span class="exporttype buttonicon buttonicon-file-alt" id="exportopen" data-l10n-id="pad.importExport.exportopen"></span>
-              </a>
-              <% e.end_block(); %>
-          </div>
-      </div></div>
-
-
-      <!---------------------------------------------------->
-      <!-- CONNECTIVITY POPUP (when you get disconnected) -->
-      <!---------------------------------------------------->
-
-      <div id="connectivity" class="popup"><div class="popup-content">
-          <% e.begin_block("modals"); %>
-          <div class="connected visible">
-            <h2 data-l10n-id="pad.modals.connected"></h2>
-          </div>
-          <div class="reconnecting">
-            <h1 data-l10n-id="pad.modals.reconnecting"></h1>
-            <i class='buttonicon buttonicon-spin5 icon-spin'>
-              <img src='../static/img/brand.svg' class='etherpadBrand'><br/>
-            </i>
-          </div>
-          <div class="userdup">
-            <h1 data-l10n-id="pad.modals.userdup"></h1>
-            <h2 data-l10n-id="pad.modals.userdup.explanation"></h2>
-            <p id="defaulttext" data-l10n-id="pad.modals.userdup.advice"></p>
-            <button id="forcereconnect" class="btn btn-primary" data-l10n-id="pad.modals.forcereconnect"></button>
-          </div>
-          <div class="unauth">
-            <h1 data-l10n-id="pad.modals.unauth"></h1>
-            <p id="defaulttext" data-l10n-id="pad.modals.unauth.explanation"></p>
-            <button id="forcereconnect" class="btn btn-primary" data-l10n-id="pad.modals.forcereconnect"></button>
-          </div>
-          <div class="looping">
-            <h1 data-l10n-id="pad.modals.disconnected"></h1>
-            <h2 data-l10n-id="pad.modals.looping.explanation"></h2>
-            <p data-l10n-id="pad.modals.looping.cause"></p>
-          </div>
-          <div class="initsocketfail">
-            <h1 data-l10n-id="pad.modals.initsocketfail"></h1>
-            <h2 data-l10n-id="pad.modals.initsocketfail.explanation"></h2>
-            <p data-l10n-id="pad.modals.initsocketfail.cause"></p>
-          </div>
-          <div class="slowcommit with_reconnect_timer">
-            <h1 data-l10n-id="pad.modals.disconnected"></h1>
-            <h2 data-l10n-id="pad.modals.slowcommit.explanation"></h2>
-            <p id="defaulttext" data-l10n-id="pad.modals.slowcommit.cause"></p>
-            <button id="forcereconnect" class="btn btn-primary" data-l10n-id="pad.modals.forcereconnect"></button>
-          </div>
-          <div class="badChangeset with_reconnect_timer">
-            <h1 data-l10n-id="pad.modals.disconnected"></h1>
-            <h2 data-l10n-id="pad.modals.badChangeset.explanation"></h2>
-            <p id="defaulttext" data-l10n-id="pad.modals.badChangeset.cause"></p>
-            <button id="forcereconnect" class="btn btn-primary" data-l10n-id="pad.modals.forcereconnect"></button>
-          </div>
-          <div class="corruptPad">
-            <h1 data-l10n-id="pad.modals.disconnected"></h1>
-            <h2 data-l10n-id="pad.modals.corruptPad.explanation"></h2>
-            <p data-l10n-id="pad.modals.corruptPad.cause"></p>
-          </div>
-          <div class="deleted">
-            <h1 data-l10n-id="pad.modals.deleted"></h1>
-            <p data-l10n-id="pad.modals.deleted.explanation"></p>
-          </div>
-          <div class="rateLimited">
-            <h1 data-l10n-id="pad.modals.rateLimited"></h1>
-            <p data-l10n-id="pad.modals.rateLimited.explanation"></p>
-          </div>
-          <div class="rejected">
-            <h1 data-l10n-id="pad.modals.disconnected"></h1>
-            <h2 data-l10n-id="pad.modals.rejected.explanation"></h2>
-            <p data-l10n-id="pad.modals.rejected.cause"></p>
-          </div>
-          <div class="disconnected with_reconnect_timer">
-            <% e.begin_block("disconnected"); %>
-            <h1 data-l10n-id="pad.modals.disconnected"></h1>
-            <h2 data-l10n-id="pad.modals.disconnected.explanation"></h2>
-            <p id="defaulttext" data-l10n-id="pad.modals.disconnected.cause"></p>
-            <button id="forcereconnect" class="btn btn-primary" data-l10n-id="pad.modals.forcereconnect"></button>
-            <% e.end_block(); %>
-          </div>
-          <form id="reconnectform" method="post" action="/ep/pad/reconnect" accept-charset="UTF-8" style="display: none;">
-              <input type="hidden" class="padId" name="padId">
-              <input type="hidden" class="diagnosticInfo" name="diagnosticInfo">
-              <input type="hidden" class="missedChanges" name="missedChanges">
-          </form>
-          <% e.end_block(); %>
-      </div></div>
-
-
-      <!-------------------------------->
-      <!-- EMBED POPUP (Share, embed) -->
-      <!-------------------------------->
-
-      <div id="embed" class="popup"><div class="popup-content">
-          <% e.begin_block("embedPopup"); %>
-          <h1 data-l10n-id="pad.share"></h1>
-          <div id="embedreadonly" class="acl-write">
-              <input type="checkbox" id="readonlyinput">
-              <label for="readonlyinput" data-l10n-id="pad.share.readonly"></label>
-          </div>
-          <div id="linkcode">
-              <h2 data-l10n-id="pad.share.link"></h2>
-              <input id="linkinput" type="text" value="" onclick="this.select()">
-          </div>
-          <div id="embedcode">
-              <h2 data-l10n-id="pad.share.emebdcode"></h2>
-              <input id="embedinput" type="text" value="" onclick="this.select()">
-          </div>
-          <% e.end_block(); %>
-      </div></div>
-
-      <div class="sticky-container">
-
-        <!---------------------------------------------------------------------->
-        <!-- USERS POPUP (set username, color, see other users names & color) -->
-        <!---------------------------------------------------------------------->
-
-        <div id="users" class="popup"><div class="popup-content">
-            <% e.begin_block("userlist"); %>
-            <div id="connectionstatus"></div>
-            <div id="myuser">
-                <div id="mycolorpicker" class="popup"><div class="popup-content">
-                    <div id="colorpicker"></div>
-                    <div class="btn-container">
-                      <button id="mycolorpickersave" data-l10n-id="pad.colorpicker.save" class="btn btn-primary"></button>
-                      <button id="mycolorpickercancel" data-l10n-id="pad.colorpicker.cancel" class="btn btn-default"></button>
-                      <span id="mycolorpickerpreview" class="myswatchboxhoverable"></span>
-                    </div>
-                </div></div>
-                <div id="myswatchbox"><div id="myswatch"></div></div>
-                <div id="myusernameform">
-                  <input type="text" id="myusernameedit" disabled="disabled" data-l10n-id="pad.userlist.entername">
-                </div>
-            </div>
-            <div id="otherusers" aria-role="document">
-                <table id="otheruserstable" cellspacing="0" cellpadding="0" border="0">
-                    <tr><td></td></tr>
-                </table>
-            </div>
-            <div id="userlistbuttonarea"></div>
-            <% e.end_block(); %>
-        </div></div>
-
-
-        <!----------------------------->
-        <!----------- CHAT ------------>
-        <!----------------------------->
-
-        <div id="chaticon" class="visible" onclick="chat.show();return false;" title="Chat (Alt C)">
-            <span id="chatlabel" data-l10n-id="pad.chat"></span>
-            <span class="buttonicon buttonicon-chat"></span>
-            <span id="chatcounter">0</span>
-        </div>
-
-        <div id="chatbox">
-          <div class="chat-content">
-            <div id="titlebar">
-              <h1 id ="titlelabel" data-l10n-id="pad.chat"></h1>
-              <a id="titlecross" class="hide-reduce-btn" onClick="chat.hide();return false;">-&nbsp;</a>
-              <a id="titlesticky" class="stick-to-screen-btn" onClick="chat.stickToScreen(true);return false;" data-l10n-id="pad.chat.stick.title">█&nbsp;&nbsp;</a>
-            </div>
-            <div id="chattext" class="thin-scrollbar" aria-live="polite" aria-relevant="additions removals text" role="log" aria-atomic="false">
-                <div alt="loading.." id="chatloadmessagesball" class="chatloadmessages loadingAnimation" align="top"></div>
-                <button id="chatloadmessagesbutton" class="chatloadmessages" data-l10n-id="pad.chat.loadmessages"></button>
-            </div>
-            <div id="chatinputbox">
-                <form>
-                    <textarea id="chatinput" maxlength="999" data-l10n-id="pad.chat.writeMessage.placeholder"></textarea>
-                </form>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!------------------------------------------------------------------>
-      <!-- SKIN VARIANTS BUILDER (Customize rendering, only for admins) -->
-      <!------------------------------------------------------------------>
-      <% if (settings.skinName == 'colibris') { %>
-      <div id="skin-variants" class="popup"><div class="popup-content">
-        <h1>Skin Builder</h1>
-
-        <div class="dropdowns-container">
-        <% containers = [ "toolbar", "background", "editor" ]; %>
-        <% for(var i=0; i < containers.length; i++) { %>
-          <p class="dropdown-line">
-            <label class="skin-variant-container"><%=containers[i]%></label>
-            <select class="skin-variant skin-variant-color" data-container="<%=containers[i]%>">
-              <option value="super-light">Super Light</option>
-              <option value="light">Light</option>
-              <option value="dark">Dark</option>
-              <option value="super-dark">Super Dark</option>
-            </select>
-          </p>
-        <% } %>
-        </div>
-
-        <p>
-            <input type="checkbox" id="skin-variant-full-width" class="skin-variant"/>
-            <label for="skin-variant-full-width">Full Width Editor</label>
-        </p>
-
-        <p>
-          <label>Result to copy in settings.json</label>
-          <input id="skin-variants-result" type="text" readonly class="disabled" />
-        </p>
-      </div></div>
-      <% } %>
-
+  <head>
+    <% e.begin_block("htmlHead"); %>
       <% e.end_block(); %>
+        <title>
+          <%=settings.title%>
+        </title>
+        <link rel="manifest" href="../../manifest.json" />
+        <script>
+          /*
+          |@licstart  The following is the entire license notice for the
+          JavaScript code in this page.|
+      
+          Copyright 2011 Peter Martischka, Primary Technology.
+      
+          Licensed under the Apache License, Version 2.0 (the "License");
+          you may not use this file except in compliance with the License.
+          You may obtain a copy of the License at
+      
+             http://www.apache.org/licenses/LICENSE-2.0
+      
+          Unless required by applicable law or agreed to in writing, software
+          distributed under the License is distributed on an "AS IS" BASIS,
+          WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+          See the License for the specific language governing permissions and
+          limitations under the License.
+      
+          |@licend  The above is the entire license notice
+          for the JavaScript code in this page.|
+          */
+        </script>
 
-  </div> <!-- End of #editorcontainerbox -->
+        <meta charset="utf-8">
+        <meta name="robots" content="noindex, nofollow">
+        <meta name="referrer" content="no-referrer">
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
+        <link rel="shortcut icon" href="../favicon.ico">
 
-  <% e.end_block(); %>
+        <% e.begin_block("styles"); %>
+          <link href="../static/css/pad.css?v=<%=settings.randomVersionString%>" rel="stylesheet">
+
+          <% e.begin_block("customStyles"); %>
+            <link href="../static/skins/<%=encodeURI(settings.skinName)%>/pad.css?v=<%=settings.randomVersionString%>"
+              rel="stylesheet">
+            <% e.end_block(); %>
+
+              <style title="dynamicsyntax"></style>
+              <% e.end_block(); %>
+
+                <link rel="localizations" type="application/l10n+json" href="../locales.json" />
+  </head>
+
+  <body>
+    <% e.begin_block("body"); %>
+
+      <!-- Accessibility: Skip to content link for keyboard/screenreader users (#7255) -->
+      <style>
+        .skip-to-content {
+          position: absolute;
+          left: -9999px;
+          top: auto;
+          width: 1px;
+          height: 1px;
+          overflow: hidden;
+          z-index: 10000;
+        }
+
+        .skip-to-content:focus {
+          position: static;
+          width: auto;
+          height: auto;
+          overflow: visible;
+          padding: 8px 16px;
+          background: #0078d4;
+          color: #fff;
+          text-decoration: none;
+          font-weight: bold;
+        }
+      </style>
+      <a href="#editorcontainer" class="skip-to-content">Skip to content</a>
+
+      <!----------------------------->
+      <!--------- TOOLBAR ----------->
+      <!----------------------------->
+      <div id="editbar" class="toolbar">
+        <div id="toolbar-overlay"></div>
+
+        <ul class="menu_left" role="toolbar">
+          <% e.begin_block("editbarMenuLeft"); %>
+            <%- toolbar.menu(settings.toolbar.left, isReadOnly, 'left' , 'pad' ) %>
+              <% e.end_block(); %>
+        </ul>
+        <ul class="menu_right" role="toolbar">
+          <% e.begin_block("editbarMenuRight"); %>
+            <%- toolbar.menu(settings.toolbar.right, isReadOnly, 'right' , 'pad' ) %>
+              <% e.end_block(); %>
+        </ul>
+        <span class="show-more-icon-btn"></span> <!-- use on small screen to display hidden toolbar buttons -->
+      </div>
+
+      <% e.begin_block("afterEditbar"); %>
+        <% e.end_block(); %>
+
+          <div id="editorcontainerbox" class="flex-layout">
+
+            <% e.begin_block("editorContainerBox"); %>
+
+              <!----------------------------->
+              <!--- PAD EDITOR (in iframe) -->
+              <!----------------------------->
+
+              <div id="editorcontainer" class="editorcontainer"></div>
+
+              <div id="editorloadingbox">
+                <% e.begin_block("permissionDenied"); %>
+                  <div id="permissionDenied">
+                    <p data-l10n-id="pad.permissionDenied" class="editorloadingbox-message">
+                      You do not have permission to access this pad
+                    </p>
+                  </div>
+                  <% e.end_block(); %>
+                    <% e.begin_block("loading"); %>
+                      <p data-l10n-id="pad.loading" id="loading" class="editorloadingbox-message">
+                        <img src='../static/img/brand.svg' class='etherpadBrand'><br />
+                        Loading...
+                      </p>
+                      <% e.end_block(); %>
+                        <noscript>
+                          <p class="editorloadingbox-message">
+                            <strong>
+                              Sorry, you have to enable Javascript in order to use this.
+                            </strong>
+                          </p>
+                        </noscript>
+              </div>
 
 
-  <!----------------------------->
-  <!-------- JAVASCRIPT --------->
-  <!----------------------------->
+              <!------------------------------------------------------------->
+              <!-- SETTINGS POPUP (change font, language, chat parameters) -->
+              <!------------------------------------------------------------->
 
-  <% e.begin_block("scripts"); %>
+              <div id="settings" class="popup">
+                <div class="popup-content">
+                  <h1 data-l10n-id="pad.settings.padSettings"></h1>
+                  <% e.begin_block("mySettings"); %>
+                    <h2 data-l10n-id="pad.settings.myView"></h2>
+                    <p class="hide-for-mobile">
+                      <input type="checkbox" id="options-stickychat">
+                      <label for="options-stickychat" data-l10n-id="pad.settings.stickychat"></label>
+                    </p>
+                    <p class="hide-for-mobile">
+                      <input type="checkbox" id="options-chatandusers" onClick="chat.chatAndUsers();">
+                      <label for="options-chatandusers" data-l10n-id="pad.settings.chatandusers"></label>
+                    </p>
+                    <p>
+                      <input type="checkbox" id="options-colorscheck">
+                      <label for="options-colorscheck" data-l10n-id="pad.settings.colorcheck"></label>
+                    </p>
+                    <p>
+                      <input type="checkbox" id="options-linenoscheck" checked>
+                      <label for="options-linenoscheck" data-l10n-id="pad.settings.linenocheck"></label>
+                    </p>
+                    <p>
+                      <input type="checkbox" id="options-rtlcheck">
+                      <label for="options-rtlcheck" data-l10n-id="pad.settings.rtlcheck"></label>
+                    </p>
+                    <% e.end_block(); %>
 
-  <script src="<%=entrypoint%>"></script>
+                      <div class="dropdowns-container">
+                        <% e.begin_block("mySettings.dropdowns"); %>
+                          <p class="dropdown-line">
+                            <label for="viewfontmenu" data-l10n-id="pad.settings.fontType">Font type:</label>
+                            <select id="viewfontmenu">
+                              <option value="" data-l10n-id="pad.settings.fontType.normal">Normal</option>
+                              <%= fonts=["Quicksand", "Roboto" , "Alegreya" , "PlayfairDisplay" , "Montserrat"
+                                , "OpenDyslexic" , "RobotoMono" ] %>
+                                <% for(var i=0; i < fonts.length; i++) { %>
+                                  <option value="<%=fonts[i]%>">
+                                    <%=fonts[i]%>
+                                  </option>
+                                  <% } %>
+                            </select>
+                          </p>
 
-  <% e.begin_block("customScripts"); %>
-  <script type="text/javascript" src="../static/skins/<%=encodeURI(settings.skinName)%>/pad.js?v=<%=settings.randomVersionString%>"></script>
-  <% e.end_block(); %>
-  <div style="display:none"><a href="/javascript" data-jslicense="1">JavaScript license information</a></div>
-  <% e.end_block(); %>
-</body>
-</html>
+                          <p class="dropdown-line">
+                            <label for="languagemenu" data-l10n-id="pad.settings.language">Language:</label>
+                            <select id="languagemenu">
+                              <% for (lang in langs) { %>
+                                <option value="<%=lang%>">
+                                  <%=langs[lang].nativeName%>
+                                </option>
+                                <% } %>
+                            </select>
+                          </p>
+                          <% e.end_block(); %>
+                      </div>
+                      <button data-l10n-id="pad.settings.deletePad" id="delete-pad">Delete pad</button>
+                      <div id="theme-switcher" style="display: none;">
+                        <svg width="2rem" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                          stroke-width="1.5" stroke="currentColor" class="size-6">
+                          <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z" />
+                        </svg>
+                        <div>
+                          <span aria-label="theme-switcher-knob"></span>
+                        </div>
+                        <svg width="2rem" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                          stroke-width="1.5" stroke="currentColor" class="size-6">
+                          <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z" />
+                        </svg>
+                      </div>
+
+
+                      <h2 data-l10n-id="pad.settings.about">About</h2>
+                      <span data-l10n-id="pad.settings.poweredBy">Powered by</span>
+                      <a href="https://etherpad.org" target="_blank" referrerpolicy="no-referrer"
+                        rel="noopener">Etherpad</a>
+                      <% if (settings.exposeVersion) { %>(commit <%= settings.gitVersion %>)<% } %>
+                </div>
+              </div>
+
+
+              <!------------------------->
+              <!-- IMPORT EXPORT POPUP -->
+              <!------------------------->
+
+              <div id="import_export" class="popup">
+                <div class="popup-content">
+                  <h1 data-l10n-id="pad.importExport.import_export"></h1>
+                  <div class="acl-write">
+                    <% e.begin_block("importColumn"); %>
+                      <h2 data-l10n-id="pad.importExport.import"></h2>
+                      <div class="importmessage" id="importmessageabiword"
+                        data-l10n-id="pad.importExport.abiword.innerHTML"></div><br>
+                      <form id="importform" method="post" action="" target="importiframe" enctype="multipart/form-data">
+                        <div class="importformdiv" id="importformfilediv">
+                          <input type="file" name="file" size="10" id="importfileinput">
+                          <div class="importmessage" id="importmessagefail"></div>
+                        </div>
+                        <div id="import"></div>
+                        <div class="importmessage" id="importmessagesuccess"
+                          data-l10n-id="pad.importExport.importSuccessful"></div>
+                        <div class="importformdiv" id="importformsubmitdiv">
+                          <span class="nowrap">
+                            <input type="submit" class="btn btn-primary" name="submit" value="Import Now"
+                              disabled="disabled" id="importsubmitinput">
+                            <div alt="" id="importstatusball" class="loadingAnimation" align="top"></div>
+                          </span>
+                        </div>
+                      </form>
+                      <% e.end_block(); %>
+                  </div>
+                  <div id="exportColumn">
+                    <h2 data-l10n-id="pad.importExport.export"></h2>
+                    <% e.begin_block("exportColumn"); %>
+                      <a id="exportetherpada" target="_blank" class="exportlink">
+                        <span class="exporttype buttonicon buttonicon-file-powerpoint" id="exportetherpad"
+                          data-l10n-id="pad.importExport.exportetherpad"></span>
+                      </a>
+                      <a id="exporthtmla" target="_blank" class="exportlink">
+                        <span class="exporttype buttonicon buttonicon-file-code" id="exporthtml"
+                          data-l10n-id="pad.importExport.exporthtml"></span>
+                      </a>
+                      <a id="exportplaina" target="_blank" class="exportlink">
+                        <span class="exporttype buttonicon buttonicon-file" id="exportplain"
+                          data-l10n-id="pad.importExport.exportplain"></span>
+                      </a>
+                      <a id="exportworda" target="_blank" class="exportlink">
+                        <span class="exporttype buttonicon buttonicon-file-word" id="exportword"
+                          data-l10n-id="pad.importExport.exportword"></span>
+                      </a>
+                      <a id="exportpdfa" target="_blank" class="exportlink">
+                        <span class="exporttype buttonicon buttonicon-file-pdf" id="exportpdf"
+                          data-l10n-id="pad.importExport.exportpdf"></span>
+                      </a>
+                      <a id="exportopena" target="_blank" class="exportlink">
+                        <span class="exporttype buttonicon buttonicon-file-alt" id="exportopen"
+                          data-l10n-id="pad.importExport.exportopen"></span>
+                      </a>
+                      <% e.end_block(); %>
+                  </div>
+                </div>
+              </div>
+
+
+              <!---------------------------------------------------->
+              <!-- CONNECTIVITY POPUP (when you get disconnected) -->
+              <!---------------------------------------------------->
+
+              <div id="connectivity" class="popup">
+                <div class="popup-content">
+                  <% e.begin_block("modals"); %>
+                    <div class="connected visible">
+                      <h2 data-l10n-id="pad.modals.connected"></h2>
+                    </div>
+                    <div class="reconnecting">
+                      <h1 data-l10n-id="pad.modals.reconnecting"></h1>
+                      <i class='buttonicon buttonicon-spin5 icon-spin'>
+                        <img src='../static/img/brand.svg' class='etherpadBrand'><br />
+                      </i>
+                    </div>
+                    <div class="userdup">
+                      <h1 data-l10n-id="pad.modals.userdup"></h1>
+                      <h2 data-l10n-id="pad.modals.userdup.explanation"></h2>
+                      <p id="defaulttext" data-l10n-id="pad.modals.userdup.advice"></p>
+                      <button id="forcereconnect" class="btn btn-primary"
+                        data-l10n-id="pad.modals.forcereconnect"></button>
+                    </div>
+                    <div class="unauth">
+                      <h1 data-l10n-id="pad.modals.unauth"></h1>
+                      <p id="defaulttext" data-l10n-id="pad.modals.unauth.explanation"></p>
+                      <button id="forcereconnect" class="btn btn-primary"
+                        data-l10n-id="pad.modals.forcereconnect"></button>
+                    </div>
+                    <div class="looping">
+                      <h1 data-l10n-id="pad.modals.disconnected"></h1>
+                      <h2 data-l10n-id="pad.modals.looping.explanation"></h2>
+                      <p data-l10n-id="pad.modals.looping.cause"></p>
+                    </div>
+                    <div class="initsocketfail">
+                      <h1 data-l10n-id="pad.modals.initsocketfail"></h1>
+                      <h2 data-l10n-id="pad.modals.initsocketfail.explanation"></h2>
+                      <p data-l10n-id="pad.modals.initsocketfail.cause"></p>
+                    </div>
+                    <div class="slowcommit with_reconnect_timer">
+                      <h1 data-l10n-id="pad.modals.disconnected"></h1>
+                      <h2 data-l10n-id="pad.modals.slowcommit.explanation"></h2>
+                      <p id="defaulttext" data-l10n-id="pad.modals.slowcommit.cause"></p>
+                      <button id="forcereconnect" class="btn btn-primary"
+                        data-l10n-id="pad.modals.forcereconnect"></button>
+                    </div>
+                    <div class="badChangeset with_reconnect_timer">
+                      <h1 data-l10n-id="pad.modals.disconnected"></h1>
+                      <h2 data-l10n-id="pad.modals.badChangeset.explanation"></h2>
+                      <p id="defaulttext" data-l10n-id="pad.modals.badChangeset.cause"></p>
+                      <button id="forcereconnect" class="btn btn-primary"
+                        data-l10n-id="pad.modals.forcereconnect"></button>
+                    </div>
+                    <div class="corruptPad">
+                      <h1 data-l10n-id="pad.modals.disconnected"></h1>
+                      <h2 data-l10n-id="pad.modals.corruptPad.explanation"></h2>
+                      <p data-l10n-id="pad.modals.corruptPad.cause"></p>
+                    </div>
+                    <div class="deleted">
+                      <h1 data-l10n-id="pad.modals.deleted"></h1>
+                      <p data-l10n-id="pad.modals.deleted.explanation"></p>
+                    </div>
+                    <div class="rateLimited">
+                      <h1 data-l10n-id="pad.modals.rateLimited"></h1>
+                      <p data-l10n-id="pad.modals.rateLimited.explanation"></p>
+                    </div>
+                    <div class="rejected">
+                      <h1 data-l10n-id="pad.modals.disconnected"></h1>
+                      <h2 data-l10n-id="pad.modals.rejected.explanation"></h2>
+                      <p data-l10n-id="pad.modals.rejected.cause"></p>
+                    </div>
+                    <div class="disconnected with_reconnect_timer">
+                      <% e.begin_block("disconnected"); %>
+                        <h1 data-l10n-id="pad.modals.disconnected"></h1>
+                        <h2 data-l10n-id="pad.modals.disconnected.explanation"></h2>
+                        <p id="defaulttext" data-l10n-id="pad.modals.disconnected.cause"></p>
+                        <button id="forcereconnect" class="btn btn-primary"
+                          data-l10n-id="pad.modals.forcereconnect"></button>
+                        <% e.end_block(); %>
+                    </div>
+                    <form id="reconnectform" method="post" action="/ep/pad/reconnect" accept-charset="UTF-8"
+                      style="display: none;">
+                      <input type="hidden" class="padId" name="padId">
+                      <input type="hidden" class="diagnosticInfo" name="diagnosticInfo">
+                      <input type="hidden" class="missedChanges" name="missedChanges">
+                    </form>
+                    <% e.end_block(); %>
+                </div>
+              </div>
+
+
+              <!-------------------------------->
+              <!-- EMBED POPUP (Share, embed) -->
+              <!-------------------------------->
+
+              <div id="embed" class="popup">
+                <div class="popup-content">
+                  <% e.begin_block("embedPopup"); %>
+                    <h1 data-l10n-id="pad.share"></h1>
+                    <div id="embedreadonly" class="acl-write">
+                      <input type="checkbox" id="readonlyinput">
+                      <label for="readonlyinput" data-l10n-id="pad.share.readonly"></label>
+                    </div>
+                    <div id="linkcode">
+                      <h2 data-l10n-id="pad.share.link"></h2>
+                      <input id="linkinput" type="text" value="" onclick="this.select()">
+                    </div>
+                    <div id="embedcode">
+                      <h2 data-l10n-id="pad.share.emebdcode"></h2>
+                      <input id="embedinput" type="text" value="" onclick="this.select()">
+                    </div>
+                    <% e.end_block(); %>
+                </div>
+              </div>
+
+              <div class="sticky-container">
+
+                <!---------------------------------------------------------------------->
+                <!-- USERS POPUP (set username, color, see other users names & color) -->
+                <!---------------------------------------------------------------------->
+
+                <div id="users" class="popup">
+                  <div class="popup-content">
+                    <% e.begin_block("userlist"); %>
+                      <div id="connectionstatus"></div>
+                      <div id="myuser">
+                        <div id="mycolorpicker" class="popup">
+                          <div class="popup-content">
+                            <div id="colorpicker"></div>
+                            <div class="btn-container">
+                              <button id="mycolorpickersave" data-l10n-id="pad.colorpicker.save"
+                                class="btn btn-primary"></button>
+                              <button id="mycolorpickercancel" data-l10n-id="pad.colorpicker.cancel"
+                                class="btn btn-default"></button>
+                              <span id="mycolorpickerpreview" class="myswatchboxhoverable"></span>
+                            </div>
+                          </div>
+                        </div>
+                        <div id="myswatchbox">
+                          <div id="myswatch"></div>
+                        </div>
+                        <div id="myusernameform">
+                          <input type="text" id="myusernameedit" disabled="disabled"
+                            data-l10n-id="pad.userlist.entername">
+                        </div>
+                      </div>
+                      <div id="otherusers" aria-role="document">
+                        <table id="otheruserstable" cellspacing="0" cellpadding="0" border="0">
+                          <tr>
+                            <td></td>
+                          </tr>
+                        </table>
+                      </div>
+                      <div id="userlistbuttonarea"></div>
+                      <% e.end_block(); %>
+                  </div>
+                </div>
+
+
+                <!----------------------------->
+                <!----------- CHAT ------------>
+                <!----------------------------->
+
+                <div id="chaticon" class="visible" onclick="chat.show();return false;" title="Chat (Alt C)">
+                  <span id="chatlabel" data-l10n-id="pad.chat"></span>
+                  <span class="buttonicon buttonicon-chat"></span>
+                  <span id="chatcounter">0</span>
+                </div>
+
+                <div id="chatbox">
+                  <div class="chat-content">
+                    <div id="titlebar">
+                      <h1 id="titlelabel" data-l10n-id="pad.chat"></h1>
+                      <a id="titlecross" class="hide-reduce-btn" onClick="chat.hide();return false;">-&nbsp;</a>
+                      <a id="titlesticky" class="stick-to-screen-btn" onClick="chat.stickToScreen(true);return false;"
+                        data-l10n-id="pad.chat.stick.title">█&nbsp;&nbsp;</a>
+                    </div>
+                    <div id="chattext" class="thin-scrollbar" aria-live="polite" aria-relevant="additions removals text"
+                      role="log" aria-atomic="false">
+                      <div alt="loading.." id="chatloadmessagesball" class="chatloadmessages loadingAnimation"
+                        align="top"></div>
+                      <button id="chatloadmessagesbutton" class="chatloadmessages"
+                        data-l10n-id="pad.chat.loadmessages"></button>
+                    </div>
+                    <div id="chatinputbox">
+                      <form>
+                        <textarea id="chatinput" maxlength="999"
+                          data-l10n-id="pad.chat.writeMessage.placeholder"></textarea>
+                      </form>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!------------------------------------------------------------------>
+              <!-- SKIN VARIANTS BUILDER (Customize rendering, only for admins) -->
+              <!------------------------------------------------------------------>
+              <% if (settings.skinName=='colibris' ) { %>
+                <div id="skin-variants" class="popup">
+                  <div class="popup-content">
+                    <h1>Skin Builder</h1>
+
+                    <div class="dropdowns-container">
+                      <% containers=[ "toolbar" , "background" , "editor" ]; %>
+                        <% for(var i=0; i < containers.length; i++) { %>
+                          <p class="dropdown-line">
+                            <label class="skin-variant-container">
+                              <%=containers[i]%>
+                            </label>
+                            <select class="skin-variant skin-variant-color" data-container="<%=containers[i]%>">
+                              <option value="super-light">Super Light</option>
+                              <option value="light">Light</option>
+                              <option value="dark">Dark</option>
+                              <option value="super-dark">Super Dark</option>
+                            </select>
+                          </p>
+                          <% } %>
+                    </div>
+
+                    <p>
+                      <input type="checkbox" id="skin-variant-full-width" class="skin-variant" />
+                      <label for="skin-variant-full-width">Full Width Editor</label>
+                    </p>
+
+                    <p>
+                      <label>Result to copy in settings.json</label>
+                      <input id="skin-variants-result" type="text" readonly class="disabled" />
+                    </p>
+                  </div>
+                </div>
+                <% } %>
+
+                  <% e.end_block(); %>
+
+          </div> <!-- End of #editorcontainerbox -->
+
+          <% e.end_block(); %>
+
+
+            <!----------------------------->
+            <!-------- JAVASCRIPT --------->
+            <!----------------------------->
+
+            <% e.begin_block("scripts"); %>
+
+              <script src="<%=entrypoint%>"></script>
+
+              <% e.begin_block("customScripts"); %>
+                <script type="text/javascript"
+                  src="../static/skins/<%=encodeURI(settings.skinName)%>/pad.js?v=<%=settings.randomVersionString%>"></script>
+                <% e.end_block(); %>
+                  <div style="display:none"><a href="/javascript" data-jslicense="1">JavaScript license information</a>
+                  </div>
+                  <% e.end_block(); %>
+  </body>
+
+  </html>
