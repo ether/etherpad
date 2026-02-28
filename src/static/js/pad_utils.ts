@@ -6,7 +6,7 @@
  * TL;DR COMMENTS ON THIS FILE ARE HIGHLY APPRECIATED
  */
 
-import {binarySearch} from "./ace2_common";
+import { binarySearch } from "./ace2_common";
 
 /**
  * Copyright 2009 Google Inc.
@@ -25,7 +25,7 @@ import {binarySearch} from "./ace2_common";
  */
 
 const Security = require('security');
-import jsCookie, {CookiesStatic} from 'js-cookie'
+import jsCookie, { CookiesStatic } from 'js-cookie'
 
 /**
  * Generates a random String with the given length. Is needed to generate the Author, Group,
@@ -147,7 +147,7 @@ class PadUtils {
     if (typeof err.stack === 'string') {
       if (this.warnDeprecatedFlags._rl == null) {
         this.warnDeprecatedFlags._rl =
-          {prevs: new Map(), now: () => Date.now(), period: 10 * 60 * 1000};
+          { prevs: new Map(), now: () => Date.now(), period: 10 * 60 * 1000 };
       }
       const rl = this.warnDeprecatedFlags._rl;
       const now = rl.now();
@@ -196,18 +196,10 @@ class PadUtils {
   }
   // returns null if no URLs, or [[startIndex1, url1], [startIndex2, url2], ...]
   findURLs = (text: string) => {
-    // Copy padutils.urlRegex so that the use of .exec() below (which mutates the RegExp object)
-    // does not break other concurrent uses of padutils.urlRegex.
-    const urlRegex = new RegExp(this.urlRegex, 'g');
-    urlRegex.lastIndex = 0;
     let urls: [number, string][] | null = null;
-    let execResult;
-    // TODO: Switch to String.prototype.matchAll() after support for Node.js < 12.0.0 is dropped.
-    while ((execResult = urlRegex.exec(text))) {
+    for (const match of text.matchAll(this.urlRegex)) {
       urls = (urls || []);
-      const startIndex = execResult.index;
-      const url = execResult[0];
-      urls.push([startIndex, url]);
+      urls.push([match.index!, match[0]]);
     }
     return urls;
   }
@@ -217,12 +209,12 @@ class PadUtils {
     const urls = this.findURLs(text);
 
     const advanceTo = (i: number) => {
-        if (i > idx) {
-          pieces.push(Security.escapeHTML(text.substring(idx, i)));
-          idx = i;
-        }
+      if (i > idx) {
+        pieces.push(Security.escapeHTML(text.substring(idx, i)));
+        idx = i;
       }
-    ;
+    }
+      ;
     if (urls) {
       for (let j = 0; j < urls.length; j++) {
         const startIndex = urls[j][0];
@@ -273,10 +265,10 @@ class PadUtils {
   timediff = (d: number) => {
     const pad = require('./pad').pad; // Sidestep circular dependency
     const format = (n: number, word: string) => {
-        n = Math.round(n);
-        return (`${n} ${word}${n !== 1 ? 's' : ''} ago`);
-      }
-    ;
+      n = Math.round(n);
+      return (`${n} ${word}${n !== 1 ? 's' : ''} ago`);
+    }
+      ;
     d = Math.max(0, (+(new Date()) - (+d) - pad.clientTimeOffset) / 1000);
     if (d < 60) {
       return format(d, 'second');
@@ -317,7 +309,7 @@ class PadUtils {
           }, stepTime * stepsAtOnce);
         }
       };
-      return {scheduleAnimation};
+      return { scheduleAnimation };
     }
 
   makeFieldLabeledWhenEmpty
@@ -326,10 +318,10 @@ class PadUtils {
       field = $(field);
 
       const clear = () => {
-          field.addClass('editempty');
-          field.val(labelText);
-        }
-      ;
+        field.addClass('editempty');
+        field.val(labelText);
+      }
+        ;
       field.focus(() => {
         if (field.hasClass('editempty')) {
           field.val('');
@@ -404,11 +396,11 @@ class PadUtils {
         if (e instanceof ErrorEvent) {
           type = 'Uncaught exception';
           err = e.error || {};
-          ({message: msg, filename: url, lineno: linenumber} = e);
+          ({ message: msg, filename: url, lineno: linenumber } = e);
         } else if (e instanceof PromiseRejectionEvent) {
           type = 'Unhandled Promise rejection';
           err = e.reason || {};
-          ({message: msg = 'unknown', fileName: url = 'unknown', lineNumber: linenumber = -1} = err);
+          ({ message: msg = 'unknown', fileName: url = 'unknown', lineNumber: linenumber = -1 } = err);
         } else {
           throw new Error(`unknown event: ${e.toString()}`);
         }

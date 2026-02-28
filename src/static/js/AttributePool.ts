@@ -32,7 +32,7 @@
 /**
  * Maps an attribute's identifier to the attribute.
  *
- * @typedef {Object.<number, Attribute>} NumToAttrib
+ * @typedef {Attribute[]} NumToAttrib
  */
 
 /**
@@ -40,11 +40,11 @@
  * via `JSON.stringify` and transmission to another user.
  *
  * @typedef {Object} Jsonable
- * @property {NumToAttrib} numToAttrib - The pool's attributes and their identifiers.
+ * @property {Attribute[]} numToAttrib - The pool's attributes and their identifiers.
  * @property {number} nextNum - The attribute ID to assign to the next new attribute.
  */
 
-import {Attribute} from "./types/Attribute";
+import { Attribute } from "./types/Attribute";
 
 /**
  * Represents an attribute pool, which is a collection of attributes (pairs of key and value
@@ -57,48 +57,32 @@ import {Attribute} from "./types/Attribute";
  * in the pad.
  */
 class AttributePool {
-  numToAttrib: {
-    [key: number]: [string, string]
-  }
-  private attribToNum: {
-    [key: number]: [string, string]
-  }
-  private nextNum: number
+  private _numToAttrib: [string, string][]
+  private _attribToNum: Map<string, number>
 
   constructor() {
     /**
      * Maps an attribute identifier to the attribute's `[key, value]` string pair.
-     *
-     * TODO: Rename to `_numToAttrib` once all users have been migrated to call `getAttrib` instead
-     * of accessing this directly.
      * @private
-     * TODO: Convert to an array.
-     * @type {NumToAttrib}
+     * @type {[string, string][]}
      */
-    this.numToAttrib = {}; // e.g. {0: ['foo','bar']}
+    this._numToAttrib = []; // e.g. [['foo','bar']]
 
     /**
      * Maps the string representation of an attribute (`String([key, value])`) to its non-negative
      * identifier.
-     *
-     * TODO: Rename to `_attribToNum` once all users have been migrated to use `putAttrib` instead
-     * of accessing this directly.
      * @private
-     * TODO: Convert to a `Map` object.
-     * @type {Object.<string, number>}
+     * @type {Map<string, number>}
      */
-    this.attribToNum = {}; // e.g. {'foo,bar': 0}
+    this._attribToNum = new Map(); // e.g. new Map([['foo,bar', 0]])
+  }
 
-    /**
-     * The attribute ID to assign to the next new attribute.
-     *
-     * TODO: This property will not be necessary once `numToAttrib` is converted to an array (just
-     * push onto the array).
-     *
-     * @private
-     * @type {number}
-     */
-    this.nextNum = 0;
+  get numToAttrib(): any {
+    return this._numToAttrib;
+  }
+
+  get nextNum(): number {
+    return this._numToAttrib.length;
   }
 
   /**
@@ -106,12 +90,8 @@ class AttributePool {
    */
   clone() {
     const c = new AttributePool();
-    for (const [n, a] of Object.entries(this.numToAttrib)){
-      // @ts-ignore
-      c.numToAttrib[n] = [a[0], a[1]];
-    }
-    Object.assign(c.attribToNum, this.attribToNum);
-    c.nextNum = this.nextNum;
+    c._numToAttrib = this._numToAttrib.map(a => [a[0], a[1]]);
+    c._attribToNum = new Map(this._attribToNum);
     return c;
   }
 
@@ -126,17 +106,16 @@ class AttributePool {
    */
   putAttrib(attrib: Attribute, dontAddIfAbsent = false) {
     const str = String(attrib);
-    if (str in this.attribToNum) {
-      // @ts-ignore
-      return this.attribToNum[str];
+    const existing = this._attribToNum.get(str);
+    if (existing !== undefined) {
+      return existing;
     }
     if (dontAddIfAbsent) {
       return -1;
     }
-    const num = this.nextNum++;
-    // @ts-ignore
-    this.attribToNum[str] = num;
-    this.numToAttrib[num] = [String(attrib[0] || ''), String(attrib[1] || '')];
+    const num = this._numToAttrib.length;
+    this._attribToNum.set(str, num);
+    this._numToAttrib.push([String(attrib[0] || ''), String(attrib[1] || '')]);
     return num;
   }
 
@@ -145,10 +124,10 @@ class AttributePool {
    * @returns {Attribute} The attribute with the given identifier, or nullish if there is no such
    *     attribute.
    */
-  getAttrib(num: number): Attribute {
-    const pair = this.numToAttrib[num];
+  getAttrib(num: number): Attribute | undefined {
+    const pair = this._numToAttrib[num];
     if (!pair) {
-      return pair;
+      return pair as any;
     }
     return [pair[0], pair[1]]; // return a mutable copy
   }
@@ -159,7 +138,7 @@ class AttributePool {
    *     string.
    */
   getAttribKey(num: number): string {
-    const pair = this.numToAttrib[num];
+    const pair = this._numToAttrib[num];
     if (!pair) return '';
     return pair[0];
   }
@@ -170,7 +149,7 @@ class AttributePool {
    *     string.
    */
   getAttribValue(num: number) {
-    const pair = this.numToAttrib[num];
+    const pair = this._numToAttrib[num];
     if (!pair) return '';
     return pair[1];
   }
@@ -178,14 +157,15 @@ class AttributePool {
   /**
    * Executes a callback for each attribute in the pool.
    *
-   * @param {Function} func - Callback to call with two arguments: key and value. Its return value
-   *     is ignored.
+   * @param {Function} func - Callback to call with three arguments: key, value, and ID. Its return
+   *     value is ignored.
    */
-  eachAttrib(func: (k: string, v: string)=>void) {
-    for (const n in this.numToAttrib) {
-      const pair = this.numToAttrib[n];
-      func(pair[0], pair[1]);
-    }
+  eachAttrib(func: (k: string, v: string, i: number) => void) {
+    this._numToAttrib.forEach((pair, i) => {
+      if (pair) {
+        func(pair[0], pair[1], i);
+      }
+    });
   }
 
   /**
@@ -197,7 +177,7 @@ class AttributePool {
    */
   toJsonable() {
     return {
-      numToAttrib: this.numToAttrib,
+      numToAttrib: this._numToAttrib,
       nextNum: this.nextNum,
     };
   }
@@ -211,13 +191,20 @@ class AttributePool {
    *     `new AttributePool().fromJsonable(pool.toJsonable())` to copy because the resulting shared
    *     state will lead to pool corruption.
    */
-  fromJsonable(obj: this) {
-    this.numToAttrib = obj.numToAttrib;
-    this.nextNum = obj.nextNum;
-    this.attribToNum = {};
-    for (const n of Object.keys(this.numToAttrib)) {
-      // @ts-ignore
-      this.attribToNum[String(this.numToAttrib[n])] = Number(n);
+  fromJsonable(obj: any) {
+    if (Array.isArray(obj.numToAttrib)) {
+      this._numToAttrib = obj.numToAttrib.map((a: any) => [a[0], a[1]]);
+    } else {
+      this._numToAttrib = [];
+      for (const [n, val] of Object.entries(obj.numToAttrib)) {
+        this._numToAttrib[Number(n)] = val as [string, string];
+      }
+    }
+    this._attribToNum = new Map();
+    for (let i = 0; i < this._numToAttrib.length; i++) {
+      if (this._numToAttrib[i]) {
+        this._attribToNum.set(String(this._numToAttrib[i]), i);
+      }
     }
     return this;
   }
@@ -228,18 +215,15 @@ class AttributePool {
   check() {
     if (!Number.isInteger(this.nextNum)) throw new Error('nextNum property is not an integer');
     if (this.nextNum < 0) throw new Error('nextNum property is negative');
-    for (const prop of ['numToAttrib', 'attribToNum']) {
-      // @ts-ignore
-      const obj = this[prop];
-      if (obj == null) throw new Error(`${prop} property is null`);
-      if (typeof obj !== 'object') throw new TypeError(`${prop} property is not an object`);
-      const keys = Object.keys(obj);
-      if (keys.length !== this.nextNum) {
-        throw new Error(`${prop} size mismatch (want ${this.nextNum}, got ${keys.length})`);
-      }
+    if (!Array.isArray(this._numToAttrib)) throw new TypeError('numToAttrib property is not an array');
+    if (!(this._attribToNum instanceof Map)) throw new TypeError('attribToNum property is not a Map');
+
+    if (this._numToAttrib.length !== this.nextNum) {
+      throw new Error(`size mismatch (want ${this.nextNum}, got ${this._numToAttrib.length})`);
     }
+
     for (let i = 0; i < this.nextNum; ++i) {
-      const attr = this.numToAttrib[`${i}`];
+      const attr = this._numToAttrib[i];
       if (!Array.isArray(attr)) throw new TypeError(`attrib ${i} is not an array`);
       if (attr.length !== 2) throw new Error(`attrib ${i} is not an array of length 2`);
       const [k, v] = attr;
@@ -248,8 +232,7 @@ class AttributePool {
       if (v == null) throw new TypeError(`attrib ${i} value is null`);
       if (typeof v !== 'string') throw new TypeError(`attrib ${i} value is not a string`);
       const attrStr = String(attr);
-      // @ts-ignore
-      if (this.attribToNum[attrStr] !== i) throw new Error(`attribToNum for ${attrStr} !== ${i}`);
+      if (this._attribToNum.get(attrStr) !== i) throw new Error(`attribToNum for ${attrStr} !== ${i}`);
     }
   }
 }

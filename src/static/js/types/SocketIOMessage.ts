@@ -1,9 +1,9 @@
-import {MapArrayType} from "../../../node/types/MapType";
-import {AText} from "./AText";
+import { MapArrayType } from "../../../node/types/MapType";
+import { AText } from "./AText";
 import AttributePool from "../AttributePool";
 import attributePool from "../AttributePool";
 import ChatMessage from "../ChatMessage";
-import {PadRevision} from "./PadRevision";
+import { PadRevision } from "./PadRevision";
 
 export type Part = {
   name: string,
@@ -15,7 +15,7 @@ export type Part = {
 }
 
 
-export type MappedPlugin = Part& {
+export type MappedPlugin = Part & {
   plugin: string
   full_name: string
 }
@@ -44,13 +44,13 @@ export type ServerVar = {
   time: number
 }
 
-export type AttributePoolWire = {numToAttrib: {[p: number]: [string, string]}, nextNum: number}
+export type AttributePoolWire = { numToAttrib: { [p: number]: [string, string] }, nextNum: number }
 
 
 export type UserInfo = {
   userId: string
   colorId: string,
-  name: string|null
+  name: string | null
 }
 
 export type ClientVarPayload = {
@@ -89,11 +89,11 @@ export type ClientVarPayload = {
   abiwordAvailable: string
   sofficeAvailable: string
   plugins: {
-    plugins:  MapArrayType<any>
-    parts:  MappedPlugin[]
+    plugins: MapArrayType<any>
+    parts: MappedPlugin[]
   }
   indentationOnNewLine: boolean
-  scrollWhenFocusLineIsOutOfViewport : {
+  scrollWhenFocusLineIsOutOfViewport: {
     percentage: {
       editionAboveViewport: number,
       editionBelowViewport: number
@@ -102,7 +102,6 @@ export type ClientVarPayload = {
     scrollWhenCaretIsInTheLastLineOfViewport: boolean
     percentageToScrollWhenUserPressesArrowUp: number
   }
-  initialChangesets: []
 }
 
 export type ClientVarData = {
@@ -111,7 +110,7 @@ export type ClientVarData = {
 }
 
 export type ClientNewChanges = {
-  type : 'NEW_CHANGES'
+  type: 'NEW_CHANGES'
   apool: AttributePool,
   author: string,
   changeset: string,
@@ -175,7 +174,7 @@ export type ClientUserChangesMessage = {
 
 
 
-export type ClientSendMessages =  ClientUserChangesMessage |ClientReadyMessage| ClientSendUserInfoUpdate|ChatMessageMessage| ClientMessageMessage | GetChatMessageMessage |ClientSuggestUserName | NewRevisionListMessage | RevisionLabel | PadOptionsMessage| ClientSaveRevisionMessage
+export type ClientSendMessages = ClientUserChangesMessage | ClientReadyMessage | ClientSendUserInfoUpdate | ChatMessageMessage | ClientMessageMessage | GetChatMessageMessage | ClientSuggestUserName | NewRevisionListMessage | RevisionLabel | PadOptionsMessage | ClientSaveRevisionMessage
 
 export type ClientReadyMessage = {
   type: 'CLIENT_READY',
@@ -227,7 +226,7 @@ export type NewRevisionListMessage = {
 }
 
 export type RevisionLabel = {
-  type:  'revisionLabel'
+  type: 'revisionLabel'
   revisionList: number[]
 }
 
@@ -238,23 +237,23 @@ export type PadOptionsMessage = {
 }
 
 export type PadOption = {
-  "noColors"?:         boolean,
-  "showControls"?:     boolean,
-  "showChat"?:         boolean,
-  "showLineNumbers"?:  boolean,
+  "noColors"?: boolean,
+  "showControls"?: boolean,
+  "showChat"?: boolean,
+  "showLineNumbers"?: boolean,
   "useMonospaceFont"?: boolean,
-  "userName"?:         null|string,
-  "userColor"?:        null|string,
-  "rtl"?:              boolean,
-  "alwaysShowChat"?:   boolean,
-  "chatAndUsers"?:     boolean,
-  "lang"?:             null|string,
-  view? : MapArrayType<boolean>
+  "userName"?: null | string,
+  "userColor"?: null | string,
+  "rtl"?: boolean,
+  "alwaysShowChat"?: boolean,
+  "chatAndUsers"?: boolean,
+  "lang"?: null | string,
+  view?: MapArrayType<boolean>
 }
 
 
 type SharedMessageType = {
-  payload:{
+  payload: {
     timestamp: number
   }
 }
@@ -294,11 +293,11 @@ export type CollabroomMessage = {
   data: ClientSendUserInfoUpdate | ClientUserChangesMessage | ChatMessageMessage | GetChatMessageMessage | ClientSaveRevisionMessage | ClientMessageMessage | PadDeleteMessage
 }
 
-export type ClientVarMessage =  | ClientVarData | ClientDisconnectedMessage | ClientReadyMessage| ChangesetRequestMessage | CollabroomMessage | CustomMessage
+export type ClientVarMessage = | ClientVarData | ClientDisconnectedMessage | ClientReadyMessage | ChangesetRequestMessage | CollabroomMessage | CustomMessage
 
 
 export type CustomMessage = {
-  type:  'CUSTOM'
+  type: 'CUSTOM'
   data: any
 }
 
@@ -316,8 +315,8 @@ export type SocketClientReadyMessage = {
   sessionID: string
   token: string
   userInfo: {
-    colorId: string|null
-    name: string|null
+    colorId: string | null
+    name: string | null
   },
   reconnect?: boolean
   client_rev?: number

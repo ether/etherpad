@@ -81,22 +81,19 @@ const getHTMLFromAtext = async (pad:PadType, atext: AText, authorColors?: string
   if (authorColors) {
     css += '<style>\n';
 
-    for (const a of Object.keys(apool.numToAttrib)) {
-      // @ts-ignore
-      const attr = apool.numToAttrib[a];
-
+    apool.eachAttrib((key, value, i) => {
       // skip non author attributes
-      if (attr[0] === 'author' && attr[1] !== '') {
+      if (key === 'author' && value !== '') {
         // add to props array
-        const propName = `author${stripDotFromAuthorID(attr[1])}`;
+        const propName = `author${stripDotFromAuthorID(value)}`;
         const newLength = props.push(propName);
-        anumMap[a] = newLength - 1;
+        anumMap[i] = newLength - 1;
 
-        css += `.${propName} {background-color: ${authorColors[attr[1]]}}\n`;
-      } else if (attr[0] === 'removed') {
+        css += `.${propName} {background-color: ${authorColors[value]}}\n`;
+      } else if (key === 'removed') {
         const propName = 'removed';
         const newLength = props.push(propName);
-        anumMap[a] = newLength - 1;
+        anumMap[i] = newLength - 1;
 
         css += '.removed {text-decoration: line-through; ' +
              "-ms-filter:'progid:DXImageTransform.Microsoft.Alpha(Opacity=80)'; " +
@@ -104,7 +101,7 @@ const getHTMLFromAtext = async (pad:PadType, atext: AText, authorColors?: string
              'opacity: 0.8; ' +
              '}\n';
       }
-    }
+    });
 
     css += '</style>';
   }

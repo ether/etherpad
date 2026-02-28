@@ -1,14 +1,14 @@
 'use strict';
-import {Database} from "ueberdb2";
-import {AChangeSet, APool, AText} from "../types/PadType";
-import {MapArrayType} from "../types/MapType";
+import { Database } from "ueberdb2";
+import { AChangeSet, APool, AText } from "../types/PadType";
+import { MapArrayType } from "../types/MapType";
 
 /**
  * The pad object, defined with joose
  */
 
 import AttributeMap from '../../static/js/AttributeMap';
-import {applyToAText, checkRep, copyAText, deserializeOps, makeAText, makeSplice, opsFromAText, pack, unpack} from '../../static/js/Changeset';
+import { applyToAText, checkRep, copyAText, deserializeOps, makeAText, makeSplice, opsFromAText, pack, unpack } from '../../static/js/Changeset';
 import ChatMessage from '../../static/js/ChatMessage';
 import AttributePool from '../../static/js/AttributePool';
 const Stream = require('../utils/Stream');
@@ -24,8 +24,8 @@ import readOnlyManager from './ReadOnlyManager';
 import randomString from '../utils/randomstring';
 const hooks = require('../../static/js/pluginfw/hooks');
 import pad_utils from "../../static/js/pad_utils";
-import {SmartOpAssembler} from "../../static/js/SmartOpAssembler";
-import {timesLimit} from "async";
+import { SmartOpAssembler } from "../../static/js/SmartOpAssembler";
+import { timesLimit } from "async";
 
 /**
  * Copied from the Etherpad source code. It converts Windows line breaks to Unix
@@ -33,20 +33,20 @@ import {timesLimit} from "async";
  * @param {String} txt The text to clean
  * @returns {String} The cleaned text
  */
-exports.cleanText = (txt:string): string => txt.replace(/\r\n/g, '\n')
-    .replace(/\r/g, '\n')
-    .replace(/\t/g, '        ')
-    .replace(/\xa0/g, ' ');
+exports.cleanText = (txt: string): string => txt.replace(/\r\n/g, '\n')
+  .replace(/\r/g, '\n')
+  .replace(/\t/g, '        ')
+  .replace(/\xa0/g, ' ');
 
 class Pad {
   private db: Database;
   private atext: AText;
   private pool: AttributePool;
   private head: number;
-    private chatHead: number;
-    private publicStatus: boolean;
-    private id: string;
-    private savedRevisions: any[];
+  private chatHead: number;
+  private publicStatus: boolean;
+  private id: string;
+  private savedRevisions: any[];
   /**
    * @param id
    * @param [database] - Database object to access this pad's records (and only this pad's records;
@@ -55,7 +55,7 @@ class Pad {
    *     can be used to shard pad storage across multiple database backends, to put each pad in its
    *     own database table, or to validate imported pad data before it is written to the database.
    */
-  constructor(id:string, database = db) {
+  constructor(id: string, database = db) {
     this.db = database;
     this.atext = makeAText('\n');
     this.pool = new AttributePool();
@@ -94,10 +94,10 @@ class Pad {
    * @param {String} authorId The id of the author
    * @return {Promise<number|string>}
    */
-  async appendRevision(aChangeset:string, authorId = '') {
+  async appendRevision(aChangeset: string, authorId = '') {
     const newAText = applyToAText(aChangeset, this.atext, this.pool);
     if (newAText.text === this.atext.text && newAText.attribs === this.atext.attribs &&
-        this.head !== -1) {
+      this.head !== -1) {
       return this.head;
     }
     copyAText(newAText, this.atext);
@@ -144,7 +144,7 @@ class Pad {
   }
 
   toJSON() {
-    const o:Pad = {...this, pool: this.pool.toJsonable()};
+    const o: Pad = { ...this, pool: this.pool.toJsonable() };
     // @ts-ignore
     delete o.db;
     // @ts-ignore
@@ -194,13 +194,13 @@ class Pad {
    * @return {[String]} The id of authors who contributed to this pad
    */
   getAllAuthors() {
-    const authorIds = [];
+    const authorIds: string[] = [];
 
-    for (const key in this.pool.numToAttrib) {
-      if (this.pool.numToAttrib[key][0] === 'author' && this.pool.numToAttrib[key][1] !== '') {
-        authorIds.push(this.pool.numToAttrib[key][1]);
+    this.pool.eachAttrib((k, v) => {
+      if (k === 'author' && v !== '') {
+        authorIds.push(v);
       }
-    }
+    });
 
     return authorIds;
   }
@@ -212,7 +212,7 @@ class Pad {
     const [keyAText, changesets] = await Promise.all([
       this._getKeyRevisionAText(keyRev),
       Promise.all(
-          Stream.range(keyRev + 1, targetRev + 1).map(this.getRevisionChangeset.bind(this))),
+        Stream.range(keyRev + 1, targetRev + 1).map(this.getRevisionChangeset.bind(this))),
     ]);
     const apool = this.apool();
     let atext = keyAText;
@@ -226,19 +226,19 @@ class Pad {
 
   async getAllAuthorColors() {
     const authorIds = this.getAllAuthors();
-    const returnTable:MapArrayType<string> = {};
+    const returnTable: MapArrayType<string> = {};
     const colorPalette = authorManager.getColorPalette();
 
     await Promise.all(
-        authorIds.map((authorId) => authorManager.getAuthorColorId(authorId).then((colorId:string) => {
-          // colorId might be a hex color or an number out of the palette
-          returnTable[authorId] = colorPalette[colorId] || colorId;
-        })));
+      authorIds.map((authorId) => authorManager.getAuthorColorId(authorId).then((colorId: string) => {
+        // colorId might be a hex color or an number out of the palette
+        returnTable[authorId] = colorPalette[colorId] || colorId;
+      })));
 
     return returnTable;
   }
 
-  getValidRevisionRange(startRev: any, endRev:any) {
+  getValidRevisionRange(startRev: any, endRev: any) {
     startRev = parseInt(startRev, 10);
     const head = this.getHeadRevisionNumber();
     endRev = endRev ? parseInt(endRev, 10) : head;
@@ -254,7 +254,7 @@ class Pad {
     }
 
     if (startRev != null && endRev != null) {
-      return {startRev, endRev};
+      return { startRev, endRev };
     }
     return null;
   }
@@ -281,7 +281,7 @@ class Pad {
    * @param {string} ins - New text to insert at `start` (after the `ndel` characters are deleted).
    * @param {string} [authorId] - Author ID of the user making the change (if applicable).
    */
-  async spliceText(start:number, ndel:number, ins: string, authorId: string = '') {
+  async spliceText(start: number, ndel: number, ins: string, authorId: string = '') {
     if (start < 0) throw new RangeError(`start index must be non-negative (is ${start})`);
     if (ndel < 0) throw new RangeError(`characters to delete must be non-negative (is ${ndel})`);
     const orig = this.text();
@@ -289,9 +289,9 @@ class Pad {
     if (start + ndel > orig.length) throw new RangeError('start/delete past the end of the text');
     ins = exports.cleanText(ins);
     const willEndWithNewline =
-        start + ndel < orig.length || // Keeping last char (which is guaranteed to be a newline).
-        ins.endsWith('\n') ||
-        (!ins && start > 0 && orig[start - 1] === '\n');
+      start + ndel < orig.length || // Keeping last char (which is guaranteed to be a newline).
+      ins.endsWith('\n') ||
+      (!ins && start > 0 && orig[start - 1] === '\n');
     if (!willEndWithNewline) ins += '\n';
     if (ndel === 0 && ins.length === 0) return;
     const changeset = makeSplice(orig, start, ndel, ins);
@@ -317,7 +317,7 @@ class Pad {
    * @param {string} [authorId] - The author ID of the user that initiated the change, if
    *     applicable.
    */
-  async appendText(newText:string, authorId = '') {
+  async appendText(newText: string, authorId = '') {
     await this.spliceText(this.text().length - 1, 0, newText, authorId);
   }
 
@@ -331,15 +331,15 @@ class Pad {
    * @param {?number} [time] - Message timestamp (milliseconds since epoch). Deprecated; use
    *     `msgOrText.time` instead.
    */
-  async appendChatMessage(msgOrText: string| ChatMessage, authorId = null, time = null) {
+  async appendChatMessage(msgOrText: string | ChatMessage, authorId = null, time = null) {
     const msg =
-          msgOrText instanceof ChatMessage ? msgOrText : new ChatMessage(msgOrText, authorId, time);
+      msgOrText instanceof ChatMessage ? msgOrText : new ChatMessage(msgOrText, authorId, time);
     this.chatHead++;
     await Promise.all([
       // Don't save the display name in the database because the user can change it at any time. The
       // `displayName` property will be populated with the current value when the message is read
       // from the database.
-      this.db.set(`pad:${this.id}:chat:${this.chatHead}`, {...msg, displayName: undefined}),
+      this.db.set(`pad:${this.id}:chat:${this.chatHead}`, { ...msg, displayName: undefined }),
       this.saveToDatabase(),
     ]);
   }
@@ -365,7 +365,7 @@ class Pad {
    */
   async getChatMessages(start: string, end: number) {
     const entries =
-        await Promise.all(Stream.range(start, end + 1).map(this.getChatMessage.bind(this)));
+      await Promise.all(Stream.range(start, end + 1).map(this.getChatMessage.bind(this)));
 
     // sort out broken chat entries
     // it looks like in happened in the past that the chat head was
@@ -379,7 +379,7 @@ class Pad {
     });
   }
 
-  async init(text:string, authorId = '') {
+  async init(text: string, authorId = '') {
     // try to load the pad
     const value = await this.db.get(`pad:${this.id}`);
 
@@ -389,7 +389,7 @@ class Pad {
       if ('pool' in value) this.pool = new AttributePool().fromJsonable(value.pool);
     } else {
       if (text == null) {
-        const context = {pad: this, authorId, type: 'text', content: settings.defaultPadText};
+        const context = { pad: this, authorId, type: 'text', content: settings.defaultPadText };
         await hooks.aCallAll('padDefaultContent', context);
         if (context.type !== 'text') throw new Error(`unsupported content type: ${context.type}`);
         text = exports.cleanText(context.content);
@@ -397,7 +397,7 @@ class Pad {
       const firstChangeset = makeSplice('\n', 0, 0, text);
       await this.appendRevision(firstChangeset, authorId);
     }
-    await hooks.aCallAll('padLoad', {pad: this});
+    await hooks.aCallAll('padLoad', { pad: this });
   }
 
   async copy(destinationID: string, force: boolean) {
@@ -443,18 +443,18 @@ class Pad {
       },
       get destinationID() {
         pad_utils.warnDeprecated(
-            'padCopy destinationID context property is deprecated; use dstPad.id instead');
+          'padCopy destinationID context property is deprecated; use dstPad.id instead');
         return this.dstPad.id;
       },
       srcPad: this,
       dstPad,
     });
 
-    return {padID: destinationID};
+    return { padID: destinationID };
   }
 
   async checkIfGroupExistAndReturnIt(destinationID: string) {
-    let destGroupID:false|string = false;
+    let destGroupID: false | string = false;
 
     if (destinationID.indexOf('$') >= 0) {
       destGroupID = destinationID.split('$')[0];
@@ -468,7 +468,7 @@ class Pad {
     return destGroupID;
   }
 
-  async removePadIfForceIsTrueAndAlreadyExist(destinationID: string, force: boolean|string) {
+  async removePadIfForceIsTrueAndAlreadyExist(destinationID: string, force: boolean | string) {
     // if the pad exists, we should abort, unless forced.
     const exists = await padManager.doesPadExist(destinationID);
 
@@ -494,10 +494,10 @@ class Pad {
   async copyAuthorInfoToDestinationPad(destinationID: string) {
     // add the new sourcePad to all authors who contributed to the old one
     await Promise.all(this.getAllAuthors().map(
-        (authorID) => authorManager.addPad(authorID, destinationID)));
+      (authorID) => authorManager.addPad(authorID, destinationID)));
   }
 
-  async copyPadWithoutHistory(destinationID: string, force: string|boolean, authorId = '') {
+  async copyPadWithoutHistory(destinationID: string, force: string | boolean, authorId = '') {
     // flush the source pad
     this.saveToDatabase();
 
@@ -544,14 +544,14 @@ class Pad {
       },
       get destinationID() {
         pad_utils.warnDeprecated(
-            'padCopy destinationID context property is deprecated; use dstPad.id instead');
+          'padCopy destinationID context property is deprecated; use dstPad.id instead');
         return this.dstPad.id;
       },
       srcPad: this,
       dstPad,
     });
 
-    return {padID: destinationID};
+    return { padID: destinationID };
   }
 
   async remove() {
@@ -629,7 +629,7 @@ class Pad {
     }
 
     // build the saved revision object
-    const savedRevision:MapArrayType<any> = {};
+    const savedRevision: MapArrayType<any> = {};
     savedRevision.revNum = revNum;
     savedRevision.savedById = savedById;
     savedRevision.label = label || `Revision ${revNum}`;
@@ -692,23 +692,23 @@ class Pad {
       if (k === 'author' && v) authorIds.add(v);
     });
     const revs = Stream.range(0, head + 1)
-        .map(async (r: number) => {
-          const isKeyRev = r === this.getKeyRevisionNumber(r);
-          try {
-            return await Promise.all([
-              r,
-              this.getRevisionChangeset(r),
-              this.getRevisionAuthor(r),
-              this.getRevisionDate(r),
-              isKeyRev,
-              isKeyRev ? this._getKeyRevisionAText(r) : null,
-            ]);
-          } catch (err:any) {
-            err.message = `(pad ${this.id} revision ${r}) ${err.message}`;
-            throw err;
-          }
-        })
-        .batch(100).buffer(99);
+      .map(async (r: number) => {
+        const isKeyRev = r === this.getKeyRevisionNumber(r);
+        try {
+          return await Promise.all([
+            r,
+            this.getRevisionChangeset(r),
+            this.getRevisionAuthor(r),
+            this.getRevisionDate(r),
+            isKeyRev,
+            isKeyRev ? this._getKeyRevisionAText(r) : null,
+          ]);
+        } catch (err: any) {
+          err.message = `(pad ${this.id} revision ${r}) ${err.message}`;
+          throw err;
+        }
+      })
+      .batch(100).buffer(99);
     let atext = makeAText('\n');
     for await (const [r, changeset, authorId, timestamp, isKeyRev, keyAText] of revs) {
       try {
@@ -736,7 +736,7 @@ class Pad {
         }
         atext = applyToAText(changeset, atext, pool);
         if (isKeyRev) assert.deepEqual(keyAText, atext);
-      } catch (err:any) {
+      } catch (err: any) {
         err.message = `(pad ${this.id} revision ${r}) ${err.message}`;
         throw err;
       }
@@ -749,20 +749,20 @@ class Pad {
     assert(Number.isInteger(this.chatHead));
     assert(this.chatHead >= -1);
     const chats = Stream.range(0, this.chatHead + 1)
-        .map(async (c: number) => {
-          try {
-            const msg = await this.getChatMessage(c);
-            assert(msg != null);
-            assert(msg instanceof ChatMessage);
-          } catch (err:any) {
-            err.message = `(pad ${this.id} chat message ${c}) ${err.message}`;
-            throw err;
-          }
-        })
-        .batch(100).buffer(99);
+      .map(async (c: number) => {
+        try {
+          const msg = await this.getChatMessage(c);
+          assert(msg != null);
+          assert(msg instanceof ChatMessage);
+        } catch (err: any) {
+          err.message = `(pad ${this.id} chat message ${c}) ${err.message}`;
+          throw err;
+        }
+      })
+      .batch(100).buffer(99);
     for (const p of chats) await p;
 
-    await hooks.aCallAll('padCheck', {pad: this});
+    await hooks.aCallAll('padCheck', { pad: this });
   }
 }
 exports.Pad = Pad;

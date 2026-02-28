@@ -24,21 +24,21 @@
 
 import AttributeMap from './AttributeMap'
 import AttributePool from "./AttributePool";
-import {attribsFromString} from './attributes';
+import { attribsFromString } from './attributes';
 import padutils from "./pad_utils";
-import Op, {OpCode} from './Op'
-import {numToString, parseNum} from './ChangesetUtils'
-import {StringAssembler} from "./StringAssembler";
-import {OpIter} from "./OpIter";
-import {Attribute} from "./types/Attribute";
-import {SmartOpAssembler} from "./SmartOpAssembler";
+import Op, { OpCode } from './Op'
+import { numToString, parseNum } from './ChangesetUtils'
+import { StringAssembler } from "./StringAssembler";
+import { OpIter } from "./OpIter";
+import { Attribute } from "./types/Attribute";
+import { SmartOpAssembler } from "./SmartOpAssembler";
 import TextLinesMutator from "./TextLinesMutator";
-import {ChangeSet} from "./types/ChangeSet";
-import {AText} from "./types/AText";
-import {ChangeSetBuilder} from "./types/ChangeSetBuilder";
-import {Builder} from "./Builder";
-import {StringIterator} from "./StringIterator";
-import {MergingOpAssembler} from "./MergingOpAssembler";
+import { ChangeSet } from "./types/ChangeSet";
+import { AText } from "./types/AText";
+import { ChangeSetBuilder } from "./types/ChangeSetBuilder";
+import { Builder } from "./Builder";
+import { StringIterator } from "./StringIterator";
+import { MergingOpAssembler } from "./MergingOpAssembler";
 
 /**
  * A `[key, value]` pair of strings describing a text attribute.
@@ -116,13 +116,11 @@ export const newLen = (cs: string) => unpack(cs).newLen
  * @returns {Generator<Op>}
  */
 export const deserializeOps = function* (ops: string) {
-  // TODO: Migrate to String.prototype.matchAll() once there is enough browser support.
   const regex = /((?:\*[0-9a-z]+)*)(?:\|([0-9a-z]+))?([-+=])([0-9a-z]+)|(.)/g;
-  let match;
-  while ((match = regex.exec(ops)) != null) {
+  for (const match of ops.matchAll(regex)) {
     if (match[5] === '$') return; // Start of the insert operation character bank.
-    if (match[5] != null) error(`invalid operation: ${ops.slice(regex.lastIndex - 1)}`);
-    const opMatch = match[3] as   ""|"=" | "+" | "-" | undefined
+    if (match[5] != null) error(`invalid operation: ${ops.slice(match.index)}`);
+    const opMatch = match[3] as "" | "=" | "+" | "-" | undefined
     const op = new Op(opMatch);
     op.lines = parseNum(match[2] || '0');
     op.chars = parseNum(match[4]);
@@ -165,7 +163,7 @@ export const clearOp = (op: Op) => {
  * @param {('+'|'-'|'='|'')} [optOpcode=''] - The operation's operator.
  * @returns {Op}
  */
-export const newOp = (optOpcode:'+'|'-'|'='|'' ): Op => {
+export const newOp = (optOpcode: '+' | '-' | '=' | ''): Op => {
   padutils.warnDeprecated('Changeset.newOp() is deprecated; use the Changeset.Op class instead');
   return new Op(optOpcode);
 };
@@ -213,7 +211,7 @@ export const copyOp = (op1: Op, op2: Op = new Op()): Op => Object.assign(op2, op
  * @yields {Op} One or two ops (depending on the presense of newlines) that cover the given text.
  * @returns {Generator<Op>}
  */
-export const opsFromText = function* (opcode: "" | "=" | "+" | "-" | undefined, text: string, attribs: string|Attribute[] = '', pool: AttributePool|null = null) {
+export const opsFromText = function* (opcode: "" | "=" | "+" | "-" | undefined, text: string, attribs: string | Attribute[] = '', pool: AttributePool | null = null) {
   const op = new Op(opcode);
   op.attribs = typeof attribs === 'string'
     ? attribs : new AttributeMap(pool).update(attribs || [], opcode === '+').toString();
@@ -263,19 +261,19 @@ export const checkRep = (cs: string) => {
         assert(oldPos <= oldLen, `${oldPos} > ${oldLen} in ${cs}`);
         break;
       case '+':
-      {
-        assert(charBank.length >= o.chars, 'Invalid changeset: not enough chars in charBank');
-        const chars = charBank.slice(0, o.chars);
-        const nlines = (chars.match(/\n/g) || []).length;
-        assert(nlines === o.lines,
-          'Invalid changeset: number of newlines in insert op does not match the charBank');
-        assert(o.lines === 0 || chars.endsWith('\n'),
-          'Invalid changeset: multiline insert op does not end with a newline');
-        charBank = charBank.slice(o.chars);
-        calcNewLen += o.chars;
-        assert(calcNewLen <= newLen, `${calcNewLen} > ${newLen} in ${cs}`);
-        break;
-      }
+        {
+          assert(charBank.length >= o.chars, 'Invalid changeset: not enough chars in charBank');
+          const chars = charBank.slice(0, o.chars);
+          const nlines = (chars.match(/\n/g) || []).length;
+          assert(nlines === o.lines,
+            'Invalid changeset: number of newlines in insert op does not match the charBank');
+          assert(o.lines === 0 || chars.endsWith('\n'),
+            'Invalid changeset: multiline insert op does not end with a newline');
+          charBank = charBank.slice(o.chars);
+          calcNewLen += o.chars;
+          assert(calcNewLen <= newLen, `${calcNewLen} > ${newLen} in ${cs}`);
+          break;
+        }
       default:
         assert(false, `Invalid changeset: Unknown opcode: ${JSON.stringify(o.opcode)}`);
     }
@@ -445,7 +443,7 @@ export const applyToText = (cs: string, str: string): string => {
  * @param {string} cs - the changeset to apply
  * @param {string[]} lines - The lines to which the changeset needs to be applied
  */
-export const mutateTextLines = (cs: string, lines: RegExpMatchArray|string[] | null) => {
+export const mutateTextLines = (cs: string, lines: RegExpMatchArray | string[] | null) => {
   const unpacked = unpack(cs);
   const bankIter = new StringIterator(unpacked.charBank);
   const mut = new TextLinesMutator(lines!);
@@ -474,7 +472,7 @@ export const mutateTextLines = (cs: string, lines: RegExpMatchArray|string[] | n
  * @param {AttributePool.ts} pool - attribute pool
  * @returns {string}
  */
-export const composeAttributes = (att1: string, att2: string, resultIsMutation: boolean, pool?: AttributePool|null): string => {
+export const composeAttributes = (att1: string, att2: string, resultIsMutation: boolean, pool?: AttributePool | null): string => {
   // att1 and att2 are strings like "*3*f*1c", asMutation is a boolean.
   // Sometimes attribute (key,value) pairs are treated as attribute presence
   // information, while other times they are treated as operations that
@@ -620,7 +618,7 @@ export const mutateAttributionLines = (cs: any, lines: string[] | RegExpMatchArr
  * @param {AttributePool.ts} pool - Can be null if definitely not needed.
  * @returns {Op} The result of applying `csOp` to `attOp`.
  */
-export const slicerZipperFunc = (attOp: Op, csOp: Op, pool: AttributePool|null):Op => {
+export const slicerZipperFunc = (attOp: Op, csOp: Op, pool: AttributePool | null): Op => {
   const opOut = new Op();
   if (!attOp.opcode) {
     copyOp(csOp, opOut);
@@ -683,7 +681,7 @@ export const slicerZipperFunc = (attOp: Op, csOp: Op, pool: AttributePool|null):
  */
 export const applyToAttribution = (cs: string, astr: string, pool: AttributePool): string => {
   const unpacked = unpack(cs);
-  return applyZip(astr, unpacked.ops, (op1: Op, op2:Op) => slicerZipperFunc(op1, op2, pool));
+  return applyZip(astr, unpacked.ops, (op1: Op, op2: Op) => slicerZipperFunc(op1, op2, pool));
 };
 
 /**
@@ -705,7 +703,7 @@ export const splitAttributionLines = (attrOps: string, text: string) => {
   const lines: string[] = [];
   let pos = 0;
 
-  const appendOp = (op:Op) => {
+  const appendOp = (op: Op) => {
     assem.append(op);
     if (op.lines > 0) {
       lines.push(assem.toString());
@@ -742,7 +740,7 @@ export const splitAttributionLines = (attrOps: string, text: string) => {
  * @param {string} text - text to split
  * @returns {string[]}
  */
-export const splitTextLines = (text:string) => text.match(/[^\n]*(?:\n|[^\n]$)/g);
+export const splitTextLines = (text: string) => text.match(/[^\n]*(?:\n|[^\n]$)/g);
 
 /**
  * Compose two Changesets.
@@ -752,7 +750,7 @@ export const splitTextLines = (text:string) => text.match(/[^\n]*(?:\n|[^\n]$)/g
  * @param {AttributePool.ts} pool - Attribs pool
  * @returns {string}
  */
-export const compose = (cs1: string, cs2:string, pool: AttributePool): string => {
+export const compose = (cs1: string, cs2: string, pool: AttributePool): string => {
   const unpacked1 = unpack(cs1);
   const unpacked2 = unpack(cs2);
   const len1 = unpacked1.oldLen;
@@ -821,7 +819,7 @@ export const identity = (N: number): string => pack(N, N, '', '');
  * @param {AttributePool.ts} [pool] - Attribute pool.
  * @returns {string}
  */
-export const makeSplice = (orig: string, start: number, ndel: number, ins: string|null, attribs?: string | Attribute[] | undefined, pool?: AttributePool | null | undefined): string => {
+export const makeSplice = (orig: string, start: number, ndel: number, ins: string | null, attribs?: string | Attribute[] | undefined, pool?: AttributePool | null | undefined): string => {
   if (start < 0) throw new RangeError(`start index must be non-negative (is ${start})`);
   if (ndel < 0) throw new RangeError(`characters to delete must be non-negative (is ${ndel})`);
   if (start > orig.length) start = orig.length;
@@ -881,7 +879,7 @@ const toSplices = (cs: string): [number, number, string][] => {
  * @param {number} insertionsAfter -
  * @returns {[number, number]}
  */
-export const characterRangeFollow = (cs: string, startChar: number, endChar: number, insertionsAfter: number):[number, number] => {
+export const characterRangeFollow = (cs: string, startChar: number, endChar: number, insertionsAfter: number): [number, number] => {
   let newStartChar = startChar;
   let newEndChar = endChar;
   let lengthChangeSoFar = 0;
@@ -1183,7 +1181,7 @@ const _attribsAttributeValue = (attribs: string, key: string, pool: AttributePoo
  * @param {AttributePool.ts} pool - attribute pool
  * @returns {string}
  */
-export const opAttributeValue = (op: Op, key: string, pool: AttributePool):string => {
+export const opAttributeValue = (op: Op, key: string, pool: AttributePool): string => {
   padutils.warnDeprecated(
     'Changeset.opAttributeValue() is deprecated; use an AttributeMap instead');
   return _attribsAttributeValue(op.attribs, key, pool);
@@ -1219,7 +1217,7 @@ export const attribsAttributeValue = (attribs: string, key: string, pool: Attrib
  *     ignored if `attribs` is an attribute string.
  * @returns {AttributeString}
  */
-export const makeAttribsString = (opcode: string, attribs: Attribute[]|string, pool: AttributePool | null | undefined): string => {
+export const makeAttribsString = (opcode: string, attribs: Attribute[] | string, pool: AttributePool | null | undefined): string => {
   padutils.warnDeprecated(
     'Changeset.makeAttribsString() is deprecated; ' +
     'use AttributeMap.prototype.toString() or attributes.attribsToString() instead');
@@ -1276,7 +1274,7 @@ export const subattribution = (astr: string, start: number, optEnd?: number) => 
   return assem.toString();
 };
 
-export const inverse = (cs: string, lines: string|RegExpMatchArray|string[] | null, alines: string[]|{
+export const inverse = (cs: string, lines: string | RegExpMatchArray | string[] | null, alines: string[] | {
   get: (idx: number) => string,
 }, pool: AttributePool) => {
   // lines and alines are what the exports is meant to apply to.
@@ -1308,8 +1306,8 @@ export const inverse = (cs: string, lines: string|RegExpMatchArray|string[] | nu
 
   let curLine = 0;
   let curChar = 0;
-  let curLineOps: null|Generator<Op> = null;
-  let curLineOpsNext:IteratorResult<Op>|null = null;
+  let curLineOps: null | Generator<Op> = null;
+  let curLineOpsNext: IteratorResult<Op> | null = null;
   let curLineOpsLine: number;
   let curLineNextOp = new Op('+');
 
@@ -1369,7 +1367,7 @@ export const inverse = (cs: string, lines: string|RegExpMatchArray|string[] | nu
       curLine += L;
       curChar = 0;
     } else if (curLineOps && curLineOpsLine === curLine) {
-      consumeAttribRuns(N, () => {});
+      consumeAttribRuns(N, () => { });
     } else {
       curChar += N;
     }
@@ -1394,7 +1392,7 @@ export const inverse = (cs: string, lines: string|RegExpMatchArray|string[] | nu
   };
 
   const cachedStrFunc = (func: Function) => {
-    const cache:{
+    const cache: {
       [key: string]: string
     } = {};
     return (s: string | number) => {
@@ -1443,7 +1441,7 @@ export const inverse = (cs: string, lines: string|RegExpMatchArray|string[] | nu
 };
 
 // %CLIENT FILE ENDS HERE%
-export const follow = (cs1: string, cs2:string, reverseInsertOrder: boolean, pool: AttributePool) => {
+export const follow = (cs1: string, cs2: string, reverseInsertOrder: boolean, pool: AttributePool) => {
   const unpacked1 = unpack(cs1);
   const unpacked2 = unpack(cs2);
   const len1 = unpacked1.oldLen;

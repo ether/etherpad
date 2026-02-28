@@ -4,8 +4,8 @@
  * Import and Export tests for the /p/whateverPadId/import and /p/whateverPadId/export endpoints.
  */
 
-import {MapArrayType} from "../../../../node/types/MapType";
-import {SuperTestStatic} from "supertest";
+import { MapArrayType } from "../../../../node/types/MapType";
+import { SuperTestStatic } from "supertest";
 import TestAgent from "supertest/lib/agent";
 
 const assert = require('assert').strict;
@@ -42,18 +42,18 @@ describe(__filename, function () {
   describe('Connectivity', function () {
     it('can connect', async function () {
       await agent.get('/api/')
-          .set("authorization", await common.generateJWTToken())
-          .expect(200)
-          .expect('Content-Type', /json/);
+        .set("authorization", await common.generateJWTToken())
+        .expect(200)
+        .expect('Content-Type', /json/);
     });
   });
 
   describe('API Versioning', function () {
     it('finds the version tag', async function () {
       await agent.get('/api/')
-          .set("authorization", await common.generateJWTToken())
-          .expect(200)
-          .expect((res:any) => assert(res.body.currentVersion));
+        .set("authorization", await common.generateJWTToken())
+        .expect(200)
+        .expect((res: any) => assert(res.body.currentVersion));
     });
   });
 
@@ -84,7 +84,7 @@ describe(__filename, function () {
   */
 
   describe('Imports and Exports', function () {
-    const backups:MapArrayType<any> = {};
+    const backups: MapArrayType<any> = {};
 
     beforeEach(async function () {
       backups.hooks = {};
@@ -96,7 +96,7 @@ describe(__filename, function () {
       backups.settings = Object.assign({}, settings);
       settings.requireAuthentication = false;
       settings.requireAuthorization = false;
-      settings.users = {user: {password: 'user-password'}};
+      settings.users = { user: { password: 'user-password' } };
     });
 
     afterEach(async function () {
@@ -107,35 +107,35 @@ describe(__filename, function () {
 
     it('creates a new Pad, imports content to it, checks that content', async function () {
       await agent.get(`${endPoint('createPad')}?padID=${testPadId}`)
-          .set("authorization", await common.generateJWTToken())
-          .expect(200)
-          .expect('Content-Type', /json/)
-          .expect((res:any) => assert.equal(res.body.code, 0));
+        .set("authorization", await common.generateJWTToken())
+        .expect(200)
+        .expect('Content-Type', /json/)
+        .expect((res: any) => assert.equal(res.body.code, 0));
       await agent.post(`/p/${testPadId}/import`)
-          .set("authorization", await common.generateJWTToken())
-          .attach('file', padText, {filename: '/test.txt', contentType: 'text/plain'})
-          .expect(200);
+        .set("authorization", await common.generateJWTToken())
+        .attach('file', padText, { filename: '/test.txt', contentType: 'text/plain' })
+        .expect(200);
       await agent.get(`${endPoint('getText')}?padID=${testPadId}`)
-          .set("authorization", await common.generateJWTToken())
-          .expect(200)
-          .expect((res:any) => assert.equal(res.body.data.text, padText.toString()));
+        .set("authorization", await common.generateJWTToken())
+        .expect(200)
+        .expect((res: any) => assert.equal(res.body.data.text, padText.toString()));
     });
 
     describe('export from read-only pad ID', function () {
-      let readOnlyId:string;
+      let readOnlyId: string;
 
       // This ought to be before(), but it must run after the top-level beforeEach() above.
       beforeEach(async function () {
         if (readOnlyId != null) return;
         await agent.post(`/p/${testPadId}/import`)
-            .set("authorization", await common.generateJWTToken())
-            .attach('file', padText, {filename: '/test.txt', contentType: 'text/plain'})
-            .expect(200);
+          .set("authorization", await common.generateJWTToken())
+          .attach('file', padText, { filename: '/test.txt', contentType: 'text/plain' })
+          .expect(200);
         const res = await agent.get(`${endPoint('getReadOnlyID')}?padID=${testPadId}`)
-            .set("authorization", await common.generateJWTToken())
-            .expect(200)
-            .expect('Content-Type', /json/)
-            .expect((res:any) => assert.equal(res.body.code, 0));
+          .set("authorization", await common.generateJWTToken())
+          .expect(200)
+          .expect('Content-Type', /json/)
+          .expect((res: any) => assert.equal(res.body.code, 0));
         readOnlyId = res.body.data.readOnlyID;
       });
 
@@ -148,17 +148,17 @@ describe(__filename, function () {
 
           for (const exportType of ['html', 'txt', 'etherpad']) {
             describe(`export to ${exportType}`, function () {
-              let text:string;
+              let text: string;
 
               // This ought to be before(), but it must run after the top-level beforeEach() above.
               beforeEach(async function () {
                 if (text != null) return;
                 let req = agent.get(`/p/${readOnlyId}/export/${exportType}`)
-                    .set("authorization", await common.generateJWTToken());
+                  .set("authorization", await common.generateJWTToken());
                 if (authn) req = req.auth('user', 'user-password');
                 const res = await req
-                    .expect(200)
-                    .buffer(true).parse(superagent.parse.text);
+                  .expect(200)
+                  .buffer(true).parse(superagent.parse.text);
                 text = res.text;
               });
 
@@ -172,11 +172,11 @@ describe(__filename, function () {
 
               it('re-import to read-only pad ID gives 403 forbidden', async function () {
                 let req = agent.post(`/p/${readOnlyId}/import`)
-                    .set("authorization", await common.generateJWTToken())
-                    .attach('file', Buffer.from(text), {
-                      filename: `/test.${exportType}`,
-                      contentType: 'text/plain',
-                    });
+                  .set("authorization", await common.generateJWTToken())
+                  .attach('file', Buffer.from(text), {
+                    filename: `/test.${exportType}`,
+                    contentType: 'text/plain',
+                  });
                 if (authn) req = req.auth('user', 'user-password');
                 await req.expect(403);
               });
@@ -185,11 +185,11 @@ describe(__filename, function () {
                 // The new pad ID must differ from testPadId because Etherpad refuses to import
                 // .etherpad files on top of a pad that already has edits.
                 let req = agent.post(`/p/${testPadId}_import/import`)
-                    .set("authorization", await common.generateJWTToken())
-                    .attach('file', Buffer.from(text), {
-                      filename: `/test.${exportType}`,
-                      contentType: 'text/plain',
-                    });
+                  .set("authorization", await common.generateJWTToken())
+                  .attach('file', Buffer.from(text), {
+                    filename: `/test.${exportType}`,
+                    contentType: 'text/plain',
+                  });
                 if (authn) req = req.auth('user', 'user-password');
                 await req.expect(200);
               });
@@ -202,7 +202,7 @@ describe(__filename, function () {
     describe('Import/Export tests requiring AbiWord/LibreOffice', function () {
       before(async function () {
         if ((!settings.abiword || settings.abiword.indexOf('/') === -1) &&
-            (!settings.soffice || settings.soffice.indexOf('/') === -1)) {
+          (!settings.soffice || settings.soffice.indexOf('/') === -1)) {
           this.skip();
         }
       });
@@ -211,140 +211,140 @@ describe(__filename, function () {
       // TODO: fix support for .doc files..
       it('Tries to import .doc that uses soffice or abiword', async function () {
         await agent.post(`/p/${testPadId}/import`)
-            .set("authorization", await common.generateJWTToken())
-            .attach('file', wordDoc, {filename: '/test.doc', contentType: 'application/msword'})
-            .expect(200)
-            .expect('Content-Type', /json/)
-            .expect((res:any) => assert.deepEqual(res.body, {
-              code: 0,
-              message: 'ok',
-              data: {directDatabaseAccess: false},
-            }));
+          .set("authorization", await common.generateJWTToken())
+          .attach('file', wordDoc, { filename: '/test.doc', contentType: 'application/msword' })
+          .expect(200)
+          .expect('Content-Type', /json/)
+          .expect((res: any) => assert.deepEqual(res.body, {
+            code: 0,
+            message: 'ok',
+            data: { directDatabaseAccess: false },
+          }));
       });
 
       it('exports DOC', async function () {
         await agent.get(`/p/${testPadId}/export/doc`)
-            .set("authorization", await common.generateJWTToken())
-            .buffer(true).parse(superagent.parse['application/octet-stream'])
-            .expect(200)
-            .expect((res:any) => assert(res.body.length >= 9000));
+          .set("authorization", await common.generateJWTToken())
+          .buffer(true).parse(superagent.parse['application/octet-stream'])
+          .expect(200)
+          .expect((res: any) => assert(res.body.length >= 9000));
       });
 
       it('Tries to import .docx that uses soffice or abiword', async function () {
         await agent.post(`/p/${testPadId}/import`)
-            .set("authorization", await common.generateJWTToken())
-            .attach('file', wordXDoc, {
-              filename: '/test.docx',
-              contentType:
-                  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            })
-            .expect(200)
-            .expect('Content-Type', /json/)
-            .expect((res:any) => assert.deepEqual(res.body, {
-              code: 0,
-              message: 'ok',
-              data: {directDatabaseAccess: false},
-            }));
+          .set("authorization", await common.generateJWTToken())
+          .attach('file', wordXDoc, {
+            filename: '/test.docx',
+            contentType:
+              'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          })
+          .expect(200)
+          .expect('Content-Type', /json/)
+          .expect((res: any) => assert.deepEqual(res.body, {
+            code: 0,
+            message: 'ok',
+            data: { directDatabaseAccess: false },
+          }));
       });
 
       it('exports DOC from imported DOCX', async function () {
         await agent.get(`/p/${testPadId}/export/doc`)
-            .set("authorization", await common.generateJWTToken())
-            .buffer(true).parse(superagent.parse['application/octet-stream'])
-            .expect(200)
-            .expect((res:any) => assert(res.body.length >= 9100));
+          .set("authorization", await common.generateJWTToken())
+          .buffer(true).parse(superagent.parse['application/octet-stream'])
+          .expect(200)
+          .expect((res: any) => assert(res.body.length >= 9100));
       });
 
       it('Tries to import .pdf that uses soffice or abiword', async function () {
         await agent.post(`/p/${testPadId}/import`)
-            .set("authorization", await common.generateJWTToken())
-            .attach('file', pdfDoc, {filename: '/test.pdf', contentType: 'application/pdf'})
-            .expect(200)
-            .expect('Content-Type', /json/)
-            .expect((res:any) => assert.deepEqual(res.body, {
-              code: 0,
-              message: 'ok',
-              data: {directDatabaseAccess: false},
-            }));
+          .set("authorization", await common.generateJWTToken())
+          .attach('file', pdfDoc, { filename: '/test.pdf', contentType: 'application/pdf' })
+          .expect(200)
+          .expect('Content-Type', /json/)
+          .expect((res: any) => assert.deepEqual(res.body, {
+            code: 0,
+            message: 'ok',
+            data: { directDatabaseAccess: false },
+          }));
       });
 
       it('exports PDF', async function () {
         await agent.get(`/p/${testPadId}/export/pdf`)
-            .set("authorization", await common.generateJWTToken())
-            .buffer(true).parse(superagent.parse['application/octet-stream'])
-            .expect(200)
-            .expect((res:any) => assert(res.body.length >= 1000));
+          .set("authorization", await common.generateJWTToken())
+          .buffer(true).parse(superagent.parse['application/octet-stream'])
+          .expect(200)
+          .expect((res: any) => assert(res.body.length >= 1000));
       });
 
       it('Tries to import .odt that uses soffice or abiword', async function () {
         await agent.post(`/p/${testPadId}/import`)
-            .set("authorization", await common.generateJWTToken())
-            .attach('file', odtDoc, {filename: '/test.odt', contentType: 'application/odt'})
-            .expect(200)
-            .expect('Content-Type', /json/)
-            .expect((res:any) => assert.deepEqual(res.body, {
-              code: 0,
-              message: 'ok',
-              data: {directDatabaseAccess: false},
-            }));
+          .set("authorization", await common.generateJWTToken())
+          .attach('file', odtDoc, { filename: '/test.odt', contentType: 'application/odt' })
+          .expect(200)
+          .expect('Content-Type', /json/)
+          .expect((res: any) => assert.deepEqual(res.body, {
+            code: 0,
+            message: 'ok',
+            data: { directDatabaseAccess: false },
+          }));
       });
 
       it('exports ODT', async function () {
         await agent.get(`/p/${testPadId}/export/odt`)
-            .set("authorization", await common.generateJWTToken())
-            .buffer(true).parse(superagent.parse['application/octet-stream'])
-            .expect(200)
-            .expect((res:any) => assert(res.body.length >= 7000));
+          .set("authorization", await common.generateJWTToken())
+          .buffer(true).parse(superagent.parse['application/octet-stream'])
+          .expect(200)
+          .expect((res: any) => assert(res.body.length >= 7000));
       });
     }); // End of AbiWord/LibreOffice tests.
 
     it('Tries to import .etherpad', async function () {
       this.timeout(3000);
       await agent.post(`/p/${testPadId}/import`)
-          .set("authorization", await common.generateJWTToken())
-          .attach('file', etherpadDoc, {
-            filename: '/test.etherpad',
-            contentType: 'application/etherpad',
-          })
-          .expect(200)
-          .expect('Content-Type', /json/)
-          .expect((res:any) => assert.deepEqual(res.body, {
-            code: 0,
-            message: 'ok',
-            data: {directDatabaseAccess: true},
-          }));
+        .set("authorization", await common.generateJWTToken())
+        .attach('file', etherpadDoc, {
+          filename: '/test.etherpad',
+          contentType: 'application/etherpad',
+        })
+        .expect(200)
+        .expect('Content-Type', /json/)
+        .expect((res: any) => assert.deepEqual(res.body, {
+          code: 0,
+          message: 'ok',
+          data: { directDatabaseAccess: true },
+        }));
     });
 
     it('exports Etherpad', async function () {
       this.timeout(3000);
       await agent.get(`/p/${testPadId}/export/etherpad`)
-          .set("authorization", await common.generateJWTToken())
-          .buffer(true).parse(superagent.parse.text)
-          .expect(200)
-          .expect(/hello/);
+        .set("authorization", await common.generateJWTToken())
+        .buffer(true).parse(superagent.parse.text)
+        .expect(200)
+        .expect(/hello/);
     });
 
     it('exports HTML for this Etherpad file', async function () {
       this.timeout(3000);
       await agent.get(`/p/${testPadId}/export/html`)
-          .set("authorization", await common.generateJWTToken())
-          .expect(200)
-          .expect('content-type', 'text/html; charset=utf-8')
-          .expect(/<ul class="bullet"><li><ul class="bullet"><li>hello<\/ul><\/li><\/ul>/);
+        .set("authorization", await common.generateJWTToken())
+        .expect(200)
+        .expect('content-type', 'text/html; charset=utf-8')
+        .expect(/<ul class="bullet"><li><ul class="bullet"><li>hello<\/ul><\/li><\/ul>/);
     });
 
     it('Tries to import unsupported file type', async function () {
       this.timeout(3000);
       settings.allowUnknownFileEnds = false;
       await agent.post(`/p/${testPadId}/import`)
-          .set("authorization", await common.generateJWTToken())
-          .attach('file', padText, {filename: '/test.xasdasdxx', contentType: 'weirdness/jobby'})
-          .expect(400)
-          .expect('Content-Type', /json/)
-          .expect((res:any) => {
-            assert.equal(res.body.code, 1);
-            assert.equal(res.body.message, 'uploadFailed');
-          });
+        .set("authorization", await common.generateJWTToken())
+        .attach('file', padText, { filename: '/test.xasdasdxx', contentType: 'weirdness/jobby' })
+        .expect(400)
+        .expect('Content-Type', /json/)
+        .expect((res: any) => {
+          assert.equal(res.body.code, 1);
+          assert.equal(res.body.message, 'uploadFailed');
+        });
     });
 
     describe('malformed .etherpad files are rejected', function () {
@@ -355,9 +355,9 @@ describe(__filename, function () {
             attribs: '|1+4',
           },
           pool: {
-            numToAttrib: {
-              0: ['author', 'a.foo'],
-            },
+            numToAttrib: [
+              ['author', 'a.foo'],
+            ],
             nextNum: 1,
           },
           chatHead: 0,
@@ -376,7 +376,7 @@ describe(__filename, function () {
             author: 'a.foo',
             timestamp: 1597632398288,
             pool: {
-              numToAttrib: {},
+              numToAttrib: [],
               nextNum: 0,
             },
             atext: {
@@ -392,11 +392,11 @@ describe(__filename, function () {
         },
       });
 
-      const importEtherpad = (records:any) => agent.post(`/p/${testPadId}/import`)
-          .attach('file', Buffer.from(JSON.stringify(records), 'utf8'), {
-            filename: '/test.etherpad',
-            contentType: 'application/etherpad',
-          });
+      const importEtherpad = (records: any) => agent.post(`/p/${testPadId}/import`)
+        .attach('file', Buffer.from(JSON.stringify(records), 'utf8'), {
+          filename: '/test.etherpad',
+          contentType: 'application/etherpad',
+        });
 
       before(async function () {
         // makeGoodExport() is assumed to produce good .etherpad records. Verify that assumption so
@@ -406,22 +406,22 @@ describe(__filename, function () {
         const importedPads = await importEtherpad(records)
         console.log(importedPads)
         await importEtherpad(records)
-            .expect(200)
-            .expect('Content-Type', /json/)
-            .expect((res:any) => assert.deepEqual(res.body, {
-              code: 0,
-              message: 'ok',
-              data: {directDatabaseAccess: true},
-            }));
+          .expect(200)
+          .expect('Content-Type', /json/)
+          .expect((res: any) => assert.deepEqual(res.body, {
+            code: 0,
+            message: 'ok',
+            data: { directDatabaseAccess: true },
+          }));
         await agent.get(`/p/${testPadId}/export/txt`)
-            .set("authorization", await common.generateJWTToken())
-            .expect(200)
-            .buffer(true).parse(superagent.parse.text)
-            .expect((res:any) => assert.match(res.text, /foo/));
+          .set("authorization", await common.generateJWTToken())
+          .expect(200)
+          .buffer(true).parse(superagent.parse.text)
+          .expect((res: any) => assert.match(res.text, /foo/));
       });
 
       it('missing rev', async function () {
-        const records:MapArrayType<any> = makeGoodExport();
+        const records: MapArrayType<any> = makeGoodExport();
         delete records['pad:testing:revs:0'];
         importEtherpad(records).expect(500);
       });
@@ -441,13 +441,12 @@ describe(__filename, function () {
       it('extra attrib in pool', async function () {
         const records = makeGoodExport();
         const pool = records['pad:testing'].pool;
-        // @ts-ignore
         pool.numToAttrib[pool.nextNum] = ['key', 'value'];
         (importEtherpad(records)).expect(500);
       });
 
       it('changeset refers to non-existent attrib', async function () {
-        const records:MapArrayType<any> = makeGoodExport();
+        const records: MapArrayType<any> = makeGoodExport();
         records['pad:testing:revs:1'] = {
           changeset: 'Z:4>4*1+4$asdf',
           meta: {
@@ -470,7 +469,7 @@ describe(__filename, function () {
       });
 
       it('missing chat message', async function () {
-        const records:MapArrayType<any> = makeGoodExport();
+        const records: MapArrayType<any> = makeGoodExport();
         delete records['pad:testing:chat:0'];
         importEtherpad(records).expect(500);
       });
@@ -484,9 +483,9 @@ describe(__filename, function () {
             attribs: '|1+6',
           },
           pool: {
-            numToAttrib: {
-              0: ['author', 'a.foo'],
-            },
+            numToAttrib: [
+              ['author', 'a.foo'],
+            ],
             nextNum: 1,
           },
           head: 2,
@@ -505,9 +504,9 @@ describe(__filename, function () {
             timestamp: 1597632398288,
             pool: {
               nextNum: 1,
-              numToAttrib: {
-                0: ['author', 'a.foo'],
-              },
+              numToAttrib: [
+                ['author', 'a.foo'],
+              ],
             },
             atext: {
               text: 'foo\n',
@@ -522,9 +521,9 @@ describe(__filename, function () {
             timestamp: 1597632398288,
             pool: {
               nextNum: 1,
-              numToAttrib: {
-                0: ['author', 'a.foo'],
-              },
+              numToAttrib: [
+                ['author', 'a.foo'],
+              ],
             },
             atext: {
               text: 'fooo\n',
@@ -538,7 +537,7 @@ describe(__filename, function () {
             author: 'a.foo',
             timestamp: 1597632398288,
             pool: {
-              numToAttrib: {},
+              numToAttrib: [],
               nextNum: 0,
             },
             atext: {
@@ -549,11 +548,11 @@ describe(__filename, function () {
         },
       });
 
-      const importEtherpad =  (records: MapArrayType<any>) => agent.post(`/p/${testPadId}/import`)
-          .attach('file', Buffer.from(JSON.stringify(records), 'utf8'), {
-            filename: '/test.etherpad',
-            contentType: 'application/etherpad',
-          });
+      const importEtherpad = (records: MapArrayType<any>) => agent.post(`/p/${testPadId}/import`)
+        .attach('file', Buffer.from(JSON.stringify(records), 'utf8'), {
+          filename: '/test.etherpad',
+          contentType: 'application/etherpad',
+        });
 
       before(async function () {
         // makeGoodExport() is assumed to produce good .etherpad records. Verify that assumption so
@@ -561,105 +560,105 @@ describe(__filename, function () {
         const records = makeGoodExport();
         await deleteTestPad();
         await importEtherpad(records)
-            .expect(200)
-            .expect('Content-Type', /json/)
-            .expect((res:any) => assert.deepEqual(res.body, {
-              code: 0,
-              message: 'ok',
-              data: {directDatabaseAccess: true},
-            }));
+          .expect(200)
+          .expect('Content-Type', /json/)
+          .expect((res: any) => assert.deepEqual(res.body, {
+            code: 0,
+            message: 'ok',
+            data: { directDatabaseAccess: true },
+          }));
         await agent.get(`/p/${testPadId}/export/txt`)
-            .set("authorization", await common.generateJWTToken())
-            .expect(200)
-            .buffer(true).parse(superagent.parse.text)
-            .expect((res:any) => assert.equal(res.text, 'oofoo\n'));
+          .set("authorization", await common.generateJWTToken())
+          .expect(200)
+          .buffer(true).parse(superagent.parse.text)
+          .expect((res: any) => assert.equal(res.text, 'oofoo\n'));
       });
 
       it('txt request rev 1', async function () {
         await agent.get(`/p/${testPadId}/1/export/txt`)
-            .set("authorization", await common.generateJWTToken())
-            .expect(200)
-            .buffer(true).parse(superagent.parse.text)
-            .expect((res:any) => assert.equal(res.text, 'ofoo\n'));
+          .set("authorization", await common.generateJWTToken())
+          .expect(200)
+          .buffer(true).parse(superagent.parse.text)
+          .expect((res: any) => assert.equal(res.text, 'ofoo\n'));
       });
 
       it('txt request rev 2', async function () {
         await agent.get(`/p/${testPadId}/2/export/txt`)
-            .set("authorization", await common.generateJWTToken())
-            .expect(200)
-            .buffer(true).parse(superagent.parse.text)
-            .expect((res:any) => assert.equal(res.text, 'oofoo\n'));
+          .set("authorization", await common.generateJWTToken())
+          .expect(200)
+          .buffer(true).parse(superagent.parse.text)
+          .expect((res: any) => assert.equal(res.text, 'oofoo\n'));
       });
 
       it('txt request rev 1test returns rev 1', async function () {
         await agent.get(`/p/${testPadId}/1test/export/txt`)
-            .set("authorization", await common.generateJWTToken())
-            .expect(200)
-            .buffer(true).parse(superagent.parse.text)
-            .expect((res:any) => assert.equal(res.text, 'ofoo\n'));
+          .set("authorization", await common.generateJWTToken())
+          .expect(200)
+          .buffer(true).parse(superagent.parse.text)
+          .expect((res: any) => assert.equal(res.text, 'ofoo\n'));
       });
 
       it('txt request rev test1 is 403', async function () {
         await agent.get(`/p/${testPadId}/test1/export/txt`)
-            .set("authorization", await common.generateJWTToken())
-            .expect(500)
-            .buffer(true).parse(superagent.parse.text)
-            .expect((res:any) => assert.match(res.text, /rev is not a number/));
+          .set("authorization", await common.generateJWTToken())
+          .expect(500)
+          .buffer(true).parse(superagent.parse.text)
+          .expect((res: any) => assert.match(res.text, /rev is not a number/));
       });
 
       it('txt request rev 5 returns head rev', async function () {
         await agent.get(`/p/${testPadId}/5/export/txt`)
-            .set("authorization", await common.generateJWTToken())
-            .expect(200)
-            .buffer(true).parse(superagent.parse.text)
-            .expect((res:any) => assert.equal(res.text, 'oofoo\n'));
+          .set("authorization", await common.generateJWTToken())
+          .expect(200)
+          .buffer(true).parse(superagent.parse.text)
+          .expect((res: any) => assert.equal(res.text, 'oofoo\n'));
       });
 
       it('html request rev 1', async function () {
         await agent.get(`/p/${testPadId}/1/export/html`)
-            .set("authorization", await common.generateJWTToken())
-            .expect(200)
-            .buffer(true).parse(superagent.parse.text)
-            .expect((res:any) => assert.match(res.text, /ofoo<br>/));
+          .set("authorization", await common.generateJWTToken())
+          .expect(200)
+          .buffer(true).parse(superagent.parse.text)
+          .expect((res: any) => assert.match(res.text, /ofoo<br>/));
       });
 
       it('html request rev 2', async function () {
         await agent.get(`/p/${testPadId}/2/export/html`)
-            .set("authorization", await common.generateJWTToken())
-            .expect(200)
-            .buffer(true).parse(superagent.parse.text)
-            .expect((res:any) => assert.match(res.text, /oofoo<br>/));
+          .set("authorization", await common.generateJWTToken())
+          .expect(200)
+          .buffer(true).parse(superagent.parse.text)
+          .expect((res: any) => assert.match(res.text, /oofoo<br>/));
       });
 
       it('html request rev 1test returns rev 1', async function () {
         await agent.get(`/p/${testPadId}/1test/export/html`)
-            .set("authorization", await common.generateJWTToken())
-            .expect(200)
-            .buffer(true).parse(superagent.parse.text)
-            .expect((res:any) => assert.match(res.text, /ofoo<br>/));
+          .set("authorization", await common.generateJWTToken())
+          .expect(200)
+          .buffer(true).parse(superagent.parse.text)
+          .expect((res: any) => assert.match(res.text, /ofoo<br>/));
       });
 
       it('html request rev test1 results in 500 response', async function () {
         await agent.get(`/p/${testPadId}/test1/export/html`)
-            .set("authorization", await common.generateJWTToken())
-            .expect(500)
-            .buffer(true).parse(superagent.parse.text)
-            .expect((res:any) => assert.match(res.text, /rev is not a number/));
+          .set("authorization", await common.generateJWTToken())
+          .expect(500)
+          .buffer(true).parse(superagent.parse.text)
+          .expect((res: any) => assert.match(res.text, /rev is not a number/));
       });
 
       it('html request rev 5 returns head rev', async function () {
         await agent.get(`/p/${testPadId}/5/export/html`)
-            .set("authorization", await common.generateJWTToken())
-            .expect(200)
-            .buffer(true).parse(superagent.parse.text)
-            .expect((res:any) => assert.match(res.text, /oofoo<br>/));
+          .set("authorization", await common.generateJWTToken())
+          .expect(200)
+          .buffer(true).parse(superagent.parse.text)
+          .expect((res: any) => assert.match(res.text, /oofoo<br>/));
       });
     });
 
     describe('Import authorization checks', function () {
       let authorize: (arg0: any) => any;
 
-      const createTestPad = async (text:string) => {
+      const createTestPad = async (text: string) => {
         const pad = await padManager.getPad(testPadId);
         if (text) await pad.setText(text);
         return pad;
@@ -671,7 +670,7 @@ describe(__filename, function () {
         await deleteTestPad();
         settings.requireAuthorization = true;
         authorize = () => true;
-        plugins.hooks.authorize = [{hook_fn: (hookName: string, {req}:any, cb:Function) => cb([authorize(req)])}];
+        plugins.hooks.authorize = [{ hook_fn: (hookName: string, { req }: any, cb: Function) => cb([authorize(req)]) }];
       });
 
       afterEach(async function () {
@@ -680,9 +679,9 @@ describe(__filename, function () {
 
       it('!authn !exist -> create', async function () {
         await agent.post(`/p/${testPadIdEnc}/import`)
-            .set("authorization", await common.generateJWTToken())
-            .attach('file', padText, {filename: '/test.txt', contentType: 'text/plain'})
-            .expect(200);
+          .set("authorization", await common.generateJWTToken())
+          .attach('file', padText, { filename: '/test.txt', contentType: 'text/plain' })
+          .expect(200);
         assert(await padManager.doesPadExist(testPadId));
         const pad = await padManager.getPad(testPadId);
         assert.equal(pad.text(), padText.toString());
@@ -691,9 +690,9 @@ describe(__filename, function () {
       it('!authn exist -> replace', async function () {
         const pad = await createTestPad('before import');
         await agent.post(`/p/${testPadIdEnc}/import`)
-            .set("authorization", await common.generateJWTToken())
-            .attach('file', padText, {filename: '/test.txt', contentType: 'text/plain'})
-            .expect(200);
+          .set("authorization", await common.generateJWTToken())
+          .attach('file', padText, { filename: '/test.txt', contentType: 'text/plain' })
+          .expect(200);
         assert(await padManager.doesPadExist(testPadId));
         assert.equal(pad.text(), padText.toString());
       });
@@ -701,9 +700,9 @@ describe(__filename, function () {
       it('authn anonymous !exist -> fail', async function () {
         settings.requireAuthentication = true;
         await agent.post(`/p/${testPadIdEnc}/import`)
-            .set("authorization", await common.generateJWTToken())
-            .attach('file', padText, {filename: '/test.txt', contentType: 'text/plain'})
-            .expect(401);
+          .set("authorization", await common.generateJWTToken())
+          .attach('file', padText, { filename: '/test.txt', contentType: 'text/plain' })
+          .expect(401);
         assert(!(await padManager.doesPadExist(testPadId)));
       });
 
@@ -711,19 +710,19 @@ describe(__filename, function () {
         settings.requireAuthentication = true;
         const pad = await createTestPad('before import\n');
         await agent.post(`/p/${testPadIdEnc}/import`)
-            .set("authorization", await common.generateJWTToken())
-            .attach('file', padText, {filename: '/test.txt', contentType: 'text/plain'})
-            .expect(401);
+          .set("authorization", await common.generateJWTToken())
+          .attach('file', padText, { filename: '/test.txt', contentType: 'text/plain' })
+          .expect(401);
         assert.equal(pad.text(), 'before import\n');
       });
 
       it('authn user create !exist -> create', async function () {
         settings.requireAuthentication = true;
         await agent.post(`/p/${testPadIdEnc}/import`)
-            .set("authorization", await common.generateJWTToken())
-            .auth('user', 'user-password')
-            .attach('file', padText, {filename: '/test.txt', contentType: 'text/plain'})
-            .expect(200);
+          .set("authorization", await common.generateJWTToken())
+          .auth('user', 'user-password')
+          .attach('file', padText, { filename: '/test.txt', contentType: 'text/plain' })
+          .expect(200);
         assert(await padManager.doesPadExist(testPadId));
         const pad = await padManager.getPad(testPadId);
         assert.equal(pad.text(), padText.toString());
@@ -733,10 +732,10 @@ describe(__filename, function () {
         settings.requireAuthentication = true;
         authorize = () => 'modify';
         await agent.post(`/p/${testPadIdEnc}/import`)
-            .set("authorization", await common.generateJWTToken())
-            .auth('user', 'user-password')
-            .attach('file', padText, {filename: '/test.txt', contentType: 'text/plain'})
-            .expect(403);
+          .set("authorization", await common.generateJWTToken())
+          .auth('user', 'user-password')
+          .attach('file', padText, { filename: '/test.txt', contentType: 'text/plain' })
+          .expect(403);
         assert(!(await padManager.doesPadExist(testPadId)));
       });
 
@@ -744,10 +743,10 @@ describe(__filename, function () {
         settings.requireAuthentication = true;
         authorize = () => 'readOnly';
         await agent.post(`/p/${testPadIdEnc}/import`)
-            .set("authorization", await common.generateJWTToken())
-            .auth('user', 'user-password')
-            .attach('file', padText, {filename: '/test.txt', contentType: 'text/plain'})
-            .expect(403);
+          .set("authorization", await common.generateJWTToken())
+          .auth('user', 'user-password')
+          .attach('file', padText, { filename: '/test.txt', contentType: 'text/plain' })
+          .expect(403);
         assert(!(await padManager.doesPadExist(testPadId)));
       });
 
@@ -755,10 +754,10 @@ describe(__filename, function () {
         settings.requireAuthentication = true;
         const pad = await createTestPad('before import\n');
         await agent.post(`/p/${testPadIdEnc}/import`)
-            .set("authorization", await common.generateJWTToken())
-            .auth('user', 'user-password')
-            .attach('file', padText, {filename: '/test.txt', contentType: 'text/plain'})
-            .expect(200);
+          .set("authorization", await common.generateJWTToken())
+          .auth('user', 'user-password')
+          .attach('file', padText, { filename: '/test.txt', contentType: 'text/plain' })
+          .expect(200);
         assert.equal(pad.text(), padText.toString());
       });
 
@@ -767,10 +766,10 @@ describe(__filename, function () {
         authorize = () => 'modify';
         const pad = await createTestPad('before import\n');
         await agent.post(`/p/${testPadIdEnc}/import`)
-            .set("authorization", await common.generateJWTToken())
-            .auth('user', 'user-password')
-            .attach('file', padText, {filename: '/test.txt', contentType: 'text/plain'})
-            .expect(200);
+          .set("authorization", await common.generateJWTToken())
+          .auth('user', 'user-password')
+          .attach('file', padText, { filename: '/test.txt', contentType: 'text/plain' })
+          .expect(200);
         assert.equal(pad.text(), padText.toString());
       });
 
@@ -779,10 +778,10 @@ describe(__filename, function () {
         settings.requireAuthentication = true;
         authorize = () => 'readOnly';
         await agent.post(`/p/${testPadIdEnc}/import`)
-            .set("authorization", await common.generateJWTToken())
-            .auth('user', 'user-password')
-            .attach('file', padText, {filename: '/test.txt', contentType: 'text/plain'})
-            .expect(403);
+          .set("authorization", await common.generateJWTToken())
+          .auth('user', 'user-password')
+          .attach('file', padText, { filename: '/test.txt', contentType: 'text/plain' })
+          .expect(403);
         assert.equal(pad.text(), 'before import\n');
       });
     });
@@ -790,7 +789,7 @@ describe(__filename, function () {
 }); // End of tests.
 
 
-const endPoint = (point: string, version?:string) => {
+const endPoint = (point: string, version?: string) => {
   return `/api/${version || apiVersion}/${point}`;
 };
 
