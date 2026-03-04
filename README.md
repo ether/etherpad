@@ -100,7 +100,7 @@ volumes:
 
 ### Requirements
 
-[Node.js](https://nodejs.org/) >= **18.18.2**.
+[Node.js](https://nodejs.org/).
 
 ### Windows, macOS, Linux
 
