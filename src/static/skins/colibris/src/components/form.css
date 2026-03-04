@@ -20,11 +20,14 @@ input[type="text"]::placeholder, textarea::placeholder {
 select, .nice-select {
   background-color: #f2f3f4;
   background-color: var(--bg-soft-color);
-  border: none;
+  border: 1px solid var(--bg-soft-color);
   padding: 4px 10px;
   padding-right: 25px;
   font-weight: bold;
   line-height: inherit;
+}
+select:hover, .nice-select:hover {
+  border-color: var(--bg-soft-color)
 }
 .nice-select .list {
   background-color: #f2f3f4;

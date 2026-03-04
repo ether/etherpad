@@ -1,0 +1,90 @@
+permissions:
+  contents: read
+name: Release etherpad
+on:
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: 'Choose the type of release to create'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+env:
+  PNPM_HOME: ~/.pnpm-store
+
+jobs:
+  releases:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+            repository: ether/etherpad-lite
+            path: etherpad
+            token: '${{ secrets.ETHER_RELEASE_TOKEN }}'
+            fetch-depth: '0'
+            fetch-tags: 'true'
+      - name: Checkout master
+        working-directory: etherpad
+        run: |
+          git fetch origin master
+          git checkout master
+          git reset --hard origin/master
+      - name: Checkout develop
+        working-directory: etherpad
+        run: |
+          git fetch origin develop
+          git checkout develop
+          git reset --hard origin/develop
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          repository: ether/ether.github.com
+          path: ether.github.com
+          token: '${{ secrets.ETHER_RELEASE_TOKEN }}'
+      - uses: actions/cache@v5
+        name: Setup gnpm cache
+        if: always()
+        with:
+          path: |
+            ${{ env.STORE_PATH }}
+            ~/.local/share/gnpm
+            ~/.cache/ms-playwright
+            /usr/local/bin/gnpm
+            /usr/local/bin/gnpm-0.0.12
+          key: ${{ runner.os }}-gnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-gnpm-store-
+      - name: Setup gnpm
+        uses: SamTV12345/gnpm-setup@main
+        with:
+          version: 0.0.12
+      - name: Install dependencies ether.github.com
+        run: gnpm install --frozen-lockfile
+        working-directory: ether.github.com
+      - name: Set git user
+        run: |
+          git config --global user.name "Etherpad Release Bot"
+          git config --global user.email "noreply@etherpad.org"
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 2.7
+
+      - uses: reitzig/actions-asciidoctor@v2.0.2
+        with:
+          version: 2.0.18
+      - name: Prepare release
+        working-directory: etherpad
+        run: |
+          cd bin
+          gnpm install
+          gnpm run release ${{ inputs.release_type }}
+      - name: Push after release
+        working-directory: etherpad
+        run: |
+          ./bin/push-after-release.sh

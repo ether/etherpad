@@ -16,8 +16,8 @@ select, .nice-select {
   padding-right: 24px;
   position: relative;
   text-align: left !important;
-  -webkit-transition: all 0.2s ease-in-out;
-  transition: all 0.2s ease-in-out;
+  -webkit-transition: all 0.1s ease-in-out;
+  transition: all 0.1s ease-in-out;
   -webkit-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
@@ -25,6 +25,9 @@ select, .nice-select {
   white-space: nowrap;
   min-width: 100px;
   text-transform: capitalize;
+}
+.nice-select:not(.open):not(:hover):focus {
+  border-color: #a5c8ec;
 }
 .popup .nice-select {
   padding: 4px 24px 4px 8px;

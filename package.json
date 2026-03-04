@@ -1,0 +1,54 @@
+{
+  "name": "etherpad",
+  "description": "A free and open source realtime collaborative editor",
+  "homepage": "https://etherpad.org",
+  "type": "module",
+  "keywords": [
+    "etherpad",
+    "realtime",
+    "collaborative",
+    "editor"
+  ],
+  "bin": {
+    "etherpad-healthcheck": "bin/etherpad-healthcheck"
+  },
+  "scripts": {
+    "lint": "pnpm --filter ep_etherpad-lite run lint",
+    "test": "pnpm --filter ep_etherpad-lite run test",
+    "test-utils": "pnpm --filter ep_etherpad-lite run test-utils",
+    "test-container": "pnpm --filter ep_etherpad-lite run test-container",
+    "dev": "pnpm --filter ep_etherpad-lite run dev",
+    "prod": "pnpm --filter ep_etherpad-lite run prod",
+    "ts-check": "pnpm --filter ep_etherpad-lite run ts-check",
+    "ts-check:watch": "pnpm --filter ep_etherpad-lite run ts-check:watch",
+    "test-ui": "pnpm --filter ep_etherpad-lite run test-ui",
+    "test-ui:ui": "pnpm --filter ep_etherpad-lite run test-ui:ui",
+    "test-admin": "pnpm --filter ep_etherpad-lite run test-admin",
+    "test-admin:ui": "pnpm --filter ep_etherpad-lite run test-admin:ui",
+    "plugins": "pnpm --filter bin run plugins",
+    "install-plugins": "pnpm --filter bin run plugins i",
+    "remove-plugins": "pnpm --filter bin run remove-plugins",
+    "list-plugins": "pnpm --filter bin run list-plugins",
+    "build:etherpad": "pnpm --filter admin run build-copy && pnpm --filter ui run build-copy",
+    "build:ui": "pnpm --filter ui run build-copy && pnpm --filter admin run build-copy",
+    "makeDocs": "pnpm --filter bin run makeDocs"
+  },
+  "dependencies": {
+    "ep_etherpad-lite": "link:src"
+  },
+  "devDependencies": {
+    "admin": "link:admin",
+    "docs": "link:doc",
+    "ui": "link:ui"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ether/etherpad-lite.git"
+  },
+  "engineStrict": true,
+  "version": "2.6.1",
+  "license": "Apache-2.0"
+}

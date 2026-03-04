@@ -1,0 +1,18 @@
+name: 'Close stale issues and PRs'
+on:
+  schedule:
+    - cron: '30 6 * * *'
+permissions:
+  issues: write
+  pull-requests: write
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/stale@v10
+        with:
+          close-issue-label: wontfix
+          close-pr-label: wontfix
+          days-before-close: -1
+          exempt-issue-labels: 'pinned,security,Bug,Serious Bug,Minor bug,Black hole bug,Special case Bug,Upstream bug,Feature Request'
+          exempt-pr-labels: 'pinned,security,Bug,Serious Bug,Minor bug,Black hole bug,Special case Bug,Upstream bug,Feature Request'

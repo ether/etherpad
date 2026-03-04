@@ -1,0 +1,20 @@
+{
+  "name": "ui",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "build-copy": "tsc && vite build --outDir ../src/static/oidc --emptyOutDir"
+  },
+  "devDependencies": {
+    "ep_etherpad-lite": "workspace:../src",
+    "typescript": "^5.9.3",
+    "vite": "npm:rolldown-vite@7.2.10"
+  },
+  "overrides": {
+    "vite": "npm:rolldown-vite@7.2.10"
+  }
+}

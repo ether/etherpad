@@ -1,88 +1,279 @@
-#button,
-body,
-form {
-  border: none
+@import url("./src/components/buttons.css");
+
+:root {
+  --etherpad-color: #64d29b;
+  --etherpad-color-dark: #4a5d5c;
+  --etherpad-border: oklch(92.8% 0.006 264.531);
+  --muted-text: oklch(44.6% 0.03 256.802);
+  --muted-border: oklch(87.2% 0.01 258.338);
+  --muted-background: hsl(240 4.8% 95.9%);
+  --ep-color: rgb(22 163 74);
+  --warm-green-olive: #7c9a3e;
+  --warm-green-moss: #8fae4a;
+  --warm-green-lime: #b7c96c;
+  --warm-green-avocado: #6e8b3d;
+  --warm-green-spring: #a3c85a;
 }
+
 
 body {
-  background: url(images/fond.jpg) center center no-repeat fixed #fff;
-  font-family: Quicksand, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
-  font-size: 16px;
-  line-height: 1.42857143;
-  color: #333;
+  border-top: 0;
+  background: oklch(98.5% 0.002 247.839);
   display: flex;
-  align-items: center;
-  justify-content: center;
-  background-size: cover;
+  flex-direction: column;
 }
 
-#wrapper {
-  border-top: none;
-  margin-top: 0;
-  padding: 0;
-  background: 0 0;
-  box-shadow: none
+h1 {
+  margin: auto 0 0;
+  font-size: 26px;
 }
 
-input {
-  color: #4a5d5c;
-}
-
-#inner {
-  background: transparent;
-  padding-top: 0;
-  width: 350px;
-  max-width: 350px;
-  text-align: center;
-  color:#FFF;
-}
-
-#label {
-  text-shadow: none;
-  color: #FFF;
-  font-weight: normal;
-  text-align: center;
-}
-
-#button {
-  margin: 0 auto;
-  text-align: center;
-  width: 100%;
-  text-shadow: none;
-  font-size: 23px;
-  line-height: 1.8;
-  color: #64d29b;
-  background: #586a69;
-  border-radius: 3px;
-  box-shadow: none;
-  height: 53px;
-  border: none;
+.mission-statement, .pad-datalist {
   display: block;
 }
 
-
-button[type=submit] {
-  border-top-right-radius: 3px;
-  border-bottom-right-radius: 3px;
-  left: 305px;
-  color: #64d29b;
-  background: #586a69;
-  border: none;
-  top: 0;
-  opacity: 1;
-  transition: .2s background;
+.mission-statement h2 {
+  font-weight: 700;
+  font-size: 2.25rem;
+  text-align: center;
+  margin: 0;
+  padding-top: 4rem;
 }
 
-#button:hover,
-button[type=submit]:hover {
-  cursor: pointer;
-  background: #4a5d5c;
-  color: #64d29b;
+.mission-statement p {
+  color: var(--muted-text);
+  font-size: 20px;
+  text-align: center;
+  max-width: 40%;
+  margin: auto;
+}
+
+#wrapper {
+  border-top: 0;
+  margin-top: 0;
+  padding: 0;
+  background: unset;
+  box-shadow: none;
+}
+
+#inner {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  margin-top: 20px;
+  margin-bottom: 20px;
+  max-width: 80%;
+}
+
+#label {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 700;
+  color: rgb(55 65 81);
+  margin-bottom: 0.5rem;
+  margin-top: 0;
+}
+
+#go2Name {
+  order: 1;
+}
+
+#padname, #go2Name, #go2Name [type="submit"], #button, #button:hover {
+  all: unset;
+}
+
+
+#padname {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+  outline: none;
+  transition: border 0.2s;
 }
 
 #padname {
-  height: 38px;
-  max-width: 350px;
-  padding: 0 12px;
+  box-sizing: border-box;
+  width: 100%;
+  color: var(--muted-text);
+  border: 1px solid var(--muted-border);
+  border-radius: 5px;
+}
+
+#button, #button:hover, #go2Name [type="submit"], #transferSessionButton {
+  order: 2;
+  margin-top: 0.5rem;
+  line-height: 1.25rem;
+  background: white;
+  border: 1px solid var(--muted-border);
+  text-align: center;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+  font-size: 14px;
+  font-weight: 700;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+#go2Name [type="submit"]:hover, #transferSessionButton {
+  background-color: oklch(52.7% 0.154 150.069)
+}
+
+#transferSessionButton:disabled {
+  opacity: 0.5;
+}
+
+#button, #button:hover {
+  order: 2;
+}
+
+#button:hover {
+  background-color: var(--muted-background);
+}
+
+#go2Name input {
+  width: 100%;
+}
+
+
+#go2Name [type="submit"], #transferSessionButton {
+  display: block;
+  background-color: var(--ep-color);
+  color: white;
+  width: 100%;
+}
+
+
+body nav {
+  display: flex;
+  border-bottom-width: 1px;
+  border-bottom-style: solid;
+  border-bottom-color: var(--etherpad-border);
+  padding: 1rem 1.5rem;
+}
+
+.logo-box svg {
+  width: 1.25rem;
+  height: 1.25rem;
+  color: #fff;
+}
+
+.logo-box {
+  width: 2rem;
+  height: 2rem;
+  background: #16a34a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 1rem;
+}
+
+
+#wrapper, .pad-datalist {
+  width: 100%;
+  max-width: 28rem;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 2px 0 #0001;
+  margin: 2rem auto auto;
+}
+
+.pad-datalist {
+  max-width: 56rem;
+  margin-bottom: 1rem;
+}
+
+.break-column {
+  flex-basis: 100%;
+  width: 0;
+}
+
+ul {
+  list-style-type: none;
+}
+
+.recent-pad {
+  padding: 0.75rem 1.5rem;
+  display: flex;
   position: relative;
+  flex-direction: column;
+}
+
+.body {
+  flex-grow: 1;
+  background: linear-gradient(
+    to bottom right,
+    #d1fae5,   /* emerald-100 */
+    #f0fdfa,   /* teal-50 */
+    #dbeafe,   /* blue-100 */
+    #c7d2fe    /* indigo-200 */
+  );
+}
+
+.recent-pad:hover a {
+  color: var(--ep-color);
+}
+
+.recent-pad-arrow {
+  position: absolute;
+  right: 1rem;
+}
+
+.recent-pad a {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 800;
+}
+
+a, a:visited, a:hover, a:active {
+  color: inherit;
+}
+
+.pad-datalist h2 {
+  border-bottom: 1px solid var(--muted-border);
+  padding: 1rem 1.5rem;
+  border-bottom-width: 1px;
+  border-bottom-style: solid;
+  border-bottom-color: #e5e7eb;
+}
+
+#settings-dialog::backdrop {
+    background: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(2px);
+}
+
+.card-content {
+  padding: 1.5rem;
+}
+
+#codeInput {
+  height: auto;
+  position: static;
+  border: 1px solid var(--muted-border);
+  border-radius: 0.375rem;
+  font-size: 1rem;
+  outline: none;
+  transition: border 0.2s;
+}
+
+@media (max-width: 640px) {
+  #inner {
+    max-width: 100%;
+    padding: 0 1rem;
+  }
+
+  .mission-statement p {
+    max-width: 100%;
+  }
+
+  .pad-datalist {
+    max-width: 90%;
+  }
+
+  .mission-statement h2 {
+    font-size: 1.5rem;
+  }
 }

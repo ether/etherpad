@@ -1,0 +1,17 @@
+{
+	"@metadata": {
+		"authors": [
+			"Mrkczr"
+		]
+	},
+	"ep_adminpads2_action": "Kilos",
+	"ep_adminpads2_delete.value": "Burahin",
+	"ep_adminpads2_last-edited": "Huling binago",
+	"ep_adminpads2_loading": "Naglo-load...",
+	"ep_adminpads2_no-results": "Walang mga resulta",
+	"ep_adminpads2_search-box.placeholder": "Mga katagang hahanapin:",
+	"ep_adminpads2_search-button.value": "Hanapin",
+	"ep_adminpads2_search-done": "Natapos na ang paghahanap",
+	"ep_adminpads2_unknown-error": "Hindi nalalamang kamalian",
+	"ep_adminpads2_unknown-status": "Hindi alam na katayuan"
+}

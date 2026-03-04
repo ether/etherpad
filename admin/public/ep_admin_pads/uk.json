@@ -1,0 +1,28 @@
+{
+	"@metadata": {
+		"authors": [
+			"DDPAT",
+			"Ice bulldog"
+		]
+	},
+	"ep_adminpads2_action": "Дія",
+	"ep_adminpads2_autoupdate-label": "Автоматичне оновлення при зміні майданчика",
+	"ep_adminpads2_autoupdate.title": "Вмикає або вимикає автоматичне оновлення поточного запиту.",
+	"ep_adminpads2_confirm": "Ви дійсно хочете видалити панель {{padID}}?",
+	"ep_adminpads2_delete.value": "Видалити",
+	"ep_adminpads2_last-edited": "Останнє редагування",
+	"ep_adminpads2_loading": "Завантаження…",
+	"ep_adminpads2_manage-pads": "Управління майданчиками",
+	"ep_adminpads2_no-results": "Немає результатів",
+	"ep_adminpads2_pad-user-count": "Кількість майданчиків користувача",
+	"ep_adminpads2_padname": "Назва майданчика",
+	"ep_adminpads2_search-box.placeholder": "Пошуковий термін",
+	"ep_adminpads2_search-button.value": "Пошук",
+	"ep_adminpads2_search-done": "Пошук завершено",
+	"ep_adminpads2_search-error-explanation": "Під час пошуку педів сервер виявив помилку:",
+	"ep_adminpads2_search-error-title": "Не вдалося отримати список панелей",
+	"ep_adminpads2_search-heading": "Пошук майданчиків",
+	"ep_adminpads2_title": "Введення майданчиків",
+	"ep_adminpads2_unknown-error": "Невідома помилка",
+	"ep_adminpads2_unknown-status": "Невідомий статус"
+}

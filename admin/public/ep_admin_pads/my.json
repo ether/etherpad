@@ -1,0 +1,27 @@
+{
+	"@metadata": {
+		"authors": [
+			"Andibecker"
+		]
+	},
+	"ep_adminpads2_action": "လုပ်ဆောင်ချက်",
+	"ep_adminpads2_autoupdate-label": "pad အပြောင်းအလဲများတွင်အလိုအလျောက်အပ်ဒိတ်လုပ်ပါ",
+	"ep_adminpads2_autoupdate.title": "လက်ရှိမေးမြန်းမှုအတွက်အလိုအလျောက်အပ်ဒိတ်များကိုဖွင့်ပါသို့မဟုတ်ပိတ်ပါ။",
+	"ep_adminpads2_confirm": "pad {{padID}} ကိုသင်တကယ်ဖျက်ချင်လား။",
+	"ep_adminpads2_delete.value": "ဖျက်ပါ",
+	"ep_adminpads2_last-edited": "နောက်ဆုံးတည်းဖြတ်သည်",
+	"ep_adminpads2_loading": "ဖွင့်နေသည်…",
+	"ep_adminpads2_manage-pads": "pads များကိုစီမံပါ",
+	"ep_adminpads2_no-results": "ရလဒ်မရှိပါ",
+	"ep_adminpads2_pad-user-count": "Pad အသုံးပြုသူအရေအတွက်",
+	"ep_adminpads2_padname": "Padname",
+	"ep_adminpads2_search-box.placeholder": "ဝေါဟာရရှာဖွေပါ",
+	"ep_adminpads2_search-button.value": "ရှာဖွေပါ",
+	"ep_adminpads2_search-done": "ရှာဖွေမှုပြီးပါပြီ",
+	"ep_adminpads2_search-error-explanation": "pads များကိုရှာဖွေစဉ်ဆာဗာသည်အမှားတစ်ခုကြုံခဲ့သည်။",
+	"ep_adminpads2_search-error-title": "pad စာရင်းရယူရန်မအောင်မြင်ပါ",
+	"ep_adminpads2_search-heading": "pads များကိုရှာဖွေပါ",
+	"ep_adminpads2_title": "Pad စီမံခန့်ခွဲမှု",
+	"ep_adminpads2_unknown-error": "အမည်မသိအမှား",
+	"ep_adminpads2_unknown-status": "အခြေအနေမသိ"
+}

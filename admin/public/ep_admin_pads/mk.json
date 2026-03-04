@@ -1,0 +1,27 @@
+{
+	"@metadata": {
+		"authors": [
+			"Bjankuloski06"
+		]
+	},
+	"ep_adminpads2_action": "Дејство",
+	"ep_adminpads2_autoupdate-label": "Самоподнова при измени во тетратката",
+	"ep_adminpads2_autoupdate.title": "Овозможува или оневозможува самоподнова на тековното барање.",
+	"ep_adminpads2_confirm": "Дали навистина сакате да ја избришете тетратката {{padID}}?",
+	"ep_adminpads2_delete.value": "Избриши",
+	"ep_adminpads2_last-edited": "Последно уредување",
+	"ep_adminpads2_loading": "Вчитувам…",
+	"ep_adminpads2_manage-pads": "Раководење со тетратки",
+	"ep_adminpads2_no-results": "Нема исход",
+	"ep_adminpads2_pad-user-count": "Корисници на тетратката",
+	"ep_adminpads2_padname": "Назив на тетратката",
+	"ep_adminpads2_search-box.placeholder": "Пребаран поим",
+	"ep_adminpads2_search-button.value": "Пребарај",
+	"ep_adminpads2_search-done": "Пребарувањето заврши",
+	"ep_adminpads2_search-error-explanation": "Опслужувачот наиде на грешка при пребарувањето на тетратки:",
+	"ep_adminpads2_search-error-title": "Не можев да го добијам списокот на тетратки",
+	"ep_adminpads2_search-heading": "Пребарај по тетратките",
+	"ep_adminpads2_title": "Администрација на тетратки",
+	"ep_adminpads2_unknown-error": "Непозната грешка",
+	"ep_adminpads2_unknown-status": "Непозната состојба"
+}

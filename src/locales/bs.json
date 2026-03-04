@@ -3,7 +3,8 @@
 		"authors": [
 			"Edinwiki",
 			"Semina x",
-			"Srdjan m"
+			"Srdjan m",
+			"Srđan"
 		]
 	},
 	"index.newPad": "Novi Pad",
@@ -28,9 +29,7 @@
 	"pad.colorpicker.cancel": "Otkaži",
 	"pad.loading": "Učitavam...",
 	"pad.noCookie": "Kolačić nije pronađen. Molimo Vas dozvolite kolačiće u Vašem pregledniku!",
-	"pad.passwordRequired": "Treba Vam lozinka da bi ste pristupili ovom padu",
 	"pad.permissionDenied": "Nemate dopuštenje da pistupite ovom padu",
-	"pad.wrongPassword": "Vaša lozinka je pogrešna",
 	"pad.settings.padSettings": "Postavke stranice",
 	"pad.settings.myView": "Moj prikaz",
 	"pad.settings.stickychat": "Ćaskanje uvijek na ekranu",
@@ -96,9 +95,6 @@
 	"pad.savedrevs.marked": "Ova revizija je sada označena kao sačuvana revizija",
 	"pad.userlist.entername": "Upišite svoje ime",
 	"pad.userlist.unnamed": "neimenovano",
-	"pad.userlist.guest": "Gost",
-	"pad.userlist.deny": "Odbij",
-	"pad.userlist.approve": "Odobri",
 	"pad.editbar.clearcolors": "Očisti autorske boje na čitavom dokumentu?",
 	"pad.impexp.importbutton": "Uvezi odmah",
 	"pad.impexp.importing": "Uvozim...",

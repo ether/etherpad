@@ -1,0 +1,23 @@
+{
+  "ep_adminpads2_action": "Action",
+  "ep_adminpads2_autoupdate-label": "Auto-update on pad changes",
+  "ep_adminpads2_autoupdate.title": "Enables or disables automatic updates for the current query.",
+  "ep_adminpads2_confirm": "Do you really want to delete the pad {{padID}}?",
+  "ep_adminpads2_delete.value": "Delete",
+  "ep_adminpads2_cleanup": "Cleanup revisions",
+  "ep_adminpads2_last-edited": "Last edited",
+  "ep_adminpads2_loading": "Loading…",
+  "ep_adminpads2_manage-pads": "Manage pads",
+  "ep_adminpads2_no-results": "No results",
+  "ep_adminpads2_pad-user-count": "Pad user count",
+  "ep_adminpads2_padname": "Padname",
+  "ep_adminpads2_search-box.placeholder": "Search term",
+  "ep_adminpads2_search-button.value": "Search",
+  "ep_adminpads2_search-done": "Search complete",
+  "ep_adminpads2_search-error-explanation": "The server encountered an error while searching for pads:",
+  "ep_adminpads2_search-error-title": "Failed to get pad list",
+  "ep_adminpads2_search-heading": "Search for pads",
+  "ep_adminpads2_title": "Pad administration",
+  "ep_adminpads2_unknown-error": "Unknown error",
+  "ep_adminpads2_unknown-status": "Unknown status"
+}

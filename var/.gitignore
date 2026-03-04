@@ -1,2 +1,5 @@
 sqlite.db
 minified*
+installed_plugins.json
+dirty.db
+rusty.db

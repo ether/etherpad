@@ -1,0 +1,20 @@
+{
+	"@metadata": {
+		"authors": [
+			"Saraiki"
+		]
+	},
+	"ep_adminpads2_action": "عمل",
+	"ep_adminpads2_delete.value": "مٹاؤ",
+	"ep_adminpads2_last-edited": "چھیکڑی تبدیلی",
+	"ep_adminpads2_loading": "لوڈ تھین٘دا پئے۔۔۔",
+	"ep_adminpads2_manage-pads": "پیڈ منیج کرو",
+	"ep_adminpads2_no-results": "کوئی نتیجہ کائنی",
+	"ep_adminpads2_padname": "پیڈ ناں",
+	"ep_adminpads2_search-box.placeholder": "ٹرم ڳولو",
+	"ep_adminpads2_search-button.value": "ڳولو",
+	"ep_adminpads2_search-done": "ڳولݨ پورا تھیا",
+	"ep_adminpads2_search-heading": "پیڈاں دی ڳول",
+	"ep_adminpads2_unknown-error": "نامعلوم غلطی",
+	"ep_adminpads2_unknown-status": "نامعلوم حالت"
+}

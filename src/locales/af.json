@@ -65,9 +65,6 @@
 	"timeslider.month.december": "Desember",
 	"pad.userlist.entername": "Verskaf u naam",
 	"pad.userlist.unnamed": "sonder naam",
-	"pad.userlist.guest": "Gas",
-	"pad.userlist.deny": "Keur af",
-	"pad.userlist.approve": "Keur goed",
 	"pad.impexp.importbutton": "Voer nou in",
 	"pad.impexp.importing": "Besig met invoer...",
 	"pad.impexp.importfailed": "Invoer het gefaal"

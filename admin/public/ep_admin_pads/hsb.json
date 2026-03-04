@@ -1,0 +1,27 @@
+{
+	"@metadata": {
+		"authors": [
+			"Michawiki"
+		]
+	},
+	"ep_adminpads2_action": "Akcija",
+	"ep_adminpads2_autoupdate-label": "Při změnach na zapisniku awtomatisce aktualizować",
+	"ep_adminpads2_autoupdate.title": "Zmóžnja abo znjemóžnja awtomatiske aktualizacije za aktualne wotprašowanje.",
+	"ep_adminpads2_confirm": "Chceće woprawdźe zapisnik {{padID}} zhašeć?",
+	"ep_adminpads2_delete.value": "Zhašeć",
+	"ep_adminpads2_last-edited": "Poslednja změna",
+	"ep_adminpads2_loading": "Začituje so...",
+	"ep_adminpads2_manage-pads": "Zapisniki rjadować",
+	"ep_adminpads2_no-results": "Žane wuslědki.",
+	"ep_adminpads2_pad-user-count": "Ličba wužiwarjow zapisnika",
+	"ep_adminpads2_padname": "Mjeno zapisnika",
+	"ep_adminpads2_search-box.placeholder": "Pytanske zapřijeće",
+	"ep_adminpads2_search-button.value": "Pytać",
+	"ep_adminpads2_search-done": "Pytanje dokónčene",
+	"ep_adminpads2_search-error-explanation": "Serwer je na zmylk storčił, mjeztym zo je za zapisnikami pytał:",
+	"ep_adminpads2_search-error-title": "Lisćina zapisnikow njeda so wobstarać",
+	"ep_adminpads2_search-heading": "Za zapisnikami pytać",
+	"ep_adminpads2_title": "Zapisnikowa administracija",
+	"ep_adminpads2_unknown-error": "Njeznaty zmylk",
+	"ep_adminpads2_unknown-status": "Njeznaty status"
+}

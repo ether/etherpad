@@ -1,0 +1,125 @@
+:root {
+    font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+    line-height: 1.5;
+    font-weight: 400;
+
+
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    --color-etherpad: #0f775b;
+}
+
+body {
+    font-size: 16px;
+    margin: 0;
+    display: flex;
+    place-items: center;
+    min-width: 320px;
+    min-height: 100vh;
+}
+
+#app {
+    max-width: 1280px;
+    margin: auto;
+    padding: 2rem;
+}
+
+
+button {
+    border-radius: 8px;
+    border: 1px solid transparent;
+    padding: 0.6em 1.2em;
+    font-size: 1em;
+    font-weight: 500;
+    font-family: inherit;
+    background-color: #1a1a1a;
+    cursor: pointer;
+    transition: border-color 0.25s;
+}
+
+button:hover {
+    border-color: #646cff;
+}
+
+button:focus,
+button:focus-visible {
+    outline: 4px auto -webkit-focus-ring-color;
+}
+
+@media (prefers-color-scheme: light) {
+    :root {
+        color: #213547;
+        background-color: #ffffff;
+    }
+
+    a:hover {
+        color: #747bff;
+    }
+
+    button {
+        background-color: #f9f9f9;
+    }
+}
+
+.login-box {
+    background-color: #f2f6f7;
+    padding: 40px;
+    border-radius: 20px;
+    color: #607278;
+}
+
+body {
+    background: radial-gradient(100% 100% at 50% 0%, var(--color-etherpad) 0%, #003A47 100%) fixed
+}
+
+input {
+    border-radius: 8px;
+    border: 1px solid #d1d1d1;
+    padding: 0.6em 1.2em;
+    font-size: 1em;
+    font-weight: 500;
+    font-family: inherit;
+    background-color: #f9f9f9;
+    transition: border-color 0.25s;
+}
+
+.login-inner-box {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.login-inner-box input[type=submit] {
+    background-color: var(--color-etherpad);
+    color: white;
+    border: none;
+    cursor: pointer;
+    margin-top: 20px;
+}
+
+.password-label {
+    position: relative;
+}
+
+.password-label svg {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    width: 16px;
+}
+
+#eye-hide {
+    display: none;
+}
+
+label {
+    display: flex;
+}
+
+label input {
+    flex-grow: 1;
+}

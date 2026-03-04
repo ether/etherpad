@@ -1,0 +1,25 @@
+{
+	"@metadata": {
+		"authors": []
+	},
+	"ep_adminpads2_action": "Művelet",
+	"ep_adminpads2_autoupdate-label": "Változáskor jegyzetfüzet önműködő frissítése",
+	"ep_adminpads2_autoupdate.title": "Önműködő frissítése az jelenlegi lekérdezéshez be- vagy kikapcsolása.",
+	"ep_adminpads2_confirm": "Biztosan törölni szeretné a(z) {{padID}} jegyzetfüzetet?",
+	"ep_adminpads2_delete.value": "Törlés",
+	"ep_adminpads2_last-edited": "Utoljára szerkesztve",
+	"ep_adminpads2_loading": "Betöltés folyamatban…",
+	"ep_adminpads2_manage-pads": "Jegyzetfüzetek kezelése",
+	"ep_adminpads2_no-results": "Nincs találat",
+	"ep_adminpads2_pad-user-count": "Jegyzetfüzet felhasználók száma",
+	"ep_adminpads2_padname": "Jegyzetfüzet név",
+	"ep_adminpads2_search-box.placeholder": "Keresési kifejezés",
+	"ep_adminpads2_search-button.value": "Keresés",
+	"ep_adminpads2_search-done": "Keresés befejezve",
+	"ep_adminpads2_search-error-explanation": "A kiszolgáló hibát észlelt a jegyzetfüzetek keresésekor:",
+	"ep_adminpads2_search-error-title": "Nem sikerült lekérni a jegyzetfüzet listát",
+	"ep_adminpads2_search-heading": "Jegyzetfüzetek keresése",
+	"ep_adminpads2_title": "Jegyzetfüzet felügyelete",
+	"ep_adminpads2_unknown-error": "Ismeretlen hiba",
+	"ep_adminpads2_unknown-status": "Ismeretlen állapot"
+}

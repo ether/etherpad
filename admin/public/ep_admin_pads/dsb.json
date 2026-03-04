@@ -1,0 +1,27 @@
+{
+	"@metadata": {
+		"authors": [
+			"Michawiki"
+		]
+	},
+	"ep_adminpads2_action": "Akcija",
+	"ep_adminpads2_autoupdate-label": "Pśi změnach na zapisniku awtomatiski aktualizěrowaś",
+	"ep_adminpads2_autoupdate.title": "Zmóžnja abo znjemóžnja awtomatiske aktualizacije za aktualne wótpšašowanje.",
+	"ep_adminpads2_confirm": "Cośo napšawdu zapisnik {{padID}} lašowaś?",
+	"ep_adminpads2_delete.value": "Lašowaś",
+	"ep_adminpads2_last-edited": "Slědna změna",
+	"ep_adminpads2_loading": "Zacytujo se...",
+	"ep_adminpads2_manage-pads": "Zapisniki zastojaś",
+	"ep_adminpads2_no-results": "Žedne wuslědki",
+	"ep_adminpads2_pad-user-count": "Licba wužywarjow zapisnika",
+	"ep_adminpads2_padname": "Mě zapisnika",
+	"ep_adminpads2_search-box.placeholder": "Pytańske zapśimjeśe",
+	"ep_adminpads2_search-button.value": "Pytaś",
+	"ep_adminpads2_search-done": "Pytanje dokóńcone",
+	"ep_adminpads2_search-error-explanation": "Serwer jo starcył na zmólku, mjaztym až jo pytał za zapisnikami:",
+	"ep_adminpads2_search-error-title": "Lisćina zapisnikow njedajo se wobstaraś",
+	"ep_adminpads2_search-heading": "Za zapisnikami pytaś",
+	"ep_adminpads2_title": "Zapisnikowa administracija",
+	"ep_adminpads2_unknown-error": "Njeznata zmólka",
+	"ep_adminpads2_unknown-status": "Njeznaty status"
+}

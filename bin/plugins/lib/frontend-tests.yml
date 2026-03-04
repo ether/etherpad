@@ -1,0 +1,94 @@
+# Publicly credit Sauce Labs because they generously support open source
+# projects.
+name: Frontend Tests
+
+on:
+  workflow_call:
+
+jobs:
+  test-frontend:
+    runs-on: ubuntu-latest
+
+    steps:
+      -
+        name: Check out Etherpad core
+        uses: actions/checkout@v3
+        with:
+          repository: ether/etherpad-lite
+      - uses: pnpm/action-setup@v3
+        name: Install pnpm
+        with:
+          version: 10
+          run_install: false
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+      - uses: actions/cache@v4
+        name: Setup pnpm cache
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+      -
+        name: Check out the plugin
+        uses: actions/checkout@v3
+        with:
+          path: ./node_modules/__tmp
+      -
+        name: export GIT_HASH to env
+        id: environment
+        run: |
+          cd ./node_modules/__tmp
+          echo "::set-output name=sha_short::$(git rev-parse --short ${{ github.sha }})"
+      -
+        name: Determine plugin name
+        id: plugin_name
+        run: |
+          cd ./node_modules/__tmp
+          npx -c 'printf %s\\n "::set-output name=plugin_name::${npm_package_name}"'
+      -
+        name: Rename plugin directory
+        env:
+          PLUGIN_NAME: ${{ steps.plugin_name.outputs.plugin_name }}
+        run: |
+          mv ./node_modules/__tmp ./node_modules/"${PLUGIN_NAME}"
+      -
+        name: Install plugin dependencies
+        env:
+          PLUGIN_NAME: ${{ steps.plugin_name.outputs.plugin_name }}
+        run: |
+          cd ./node_modules/"${PLUGIN_NAME}"
+          pnpm i
+      # Etherpad core dependencies must be installed after installing the
+      # plugin's dependencies, otherwise npm will try to hoist common
+      # dependencies by removing them from src/node_modules and installing them
+      # in the top-level node_modules. As of v6.14.10, npm's hoist logic appears
+      # to be buggy, because it sometimes removes dependencies from
+      # src/node_modules but fails to add them to the top-level node_modules.
+      # Even if npm correctly hoists the dependencies, the hoisting seems to
+      # confuse tools such as `npm outdated`, `npm update`, and some ESLint
+      # rules.
+      -
+        name: Install Etherpad core dependencies
+        run: bin/installDeps.sh
+      - name: Create settings.json
+        run: cp ./src/tests/settings.json settings.json
+      - name: Run the frontend tests
+        shell: bash
+        run: |
+          pnpm run prod &
+          connected=false
+          can_connect() {
+          curl -sSfo /dev/null http://localhost:9001/ || return 1
+          connected=true
+          }
+          now() { date +%s; }
+          start=$(now)
+          while [ $(($(now) - $start)) -le 15 ] && ! can_connect; do
+          sleep 1
+          done
+          cd src
+          pnpm exec playwright install chromium  --with-deps
+          pnpm run test-ui --project=chromium

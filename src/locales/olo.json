@@ -10,7 +10,6 @@
 	"pad.toolbar.settings.title": "Azetukset",
 	"pad.colorpicker.save": "Tallenda",
 	"pad.colorpicker.cancel": "Hylgiä",
-	"pad.wrongPassword": "Peittosana oli viärin",
 	"pad.settings.linenocheck": "Riädynoumerot",
 	"pad.settings.rtlcheck": "Luve syväindö oigielpäi huruale?",
 	"pad.settings.language": "Kieli:",
@@ -48,7 +47,6 @@
 	"timeslider.month.december": "talvikuudu",
 	"pad.userlist.entername": "Kirjuta sinun nimi",
 	"pad.userlist.unnamed": "nimetöi",
-	"pad.userlist.guest": "Gost'u",
 	"pad.impexp.importbutton": "Tuo nygöi",
 	"pad.impexp.importing": "Tuou..."
 }

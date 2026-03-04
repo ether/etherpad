@@ -1,0 +1,109 @@
+name: "Upgrade from latest release"
+
+# any branch is useful for testing before a PR is submitted
+on:
+  push:
+    paths-ignore:
+      - "doc/**"
+  pull_request:
+    paths-ignore:
+      - "doc/**"
+
+permissions:
+  contents: read
+
+env:
+  PNPM_HOME: ~/.pnpm-store
+
+jobs:
+  withpluginsLinux:
+    # run on pushes to any branch
+    # run on PRs from external forks
+    if: |
+      (github.event_name != 'pull_request')
+      || (github.event.pull_request.head.repo.id != github.event.pull_request.base.repo.id)
+    name: Linux with Plugins
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20, 22, 24]
+    steps:
+      -
+        name: Check out latest release
+        uses: actions/checkout@v6
+        with:
+          ref: develop #FIXME change to master when doing release
+      - uses: actions/cache@v5
+        name: Setup gnpm cache
+        if: always()
+        with:
+          path: |
+            ${{ env.STORE_PATH }}
+            ~/.local/share/gnpm
+            ~/.cache/ms-playwright
+            /usr/local/bin/gnpm
+            /usr/local/bin/gnpm-0.0.12
+          key: ${{ runner.os }}-gnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-gnpm-store-
+      - name: Setup gnpm
+        uses: SamTV12345/gnpm-setup@main
+        with:
+          version: 0.0.12
+      - name: Install libreoffice
+        uses: awalsh128/cache-apt-pkgs-action@v1.6.0
+        with:
+          packages: libreoffice libreoffice-pdfimport
+          version: 1.0
+      -
+        name: Install libreoffice
+        uses: awalsh128/cache-apt-pkgs-action@v1.6.0
+        with:
+          packages: libreoffice libreoffice-pdfimport
+          version: 1.0
+      -
+        name: Install all dependencies and symlink for ep_etherpad-lite
+        run: gnpm install --frozen-lockfile --runtimeVersion="${{ matrix.node }}"
+      - name: Build admin ui
+        working-directory: admin
+        run: gnpm build --runtimeVersion="${{ matrix.node }}"
+      -
+        name: Install Etherpad plugins
+        run: >
+          gnpm run install-plugins
+          ep_align
+          ep_author_hover
+          ep_cursortrace
+          ep_font_size
+          ep_hash_auth
+          ep_headings2
+          ep_markdown
+          ep_readonly_guest
+          ep_set_title_on_pad
+          ep_spellcheck
+          ep_subscript_and_superscript
+          ep_table_of_contents --runtimeVersion="${{ matrix.node }}"
+      -
+        name: Run the backend tests
+        run: gnpm run test --runtimeVersion="${{ matrix.node }}"
+      -
+        name: Install all dependencies and symlink for ep_etherpad-lite
+        run: gnpm install --frozen-lockfile --runtimeVersion="${{ matrix.node }}"
+      # Because actions/checkout@v6 is called with "ref: master" and without
+      # "fetch-depth: 0", the local clone does not have the ${GITHUB_SHA}
+      # commit. Fetch ${GITHUB_REF} to get the ${GITHUB_SHA} commit. Note that a
+      # plain "git fetch" only fetches "normal" references (refs/heads/* and
+      # refs/tags/*), and for pull requests none of the normal references
+      # include ${GITHUB_SHA}, so we have to explicitly tell Git to fetch
+      # ${GITHUB_REF}.
+      -
+        name: Fetch the new Git commits
+        run: git fetch --depth=1 origin "${GITHUB_REF}"
+      -
+        name: Upgrade to the new Git revision
+        # For pull requests, ${GITHUB_SHA} is the automatically generated merge
+        # commit that merges the PR's source branch to its destination branch.
+        run: git checkout "${GITHUB_SHA}"
+      - name: Run the backend tests
+        run: gnpm run test --runtimeVersion="${{ matrix.node }}"

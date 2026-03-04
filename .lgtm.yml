@@ -1,0 +1,9 @@
+extraction:
+  javascript:
+    index:
+      exclude:
+        - src/static/js/vendors
+  python:
+    index:
+      exclude:
+        - /

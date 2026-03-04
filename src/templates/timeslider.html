@@ -1,39 +1,39 @@
 <%
-  var settings = require("ep_etherpad-lite/node/utils/Settings")
-    , langs = require("ep_etherpad-lite/node/hooks/i18n").availableLangs
+  var langs = require("ep_etherpad-lite/node/hooks/i18n").availableLangs
 %>
 <!doctype html>
-<html class="<%=settings.skinVariants%>">
-<title data-l10n-id="timeslider.pageTitle" data-l10n-args='{ "appTitle": "<%=settings.title%>" }'><%=settings.title%> Timeslider</title>
-<script>
-  /*
-  |@licstart  The following is the entire license notice for the
-  JavaScript code in this page.|
-
-  Copyright 2011 Peter Martischka, Primary Technology.
-
-  Licensed under the Apache License, Version 2.0 (the "License");
-  you may not use this file except in compliance with the License.
-  You may obtain a copy of the License at
-
-  http://www.apache.org/licenses/LICENSE-2.0
-
-  Unless required by applicable law or agreed to in writing, software
-  distributed under the License is distributed on an "AS IS" BASIS,
-  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  See the License for the specific language governing permissions and
-  limitations under the License.
-
-  |@licend  The above is the entire license notice
-  for the JavaScript code in this page.|
-  */
-</script>
+<html translate="no" class="pad <%=settings.skinVariants%>">
 <head>
+  <title data-l10n-id="timeslider.pageTitle" data-l10n-args='{ "appTitle": "<%=settings.title%>" }'><%=settings.title%> Timeslider</title>
+  <script>
+    /*
+    |@licstart  The following is the entire license notice for the
+    JavaScript code in this page.|
+
+    Copyright 2011 Peter Martischka, Primary Technology.
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+
+    |@licend  The above is the entire license notice
+    for the JavaScript code in this page.|
+    */
+  </script>
   <meta charset="utf-8">
+  <link rel="manifest" href="../../../manifest.json" />
   <meta name="robots" content="noindex, nofollow">
   <meta name="referrer" content="no-referrer">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
-  <link rel="shortcut icon" href="<%=settings.faviconTimeslider%>">
+  <link rel="shortcut icon" href="../../favicon.ico">
   <% e.begin_block("timesliderStyles"); %>
   <link rel="stylesheet" href="../../static/css/pad.css?v=<%=settings.randomVersionString%>">
   <link rel="stylesheet" href="../../static/css/iframe_editor.css?v=<%=settings.randomVersionString%>">
@@ -45,8 +45,6 @@
 
   <link rel="localizations" type="application/l10n+json" href="../../locales.json" />
   <% e.begin_block("timesliderScripts"); %>
-  <script type="text/javascript" src="../../static/js/html10n.js?v=<%=settings.randomVersionString%>"></script>
-  <script type="text/javascript" src="../../static/js/l10n.js?v=<%=settings.randomVersionString%>"></script>
   <% e.end_block(); %>
 </head>
 
@@ -74,11 +72,11 @@
       </div>
 
       <div class="editbarright menu_right">
-        <% e.begin_block("timesliderEditbarRight"); %>
         <ul>
-          <%- toolbar.menu(settings.toolbar.timeslider, true, 'timeslider-right', 'timeslider') %>
+          <% e.begin_block("timesliderEditbarRight"); %>
+            <%- toolbar.menu(settings.toolbar.timeslider, true, 'timeslider-right', 'timeslider') %>
+          <% e.end_block(); %>
         </ul>
-        <% e.end_block(); %>
       </div>
     </div>
 
@@ -226,14 +224,20 @@
 
     <div id="settings" class="popup"><div class="popup-content">
       <h1 data-l10n-id="pad.settings.padSettings"></h1>
-      <label for="viewfontmenu" data-l10n-id="pad.settings.fontType">Font type:</label>
-      <select id="viewfontmenu">
-        <option value="" data-l10n-id="pad.settings.fontType.normal">Normal</option>
-        <%= fonts = ["Quicksand", "Roboto", "Alegreya", "PlayfairDisplay", "Montserrat", "OpenDyslexic", "RobotoMono"] %>
-        <% for(var i=0; i < fonts.length; i++) { %>
-          <option value="<%=fonts[i]%>"><%=fonts[i]%></option>
-        <% } %>
-      </select>
+      <p>
+        <label for="viewfontmenu" data-l10n-id="pad.settings.fontType">Font type:</label>
+        <select id="viewfontmenu">
+          <option value="" data-l10n-id="pad.settings.fontType.normal">Normal</option>
+          <%= fonts = ["Quicksand", "Roboto", "Alegreya", "PlayfairDisplay", "Montserrat", "OpenDyslexic", "RobotoMono"] %>
+          <% for(var i=0; i < fonts.length; i++) { %>
+            <option value="<%=fonts[i]%>"><%=fonts[i]%></option>
+          <% } %>
+        </select>
+      </p>
+      <p>
+        <input type="checkbox" id="options-followContents" checked="checked">
+        <label for="options-followContents" data-l10n-id="timeslider.followContents"></label>
+      </p>
     </div></div>
   </div>
 </body>
@@ -242,56 +246,14 @@
 <!-------- JAVASCRIPT --------->
 <!----------------------------->
 
-<script type="text/javascript" src="../../static/js/require-kernel.js?v=<%=settings.randomVersionString%>"></script>
-<script type="text/javascript" src="../../socket.io/socket.io.js?v=<%=settings.randomVersionString%>"></script>
+<script type="text/javascript" src="../../socket.io/socket.io.js"></script>
 
 <!-- Include base packages manually (this help with debugging) -->
-<script type="text/javascript" src="../../javascripts/lib/ep_etherpad-lite/static/js/timeslider.js?callback=require.define&v=<%=settings.randomVersionString%>"></script>
-<script type="text/javascript" src="../../javascripts/lib/ep_etherpad-lite/static/js/ace2_common.js?callback=require.define&v=<%=settings.randomVersionString%>"></script>
 
 <script type="text/javascript" src="../../static/skins/<%=encodeURI(settings.skinName)%>/timeslider.js?v=<%=settings.randomVersionString%>"></script>
 
 <!-- Bootstrap -->
-<script type="text/javascript" >
-  // @license magnet:?xt=urn:btih:8e4f440f4c65981c5bf93c76d35135ba5064d8b7&dn=apache-2.0.txt
-  var clientVars = {};
-  var BroadcastSlider;
-  (function () {
-    var pathComponents = location.pathname.split('/');
-
-    // Strip 'p', the padname and 'timeslider' from the pathname and set as baseURL
-    var baseURL = pathComponents.slice(0,pathComponents.length-3).join('/') + '/';
-
-
-    require.setRootURI(baseURL + "javascripts/src");
-    require.setLibraryURI(baseURL + "javascripts/lib");
-    require.setGlobalKeyPath("require");
-
-    $ = jQuery = require('ep_etherpad-lite/static/js/rjquery').jQuery; // Expose jQuery #HACK
-    browser = require('ep_etherpad-lite/static/js/browser');
-
-    var plugins = require('ep_etherpad-lite/static/js/pluginfw/client_plugins');
-    var socket = require('ep_etherpad-lite/static/js/timeslider').socket;
-    BroadcastSlider = require('ep_etherpad-lite/static/js/timeslider').BroadcastSlider;
-    plugins.baseURL = baseURL;
-
-    plugins.update(function () {
-      var hooks = require('ep_etherpad-lite/static/js/pluginfw/hooks');
-      hooks.plugins = plugins;
-
-      var timeslider = require('ep_etherpad-lite/static/js/timeslider')
-      timeslider.baseURL = baseURL;
-      timeslider.init();
-
-      /* TODO: These globals shouldn't exist. */
-      padeditbar = require('ep_etherpad-lite/static/js/pad_editbar').padeditbar;
-      padimpexp = require('ep_etherpad-lite/static/js/pad_impexp').padimpexp;
-
-      padeditbar.init()
-    });
-  })();
-  // @license-end
-</script>
+<script src="<%=entrypoint%>"></script>
 <% e.end_block(); %>
 <div style="display:none"><a href="/javascript" data-jslicense="1">JavaScript license information</a></div>
 </html>

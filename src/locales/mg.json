@@ -21,7 +21,6 @@
 	"pad.colorpicker.cancel": "Aoka ihany",
 	"pad.loading": "Am-pakàna…",
 	"pad.permissionDenied": "Tsy manana lalalana mijery ity pad ity ianao",
-	"pad.wrongPassword": "Diso ny tenimiafinao",
 	"pad.settings.padSettings": "Safidin'ny ped",
 	"pad.settings.myView": "Ny jeriko",
 	"pad.settings.linenocheck": "Laharan'ny andalana",
@@ -81,9 +80,6 @@
 	"timeslider.month.november": "Novambra",
 	"timeslider.month.december": "Desambra",
 	"pad.userlist.unnamed": "tsy manana naarana",
-	"pad.userlist.guest": "Nasaina",
-	"pad.userlist.deny": "Lavina",
-	"pad.userlist.approve": "Ekena",
 	"pad.impexp.importbutton": "Ampidirina izao",
 	"pad.impexp.importing": "Mampiditra..."
 }

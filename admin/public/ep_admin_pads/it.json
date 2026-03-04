@@ -1,0 +1,16 @@
+{
+	"@metadata": {
+		"authors": [
+			"Beta16",
+			"Luca.favorido"
+		]
+	},
+	"ep_adminpads2_action": "Azione",
+	"ep_adminpads2_delete.value": "Cancella",
+	"ep_adminpads2_last-edited": "Ultima modifica",
+	"ep_adminpads2_loading": "Caricamento…",
+	"ep_adminpads2_no-results": "Nessun risultato",
+	"ep_adminpads2_search-button.value": "Cerca",
+	"ep_adminpads2_unknown-error": "Errore sconosciuto",
+	"ep_adminpads2_unknown-status": "Stato sconosciuto"
+}

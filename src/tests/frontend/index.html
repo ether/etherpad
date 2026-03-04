@@ -1,0 +1,33 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Frontend tests</title>
+    <meta charset="utf-8">
+
+    <link rel="stylesheet" href="runner.css" />
+  </head>
+  <body>
+    <div id="console"></div>
+    <div id="split-view">
+      <div id="mocha"></div>
+      <div id="separator"></div>
+      <div id="iframe-container"></div>
+    </div>
+
+    <script src="../../static/js/vendors/jquery.js"></script>
+    <script src="lib/sendkeys.js"></script>
+    <script src="../../static/js/vendors/browser.js"></script>
+    <script src="../../static/plugins/js-cookie/dist/js.cookie.js"></script>
+    <script src="lib/underscore.js"></script>
+
+    <script src="lib/mocha.js"></script>
+    <script> mocha.setup({ui: 'bdd', checkLeaks: true, globals: 'ret_nodes', timeout: 60000}) </script>
+    <script src="lib/expect.js"></script>
+
+    <script src="helper.js"></script>
+    <script src="helper/methods.js"></script>
+    <script src="helper/ui.js"></script>
+    <script src="helper/multipleUsers.js"></script>
+    <script src="runner.js"></script>
+  </body>
+</html>

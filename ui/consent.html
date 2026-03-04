@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Consent Etherpad</title>
+</head>
+<body>
+<div id="app">
+    <div class="login-background login-page">
+        <div class="login-box login-form">
+            <h1 class="login-title">Etherpad <span id="client"></span></h1>
+            <form class="login-inner-box input-control"  method="post">
+                <input type="hidden" name="prompt" value="consent"/>
+                <input type="submit" value="Login" class="login-button"/>
+                <div id="error"></div>
+            </form>
+        </div>
+    </div>
+</div>
+<script type="module" src="/src/consent.ts"></script>
+</body>
+</html>

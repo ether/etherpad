@@ -1,9 +1,11 @@
 {
 	"@metadata": {
 		"authors": [
-			"Aue Nai"
+			"Aue Nai",
+			"咽頭べさ"
 		]
 	},
+	"admin_plugins.description": "တၚ်ထမံက်ထ္ၜး",
 	"index.newPad": "တၞးတၟိ",
 	"pad.toolbar.bold.title": "လ္စံက် (Ctrl+B)",
 	"pad.toolbar.italic.title": "ဒစေၚ် (Ctrl+I)",
@@ -12,7 +14,6 @@
 	"pad.colorpicker.save": "ဂိုင်သိပ်",
 	"pad.colorpicker.cancel": "တးပဲါ",
 	"pad.loading": "ပတိုန်ဒၟံၚ်",
-	"pad.wrongPassword": "ကောန်ဍေၚ်မၞးဂှ် ဗၠေတ်မံၚ်",
 	"pad.settings.language": "အရေဝ်ဘာသာ",
 	"pad.importExport.import_export": "ပလုပ်/ပတိတ်",
 	"pad.importExport.importSuccessful": "ဍိုက်ပေၚ်စိုပ်ဒတုဲ",
@@ -44,7 +45,7 @@
 	"timeslider.month.april": "ဨပြဳ",
 	"timeslider.month.may": "မေ",
 	"timeslider.month.june": "ဂျောန်",
-	"timeslider.month.july": "ဂျူလာင်",
+	"timeslider.month.july": "ဂျူလာၚ်",
 	"timeslider.month.august": "အဝ်ဂေတ်",
 	"timeslider.month.september": "\nသေပ်တေမ်ပါ",
 	"timeslider.month.october": "\nအံက်တဝ်ပါ",
@@ -53,9 +54,6 @@
 	"timeslider.unnamedauthors": "{{num}} ဟွံကဵုယၟု {[ဂမၠိုၚ်(num) မွဲ: ကဝိ, တၞဟ်: ကဝိဂမၠိုၚ် ]}",
 	"pad.userlist.entername": "စုတ် ယၟုညးလွပ်",
 	"pad.userlist.unnamed": "ဟွံကဵုလဝ်ယၟု",
-	"pad.userlist.guest": "ကၟုဲ",
-	"pad.userlist.deny": "တးပဲါ",
-	"pad.userlist.approve": "သ္ပကဵုဒတန်",
 	"pad.impexp.importbutton": " မပၠောပ်စုတ် လၟုဟ်",
 	"pad.impexp.importing": "မပၠောပ်စုတ်ဒၟံၚ်...",
 	"pad.impexp.importfailed": "မပၠောပ်စုတ်တအ်လီုအာ"

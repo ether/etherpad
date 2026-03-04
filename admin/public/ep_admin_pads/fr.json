@@ -1,0 +1,27 @@
+{
+	"@metadata": {
+		"authors": [
+			"Verdy p"
+		]
+	},
+	"ep_adminpads2_action": "Action",
+	"ep_adminpads2_autoupdate-label": "Mise à jour automatique en cas de changements du bloc-notes",
+	"ep_adminpads2_autoupdate.title": "Active ou désactive les mises à jour automatiques pour la requête actuelle.",
+	"ep_adminpads2_confirm": "Voulez-vous vraiment supprimer le bloc-notes {{padID}} ?",
+	"ep_adminpads2_delete.value": "Supprimer",
+	"ep_adminpads2_last-edited": "Dernière modification",
+	"ep_adminpads2_loading": "Chargement en cours...",
+	"ep_adminpads2_manage-pads": "Gérer les bloc-notes",
+	"ep_adminpads2_no-results": "Aucun résultat",
+	"ep_adminpads2_pad-user-count": "Nombre d’utilisateurs du bloc-notes",
+	"ep_adminpads2_padname": "Nom du bloc-notes",
+	"ep_adminpads2_search-box.placeholder": "Terme de recherche",
+	"ep_adminpads2_search-button.value": "Rechercher",
+	"ep_adminpads2_search-done": "Recherche terminée",
+	"ep_adminpads2_search-error-explanation": "Le serveur a rencontré une erreur en cherchant des blocs-notes :",
+	"ep_adminpads2_search-error-title": "Échec d’obtention de la liste de blocs-notes",
+	"ep_adminpads2_search-heading": "Rechercher des blocs-notes",
+	"ep_adminpads2_title": "Administration du bloc-notes",
+	"ep_adminpads2_unknown-error": "Erreur inconnue",
+	"ep_adminpads2_unknown-status": "État inconnu"
+}

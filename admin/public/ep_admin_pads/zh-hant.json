@@ -1,0 +1,28 @@
+{
+	"@metadata": {
+		"authors": [
+			"HellojoeAoPS",
+			"Kly"
+		]
+	},
+	"ep_adminpads2_action": "操作",
+	"ep_adminpads2_autoupdate-label": "在記事本更改時自動更新",
+	"ep_adminpads2_autoupdate.title": "啟用或停用目前查詢的自動更新。",
+	"ep_adminpads2_confirm": "您確定要刪除記事本 {{padID}}？",
+	"ep_adminpads2_delete.value": "刪除",
+	"ep_adminpads2_last-edited": "上一次編輯",
+	"ep_adminpads2_loading": "載入中…",
+	"ep_adminpads2_manage-pads": "管理記事本",
+	"ep_adminpads2_no-results": "沒有結果",
+	"ep_adminpads2_pad-user-count": "記事本使用者數",
+	"ep_adminpads2_padname": "記事本名稱",
+	"ep_adminpads2_search-box.placeholder": "搜尋關鍵字",
+	"ep_adminpads2_search-button.value": "搜尋",
+	"ep_adminpads2_search-done": "搜尋完成",
+	"ep_adminpads2_search-error-explanation": "當搜尋記事本時伺服器發生錯誤：",
+	"ep_adminpads2_search-error-title": "取得記事本清單失敗",
+	"ep_adminpads2_search-heading": "搜尋記事本",
+	"ep_adminpads2_title": "記事本管理",
+	"ep_adminpads2_unknown-error": "不明錯誤",
+	"ep_adminpads2_unknown-status": "不明狀態"
+}

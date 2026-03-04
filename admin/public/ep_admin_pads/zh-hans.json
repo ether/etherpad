@@ -1,0 +1,29 @@
+{
+	"@metadata": {
+		"authors": [
+			"GuoPC",
+			"Lakejason0",
+			"沈澄心"
+		]
+	},
+	"ep_adminpads2_action": "操作",
+	"ep_adminpads2_autoupdate-label": "在记事本更改时自动更新",
+	"ep_adminpads2_autoupdate.title": "启用或禁用目前查询的自动更新",
+	"ep_adminpads2_confirm": "您确定要删除记事本 {{padID}}？",
+	"ep_adminpads2_delete.value": "删除",
+	"ep_adminpads2_last-edited": "上次编辑于",
+	"ep_adminpads2_loading": "正在加载…",
+	"ep_adminpads2_manage-pads": "管理记事本",
+	"ep_adminpads2_no-results": "没有结果",
+	"ep_adminpads2_pad-user-count": "记事本用户数",
+	"ep_adminpads2_padname": "记事本名称",
+	"ep_adminpads2_search-box.placeholder": "搜索关键词",
+	"ep_adminpads2_search-button.value": "搜索",
+	"ep_adminpads2_search-done": "搜索完成",
+	"ep_adminpads2_search-error-explanation": "搜索记事本时服务器发生错误：",
+	"ep_adminpads2_search-error-title": "获取记事本列表失败",
+	"ep_adminpads2_search-heading": "搜索记事本",
+	"ep_adminpads2_title": "记事本管理",
+	"ep_adminpads2_unknown-error": "未知错误",
+	"ep_adminpads2_unknown-status": "未知状态"
+}

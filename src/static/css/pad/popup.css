@@ -1,25 +1,20 @@
-.popup.popup-show, .popup#users.chatAndUsers {
-  visibility: visible;
-}
-
-.popup > .popup-content {
-  transform: scale(0.7);
-  opacity: 0;
-  transition: all 0.3s cubic-bezier(0.74, -0.05, 0.27, 1.75)
-}
-
-.popup.popup-show > .popup-content, .popup#users.chatAndUsers > .popup-content {
-  transform: scale(1);
-  opacity: 1;
-}
-
 .popup {
   position: absolute;
   top: 10px;
   right: 30px;
-  visibility: hidden;
+  /* visibility must transition immediately so that input elements inside the popup can get focus */
+  transition: all 0.3s cubic-bezier(0.74, -0.05, 0.27, 1.75), visibility 0s;
   z-index: 500;
 }
+
+.popup:not(.popup-show):not(#users.chatAndUsers) {
+  opacity: 0;
+  transform: scale(0.7);
+  /* visibility must not change to hidden until the end of the transition */
+  transition: all 0.3s cubic-bezier(0.74, -0.05, 0.27, 1.75);
+  visibility: hidden;
+}
+
 #mycolorpicker {
   top: 0;
 }
@@ -44,9 +39,6 @@
 }
 .popup input[type=text], #users input[type=text] {
   outline: none;
-}
-.popup a {
-  text-decoration: none
 }
 .popup h1 {
   font-size: 1.8rem;
@@ -78,9 +70,11 @@
   .popup#users .popup-content {
     overflow: visible;
   }
-  /* Move popup to the bottom, except popup linked to left toolbar, like hyperklink popup */
-  .popup:not(.toolbar-popup) {
-    top: auto;
-    bottom: 1rem;
-  }
+}
+/* Move popup to the bottom, except popup linked to left toolbar, like hyperklink popup */
+.mobile-layout .popup:not(.toolbar-popup) {
+  top: auto;
+  left: 1rem;
+  right: auto;
+  bottom: 1rem;
 }

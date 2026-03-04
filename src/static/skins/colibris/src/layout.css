@@ -46,10 +46,3 @@
     border-radius: 0;
   }
 }
-
-@media only screen and (max-width: 800px) {
-  #editorcontainerbox {
-    margin-bottom: 39px; /* margin for bottom toolbar */
-  }
-}
-

@@ -1,0 +1,172 @@
+name: "Loadtest"
+
+# any branch is useful for testing before a PR is submitted
+on:
+  push:
+    paths-ignore:
+      - "doc/**"
+  pull_request:
+    paths-ignore:
+      - "doc/**"
+
+permissions:
+  contents: read
+
+env:
+  PNPM_HOME: ~/.pnpm-store
+  LOG_LEVEL: DEBUG
+
+jobs:
+  withoutplugins:
+    # run on pushes to any branch
+    # run on PRs from external forks
+    if: |
+      (github.event_name != 'pull_request')
+      || (github.event.pull_request.head.repo.id != github.event.pull_request.base.repo.id)
+    name: without plugins
+    runs-on: ubuntu-latest
+    steps:
+      -
+        name: Checkout repository
+        uses: actions/checkout@v6
+      - uses: actions/cache@v5
+        name: Setup gnpm cache
+        if: always()
+        with:
+          path: |
+            ${{ env.STORE_PATH }}
+            ~/.local/share/gnpm
+            ~/.cache/ms-playwright
+            /usr/local/bin/gnpm
+            /usr/local/bin/gnpm-0.0.12
+          key: ${{ runner.os }}-gnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-gnpm-store-
+      - name: Setup gnpm
+        uses: SamTV12345/gnpm-setup@main
+        with:
+          version: 0.0.12
+      -
+        name: Install all dependencies and symlink for ep_etherpad-lite
+        run: gnpm install --frozen-lockfile
+      -
+        name: Install etherpad-load-test
+        run: sudo npm install -g etherpad-load-test-socket-io
+      -
+        name: Run load test
+        run: |
+          gnpm --gnpmEnv
+          eval "$(gnpm --gnpmEnv)"
+          echo $PATH
+          src/tests/frontend/travis/runnerLoadTest.sh 25 50
+
+  withplugins:
+    # run on pushes to any branch
+    # run on PRs from external forks
+    if: |
+      (github.event_name != 'pull_request')
+      || (github.event.pull_request.head.repo.id != github.event.pull_request.base.repo.id)
+    name: with Plugins
+    runs-on: ubuntu-latest
+    steps:
+      -
+        name: Checkout repository
+        uses: actions/checkout@v6
+      - uses: actions/cache@v5
+        name: Setup gnpm cache
+        if: always()
+        with:
+          path: |
+            ${{ env.STORE_PATH }}
+            ~/.local/share/gnpm
+            ~/.cache/ms-playwright
+            /usr/local/bin/gnpm
+            /usr/local/bin/gnpm-0.0.12
+          key: ${{ runner.os }}-gnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-gnpm-store-
+      - name: Setup gnpm
+        uses: SamTV12345/gnpm-setup@main
+        with:
+          version: 0.0.12
+      -
+        name: Install etherpad-load-test
+        run:  sudo npm install -g etherpad-load-test-socket-io
+      -
+        name: Install etherpad plugins
+        # The --legacy-peer-deps flag is required to work around a bug in npm v7:
+        # https://github.com/npm/cli/issues/2199
+        run: >
+          gnpm install --workspace-root
+          ep_align
+          ep_author_hover
+          ep_cursortrace
+          ep_font_size
+          ep_hash_auth
+          ep_headings2
+          ep_markdown
+          ep_readonly_guest
+          ep_set_title_on_pad
+          ep_spellcheck
+          ep_subscript_and_superscript
+          ep_table_of_contents
+      # Etherpad core dependencies must be installed after installing the
+      # plugin's dependencies, otherwise npm will try to hoist common
+      # dependencies by removing them from src/node_modules and installing them
+      # in the top-level node_modules. As of v6.14.10, npm's hoist logic appears
+      # to be buggy, because it sometimes removes dependencies from
+      # src/node_modules but fails to add them to the top-level node_modules.
+      # Even if npm correctly hoists the dependencies, the hoisting seems to
+      # confuse tools such as `npm outdated`, `npm update`, and some ESLint
+      # rules.
+      -
+        name: Install all dependencies and symlink for ep_etherpad-lite
+        run: gnpm install --frozen-lockfile
+      -
+        name: Run load test
+        run: |
+          eval "$(gnpm --gnpmEnv)"
+          src/tests/frontend/travis/runnerLoadTest.sh 25 50
+
+  long:
+    # run on pushes to any branch
+    # run on PRs from external forks
+    if: |
+      (github.event_name != 'pull_request')
+      || (github.event.pull_request.head.repo.id != github.event.pull_request.base.repo.id)
+    name: long running
+    runs-on: ubuntu-latest
+    steps:
+      -
+        name: Checkout repository
+        uses: actions/checkout@v6
+      - uses: actions/cache@v5
+        name: Setup gnpm cache
+        if: always()
+        with:
+          path: |
+            ${{ env.STORE_PATH }}
+            ~/.local/share/gnpm
+            ~/.cache/ms-playwright
+            /usr/local/bin/gnpm
+            /usr/local/bin/gnpm-0.0.12
+          key: ${{ runner.os }}-gnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-gnpm-store-
+      - name: Setup gnpm
+        uses: SamTV12345/gnpm-setup@main
+        with:
+          version: 0.0.12
+      -
+        name: Install all dependencies and symlink for ep_etherpad-lite
+        run: gnpm install --frozen-lockfile
+      -
+        name: Install etherpad-load-test
+        run: sudo npm install -g etherpad-load-test-socket-io
+      -
+        name: Run load test
+        run: |
+          gnpm --gnpmEnv
+          eval "$(gnpm --gnpmEnv)"
+          echo $PATH
+          src/tests/frontend/travis/runnerLoadTest.sh 5000 5

@@ -2,7 +2,8 @@
 	"@metadata": {
 		"authors": [
 			"Bugoslav",
-			"Hmxhmx"
+			"Hmxhmx",
+			"Ponor"
 		]
 	},
 	"index.newPad": "Novi blokić",
@@ -29,9 +30,7 @@
 	"pad.colorpicker.cancel": "Otkaži",
 	"pad.loading": "Učitavanje...",
 	"pad.noCookie": "Kolačić nije pronađen. Molimo Vas, omogućite kolačiće u Vašem pregledniku! Sesija i postavke neće biti sačuvane između Vaših posjećivanja. Razlog može biti uključenost Etherpada u iFrame u nekim preglednicima. Molimo Vas, osigurajte da je Etherpad na istoj poddomeni/domeni kao i ''roditeljski'' iFrame.",
-	"pad.passwordRequired": "Potrebna Vam je zaporka za pristup ovomu blokiću",
 	"pad.permissionDenied": "Nemate dopuštenje za pristup ovome blokiću",
-	"pad.wrongPassword": "Vaša zaporka nije valjana",
 	"pad.settings.padSettings": "Postavke blokića",
 	"pad.settings.myView": "Vaš prikaz",
 	"pad.settings.stickychat": "Stavi čavrljanje uvijek na ekranu",
@@ -40,7 +39,10 @@
 	"pad.settings.linenocheck": "Brojevi redaka",
 	"pad.settings.rtlcheck": "Želite li prikaz sadržaja s desna na lijevo?",
 	"pad.settings.fontType": "Vrsta fonta:",
+	"pad.settings.fontType.normal": "Normalna",
 	"pad.settings.language": "Jezik:",
+	"pad.settings.about": "O projektu",
+	"pad.settings.poweredBy": "Proizvod Vam pruža",
 	"pad.importExport.import_export": "Uvoz/Izvoz",
 	"pad.importExport.import": "Postavite bilo koju tekstualnu datoteku ili dokument",
 	"pad.importExport.importSuccessful": "Uspješno!",
@@ -75,6 +77,8 @@
 	"pad.modals.corruptPad.cause": "Moguće je došlo do pogrješne konfiguracije poslužitelja ili nekog drugog neočekivanog događaja ili postupka. Molimo Vas, kontaktirajte administratora usluge.",
 	"pad.modals.deleted": "Pobrisano.",
 	"pad.modals.deleted.explanation": "Blokić je bio uklonjen.",
+	"pad.modals.rateLimited": "Brzina slanja poruka na blokić je ograničena.",
+	"pad.modals.rateLimited.explanation": "Poslali ste previše poruka na ovaj blokić, te ste stoga odspojeni.",
 	"pad.modals.disconnected": "Vaša je veza prekinuta.",
 	"pad.modals.disconnected.explanation": "Veza s poslužiteljem je izgubljena.",
 	"pad.modals.disconnected.cause": "Moguće je da poslužitelj nije dostupan. Molimo Vas, obavijestite administratora usluge ukoliko se to nastavi događati.",
@@ -86,7 +90,8 @@
 	"pad.chat.title": "Otvori čavrljanje uz ovaj blokić.",
 	"pad.chat.loadmessages": "Učitaj više poruka",
 	"pad.chat.stick.title": "Prilijepi razgovor na zaslon",
-	"pad.chat.writeMessage.placeholder": "Napišite Vašu poruku ovdje",
+	"pad.chat.writeMessage.placeholder": "Ovdje napišite svoju poruku",
+	"timeslider.followContents": "Prati ažuriranja sadržaja blokića",
 	"timeslider.pageTitle": "{{appTitle}} Vremenska lenta",
 	"timeslider.toolbar.returnbutton": "Vrati se natrag na blokić",
 	"timeslider.toolbar.authors": "Autori:",
@@ -116,9 +121,6 @@
 	"pad.savedrevs.timeslider": "Možete vidjeti spremljene inačice rabeći vremensku lentu (timeslider)",
 	"pad.userlist.entername": "Unesite Vaše suradničko ime",
 	"pad.userlist.unnamed": "bez imena",
-	"pad.userlist.guest": "Gost",
-	"pad.userlist.deny": "Odbij",
-	"pad.userlist.approve": "Odobri",
 	"pad.editbar.clearcolors": "Ukloniti boje autorstva u cijelom blokiću? Radnju nije moguće poništiti jednom kad je izvršena.",
 	"pad.impexp.importbutton": "Uvezi odmah",
 	"pad.impexp.importing": "Uvoženje...",
@@ -129,6 +131,5 @@
 	"pad.impexp.importfailed": "Uvoz nije uspio",
 	"pad.impexp.copypaste": "Molimo preslikajte/zalijepite",
 	"pad.impexp.exportdisabled": "Izvoz u formatu {{type}} nije omogućen. Molimo Vas, kontaktirajte Vašega administratora sustava za više pojedinosti.",
-	"pad.impexp.maxFileSize": "Datoteka je prevelika. Kontaktirajte administratora Vašega mrežnoga sjedišta kako biste zatražili povećanje dopuštene veličine datoteke za uvoz",
-	"pad.impexp.permission": "Uvoz je onemogućen jer niste doprinosili ovom blokiću Etherpada. Molimo Vas, doprinosite barem jednom prije radnje uvoza"
+	"pad.impexp.maxFileSize": "Datoteka je prevelika. Kontaktirajte administratora Vašega mrežnoga sjedišta kako biste zatražili povećanje dopuštene veličine datoteke za uvoz"
 }

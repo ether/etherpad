@@ -1,0 +1,27 @@
+{
+	"@metadata": {
+		"authors": [
+			"Izendegi"
+		]
+	},
+	"ep_adminpads2_action": "Ekintza",
+	"ep_adminpads2_autoupdate-label": "Automatikoki eguneratu pad-aren aldaketak daudenean",
+	"ep_adminpads2_autoupdate.title": "Oraingo kontsultarako eguneratze automatikoak gaitu edo desgaitzen du.",
+	"ep_adminpads2_confirm": "Ziur zaude {{padID}} pad-a ezabatu nahi duzula?",
+	"ep_adminpads2_delete.value": "Ezabatu",
+	"ep_adminpads2_last-edited": "Azkenengoz editatua",
+	"ep_adminpads2_loading": "Kargatzen...",
+	"ep_adminpads2_manage-pads": "Kudeatu pad-ak",
+	"ep_adminpads2_no-results": "Emaitzarik ez",
+	"ep_adminpads2_pad-user-count": "Pad-erabiltzaile kopurua",
+	"ep_adminpads2_padname": "Pad-izena",
+	"ep_adminpads2_search-box.placeholder": "Bilaketa testua",
+	"ep_adminpads2_search-button.value": "Bilatu",
+	"ep_adminpads2_search-done": "Bilaketa osatu da",
+	"ep_adminpads2_search-error-explanation": "Zerbitzariak errore bat izan du pad-ak bilatzean:",
+	"ep_adminpads2_search-error-title": "Pad-zerrenda eskuratzeak huts egin du",
+	"ep_adminpads2_search-heading": "Bilatu pad-ak",
+	"ep_adminpads2_title": "Pad-en kudeaketa",
+	"ep_adminpads2_unknown-error": "Errore ezezaguna",
+	"ep_adminpads2_unknown-status": "Egoera ezezaguna"
+}

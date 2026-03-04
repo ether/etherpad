@@ -1,0 +1,14 @@
+#!/bin/sh
+set -e
+newline='
+'
+mydir=$(cd "${0%/*}" && pwd -P) || exit 1
+cd "${mydir}/../.."
+pdir=$(cd .. && pwd -P) || exit 1
+plugins=
+for p in "" "&page=2" "&page=3"; do
+  curlOut=$(curl "https://api.github.com/users/ether/repos?per_page=100${p}") || exit 1
+  plugins=${plugins}${newline}$(printf %s\\n "${curlOut}" \
+        | sed -n -e 's;.*git@github.com:ether/\(ep_[^"]*\)\.git.*;\1;p');
+done
+printf %s\\n "${plugins}" | sort -u | grep -v '^[[:space:]]*$'

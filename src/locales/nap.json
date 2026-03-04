@@ -3,9 +3,11 @@
 		"authors": [
 			"C.R.",
 			"Chelin",
+			"Finizio",
 			"Ruthven"
 		]
 	},
+	"admin_plugins.name": "Nomme",
 	"index.newPad": "Nuovo Pad",
 	"index.createOpenPad": "o crià o arape nu Pad cu 'o nomme:",
 	"pad.toolbar.bold.title": "Grassetto (Ctrl-B)",
@@ -29,9 +31,7 @@
 	"pad.colorpicker.cancel": "Canciella",
 	"pad.loading": "Carecamiento 'n curso…",
 	"pad.noCookie": "Cookie nun truvata. Pe' piacere premmettete 'e cookies dint' 'o navigatóre vuosto!",
-	"pad.passwordRequired": "Pe' accede a chisto Pad è necessaria 'na password",
 	"pad.permissionDenied": "Nun se dispunne d\"e permisse necessare pe' accede a chisto Pad",
-	"pad.wrongPassword": "'A password è sbagliata",
 	"pad.settings.padSettings": "Mpostazzione d\"o pad",
 	"pad.settings.myView": "Mia Veruta",
 	"pad.settings.stickychat": "Chat sempe ncopp' 'o schermo",
@@ -97,9 +97,6 @@
 	"timeslider.unnamedauthors": "{{num}} {[plural(num) one: autore, other: auture ]} senza nomme",
 	"pad.userlist.entername": "'Nserisce 'o tujo nomme",
 	"pad.userlist.unnamed": "senza nomme",
-	"pad.userlist.guest": "Ospite",
-	"pad.userlist.deny": "Nega",
-	"pad.userlist.approve": "Appruva",
 	"pad.impexp.importbutton": "'Mpurta mmo",
 	"pad.impexp.importing": "'Mpurtazzione 'n curso..."
 }

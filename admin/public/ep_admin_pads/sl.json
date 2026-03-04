@@ -1,0 +1,28 @@
+{
+	"@metadata": {
+		"authors": [
+			"Eleassar",
+			"HairyFotr"
+		]
+	},
+	"ep_adminpads2_action": "Dejanje",
+	"ep_adminpads2_autoupdate-label": "Samodejno posodabljanje ob spremembah blokcev",
+	"ep_adminpads2_autoupdate.title": "Omogoči ali onemogoči samodejne posodobitve za trenutno poizvedbo.",
+	"ep_adminpads2_confirm": "Ali res želite izbrisati blokec {{padID}}?",
+	"ep_adminpads2_delete.value": "Izbriši",
+	"ep_adminpads2_last-edited": "Zadnje urejanje",
+	"ep_adminpads2_loading": "Nalaganje ...",
+	"ep_adminpads2_manage-pads": "Upravljanje blokcev",
+	"ep_adminpads2_no-results": "Ni zadetkov",
+	"ep_adminpads2_pad-user-count": "Število urejevalcev blokca",
+	"ep_adminpads2_padname": "Ime blokca",
+	"ep_adminpads2_search-box.placeholder": "Iskalni izraz",
+	"ep_adminpads2_search-button.value": "Išči",
+	"ep_adminpads2_search-done": "Iskanje končano",
+	"ep_adminpads2_search-error-explanation": "Strežnik je med iskanjem blokcev naletel na napako:",
+	"ep_adminpads2_search-error-title": "Ni bilo mogoče pridobiti seznama blokcev",
+	"ep_adminpads2_search-heading": "Iskanje blokcev",
+	"ep_adminpads2_title": "Upravljanje blokcev",
+	"ep_adminpads2_unknown-error": "Neznana napaka",
+	"ep_adminpads2_unknown-status": "Neznano stanje"
+}

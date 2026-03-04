@@ -1,0 +1,27 @@
+{
+	"@metadata": {
+		"authors": [
+			"Besnik b"
+		]
+	},
+	"ep_adminpads2_action": "Veprim",
+	"ep_adminpads2_autoupdate-label": "Vetëpërditësohu, kur nga ndryshime blloku",
+	"ep_adminpads2_autoupdate.title": "Aktivizon ose çaktivizon përditësim të automatizuara për kërkesën e tanishme.",
+	"ep_adminpads2_confirm": "Doni vërtet të fshihet blloku {{padID}}?",
+	"ep_adminpads2_delete.value": "Fshije",
+	"ep_adminpads2_last-edited": "Përpunuar së fundi më",
+	"ep_adminpads2_loading": "Po ngarkohet…",
+	"ep_adminpads2_manage-pads": "Administroni blloqe",
+	"ep_adminpads2_no-results": "S’ka përfundime",
+	"ep_adminpads2_pad-user-count": "Numër përdoruesish blloku",
+	"ep_adminpads2_padname": "Emër blloku",
+	"ep_adminpads2_search-box.placeholder": "Term kërkimi",
+	"ep_adminpads2_search-button.value": "Kërko",
+	"ep_adminpads2_search-done": "Kërkim i plotë",
+	"ep_adminpads2_search-error-explanation": "Shërbyesi hasi një gabim teksa kërkohej për blloqe:",
+	"ep_adminpads2_search-error-title": "S’u arrit të merrej listë blloqesh",
+	"ep_adminpads2_search-heading": "Kërkoni për blloqe",
+	"ep_adminpads2_title": "Administrim blloku",
+	"ep_adminpads2_unknown-error": "Gabim i panjohur",
+	"ep_adminpads2_unknown-status": "Gjendje e panjohur"
+}

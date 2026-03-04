@@ -2,10 +2,11 @@
 <html lang="en">
 <head>
 <title><%- padId %></title>
-<meta name="generator" content="Etherpad">
-<meta name="author" content="Etherpad">
-<meta name="changedby" content="Etherpad">
-<meta charset="utf-8">
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="generator" content="Etherpad"/>
+<meta name="author" content="Etherpad"/>
+<meta name="changedby" content="Etherpad"/>
+<meta charset="utf-8"/>
 <style>
 ol {
   counter-reset: item;
@@ -31,6 +32,11 @@ ol ol > li:before {
   content: counters(item, ".") ". ";
   margin-left: -20px;
 }
+
+ul.indent {
+  list-style-type: none;
+}
+
 <%- extraCSS %>
 </style>
 </head>

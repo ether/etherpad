@@ -63,6 +63,18 @@
   transform: scale(1) translateY(0) !important;
   transition: all 0.4s cubic-bezier(0.74, -0.05, 0.27, 1.75) !important;
 }
+@media (prefers-reduced-motion) {
+  #gritter-container.top .gritter-item.popup > .popup-content {
+    transform: scale(1) translateY(0px) !important;
+  }
+  #gritter-container.bottom .gritter-item.popup > .popup-content {
+    transform: scale(1) translateY(0px) !important;
+  }
+  .gritter-item.popup.popup-show > .popup-content {
+    transform: scale(1) translateY(0px) !important;
+    transition: none;
+  }
+}
 
 /* for ep_deleted_after_delay */
 .gritter-item #close_expiration_notif {

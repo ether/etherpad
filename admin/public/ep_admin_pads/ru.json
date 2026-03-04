@@ -1,0 +1,31 @@
+{
+	"@metadata": {
+		"authors": [
+			"DDPAT",
+			"Ice bulldog",
+			"Megakott",
+			"Okras",
+			"Pacha Tchernof"
+		]
+	},
+	"ep_adminpads2_action": "Действие",
+	"ep_adminpads2_autoupdate-label": "Автообновление при изменении документа",
+	"ep_adminpads2_autoupdate.title": "Включает или отключает автоматические обновления для текущего запроса.",
+	"ep_adminpads2_confirm": "Вы действительно хотите удалить документ {{padID}}?",
+	"ep_adminpads2_delete.value": "Удалить",
+	"ep_adminpads2_last-edited": "Последнее изменение",
+	"ep_adminpads2_loading": "Загружается…",
+	"ep_adminpads2_manage-pads": "Управление документами",
+	"ep_adminpads2_no-results": "Нет результатов",
+	"ep_adminpads2_pad-user-count": "Количество пользователей документа",
+	"ep_adminpads2_padname": "Название документа",
+	"ep_adminpads2_search-box.placeholder": "Искать термин",
+	"ep_adminpads2_search-button.value": "Найти",
+	"ep_adminpads2_search-done": "Поиск завершён",
+	"ep_adminpads2_search-error-explanation": "Сервер обнаружил ошибку при поиске документов:",
+	"ep_adminpads2_search-error-title": "Не удалось получить список документов",
+	"ep_adminpads2_search-heading": "Поиск документов",
+	"ep_adminpads2_title": "Администрирование документов",
+	"ep_adminpads2_unknown-error": "Неизвестная ошибка",
+	"ep_adminpads2_unknown-status": "Неизвестный статус"
+}

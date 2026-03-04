@@ -1,6 +1,7 @@
 {
 	"@metadata": {
 		"authors": [
+			"Balyozxane",
 			"Bikarhêner",
 			"Dilyaramude",
 			"George Animal",
@@ -31,10 +32,11 @@
 	"pad.settings.stickychat": "Di ekranê de hertim çet bike",
 	"pad.settings.chatandusers": "Çeta û Bikarhênera Nîşan bide",
 	"pad.settings.colorcheck": "Rengên nivîskarîye",
-	"pad.settings.linenocheck": "Hejmarên rêze",
+	"pad.settings.linenocheck": "Hejmarên rêzê",
 	"pad.settings.rtlcheck": "Bila naverok ji raste ber bi çepe be xwendin?",
 	"pad.settings.fontType": "Tîpa nivîsê:",
 	"pad.settings.language": "Ziman:",
+	"pad.settings.about": "Derbar",
 	"pad.importExport.importSuccessful": "Biserketî!",
 	"pad.importExport.exportetherpad": "Etherpad",
 	"pad.importExport.exporthtml": "HTML",
@@ -58,7 +60,7 @@
 	"timeslider.toolbar.returnbutton": "Vegere bloknotê",
 	"timeslider.toolbar.authors": "Nivîser:",
 	"timeslider.toolbar.authorsList": "Nivîser Tine",
-	"timeslider.version": "Guhertoya {{version}}",
+	"timeslider.version": "Guhartoya {{version}}",
 	"timeslider.saved": "Di dîroka {{day}} {{month}} {{year}} de hate tomarkirin",
 	"timeslider.dateformat": "{{day}}/{{month}}/{{year}} {{hours}}.{{minutes}}.{{seconds}}",
 	"timeslider.month.january": "kanûna paşîn",
@@ -75,8 +77,5 @@
 	"timeslider.month.december": "kanûna pêşîn",
 	"pad.userlist.entername": "Navê xwe têkeve",
 	"pad.userlist.unnamed": "nenavkirî",
-	"pad.userlist.guest": "Mêvan",
-	"pad.userlist.deny": "Red bike",
-	"pad.userlist.approve": "Bipejirîne",
 	"pad.impexp.copypaste": "Ji kerema xwe re jê bigre û pê ve deyne (Ctrl+c, Ctrl+v)"
 }

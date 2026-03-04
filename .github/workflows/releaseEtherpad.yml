@@ -1,0 +1,45 @@
+name: releaseEtherpad.yaml
+permissions:
+  contents: read
+on:
+  workflow_dispatch:
+
+env:
+  PNPM_HOME: ~/.pnpm-store
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+        - name: Checkout repository
+          uses: actions/checkout@v6
+        - name: Get pnpm store directory
+          shell: bash
+          run: |
+            echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+        - uses: actions/cache@v5
+          name: Setup pnpm cache
+          if: always()
+          with:
+            path: |
+              ${{ env.STORE_PATH }}
+              ~/.local/share/gnpm
+              /usr/local/bin/gnpm
+              /usr/local/bin/gnpm-0.0.12
+            key: ${{ runner.os }}-gnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+            restore-keys: |
+              ${{ runner.os }}-gnpm-store-
+        - name: Setup gnpm
+          uses: SamTV12345/gnpm-setup@main
+          with:
+            version: 0.0.12
+        - name: Install dependencies
+          run: gnpm install --frozen-lockfile
+        - name: Rename etherpad
+          working-directory: ./src
+          run: sed -i 's/ep_etherpad-lite/ep_etherpad/g' package.json
+        - name: Release to npm
+          run: gnpm publish --no-git-checks
+          working-directory: ./src
+          env:
+            NODE_AUTH_TOKEN: ${{ secrets.NPM_PRIVATE_TOKEN }}

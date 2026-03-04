@@ -4,8 +4,7 @@
 
 @import url('./lists_and_indents.css');
 
-html.inner-editor {
-  height: auto !important;
+html.outer-editor, html.inner-editor {
   background-color: transparent !important;
 }
 #outerdocbody {
@@ -25,7 +24,8 @@ html.inner-editor {
 
 /* ACE-PAD Container (i.e. where the text is displayed) */
 #innerdocbody {
-  padding: 15px;
+  padding-left: 15px;
+  padding-right: 15px;
   overflow: hidden;
   background-color: white;
   line-height: 1.6;
@@ -37,10 +37,18 @@ html.inner-editor {
   white-space: normal;
   word-wrap: break-word;
   overflow-wrap: break-word;
+  /*
+   * Make the contenteditable area at least as big as the screen so that mobile
+   * users can tap anywhere to bring up their device's keyboard.
+   */
+  min-height: 100vh;
 }
+
 #innerdocbody, #sidediv {
-  padding-top: 10px; /* Both must have same top padding, so line number are aligned with the rows */
-  padding-bottom: 10px; /* some space when we scroll to the bottom */
+  /* Both must have the same top padding to line up line numbers */
+  padding-top: 15px;
+  /* Some space when we scroll to the bottom */
+  padding-bottom: 15px;
 }
 
 #innerdocbody a {
@@ -48,11 +56,6 @@ html.inner-editor {
 }
 #innerdocbody.authorColors [class^='author-'] a {
   color: inherit;
-}
-
-#innerdocbody.authorColors span {
-  padding-top: 3px;
-  padding-bottom: 4px;
 }
 
 option {
@@ -97,6 +100,7 @@ body.mozilla, body.safari {
   font-size: 9px;
   padding: 0 14px 0 10px;
   font-family: monospace;
+  cursor: pointer;
 }
 .plugin-ep_author_neat #sidedivinner.authorColors .line-number {
   padding-right: 10px;
@@ -145,7 +149,4 @@ body.mozilla, body.safari {
 }
 #innerdocbody a {
   cursor: pointer !important;
-}
-body.grayedout {
-  background-color: #eee !important
 }

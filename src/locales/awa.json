@@ -1,7 +1,8 @@
 {
 	"@metadata": {
 		"authors": [
-			"1AnuraagPandey"
+			"1AnuraagPandey",
+			"बडा काजी"
 		]
 	},
 	"index.newPad": "नयाँ प्याड",
@@ -18,7 +19,6 @@
 	"pad.colorpicker.save": "सहेजा जाय",
 	"pad.colorpicker.cancel": "रद्द करा जाय",
 	"pad.loading": "लोड होत है...",
-	"pad.wrongPassword": "आप कय पासवर्ड गलत रहा",
 	"pad.settings.padSettings": "प्याड सेटिङ्ग",
 	"pad.settings.myView": "हमार दृष्य",
 	"pad.settings.colorcheck": "लेखकीय रङ्ग",
@@ -36,7 +36,7 @@
 	"pad.modals.unauth": "अनाधिकृत",
 	"pad.modals.initsocketfail": "सर्भरमा पहुँच से बहरे है ।",
 	"pad.share.readonly": "पढय वाला खाली",
-	"pad.share.link": "लिङ्क",
+	"pad.share.link": "कडी",
 	"pad.share.emebdcode": "URL जोडा जाय",
 	"pad.chat": "बातचीत",
 	"timeslider.pageTitle": "{{appTitle}} समय रेखा",
@@ -58,9 +58,6 @@
 	"timeslider.month.december": "डिसेम्बर",
 	"timeslider.unnamedauthors": "{{num}} unnamed {[plural(num) one: author, other: authors ]}",
 	"pad.userlist.unnamed": "बेनामी",
-	"pad.userlist.guest": "पहुना",
-	"pad.userlist.deny": "अस्वीकार",
-	"pad.userlist.approve": "स्वीकृत",
 	"pad.impexp.importing": "आयात होत है...",
 	"pad.impexp.importfailed": "आयात असफल रहा",
 	"pad.impexp.copypaste": "कृपया कपी पेस्ट कीन जाय"

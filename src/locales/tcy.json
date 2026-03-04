@@ -18,7 +18,6 @@
 	"pad.colorpicker.save": "ಒರಿಪಾಲೆ",
 	"pad.colorpicker.cancel": "ವಜಾ ಮಲ್ಪುಲೆ",
 	"pad.loading": "ದಿಂಜಾವೊಂದುಂಡು......",
-	"pad.wrongPassword": "ಇರೇನಾ ಪಾಸ್ ವರ್ಡ್ ತಪ್ಪತುಂಡ್",
 	"pad.settings.padSettings": "ಪ್ಯಾಡ್ ಸಂಯೋಜನೆ",
 	"pad.settings.language": "ಬಾಸೆ:",
 	"pad.importExport.exportetherpad": "Etherpad",
@@ -42,7 +41,5 @@
 	"timeslider.month.november": "ನವಂಬರೊ",
 	"timeslider.month.december": "ದಸಂಬರೊ",
 	"pad.userlist.entername": "ಈರೆನೆ ಪುದರ್ ಬರೆಲೆ",
-	"pad.userlist.unnamed": "ಪುದರ್ ಇಜ್ಜಂತಿನವು",
-	"pad.userlist.guest": "ಬಿನ್ನೆರ್",
-	"pad.userlist.approve": "ಒಪ್ಪಂದ ಅಂಡ್"
+	"pad.userlist.unnamed": "ಪುದರ್ ಇಜ್ಜಂತಿನವು"
 }

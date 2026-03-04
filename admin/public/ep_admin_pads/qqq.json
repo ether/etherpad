@@ -1,0 +1,10 @@
+{
+	"@metadata": {
+		"authors": [
+			"BryanDavis"
+		]
+	},
+	"ep_adminpads2_action": "{{Identical|Action}}",
+	"ep_adminpads2_delete.value": "{{Identical|Delete}}",
+	"ep_adminpads2_search-button.value": "{{Identical|Search}}"
+}

@@ -19,7 +19,11 @@ Dockerfile
 .git/ORIG_HEAD
 .git/packed-refs
 .git/refs/remotes/
+.git/rr-cache/
 .gitignore
 
 settings.json
 src/node_modules
+admin/node_modules
+ui/node_modules
+node_modules

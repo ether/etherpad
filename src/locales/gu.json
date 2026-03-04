@@ -2,6 +2,7 @@
 	"@metadata": {
 		"authors": [
 			"Bhatakati aatma",
+			"Dsvyas",
 			"Harsh4101991",
 			"KartikMistry"
 		]
@@ -10,12 +11,10 @@
 	"pad.toolbar.bold.title": "બોલ્ડ",
 	"pad.toolbar.settings.title": "ગોઠવણીઓ",
 	"pad.colorpicker.save": "સાચવો",
-	"pad.colorpicker.cancel": "રદ્દ કરો",
+	"pad.colorpicker.cancel": "રદ કરો",
 	"pad.loading": "લાવે છે...",
 	"pad.noCookie": "કુકી મળી નહી. આપના બ્રાઉઝર સેટિંગમાં જઇ કુકી સક્રિય કરો!",
-	"pad.passwordRequired": "તમારે આ પેડના ઉપયોગ માટે ગુપ્તસંજ્ઞાની જરુર પડશે",
 	"pad.permissionDenied": "આ પેડના ઉપયોગની આપને પરવાનગી નથી",
-	"pad.wrongPassword": "આપની ગુપ્તસંજ્ઞા ખોટી છે",
 	"pad.settings.padSettings": "પેડ ગોઠવણીઓ",
 	"pad.settings.myView": "મારા મતે",
 	"pad.settings.fontType.normal": "સામાન્ય",
@@ -47,9 +46,6 @@
 	"timeslider.month.december": "ડિસેમ્બર",
 	"pad.userlist.entername": "તમારું નામ દાખલ કરો",
 	"pad.userlist.unnamed": "અનામી",
-	"pad.userlist.guest": "મહેમાન",
-	"pad.userlist.deny": "નકારો",
-	"pad.userlist.approve": "મંજૂર",
 	"pad.impexp.importbutton": "આયાત કરો",
 	"pad.impexp.importing": "આયાત કરે છે..."
 }

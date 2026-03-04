@@ -1,0 +1,10 @@
+packages:
+  - src
+  - admin
+  - bin
+  - doc
+  - ui
+onlyBuiltDependencies:
+  - '@scarf/scarf'
+  - '@swc/core'
+  - esbuild

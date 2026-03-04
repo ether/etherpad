@@ -1,0 +1,27 @@
+{
+	"@metadata": {
+		"authors": [
+			"Andibecker"
+		]
+	},
+	"ep_adminpads2_action": "Hatua",
+	"ep_adminpads2_autoupdate-label": "Sasisha kiotomatiki kwenye mabadiliko ya pedi",
+	"ep_adminpads2_autoupdate.title": "Huwasha au kulemaza sasisho otomatiki kwa hoja ya sasa.",
+	"ep_adminpads2_confirm": "Je! Kweli unataka kufuta pedi {{padID}}?",
+	"ep_adminpads2_delete.value": "Futa",
+	"ep_adminpads2_last-edited": "Ilihaririwa mwisho",
+	"ep_adminpads2_loading": "Inapakia...",
+	"ep_adminpads2_manage-pads": "Dhibiti pedi",
+	"ep_adminpads2_no-results": "Hakuna matokeo",
+	"ep_adminpads2_pad-user-count": "Hesabu ya mtumiaji wa pedi",
+	"ep_adminpads2_padname": "Jina la utani",
+	"ep_adminpads2_search-box.placeholder": "Neno la utaftaji",
+	"ep_adminpads2_search-button.value": "Tafuta",
+	"ep_adminpads2_search-done": "Utafutaji umekamilika",
+	"ep_adminpads2_search-error-explanation": "Seva ilipata hitilafu wakati wa kutafuta pedi:",
+	"ep_adminpads2_search-error-title": "Imeshindwa kupata orodha ya pedi",
+	"ep_adminpads2_search-heading": "Tafuta pedi",
+	"ep_adminpads2_title": "Usimamizi wa pedi",
+	"ep_adminpads2_unknown-error": "Hitilafu isiyojulikana",
+	"ep_adminpads2_unknown-status": "Hali isiyojulikana"
+}

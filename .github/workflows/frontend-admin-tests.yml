@@ -1,0 +1,149 @@
+# Leave the powered by Sauce Labs bit in as this means we get additional concurrency
+name: "Frontend admin tests"
+
+on:
+  push:
+    paths-ignore:
+      - 'doc/**'
+
+permissions:
+  contents: read # to fetch code (actions/checkout)
+
+jobs:
+  withplugins:
+    env:
+      PNPM_HOME: ~/.pnpm-store
+    name: with plugins
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20, 22, 24]
+
+    steps:
+      -
+        name: Generate Sauce Labs strings
+        id: sauce_strings
+        run: |
+          printf %s\\n '::set-output name=name::${{ github.workflow }} - ${{ github.job }} - Node ${{ matrix.node }}'
+          printf %s\\n '::set-output name=tunnel_id::${{ github.run_id }}-${{ github.run_number }}-${{ github.job }}-node${{ matrix.node }}'
+      -
+        name: Checkout repository
+        uses: actions/checkout@v6
+      - uses: actions/cache@v5
+        name: Setup gnpm cache
+        if: always()
+        with:
+          path: |
+            ${{ env.PNPM_HOME }}
+            ~/.local/share/gnpm
+            /usr/local/bin/gnpm
+            /usr/local/bin/gnpm-0.0.12
+          key: ${{ runner.os }}-gnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-gnpm-store-
+      - name: Setup gnpm
+        uses: SamTV12345/gnpm-setup@main
+        with:
+          version: 0.0.12
+      - name: Cache playwright binaries
+        uses: actions/cache@v5
+        id: playwright-cache
+        with:
+          path: |
+            ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ env.PLAYWRIGHT_VERSION }}
+      #-
+      #  name: Install etherpad plugins
+      #  # We intentionally install an old ep_align version to test upgrades to
+      #  # the minor version number. The --legacy-peer-deps flag is required to
+      #  # work around a bug in npm v7: https://github.com/npm/cli/issues/2199
+      #  run: pnpm install --workspace-root ep_align@0.2.27
+      # Etherpad core dependencies must be installed after installing the
+      # plugin's dependencies, otherwise npm will try to hoist common
+      # dependencies by removing them from src/node_modules and installing them
+      # in the top-level node_modules. As of v6.14.10, npm's hoist logic appears
+      # to be buggy, because it sometimes removes dependencies from
+      # src/node_modules but fails to add them to the top-level node_modules.
+      # Even if npm correctly hoists the dependencies, the hoisting seems to
+      # confuse tools such as `npm outdated`, `npm update`, and some ESLint
+      # rules.
+      -
+        name: Install all dependencies and symlink for ep_etherpad-lite
+        run: gnpm i --runtimeVersion="${{ matrix.node }}"
+      #-
+      #  name: Install etherpad plugins
+      #  run: rm -Rf node_modules/ep_align/static/tests/*
+      -
+        name: export GIT_HASH to env
+        id: environment
+        run: echo "::set-output name=sha_short::$(git rev-parse --short ${{ github.sha }})"
+      -
+        name: Create settings.json
+        run: cp settings.json.template settings.json
+      -
+        name: Write custom settings.json that enables the Admin UI tests
+        run: "sed -i 's/\"enableAdminUITests\": false/\"enableAdminUITests\": true,\\n\"users\":{\"admin\":{\"password\":\"changeme1\",\"is_admin\":true}}/' settings.json"
+      -
+        name: increase maxHttpBufferSize
+        run: "sed -i 's/\"maxHttpBufferSize\": 50000/\"maxHttpBufferSize\": 10000000/' settings.json"
+      -
+        name: Disable import/export rate limiting
+        run: |
+          sed -e '/^ *"importExportRateLimiting":/,/^ *\}/ s/"max":.*/"max": 100000000/' -i settings.json
+      - name: Build admin frontend
+        working-directory: admin
+        run: |
+            gnpm run build --runtimeVersion="${{ matrix.node }}"
+      #  name: Run the frontend admin tests
+      #  shell: bash
+      #  env:
+      #    SAUCE_USERNAME: ${{ secrets.SAUCE_USERNAME }}
+      #    SAUCE_ACCESS_KEY: ${{ secrets.SAUCE_ACCESS_KEY }}
+      #    SAUCE_NAME: ${{ steps.sauce_strings.outputs.name }}
+      #    TRAVIS_JOB_NUMBER: ${{ steps.sauce_strings.outputs.tunnel_id }}
+      #   GIT_HASH: ${{ steps.environment.outputs.sha_short }}
+      #  run: |
+      #    src/tests/frontend/travis/adminrunner.sh
+      #-
+      #  uses: saucelabs/sauce-connect-action@v2.3.6
+      #  with:
+      #    username: ${{ secrets.SAUCE_USERNAME }}
+      #    accessKey: ${{ secrets.SAUCE_ACCESS_KEY }}
+      #    tunnelIdentifier: ${{ steps.sauce_strings.outputs.tunnel_id }}
+      #-
+      #  name: Run the frontend admin tests
+      #  shell: bash
+      #  env:
+      #    SAUCE_USERNAME: ${{ secrets.SAUCE_USERNAME }}
+      #    SAUCE_ACCESS_KEY: ${{ secrets.SAUCE_ACCESS_KEY }}
+      #    SAUCE_NAME: ${{ steps.sauce_strings.outputs.name }}
+      #    TRAVIS_JOB_NUMBER: ${{ steps.sauce_strings.outputs.tunnel_id }}
+      #   GIT_HASH: ${{ steps.environment.outputs.sha_short }}
+      #  run: |
+      #    src/tests/frontend/travis/adminrunner.sh
+      - name: Run the frontend admin tests
+        shell: bash
+        run: |
+          gnpm run prod --runtimeVersion="${{ matrix.node }}" &
+          connected=false
+          can_connect() {
+          curl -sSfo /dev/null http://localhost:9001/ || return 1
+          connected=true
+          }
+          now() { date +%s; }
+          start=$(now)
+          while [ $(($(now) - $start)) -le 15 ] && ! can_connect; do
+          sleep 1
+          done
+          cd src
+          gnpm exec playwright install --runtimeVersion="${{ matrix.node }}"
+          gnpm exec playwright install-deps --runtimeVersion="${{ matrix.node }}"
+          gnpm run test-admin --runtimeVersion="${{ matrix.node }}"
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: playwright-report-${{ matrix.node }}
+          path: src/playwright-report/
+          retention-days: 30

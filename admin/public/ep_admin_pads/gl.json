@@ -1,0 +1,27 @@
+{
+	"@metadata": {
+		"authors": [
+			"Ghose"
+		]
+	},
+	"ep_adminpads2_action": "Accións",
+	"ep_adminpads2_autoupdate-label": "Actualización automática dos cambios",
+	"ep_adminpads2_autoupdate.title": "Activa ou desactiva as actualizacións automáticas para a consulta actual.",
+	"ep_adminpads2_confirm": "Tes a certeza de querer eliminar o pad {{padID}}?",
+	"ep_adminpads2_delete.value": "Eliminar",
+	"ep_adminpads2_last-edited": "Última edición",
+	"ep_adminpads2_loading": "Cargando…",
+	"ep_adminpads2_manage-pads": "Xestionar pads",
+	"ep_adminpads2_no-results": "Sen resultados",
+	"ep_adminpads2_pad-user-count": "Usuarias neste pad",
+	"ep_adminpads2_padname": "Nome do pad",
+	"ep_adminpads2_search-box.placeholder": "Buscar termo",
+	"ep_adminpads2_search-button.value": "Buscar",
+	"ep_adminpads2_search-done": "Busca completa",
+	"ep_adminpads2_search-error-explanation": "O servidor atopou un fallo cando buscaba pads:",
+	"ep_adminpads2_search-error-title": "Non se obtivo a lista de pads",
+	"ep_adminpads2_search-heading": "Buscar pads",
+	"ep_adminpads2_title": "Administración do pad",
+	"ep_adminpads2_unknown-error": "Erro descoñecido",
+	"ep_adminpads2_unknown-status": "Estado descoñecido"
+}

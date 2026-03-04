@@ -1,14 +1,22 @@
 # Editbar
-src/static/js/pad_editbar.js
+
+Located in `src/static/js/pad_editbar.js`
 
 ## isEnabled()
 
+If the editorbar contains the class `enabledtoolbar`, it is enabled.
+
+
 ## disable()
 
-## toggleDropDown(dropdown, callback)
+Disables the editorbar. This is done by adding the class `disabledtoolbar` and removing the enabledtoolbar
+
+## toggleDropDown(dropdown)
+
 Shows the dropdown `div.popup` whose `id` equals `dropdown`.
 
 ## registerCommand(cmd, callback)
+
 Register a handler for a specific command. Commands are fired if the corresponding button is clicked or the corresponding select is changed.
 
 ## registerAceCommand(cmd, callback)

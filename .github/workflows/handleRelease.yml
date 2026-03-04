@@ -1,0 +1,61 @@
+name: "Handle release"
+
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  # allow manual triggering of the workflow
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  PNPM_HOME: ~/.pnpm-store
+
+jobs:
+  create-release:
+    permissions: write-all
+    # run on pushes to any branch
+    # run on PRs from external forks
+    if: |
+      (github.event_name != 'pull_request')
+      || (github.event.pull_request.head.repo.id != github.event.pull_request.base.repo.id)
+    name: Handle the release
+    runs-on: ubuntu-latest
+    steps:
+      -
+        name: Checkout repository
+        uses: actions/checkout@v6
+      - uses: actions/cache@v5
+        name: Setup gnpm cache
+        if: always()
+        with:
+          path: |
+            ${{ env.STORE_PATH }}
+            ~/.local/share/gnpm
+            ~/.cache/ms-playwright
+            /usr/local/bin/gnpm
+            /usr/local/bin/gnpm-0.0.12
+          key: ${{ runner.os }}-gnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-gnpm-store-
+      - name: Setup gnpm
+        uses: SamTV12345/gnpm-setup@main
+        with:
+          version: 0.0.12
+      - name: Install all dependencies and symlink for ep_etherpad-lite
+        run: gnpm install --frozen-lockfile
+      - name: Build etherpad
+        run: gnpm run build:etherpad
+      # On release, create release
+      - name: Generate Changelog
+        working-directory: bin
+        run: gnpm run generateChangelog ${{ github.ref }} > ${{ github.workspace }}-CHANGELOG.txt
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        if: ${{startsWith(github.ref, 'refs/tags/v') }}
+        with:
+          body_path: ${{ github.workspace }}-CHANGELOG.txt
+          make_latest: true

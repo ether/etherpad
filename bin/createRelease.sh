@@ -145,12 +145,12 @@ function push_builds {
   cd $TMP_DIR/etherpad-lite/
   echo "Copying windows build and docs to website repo..."
   GIT_SHA=$(git rev-parse HEAD | cut -c1-10)
-  mv etherpad-lite-win.zip $TMP_DIR/ether.github.com/downloads/etherpad-lite-win-$VERSION-$GIT_SHA.zip
+  mv etherpad-win.zip $TMP_DIR/ether.github.com/downloads/etherpad-win-$VERSION-$GIT_SHA.zip
 
   mv out/doc $TMP_DIR/ether.github.com/doc/v$VERSION
 
   cd $TMP_DIR/ether.github.com/
-  sed -i "s/etherpad-lite-win.*\.zip/etherpad-lite-win-$VERSION-$GIT_SHA.zip/" index.html
+  sed -i "s/etherpad-win.*\.zip/etherpad-win-$VERSION-$GIT_SHA.zip/" index.html
   sed -i "s/$LATEST_GIT_TAG/$VERSION/g" index.html
   git checkout -b release_$VERSION
   [[ $? != 0 ]] && echo "Aborting: Error creating new release branch" && exit 1

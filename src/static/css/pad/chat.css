@@ -92,12 +92,18 @@
 #chattext p {
   padding: 3px;
   overflow-x: hidden;
+  white-space: pre-wrap;
   word-wrap: break-word;
 }
 #chattext .time {
   float: right;
   font-style: italic;
-  font-size: .85rem;
+  /*
+   * 'smaller' is relative to the parent element, so if the parent has its own
+   * 'font-size: smaller' rule then the timestamp will become even smaller (as
+   * desired).
+   */
+  font-size: smaller;
   opacity: .8;
   margin-left: 3px;
   margin-right: 2px;
@@ -109,6 +115,7 @@
 }
 #chatinputbox #chatinput {
   width: 100%;
+  resize: vertical;
 }
 
 

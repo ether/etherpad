@@ -1,52 +1,59 @@
-html {
-  border-top: solid green 5pt;
-}
-
-body.apidoc {
-  width: 60%;
-  min-width: 10cm;
+body {
+  border-top: solid #44b492 5pt;
+  line-height: 150%;
+  font-family: "Quicksand", sans-serif;
+  color: #313b4a;
+  max-width: 1440px;
   margin: 0 auto;
+  padding: 20px;
 }
 
-#header {
-  padding: 1pc 0;
-  color: #111;
+a {
+  color: #555;
 }
 
-a,
-a:active {
-  color: #272;
+h1,
+h2 {
+  color: #44b492;
+  line-height: 100%;
 }
-a:focus,
+
+h2 {
+  font-size: 48px;
+}
+
+h3 {
+  font-size: 1.8rem;
+}
+
+h4 {
+  font-size: 1.5rem;
+}
+
+h5 {
+  font-size: 1.2rem;
+}
+
 a:hover {
-  color: #050;
+  color: #44b492;
 }
 
-#apicontent a.mark,
-#apicontent a.mark:active {
-  float: right;
-  color: #BBB;
-  font-size: 0.7cm;
-  text-decoration: none;
-}
-#apicontent a.mark:focus,
-#apicontent a.mark:hover {
-  color: #AAA;
+pre {
+  background-color: #e0e0e0;
+  padding: 20px;
 }
 
-#apicontent code {
-  padding: 1px;
-  background-color: #EEE;
-  border-radius: 4px;
-  border: 1px solid #DDD;
-}
-#apicontent pre>code {
-  display: block;
-  overflow: auto;
-  padding: 5px;
+code {
+  background-color: #e0e0e0;
 }
 
-table, th, td {
+img {
+  max-width: 100%;
+}
+
+table,
+th,
+td {
   text-align: left;
   border: 1px solid gray;
   border-collapse: collapse;
@@ -54,7 +61,7 @@ table, th, td {
 
 th {
   padding: 0.5em;
-  background: #EEE;
+  background: #eee;
 }
 
 td {

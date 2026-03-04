@@ -1,0 +1,39 @@
+// line comment
+/*
+ * block comment
+ */
+{
+  "trailing commas": {
+    "lists": {
+      "multiple lines": [
+        "",
+      ]
+    },
+    "objects": {
+      "multiple lines": {
+        "key": "",
+      }
+    }
+  },
+  "environment variable substitution": {
+    "set": {
+      "true": "${SET_VAR_TRUE}",
+      "false": "${SET_VAR_FALSE}",
+      "null": "${SET_VAR_NULL}",
+      "undefined": "${SET_VAR_UNDEFINED}",
+      "number": "${SET_VAR_NUMBER}",
+      "string": "${SET_VAR_STRING}",
+      "empty string": "${SET_VAR_EMPTY_STRING}"
+    },
+    "unset": {
+      "no default": "${UNSET_VAR}",
+      "true": "${UNSET_VAR:true}",
+      "false": "${UNSET_VAR:false}",
+      "null": "${UNSET_VAR:null}",
+      "undefined": "${UNSET_VAR:undefined}",
+      "number": "${UNSET_VAR:123}",
+      "string": "${UNSET_VAR:foo}",
+      "empty string": "${UNSET_VAR:}"
+    }
+  }
+}

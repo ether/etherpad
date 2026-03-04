@@ -1,6 +1,7 @@
 {
 	"@metadata": {
 		"authors": [
+			"Pichnat Thong",
 			"Sovichet",
 			"វ័ណថារិទ្ធ"
 		]
@@ -25,9 +26,7 @@
 	"pad.colorpicker.save": "រក្សាទុក",
 	"pad.colorpicker.cancel": "បោះបង់",
 	"pad.loading": "កំពុងផ្ទុក…",
-	"pad.passwordRequired": "អ្នក​ត្រូវ​មាន​ពាក្យ​សម្ងាត់ ដើម្បី​ចូល​ផេត​នេះ",
 	"pad.permissionDenied": "អ្នក​មិន​មាន​សិទ្ធិ​ចូល​ផេត​នេះ​ទេ",
-	"pad.wrongPassword": "ពាក្យ​សម្ងាត់​របស់​អ្នក ខុស​ហើយ",
 	"pad.settings.padSettings": "ការ​កំណត់​ផេត",
 	"pad.settings.myView": "គំហើញរបស់ខ្ញុំ",
 	"pad.settings.stickychat": "តែង​បង្ហាញ​ការ​ជជែក​លើ​អេក្រង់",
@@ -36,6 +35,8 @@
 	"pad.settings.fontType": "ប្រភេទពុម្ពអក្សរ៖",
 	"pad.settings.fontType.normal": "ធម្មតា",
 	"pad.settings.language": "ភាសា៖",
+	"pad.settings.about": "អំពី",
+	"pad.settings.poweredBy": "ពលុបត្ថម្ភដោយ",
 	"pad.importExport.import_export": "នាំចូល/នាំចេញ",
 	"pad.importExport.import": "ផ្ទុក​ឡើង​ឯកសារ​អត្ថបទ​ណាមួយ",
 	"pad.importExport.importSuccessful": "ដោយជោគជ័យ!",
@@ -86,9 +87,6 @@
 	"timeslider.month.december": "ធ្នូ",
 	"pad.userlist.entername": "បញ្ចូល​ឈ្មោះ​របស់​អ្នក",
 	"pad.userlist.unnamed": "គ្មាន​ឈ្មោះ",
-	"pad.userlist.guest": "ភ្ញៀវ",
-	"pad.userlist.deny": "បដិសេធ",
-	"pad.userlist.approve": "យល់​ព្រម",
 	"pad.impexp.importbutton": "នាំចូលឥឡូវនេះ",
 	"pad.impexp.importing": "កំពុងនាំចូល​...",
 	"pad.impexp.importfailed": "នាំចូល​មិន​បាន​សម្រេច",

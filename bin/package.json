@@ -1,0 +1,42 @@
+{
+  "name": "bin",
+  "version": "2.6.1",
+  "description": "",
+  "main": "checkAllPads.js",
+  "directories": {
+    "doc": "doc"
+  },
+  "dependencies": {
+    "axios": "^1.13.3",
+    "ep_etherpad-lite": "workspace:../src",
+    "log4js": "^6.9.1",
+    "semver": "^7.7.3",
+    "tsx": "^4.21.0",
+    "ueberdb2": "^5.0.23"
+  },
+  "devDependencies": {
+    "@types/node": "^25.0.10",
+    "@types/semver": "^7.7.1",
+    "typescript": "^5.9.3"
+  },
+  "scripts": {
+    "makeDocs": "node --import tsx make_docs.ts",
+    "checkPad": "node --import tsx checkPad.ts",
+    "checkAllPads": "node --import tsx checkAllPads.ts",
+    "createUserSession": "node --import tsx createUserSession.ts",
+    "deletePad": "node --import tsx deletePad.ts",
+    "repairPad": "node --import tsx repairPad.ts",
+    "release": "node --import tsx release.ts",
+    "deleteAllGroupSessions": "node --import tsx deleteAllGroupSessions.ts",
+    "importSqlFile": "node --import tsx importSqlFile.ts",
+    "migrateDirtyDBtoRealDB": "node --import tsx migrateDirtyDBtoRealDB.ts",
+    "rebuildPad": "node --import tsx rebuildPad.ts",
+    "stalePlugins": "node --import tsx ./plugins/stalePlugins.ts",
+    "checkPlugin": "node --import tsx ./plugins/checkPlugin.ts",
+    "plugins": "node --import tsx ./plugins.ts",
+    "generateChangelog": "node --import tsx generateReleaseNotes.ts",
+    "migrateDB": "node --import tsx migrateDB.ts"
+  },
+  "author": "",
+  "license": "ISC"
+}

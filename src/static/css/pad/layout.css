@@ -1,11 +1,14 @@
 html, body {
   width: 100%;
-  height: 100%;
+  height: auto;
   margin: 0;
   padding: 0;
 }
-html:not(.inner-editor), html:not(.inner-editor) body {
+
+/* used in pad and timeslider */
+html.pad, html.pad body {
   overflow: hidden;
+  height: 100%;
 }
 body {
   display: flex;
@@ -47,8 +50,6 @@ body {
   width: 0; /* hide when the container is empty */
 }
 
-@media only screen and (max-width: 800px) {
-  #editorcontainerbox {
-    margin-bottom: 39px; /* Leave space for the bottom toolbar on mobile */
-  }
+.mobile-layout #editorcontainerbox {
+  margin-bottom: 39px; /* Leave space for the bottom toolbar on mobile */
 }

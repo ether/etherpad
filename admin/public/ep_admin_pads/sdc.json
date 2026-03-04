@@ -1,0 +1,14 @@
+{
+	"@metadata": {
+		"authors": [
+			"F Samaritani"
+		]
+	},
+	"ep_adminpads2_action": "Azioni",
+	"ep_adminpads2_delete.value": "Canzella",
+	"ep_adminpads2_loading": "carrigghendi...",
+	"ep_adminpads2_no-results": "Nisciun risulthaddu",
+	"ep_adminpads2_search-button.value": "Zercha",
+	"ep_adminpads2_search-heading": "Zirchà dati",
+	"ep_adminpads2_unknown-error": "Errori ischunisciddu"
+}

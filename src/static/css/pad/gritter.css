@@ -31,6 +31,8 @@
 .gritter-item .gritter-content {
   flex: 1 auto;
   text-align: center;
+  width: 95%;
+  overflow-wrap: break-word;
 }
 
 .gritter-item .gritter-close {

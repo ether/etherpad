@@ -6,3 +6,59 @@
       #editbar LI {border:1px solid #d5d5d5;}
     from pad.css
 */
+#button {
+  font-size: 90%;
+  width: 100%;
+  position: unset;
+}
+
+button[type="submit"], input[type="text"] {
+  position: unset;
+}
+
+button[type="submit"] {
+  width: auto;
+}
+
+#label {
+  display: none;
+}
+
+
+#padname {
+  max-width: 80%;
+}
+
+
+
+#inner {
+  max-width: 400px;
+}
+
+
+body {
+  border-top: none;
+}
+
+.body {
+  display: grid;
+  place-items: center;
+  height: 100%;
+}
+
+#wrapper {
+  width: 100%;
+  margin-top: 0;
+  padding: 15px 0 15px 0;
+}
+
+
+form {
+  display: flex;
+  gap: 10px;
+  background-color: transparent;
+  border: none;
+  height: 4rem;
+  flex-direction: row;
+  margin-top: 1rem;
+}

@@ -1,0 +1,27 @@
+{
+	"@metadata": {
+		"authors": [
+			"Robin Owain"
+		]
+	},
+	"ep_adminpads2_action": "Gweithred",
+	"ep_adminpads2_autoupdate-label": "Diweddaru newidiadau pad yn otomatig",
+	"ep_adminpads2_autoupdate.title": "Galluogi neu analluogi diweddaru'r ymholiad cyfredol.",
+	"ep_adminpads2_confirm": "Siwr eich bod am ddileu'r pad {{padID}}?",
+	"ep_adminpads2_delete.value": "Dileu",
+	"ep_adminpads2_last-edited": "Golygwyd ddiwethaf",
+	"ep_adminpads2_loading": "Wrthi'n llwytho...",
+	"ep_adminpads2_manage-pads": "Rheoli'r padiau",
+	"ep_adminpads2_no-results": "Dim canlyniad",
+	"ep_adminpads2_pad-user-count": "Cyfri defnyddiwr pad",
+	"ep_adminpads2_padname": "Enwpad",
+	"ep_adminpads2_search-box.placeholder": "Term chwilio",
+	"ep_adminpads2_search-button.value": "Chwilio",
+	"ep_adminpads2_search-done": "Wedi gorffen",
+	"ep_adminpads2_search-error-explanation": "Nam ar y gweinydd wrth chwilio'r padiau:",
+	"ep_adminpads2_search-error-title": "Methwyd a chael y rhestr pad",
+	"ep_adminpads2_search-heading": "Chwilio am badiau",
+	"ep_adminpads2_title": "Gweinyddiaeth y pad",
+	"ep_adminpads2_unknown-error": "Nam o ryw fath",
+	"ep_adminpads2_unknown-status": "Statws anhysbys"
+}

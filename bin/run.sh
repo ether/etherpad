@@ -1,12 +1,11 @@
 #!/bin/sh
 
-pecho() { printf %s\\n "$*"; }
-log() { pecho "$@"; }
-error() { log "ERROR: $@" >&2; }
-fatal() { error "$@"; exit 1; }
+# Move to the Etherpad base directory.
+MY_DIR=$(cd "${0%/*}" && pwd -P) || exit 1
+cd "${MY_DIR}/.." || exit 1
 
-# Move to the folder where ep-lite is installed
-cd "$(dirname "$0")"/..
+# Source constants and useful functions
+. bin/functions.sh
 
 ignoreRoot=0
 for ARG in "$@"; do
@@ -23,15 +22,27 @@ Please type 'Etherpad rocks my socks' (or restart with the '--root'
 argument) if you still want to start it as root:
 EOF
   printf "> " >&2
-  read rocks
+  read -r rocks
   [ "$rocks" = "Etherpad rocks my socks" ] || fatal "Your input was incorrect"
 fi
 
 # Prepare the environment
 bin/installDeps.sh "$@" || exit 1
 
+
+## Create the admin ui
+if [ -z "$NODE_ENV" ] || [ "$NODE_ENV" = "development" ]; then
+  ADMIN_UI_PATH="$(dirname "$0")/../admin"
+  UI_PATH="$(dirname "$0")/../ui"
+  log "Creating the admin UI..."
+  (cd "$ADMIN_UI_PATH" && pnpm run build)
+  (cd "$UI_PATH" && pnpm run build)
+else
+  log "Cannot create the admin UI in production mode"
+fi
+
 # Move to the node folder and start
 log "Starting Etherpad..."
 
-SCRIPTPATH=$(pwd -P)
-exec node "$SCRIPTPATH/node_modules/ep_etherpad-lite/node/server.js" "$@"
+# cd src
+exec pnpm run prod "$@"

@@ -1,0 +1,14 @@
+{
+	"@metadata": {
+		"authors": [
+			"Saederup92"
+		]
+	},
+	"ep_adminpads2_action": "Handling",
+	"ep_adminpads2_delete.value": "Slet",
+	"ep_adminpads2_last-edited": "Sidst redigeret",
+	"ep_adminpads2_loading": "Indlæser...",
+	"ep_adminpads2_no-results": "Ingen resultater",
+	"ep_adminpads2_unknown-error": "Ukendt fejl",
+	"ep_adminpads2_unknown-status": "Ukendt status"
+}

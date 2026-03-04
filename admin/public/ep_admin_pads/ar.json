@@ -1,0 +1,28 @@
+{
+	"@metadata": {
+		"authors": [
+			"Meno25",
+			"محمد أحمد عبد الفتاح"
+		]
+	},
+	"ep_adminpads2_action": "فعل",
+	"ep_adminpads2_autoupdate-label": "التحديث التلقائي على تغييرات الوسادة",
+	"ep_adminpads2_autoupdate.title": "لتمكين أو تعطيل التحديثات التلقائية للاستعلام الحالي.",
+	"ep_adminpads2_confirm": "هل تريد حقًا حذف الوسادة {{padID}}؟",
+	"ep_adminpads2_delete.value": "حذف",
+	"ep_adminpads2_last-edited": "آخر تعديل",
+	"ep_adminpads2_loading": "جارٍ التحميل...",
+	"ep_adminpads2_manage-pads": "إدارة الفوط",
+	"ep_adminpads2_no-results": "لا توجد نتائج.",
+	"ep_adminpads2_pad-user-count": "عدد المستخدمين الوسادة",
+	"ep_adminpads2_padname": "بادنام",
+	"ep_adminpads2_search-box.placeholder": "مصطلح البحث",
+	"ep_adminpads2_search-button.value": "بحث",
+	"ep_adminpads2_search-done": "اكتمل البحث",
+	"ep_adminpads2_search-error-explanation": "واجه الخادم خطأً أثناء البحث عن منصات:",
+	"ep_adminpads2_search-error-title": "فشل في الحصول على قائمة الوسادة",
+	"ep_adminpads2_search-heading": "ابحث عن الفوط",
+	"ep_adminpads2_title": "إدارة الوسادة",
+	"ep_adminpads2_unknown-error": "خطأ غير معروف",
+	"ep_adminpads2_unknown-status": "حالة غير معروفة"
+}

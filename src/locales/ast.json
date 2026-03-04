@@ -1,11 +1,13 @@
 {
 	"@metadata": {
 		"authors": [
-			"Xuacu"
+			"Xuacu",
+			"YoaR"
 		]
 	},
 	"index.newPad": "Nuevu bloc",
 	"index.createOpenPad": "o crear/abrir un bloc col nome:",
+	"index.openPad": "abre un bloc qu'esiste col nome:",
 	"pad.toolbar.bold.title": "Negrina (Ctrl-B)",
 	"pad.toolbar.italic.title": "Cursiva (Ctrl-I)",
 	"pad.toolbar.underline.title": "Sorrayáu (Ctrl-U)",
@@ -24,12 +26,10 @@
 	"pad.toolbar.embed.title": "Compartir ya incrustar esti bloc",
 	"pad.toolbar.showusers.title": "Amosar los usuarios d'esti bloc",
 	"pad.colorpicker.save": "Guardar",
-	"pad.colorpicker.cancel": "Encaboxar",
+	"pad.colorpicker.cancel": "Zarrar",
 	"pad.loading": "Cargando...",
-	"pad.noCookie": "Nun pudo alcontrase la cookie. ¡Por favor, permite les cookies nel navegador!",
-	"pad.passwordRequired": "Necesites una contraseña pa entrar a esti bloc",
+	"pad.noCookie": "Nun pudo alcontrase la cookie. ¡Por favor, permite les cookies nel navegador! La sesión y preferencies  nun se guarden ente visites. Esto pue debese a qu'Etherpad inclúyese nun iFrame en dalgunos restoladores. Asegúrate de qu'Etherpad tea nel mesmu subdominiu/dominiu que l'iFrame padre",
 	"pad.permissionDenied": "Nun tienes permisu pa entrar a esti bloc",
-	"pad.wrongPassword": "La contraseña era incorreuta",
 	"pad.settings.padSettings": "Configuración del bloc",
 	"pad.settings.myView": "la mio vista",
 	"pad.settings.stickychat": "Alderique en pantalla siempres",
@@ -40,6 +40,8 @@
 	"pad.settings.fontType": "Tipografía:",
 	"pad.settings.fontType.normal": "Normal",
 	"pad.settings.language": "Llingua:",
+	"pad.settings.about": "Tocante a",
+	"pad.settings.poweredBy": "Col encontu de",
 	"pad.importExport.import_export": "Importar/Esportar",
 	"pad.importExport.import": "Xubir cualquier ficheru o documentu de testu",
 	"pad.importExport.importSuccessful": "¡Correuto!",
@@ -55,7 +57,7 @@
 	"pad.modals.reconnecting": "Reconeutando col to bloc...",
 	"pad.modals.forcereconnect": "Forzar la reconexón",
 	"pad.modals.reconnecttimer": "Tentando reconeutar en",
-	"pad.modals.cancel": "Encaboxar",
+	"pad.modals.cancel": "Zarrar",
 	"pad.modals.userdup": "Abiertu n'otra ventana",
 	"pad.modals.userdup.explanation": "Esti bloc paez que ta abiertu en más d'una ventana del navegador d'esti ordenador.",
 	"pad.modals.userdup.advice": "Reconeutar pa usar esta ventana.",
@@ -115,9 +117,6 @@
 	"pad.savedrevs.timeslider": "Pues ver les revisiones guardaes visitando la llinia temporal",
 	"pad.userlist.entername": "Escribi'l to nome",
 	"pad.userlist.unnamed": "ensin nome",
-	"pad.userlist.guest": "Invitáu",
-	"pad.userlist.deny": "Refugar",
-	"pad.userlist.approve": "Aprobar",
 	"pad.editbar.clearcolors": "¿Llimpiar los colores d'autoría nel documentu ensembre? Esto nun pue desfacese",
 	"pad.impexp.importbutton": "Importar agora",
 	"pad.impexp.importing": "Importando...",
@@ -128,6 +127,5 @@
 	"pad.impexp.importfailed": "Falló la importación",
 	"pad.impexp.copypaste": "Por favor, copia y apega",
 	"pad.impexp.exportdisabled": "La esportación en formatu {{type}} ta desactivada. Por favor, comunica col alministrador del sistema pa más detalles.",
-	"pad.impexp.maxFileSize": "El ficheru ye demasiao grande. Comunícate col alministrador del sitiu p'aumentar el tamañu de ficheru permitíu na importación",
-	"pad.impexp.permission": "La importación ta desactivada porque nunca contribuisti nesti bloc. Contribuye polo menos una vez antes d'importar"
+	"pad.impexp.maxFileSize": "El ficheru ye demasiao grande. Comunícate col alministrador del sitiu p'aumentar el tamañu de ficheru permitíu na importación"
 }

@@ -2,6 +2,7 @@
 	"@metadata": {
 		"authors": [
 			"Nirajan pant",
+			"बडा काजी",
 			"रमेश सिंह बोहरा",
 			"राम प्रसाद जोशी"
 		]
@@ -29,9 +30,7 @@
 	"pad.colorpicker.cancel": "खारेजी",
 	"pad.loading": "लोड हुन्नाछ़....",
 	"pad.noCookie": "कुकी पाउन नाइ सकियो। तमरा ब्राउजरमी कुकी राख्दाइ अनुमति दिय!",
-	"pad.passwordRequired": "यो प्याड खोल्लाकी पासवर्ड चाहिन्छ",
 	"pad.permissionDenied": "तमलाईँ यै प्याड खोल्लाकी अनुमति नाइथिन",
-	"pad.wrongPassword": "तमरो पासवर्ड गलत थ्यो",
 	"pad.settings.padSettings": "प्याड सेटिङ्गअन",
 	"pad.settings.myView": "मेरि हेराइ",
 	"pad.settings.stickychat": "जबलई पर्दामी कुरडी गद्य्या",
@@ -80,7 +79,7 @@
 	"pad.modals.disconnected.cause": "सर्भर अनुपलब्ध होइसकन्छ। यदि यो हुनोइ रयाबर कृपया सेवा व्यवस्थापकलाई सूचित अरऽ।",
 	"pad.share": "यस प्याडलाई बाड्न्या",
 	"pad.share.readonly": "पड्‍ड्या मात्तरै",
-	"pad.share.link": "लिङ्क",
+	"pad.share.link": "कडी",
 	"pad.share.emebdcode": "URL थप्प्या",
 	"pad.chat": "कुरणिकानी",
 	"pad.chat.title": "येइ प्याड खिलाइ गफ खोलऽ",
@@ -114,9 +113,6 @@
 	"pad.savedrevs.timeslider": "समयस्लाइडर भेटिबर तम भँणार अरीयाऽ शंसोधनअनलाई हेरि सकन्छऽ",
 	"pad.userlist.entername": "तमरो नाउँ हाल",
 	"pad.userlist.unnamed": "बिननाउँइको",
-	"pad.userlist.guest": "पाउनो",
-	"pad.userlist.deny": "अस्वीकार",
-	"pad.userlist.approve": "अनुमोदन",
 	"pad.editbar.clearcolors": "सङताइ कागताजमी है लेखक रङ्ङअन साप अद्द्या?",
 	"pad.impexp.importbutton": "ऐलै आयात अरऽ",
 	"pad.impexp.importing": "आयात अद्दाछ़...",

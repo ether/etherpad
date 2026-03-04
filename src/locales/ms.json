@@ -2,9 +2,11 @@
 	"@metadata": {
 		"authors": [
 			"Anakmalaysia",
+			"Hakimi97",
 			"Jeluang Terluang"
 		]
 	},
+	"admin.page-title": "Papan muka Penyelia - Etherpad",
 	"index.newPad": "Pad baru",
 	"index.createOpenPad": "atau cipta/buka Pad yang bernama:",
 	"pad.toolbar.bold.title": "Tebal (Ctrl-B)",
@@ -28,9 +30,7 @@
 	"pad.colorpicker.cancel": "Batalkan",
 	"pad.loading": "Sedang dimuatkan...",
 	"pad.noCookie": "Cookie tidak dapat dijumpai. Tolong benarkan cookie dalam pelayar anda!",
-	"pad.passwordRequired": "Anda memerlukan kata laluan untuk mengakses pad ini",
 	"pad.permissionDenied": "Anda tiada kebenaran untuk mengakses pad ini",
-	"pad.wrongPassword": "Kata laluan anda salah",
 	"pad.settings.padSettings": "Tetapan Pad",
 	"pad.settings.myView": "Paparan Saya",
 	"pad.settings.stickychat": "Sentiasa bersembang pada skrin",
@@ -41,6 +41,7 @@
 	"pad.settings.fontType": "Jenis fon:",
 	"pad.settings.fontType.normal": "Normal",
 	"pad.settings.language": "Bahasa:",
+	"pad.settings.poweredBy": "Dikuasakan oleh",
 	"pad.importExport.import_export": "Import/Eksport",
 	"pad.importExport.import": "Muat naik sebarang fail teks atau dokumen",
 	"pad.importExport.importSuccessful": "Berjaya!",
@@ -111,10 +112,7 @@
 	"pad.savedrevs.marked": "Semakan ini telah ditandai sebagai semakan tersimpan",
 	"pad.savedrevs.timeslider": "Anda boleh melihat semakan yang tersimpan dengan melawat gelangsar masa",
 	"pad.userlist.entername": "Taipkan nama anda",
-	"pad.userlist.unnamed": "tanpa nama",
-	"pad.userlist.guest": "Tetamu",
-	"pad.userlist.deny": "Tolak",
-	"pad.userlist.approve": "Terima",
+	"pad.userlist.unnamed": "tidak bernama",
 	"pad.editbar.clearcolors": "Padamkan warna pengarang pada seluruh dokumen?",
 	"pad.impexp.importbutton": "Import Sekarang",
 	"pad.impexp.importing": "Sedang mengimport...",

@@ -95,7 +95,7 @@ For example, if you want to replace `Chat` with `Notes`, simply add...
 
 ## Customization for Administrators
 
-As an Etherpad administrator, it is possible to overwrite core mesages as well as messages in plugins. These include error messages, labels, and user instructions. Whereas the localization in the source code is in separate files separated by locale, an administrator's custom localizations are in `settings.json` under the `customLocaleStrigns` key, with each locale separated by a sub-key underneath.
+As an Etherpad administrator, it is possible to overwrite core messages as well as messages in plugins. These include error messages, labels, and user instructions. Whereas the localization in the source code is in separate files separated by locale, an administrator's custom localizations are in `settings.json` under the `customLocaleStrings` key, with each locale separated by a sub-key underneath.
 
 For example, let's say you want to change the text on the "New Pad" button on Etherpad's home page. If you look in `locales/en.json` (or `locales/en-gb.json`) you'll see the key for this text is `"index.newPad"`. You could add the following to `settings.json`:
 

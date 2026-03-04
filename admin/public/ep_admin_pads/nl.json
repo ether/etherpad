@@ -1,0 +1,29 @@
+{
+	"@metadata": {
+		"authors": [
+			"Aranka",
+			"McDutchie",
+			"Spinster"
+		]
+	},
+	"ep_adminpads2_action": "Handeling",
+	"ep_adminpads2_autoupdate-label": "Automatisch bijwerken bij aanpassingen aan de pad",
+	"ep_adminpads2_autoupdate.title": "Schakelt automatische updates voor de huidige query in of uit.",
+	"ep_adminpads2_confirm": "Wil je de pad {{padID}} echt verwijderen?",
+	"ep_adminpads2_delete.value": "Verwijderen",
+	"ep_adminpads2_last-edited": "Laatst bewerkt",
+	"ep_adminpads2_loading": "Bezig met laden...",
+	"ep_adminpads2_manage-pads": "Pads beheren",
+	"ep_adminpads2_no-results": "Geen resultaten",
+	"ep_adminpads2_pad-user-count": "Aantal gebruikers van de pad",
+	"ep_adminpads2_padname": "Naam van de pad",
+	"ep_adminpads2_search-box.placeholder": "Zoekterm",
+	"ep_adminpads2_search-button.value": "Zoeken",
+	"ep_adminpads2_search-done": "Zoekopdracht voltooid",
+	"ep_adminpads2_search-error-explanation": "De server heeft een fout aangetroffen tijdens het zoeken naar pads:",
+	"ep_adminpads2_search-error-title": "Kan lijst met pads niet ophalen",
+	"ep_adminpads2_search-heading": "Pads zoeken",
+	"ep_adminpads2_title": "Administratie van pad",
+	"ep_adminpads2_unknown-error": "Onbekende fout",
+	"ep_adminpads2_unknown-status": "Onbekende status"
+}

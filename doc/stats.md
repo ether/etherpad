@@ -3,15 +3,15 @@ Etherpad keeps track of the goings-on inside the edit machinery. If you'd like t
 
 We currently measure:
 
- - totalUsers (counter)
- - connects (meter)
- - disconnects (meter)
- - pendingEdits (counter)
- - edits (timer)
- - failedChangesets (meter)
- - httpRequests (timer)
- - http500 (meter)
- - memoryUsage (gauge)
+- totalUsers (counter)
+- connects (meter)
+- disconnects (meter)
+- pendingEdits (counter)
+- edits (timer)
+- failedChangesets (meter)
+- httpRequests (timer)
+- http500 (meter)
+- memoryUsage (gauge)
 
 Under the hood, we are happy to rely on [measured](https://github.com/felixge/node-measured) for all our metrics needs.
 

@@ -1,0 +1,27 @@
+{
+	"@metadata": {
+		"authors": [
+			"Ibrahima Malal Sarr"
+		]
+	},
+	"ep_adminpads2_action": "Baɗal",
+	"ep_adminpads2_autoupdate-label": "Hesɗitin e jaajol tuma baylagol faɗo",
+	"ep_adminpads2_autoupdate.title": "Hurminat walla daaƴa kesɗitine jaaje wonannde ɗaɓɓitannde wonaande.",
+	"ep_adminpads2_confirm": "Aɗa yiɗi e jaati momtude faɗo {{padID}}?",
+	"ep_adminpads2_delete.value": "Momtu",
+	"ep_adminpads2_last-edited": "Taƴtaa sakket",
+	"ep_adminpads2_loading": "Nana loowa…",
+	"ep_adminpads2_manage-pads": "Toppito paɗe",
+	"ep_adminpads2_no-results": "Alaa njaltudi",
+	"ep_adminpads2_pad-user-count": "Limoore huutorɓe faɗo",
+	"ep_adminpads2_padname": "Innde faɗo",
+	"ep_adminpads2_search-box.placeholder": "Helmere njiilaw",
+	"ep_adminpads2_search-button.value": "Yiylo",
+	"ep_adminpads2_search-done": "Njiylaw timmii",
+	"ep_adminpads2_search-error-explanation": "Sarworde ndee hawrii e juumre tuma nde yiylotoo faɗo:",
+	"ep_adminpads2_search-error-title": "Horiima heɓde doggol paɗe",
+	"ep_adminpads2_search-heading": "Yiylo paɗe",
+	"ep_adminpads2_title": "Yiylorde paɗe",
+	"ep_adminpads2_unknown-error": "Juumre nde anndaaka",
+	"ep_adminpads2_unknown-status": "Ngonka ka anndaaka"
+}

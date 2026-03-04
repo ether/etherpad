@@ -1,0 +1,33 @@
+{
+	"@metadata": {
+		"authors": [
+			"Brettchenweber",
+			"Justman10000",
+			"Lorisobi",
+			"SamTV",
+			"Umlaut",
+			"Zunkelty"
+		]
+	},
+	"ep_adminpads2_action": "Aktion",
+	"ep_adminpads2_autoupdate-label": "Automatisch bei Pad-Änderungen updaten",
+	"ep_adminpads2_autoupdate.title": "Aktiviert oder deaktiviert automatische Aktualisierungen für die aktuelle Abfrage.",
+	"ep_adminpads2_confirm": "Willst du das Pad {{padID}} wirklich löschen?",
+	"ep_adminpads2_delete.value": "Löschen",
+  "ep_adminpads2_cleanup": "Historie aufräumen",
+	"ep_adminpads2_last-edited": "Zuletzt bearbeitet",
+	"ep_adminpads2_loading": "Lädt...",
+	"ep_adminpads2_manage-pads": "Pads verwalten",
+	"ep_adminpads2_no-results": "Keine Ergebnisse",
+	"ep_adminpads2_pad-user-count": "Nutzerzahl des Pads",
+	"ep_adminpads2_padname": "Padname",
+	"ep_adminpads2_search-box.placeholder": "Suchbegriff",
+	"ep_adminpads2_search-button.value": "Suche",
+	"ep_adminpads2_search-done": "Suche vollendet",
+	"ep_adminpads2_search-error-explanation": "Der Server ist bei der Suche nach Pads auf einen Fehler gestoßen:",
+	"ep_adminpads2_search-error-title": "Pad-Liste konnte nicht abgerufen werden",
+	"ep_adminpads2_search-heading": "Nach Pads suchen",
+	"ep_adminpads2_title": "Pad-Verwaltung",
+	"ep_adminpads2_unknown-error": "Unbekannter Fehler",
+	"ep_adminpads2_unknown-status": "Unbekannter Status"
+}

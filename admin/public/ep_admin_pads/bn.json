@@ -1,0 +1,23 @@
+{
+	"@metadata": {
+		"authors": [
+			"আজিজ",
+			"আফতাবুজ্জামান"
+		]
+	},
+	"ep_adminpads2_action": "কার্য",
+	"ep_adminpads2_delete.value": "মুছে ফেলুন",
+	"ep_adminpads2_last-edited": "সর্বশেষ সম্পাদিত",
+	"ep_adminpads2_loading": "লোড হচ্ছে...",
+	"ep_adminpads2_manage-pads": "প্যাড পরিচালনা করুন",
+	"ep_adminpads2_no-results": "ফলাফল নেই",
+	"ep_adminpads2_padname": "প্যাডের নাম",
+	"ep_adminpads2_search-button.value": "অনুসন্ধান",
+	"ep_adminpads2_search-done": "অনুসন্ধান সম্পূর্ণ",
+	"ep_adminpads2_search-error-explanation": "প্যাড অনুসন্ধান করার সময় সার্ভার একটি ত্রুটির সম্মুখীন হয়েছে:",
+	"ep_adminpads2_search-error-title": "প্যাডের তালিকা পেতে ব্যর্থ",
+	"ep_adminpads2_search-heading": "প্যাড অনুসন্ধান করুন",
+	"ep_adminpads2_title": "প্যাড প্রশাসন",
+	"ep_adminpads2_unknown-error": "অজানা ত্রুটি",
+	"ep_adminpads2_unknown-status": "অজানা অবস্থা"
+}

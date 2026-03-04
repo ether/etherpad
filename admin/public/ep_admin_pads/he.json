@@ -1,0 +1,27 @@
+{
+	"@metadata": {
+		"authors": [
+			"YaronSh"
+		]
+	},
+	"ep_adminpads2_action": "פעולה",
+	"ep_adminpads2_autoupdate-label": "לעדכן אוטומטית כשהמחברת נערכת",
+	"ep_adminpads2_autoupdate.title": "הפעלה או השבתה של עדכונים אוטומטיים לשאילתה הנוכחית.",
+	"ep_adminpads2_confirm": "למחוק את המחברת {{padID}}?",
+	"ep_adminpads2_delete.value": "מחיקה",
+	"ep_adminpads2_last-edited": "עריכה אחרונה",
+	"ep_adminpads2_loading": "בטעינה…",
+	"ep_adminpads2_manage-pads": "ניהול מחברות",
+	"ep_adminpads2_no-results": "אין תוצאות",
+	"ep_adminpads2_pad-user-count": "ספירת משתמשים במחברת",
+	"ep_adminpads2_padname": "שם המחברת",
+	"ep_adminpads2_search-box.placeholder": "הביטוי לחיפוש",
+	"ep_adminpads2_search-button.value": "חיפוש",
+	"ep_adminpads2_search-done": "החיפוש הושלם",
+	"ep_adminpads2_search-error-explanation": "השרת נתקל בשגיאה בעת חיפוש מחברות:",
+	"ep_adminpads2_search-error-title": "קבלת רשימת המחברות נכשלה",
+	"ep_adminpads2_search-heading": "חיפוש אחר מחברות",
+	"ep_adminpads2_title": "ניהול מחברות",
+	"ep_adminpads2_unknown-error": "שגיאה בלתי־ידועה",
+	"ep_adminpads2_unknown-status": "מצב לא ידוע"
+}

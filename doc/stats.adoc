@@ -1,0 +1,31 @@
+== Statistics
+
+Etherpad keeps track of the goings-on inside the edit machinery. If you'd like to have a look at this, just point your browser to `/stats`.
+
+We currently measure:
+
+ - totalUsers (counter)
+ - connects (meter)
+ - disconnects (meter)
+ - pendingEdits (counter)
+ - edits (timer)
+ - failedChangesets (meter)
+ - httpRequests (timer)
+ - http500 (meter)
+ - memoryUsage (gauge)
+
+Under the hood, we are happy to rely on https://github.com/felixge/node-measured[measured] for all our metrics needs.
+
+To modify or simply access our stats in your plugin, simply `require('ep_etherpad-lite/stats')` which is a https://yaorg.github.io/node-measured/packages/measured-core/Collection.html[`measured.Collection`].
+
+
+=== Prometheus scraper
+
+Besides the non standard `/stats` endpoint, Etherpad also exposes a `/stats/prometheus` endpoint which is compatible with Prometheus scraping. It includes a lot more metrics than the standard `/stats` endpoint. It contains the following metrics:
+
+- ueberdb stats
+- gc
+- memory
+- event loop lag
+- v8
+- and more

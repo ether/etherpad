@@ -1,0 +1,686 @@
+<!doctype html>
+<html translate="no" class="pad  super-light-toolbar super-light-editor light-background">
+<head>
+
+
+  <title>Etherpad</title>
+  <link rel="manifest" href="/manifest.json" />
+  <script>
+    /*
+    |@licstart  The following is the entire license notice for the
+    JavaScript code in this page.|
+
+    Copyright 2011 Peter Martischka, Primary Technology.
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+
+    |@licend  The above is the entire license notice
+    for the JavaScript code in this page.|
+    */
+  </script>
+
+  <meta charset="utf-8">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="referrer" content="no-referrer">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
+  <link rel="shortcut icon" href="../favicon.ico">
+
+
+  <link href="../static/css/pad.css?v=5ba315cd" rel="stylesheet">
+
+
+  <link href="../static/skins/colibris/pad.css?v=5ba315cd" rel="stylesheet">
+
+
+  <style title="dynamicsyntax"></style>
+
+
+  <link rel="localizations" type="application/l10n+json" href="../locales.json" />
+</head>
+<body>
+
+
+<!----------------------------->
+<!--------- TOOLBAR ----------->
+<!----------------------------->
+<div id="editbar" class="toolbar">
+  <div id="toolbar-overlay"></div>
+
+  <ul class="menu_left" role="toolbar">
+
+    <li data-type="button" data-key="bold"><a class="grouped-left" data-l10n-id="pad.toolbar.bold.title"><button class=" buttonicon buttonicon-bold" data-l10n-id="pad.toolbar.bold.title"></button></a></li>
+    <li data-type="button" data-key="italic"><a class="grouped-middle" data-l10n-id="pad.toolbar.italic.title"><button class=" buttonicon buttonicon-italic" data-l10n-id="pad.toolbar.italic.title"></button></a></li>
+    <li data-type="button" data-key="underline"><a class="grouped-middle" data-l10n-id="pad.toolbar.underline.title"><button class=" buttonicon buttonicon-underline" data-l10n-id="pad.toolbar.underline.title"></button></a></li>
+    <li data-type="button" data-key="strikethrough"><a class="grouped-right" data-l10n-id="pad.toolbar.strikethrough.title"><button class=" buttonicon buttonicon-strikethrough" data-l10n-id="pad.toolbar.strikethrough.title"></button
+    ></a></li><li class="separator"></li><li data-type="button" data-key="insertorderedlist"><a class="grouped-left" data-l10n-id="pad.toolbar.ol.title"><button class=" buttonicon buttonicon-insertorderedlist" data-l10n-id="pad.toolbar.ol.title"></button></a></li>
+    <li data-type="button" data-key="insertunorderedlist"><a class="grouped-middle" data-l10n-id="pad.toolbar.ul.title"><button class=" buttonicon buttonicon-insertunorderedlist" data-l10n-id="pad.toolbar.ul.title"></button></a></li>
+    <li data-type="button" data-key="indent"><a class="grouped-middle" data-l10n-id="pad.toolbar.indent.title"><button class=" buttonicon buttonicon-indent" data-l10n-id="pad.toolbar.indent.title"></button></a></li>
+    <li data-type="button" data-key="outdent"><a class="grouped-right" data-l10n-id="pad.toolbar.unindent.title"><button class=" buttonicon buttonicon-outdent" data-l10n-id="pad.toolbar.unindent.title"></button></a></li><li class="separator"></li><li data-type="button" data-key="undo"><a class="grouped-left" data-l10n-id="pad.toolbar.undo.title"><button class=" buttonicon buttonicon-undo" data-l10n-id="pad.toolbar.undo.title"></button></a></li>
+    <li data-type="button" data-key="redo"><a class="grouped-right" data-l10n-id="pad.toolbar.redo.title"><button class=" buttonicon buttonicon-redo" data-l10n-id="pad.toolbar.redo.title"></button></a></li><li class="separator"></li
+  ><li data-type="button" data-key="clearauthorship"><a class="" data-l10n-id="pad.toolbar.clearAuthorship.title"><button class=" buttonicon buttonicon-clearauthorship" data-l10n-id="pad.toolbar.clearAuthorship.title"></button></a></li>
+
+  </ul>
+  <ul class="menu_right" role="toolbar">
+
+    <li data-type="button" data-key="import_export"><a class="grouped-left" data-l10n-id="pad.toolbar.import_export.title"><button class=" buttonicon buttonicon-import_export" data-l10n-id="pad.toolbar.import_export.title"></button></a></li>
+    <li data-type="button" data-key="showTimeSlider"><a class="grouped-middle" data-l10n-id="pad.toolbar.timeslider.title"><button class=" buttonicon buttonicon-history" data-l10n-id="pad.toolbar.timeslider.title"></button></a></li>
+    <li data-type="button" data-key="savedRevision"><a class="grouped-right" data-l10n-id="pad.toolbar.savedRevision.title"><button class=" buttonicon buttonicon-savedRevision" data-l10n-id="pad.toolbar.savedRevision.title"></button
+    ></a></li><li class="separator"></li><li data-type="button" data-key="settings"><a class="grouped-left" data-l10n-id="pad.toolbar.settings.title"><button class=" buttonicon buttonicon-settings" data-l10n-id="pad.toolbar.settings.title"></button></a></li>
+    <li data-type="button" data-key="embed"><a class="grouped-right" data-l10n-id="pad.toolbar.embed.title"><button class=" buttonicon buttonicon-embed" data-l10n-id="pad.toolbar.embed.title"></button></a></li><li class="separator"></li><li data-type="button" data-key="showusers"><a class="" data-l10n-id="pad.toolbar.showusers.title"><button class=" buttonicon buttonicon-showusers" data-l10n-id="pad.toolbar.showusers.title"></button></a></li>
+
+  </ul>
+  <span class="show-more-icon-btn"></span> <!-- use on small screen to display hidden toolbar buttons -->
+</div>
+
+
+
+<div id="editorcontainerbox" class="flex-layout">
+
+
+
+  <!----------------------------->
+  <!--- PAD EDITOR (in iframe) -->
+  <!----------------------------->
+
+  <div id="editorcontainer" class="editorcontainer"></div>
+
+  <div id="editorloadingbox">
+
+    <div id="permissionDenied">
+      <p data-l10n-id="pad.permissionDenied" class="editorloadingbox-message">
+        You do not have permission to access this pad
+      </p>
+    </div>
+
+
+    <p data-l10n-id="pad.loading" id="loading" class="editorloadingbox-message">
+      <img src='../static/img/brand.svg' class='etherpadBrand'><br/>
+      Loading...
+    </p>
+
+    <noscript>
+      <p class="editorloadingbox-message">
+        <strong>
+          Sorry, you have to enable Javascript in order to use this.
+        </strong>
+      </p>
+    </noscript>
+  </div>
+
+
+  <!------------------------------------------------------------->
+  <!-- SETTINGS POPUP (change font, language, chat parameters) -->
+  <!------------------------------------------------------------->
+
+  <div id="settings" class="popup"><div class="popup-content">
+    <h1 data-l10n-id="pad.settings.padSettings"></h1>
+
+    <h2 data-l10n-id="pad.settings.myView"></h2>
+    <p class="hide-for-mobile">
+      <input type="checkbox" id="options-stickychat">
+      <label for="options-stickychat" data-l10n-id="pad.settings.stickychat"></label>
+    </p>
+    <p class="hide-for-mobile">
+      <input type="checkbox" id="options-chatandusers" onClick="chat.chatAndUsers();">
+      <label for="options-chatandusers" data-l10n-id="pad.settings.chatandusers"></label>
+    </p>
+    <p>
+      <input type="checkbox" id="options-colorscheck">
+      <label for="options-colorscheck" data-l10n-id="pad.settings.colorcheck"></label>
+    </p>
+    <p>
+      <input type="checkbox" id="options-linenoscheck" checked>
+      <label for="options-linenoscheck" data-l10n-id="pad.settings.linenocheck"></label>
+    </p>
+    <p>
+      <input type="checkbox" id="options-rtlcheck">
+      <label for="options-rtlcheck" data-l10n-id="pad.settings.rtlcheck"></label>
+    </p>
+
+
+    <div class="dropdowns-container">
+
+      <p class="dropdown-line">
+        <label for="viewfontmenu" data-l10n-id="pad.settings.fontType">Font type:</label>
+        <select id="viewfontmenu">
+          <option value="" data-l10n-id="pad.settings.fontType.normal">Normal</option>
+          Quicksand,Roboto,Alegreya,PlayfairDisplay,Montserrat,OpenDyslexic,RobotoMono
+
+          <option value="Quicksand">Quicksand</option>
+
+          <option value="Roboto">Roboto</option>
+
+          <option value="Alegreya">Alegreya</option>
+
+          <option value="PlayfairDisplay">PlayfairDisplay</option>
+
+          <option value="Montserrat">Montserrat</option>
+
+          <option value="OpenDyslexic">OpenDyslexic</option>
+
+          <option value="RobotoMono">RobotoMono</option>
+
+        </select>
+      </p>
+
+      <p class="dropdown-line">
+        <label for="languagemenu" data-l10n-id="pad.settings.language">Language:</label>
+        <select id="languagemenu">
+
+          <option value="af">Afrikaans</option>
+
+          <option value="ar">العربية</option>
+
+          <option value="ast">asturianu</option>
+
+          <option value="az">azərbaycanca</option>
+
+          <option value="azb">تورکجه</option>
+
+          <option value="bcc">بلوچی مکرانی</option>
+
+          <option value="be-tarask">беларуская (тарашкевіца)‎</option>
+
+          <option value="bg">български</option>
+
+          <option value="bn">বাংলা</option>
+
+          <option value="br">brezhoneg</option>
+
+          <option value="bs">bosanski</option>
+
+          <option value="ca">català</option>
+
+          <option value="cs">česky</option>
+
+          <option value="da">dansk</option>
+
+          <option value="de">Deutsch</option>
+
+          <option value="diq">Zazaki</option>
+
+          <option value="dsb">dolnoserbski</option>
+
+          <option value="el">Ελληνικά</option>
+
+          <option value="en-gb">British English</option>
+
+          <option value="en">English</option>
+
+          <option value="eo">Esperanto</option>
+
+          <option value="es">español</option>
+
+          <option value="et">eesti</option>
+
+          <option value="eu">euskara</option>
+
+          <option value="fa">فارسی</option>
+
+          <option value="ff">Fulfulde</option>
+
+          <option value="fi">suomi</option>
+
+          <option value="fo">føroyskt</option>
+
+          <option value="fr">français</option>
+
+          <option value="fy">Frysk</option>
+
+          <option value="gl">galego</option>
+
+          <option value="gu">ગુજરાતી</option>
+
+          <option value="he">עברית</option>
+
+          <option value="hi">हिन्दी</option>
+
+          <option value="hr">hrvatski</option>
+
+          <option value="hsb">hornjoserbsce</option>
+
+          <option value="hu">magyar</option>
+
+          <option value="hy">Հայերեն</option>
+
+          <option value="ia">interlingua</option>
+
+          <option value="id">Bahasa Indonesia</option>
+
+          <option value="is">íslenska</option>
+
+          <option value="it">italiano</option>
+
+          <option value="ja">日本語</option>
+
+          <option value="kab">Taqbaylit</option>
+
+          <option value="km">ភាសាខ្មែរ</option>
+
+          <option value="kn">ಕನ್ನಡ</option>
+
+          <option value="ko">한국어</option>
+
+          <option value="krc">къарачай-малкъар</option>
+
+          <option value="ksh">Ripoarisch</option>
+
+          <option value="ku-latn">Kurdî (latînî)‎</option>
+
+          <option value="lb">Lëtzebuergesch</option>
+
+          <option value="lt">lietuvių</option>
+
+          <option value="lv">latviešu</option>
+
+          <option value="map-bms">Basa Banyumasan</option>
+
+          <option value="mg">Malagasy</option>
+
+          <option value="mk">македонски</option>
+
+          <option value="ml">മലയാളം</option>
+
+          <option value="mn">монгол</option>
+
+          <option value="mnw">ဘာသာ မန်</option>
+
+          <option value="mr">मराठी</option>
+
+          <option value="ms">Bahasa Melayu</option>
+
+          <option value="my">မြန်မာဘာသာ</option>
+
+          <option value="nah">Nāhuatl</option>
+
+          <option value="nap">Nnapulitano</option>
+
+          <option value="nb">norsk (bokmål)‎</option>
+
+          <option value="nds">Plattdüütsch</option>
+
+          <option value="ne">नेपाली</option>
+
+          <option value="nl">Nederlands</option>
+
+          <option value="nn">norsk (nynorsk)‎</option>
+
+          <option value="oc">occitan</option>
+
+          <option value="os">Ирон</option>
+
+          <option value="pa">ਪੰਜਾਬੀ</option>
+
+          <option value="pl">polski</option>
+
+          <option value="pms">Piemontèis</option>
+
+          <option value="ps">پښتو</option>
+
+          <option value="pt-br">português do Brasil</option>
+
+          <option value="pt">português</option>
+
+          <option value="qqq">Message documentation</option>
+
+          <option value="ro">română</option>
+
+          <option value="ru">русский</option>
+
+          <option value="sc">sardu</option>
+
+          <option value="sco">Scots</option>
+
+          <option value="sd">سنڌي</option>
+
+          <option value="sh">srpskohrvatski / српскохрватски</option>
+
+          <option value="shn">လိၵ်ႈတႆး</option>
+
+          <option value="sk">slovenčina</option>
+
+          <option value="sl">slovenščina</option>
+
+          <option value="sq">shqip</option>
+
+          <option value="sr-ec">српски (ћирилица)‎</option>
+
+          <option value="sr-el">srpski (latinica)‎</option>
+
+          <option value="sv">svenska</option>
+
+          <option value="sw">Kiswahili</option>
+
+          <option value="ta">தமிழ்</option>
+
+          <option value="tcy">ತುಳು</option>
+
+          <option value="te">తెలుగు</option>
+
+          <option value="th">ไทย</option>
+
+          <option value="tr">Türkçe</option>
+
+          <option value="uk">українська</option>
+
+          <option value="vec">vèneto</option>
+
+          <option value="vi">Tiếng Việt</option>
+
+          <option value="zh-hans">中文（简体）‎</option>
+
+          <option value="zh-hant">中文（繁體）‎</option>
+
+        </select>
+      </p>
+
+    </div>
+    <button data-l10n-id="pad.settings.delete">Delete pad</button>
+    <h2 data-l10n-id="pad.settings.about">About</h2>
+    <span data-l10n-id="pad.settings.poweredBy">Powered by</span>
+    <a href="https://etherpad.org">Etherpad</a>
+
+  </div></div>
+
+
+  <!------------------------->
+  <!-- IMPORT EXPORT POPUP -->
+  <!------------------------->
+
+  <div id="import_export" class="popup"><div class="popup-content">
+    <h1 data-l10n-id="pad.importExport.import_export"></h1>
+    <div class="acl-write">
+
+      <h2 data-l10n-id="pad.importExport.import"></h2>
+      <div class="importmessage" id="importmessageabiword" data-l10n-id="pad.importExport.abiword.innerHTML"></div><br>
+      <form id="importform" method="post" action="" target="importiframe" enctype="multipart/form-data">
+        <div class="importformdiv" id="importformfilediv">
+          <input type="file" name="file" size="10" id="importfileinput">
+          <div class="importmessage" id="importmessagefail"></div>
+        </div>
+        <div id="import"></div>
+        <div class="importmessage" id="importmessagesuccess" data-l10n-id="pad.importExport.importSuccessful"></div>
+        <div class="importformdiv" id="importformsubmitdiv">
+                      <span class="nowrap">
+                          <input type="submit" class="btn btn-primary" name="submit" value="Import Now" disabled="disabled" id="importsubmitinput">
+                          <div alt="" id="importstatusball" class="loadingAnimation" align="top"></div>
+                      </span>
+        </div>
+      </form>
+
+    </div>
+    <div id="exportColumn">
+      <h2 data-l10n-id="pad.importExport.export"></h2>
+
+      <a id="exportetherpada" target="_blank" class="exportlink">
+        <span class="exporttype buttonicon buttonicon-file-powerpoint" id="exportetherpad" data-l10n-id="pad.importExport.exportetherpad"></span>
+      </a>
+      <a id="exporthtmla" target="_blank" class="exportlink">
+        <span class="exporttype buttonicon buttonicon-file-code" id="exporthtml" data-l10n-id="pad.importExport.exporthtml"></span>
+      </a>
+      <a id="exportplaina" target="_blank" class="exportlink">
+        <span class="exporttype buttonicon buttonicon-file" id="exportplain" data-l10n-id="pad.importExport.exportplain"></span>
+      </a>
+      <a id="exportworda" target="_blank" class="exportlink">
+        <span class="exporttype buttonicon buttonicon-file-word" id="exportword" data-l10n-id="pad.importExport.exportword"></span>
+      </a>
+      <a id="exportpdfa" target="_blank" class="exportlink">
+        <span class="exporttype buttonicon buttonicon-file-pdf" id="exportpdf" data-l10n-id="pad.importExport.exportpdf"></span>
+      </a>
+      <a id="exportopena" target="_blank" class="exportlink">
+        <span class="exporttype buttonicon buttonicon-file-alt" id="exportopen" data-l10n-id="pad.importExport.exportopen"></span>
+      </a>
+
+    </div>
+  </div></div>
+
+
+  <!---------------------------------------------------->
+  <!-- CONNECTIVITY POPUP (when you get disconnected) -->
+  <!---------------------------------------------------->
+
+  <div id="connectivity" class="popup"><div class="popup-content">
+
+    <div class="connected visible">
+      <h2 data-l10n-id="pad.modals.connected"></h2>
+    </div>
+    <div class="reconnecting">
+      <h1 data-l10n-id="pad.modals.reconnecting"></h1>
+      <i class='buttonicon buttonicon-spin5 icon-spin'>
+        <img src='../static/img/brand.svg' class='etherpadBrand'><br/>
+      </i>
+    </div>
+    <div class="userdup">
+      <h1 data-l10n-id="pad.modals.userdup"></h1>
+      <h2 data-l10n-id="pad.modals.userdup.explanation"></h2>
+      <p id="defaulttext" data-l10n-id="pad.modals.userdup.advice"></p>
+      <button id="forcereconnect" class="btn btn-primary" data-l10n-id="pad.modals.forcereconnect"></button>
+    </div>
+    <div class="unauth">
+      <h1 data-l10n-id="pad.modals.unauth"></h1>
+      <p id="defaulttext" data-l10n-id="pad.modals.unauth.explanation"></p>
+      <button id="forcereconnect" class="btn btn-primary" data-l10n-id="pad.modals.forcereconnect"></button>
+    </div>
+    <div class="looping">
+      <h1 data-l10n-id="pad.modals.disconnected"></h1>
+      <h2 data-l10n-id="pad.modals.looping.explanation"></h2>
+      <p data-l10n-id="pad.modals.looping.cause"></p>
+    </div>
+    <div class="initsocketfail">
+      <h1 data-l10n-id="pad.modals.initsocketfail"></h1>
+      <h2 data-l10n-id="pad.modals.initsocketfail.explanation"></h2>
+      <p data-l10n-id="pad.modals.initsocketfail.cause"></p>
+    </div>
+    <div class="slowcommit with_reconnect_timer">
+      <h1 data-l10n-id="pad.modals.disconnected"></h1>
+      <h2 data-l10n-id="pad.modals.slowcommit.explanation"></h2>
+      <p id="defaulttext" data-l10n-id="pad.modals.slowcommit.cause"></p>
+      <button id="forcereconnect" class="btn btn-primary" data-l10n-id="pad.modals.forcereconnect"></button>
+    </div>
+    <div class="badChangeset with_reconnect_timer">
+      <h1 data-l10n-id="pad.modals.disconnected"></h1>
+      <h2 data-l10n-id="pad.modals.badChangeset.explanation"></h2>
+      <p id="defaulttext" data-l10n-id="pad.modals.badChangeset.cause"></p>
+      <button id="forcereconnect" class="btn btn-primary" data-l10n-id="pad.modals.forcereconnect"></button>
+    </div>
+    <div class="corruptPad">
+      <h1 data-l10n-id="pad.modals.disconnected"></h1>
+      <h2 data-l10n-id="pad.modals.corruptPad.explanation"></h2>
+      <p data-l10n-id="pad.modals.corruptPad.cause"></p>
+    </div>
+    <div class="deleted">
+      <h1 data-l10n-id="pad.modals.deleted"></h1>
+      <p data-l10n-id="pad.modals.deleted.explanation"></p>
+    </div>
+    <div class="rateLimited">
+      <h1 data-l10n-id="pad.modals.rateLimited"></h1>
+      <p data-l10n-id="pad.modals.rateLimited.explanation"></p>
+    </div>
+    <div class="rejected">
+      <h1 data-l10n-id="pad.modals.disconnected"></h1>
+      <h2 data-l10n-id="pad.modals.rejected.explanation"></h2>
+      <p data-l10n-id="pad.modals.rejected.cause"></p>
+    </div>
+    <div class="disconnected with_reconnect_timer">
+
+      <h1 data-l10n-id="pad.modals.disconnected"></h1>
+      <h2 data-l10n-id="pad.modals.disconnected.explanation"></h2>
+      <p id="defaulttext" data-l10n-id="pad.modals.disconnected.cause"></p>
+      <button id="forcereconnect" class="btn btn-primary" data-l10n-id="pad.modals.forcereconnect"></button>
+
+    </div>
+    <form id="reconnectform" method="post" action="/ep/pad/reconnect" accept-charset="UTF-8" style="display: none;">
+      <input type="hidden" class="padId" name="padId">
+      <input type="hidden" class="diagnosticInfo" name="diagnosticInfo">
+      <input type="hidden" class="missedChanges" name="missedChanges">
+    </form>
+
+  </div></div>
+
+
+  <!-------------------------------->
+  <!-- EMBED POPUP (Share, embed) -->
+  <!-------------------------------->
+
+  <div id="embed" class="popup"><div class="popup-content">
+
+    <h1 data-l10n-id="pad.share"></h1>
+    <div id="embedreadonly" class="acl-write">
+      <input type="checkbox" id="readonlyinput">
+      <label for="readonlyinput" data-l10n-id="pad.share.readonly"></label>
+    </div>
+    <div id="linkcode">
+      <h2 data-l10n-id="pad.share.link"></h2>
+      <input id="linkinput" type="text" value="" onclick="this.select()">
+    </div>
+    <div id="embedcode">
+      <h2 data-l10n-id="pad.share.emebdcode"></h2>
+      <input id="embedinput" type="text" value="" onclick="this.select()">
+    </div>
+
+  </div></div>
+
+  <div class="sticky-container">
+
+    <!---------------------------------------------------------------------->
+    <!-- USERS POPUP (set username, color, see other users names & color) -->
+    <!---------------------------------------------------------------------->
+
+    <div id="users" class="popup"><div class="popup-content">
+
+      <div id="connectionstatus"></div>
+      <div id="myuser">
+        <div id="mycolorpicker" class="popup"><div class="popup-content">
+          <div id="colorpicker"></div>
+          <div class="btn-container">
+            <button id="mycolorpickersave" data-l10n-id="pad.colorpicker.save" class="btn btn-primary"></button>
+            <button id="mycolorpickercancel" data-l10n-id="pad.colorpicker.cancel" class="btn btn-default"></button>
+            <span id="mycolorpickerpreview" class="myswatchboxhoverable"></span>
+          </div>
+        </div></div>
+        <div id="myswatchbox"><div id="myswatch"></div></div>
+        <div id="myusernameform">
+          <input type="text" id="myusernameedit" disabled="disabled" data-l10n-id="pad.userlist.entername">
+        </div>
+      </div>
+      <div id="otherusers" aria-role="document">
+        <table id="otheruserstable" cellspacing="0" cellpadding="0" border="0">
+          <tr><td></td></tr>
+        </table>
+      </div>
+      <div id="userlistbuttonarea"></div>
+
+    </div></div>
+
+
+    <!----------------------------->
+    <!----------- CHAT ------------>
+    <!----------------------------->
+
+    <div id="chaticon" class="visible" onclick="chat.show();return false;" title="Chat (Alt C)">
+      <span id="chatlabel" data-l10n-id="pad.chat"></span>
+      <span class="buttonicon buttonicon-chat"></span>
+      <span id="chatcounter">0</span>
+    </div>
+
+    <div id="chatbox">
+      <div class="chat-content">
+        <div id="titlebar">
+          <h1 id ="titlelabel" data-l10n-id="pad.chat"></h1>
+          <a id="titlecross" class="hide-reduce-btn" onClick="chat.hide();return false;">-&nbsp;</a>
+          <a id="titlesticky" class="stick-to-screen-btn" onClick="chat.stickToScreen(true);return false;" data-l10n-id="pad.chat.stick.title">█&nbsp;&nbsp;</a>
+        </div>
+        <div id="chattext" class="thin-scrollbar" aria-live="polite" aria-relevant="additions removals text" role="log" aria-atomic="false">
+          <div alt="loading.." id="chatloadmessagesball" class="chatloadmessages loadingAnimation" align="top"></div>
+          <button id="chatloadmessagesbutton" class="chatloadmessages" data-l10n-id="pad.chat.loadmessages"></button>
+        </div>
+        <div id="chatinputbox">
+          <form>
+            <textarea id="chatinput" maxlength="999" data-l10n-id="pad.chat.writeMessage.placeholder"></textarea>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!------------------------------------------------------------------>
+  <!-- SKIN VARIANTS BUILDER (Customize rendering, only for admins) -->
+  <!------------------------------------------------------------------>
+
+  <div id="skin-variants" class="popup"><div class="popup-content">
+    <h1>Skin Builder</h1>
+
+    <div class="dropdowns-container">
+
+
+      <p class="dropdown-line">
+        <label class="skin-variant-container">toolbar</label>
+        <select class="skin-variant skin-variant-color" data-container="toolbar">
+          <option value="super-light">Super Light</option>
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+          <option value="super-dark">Super Dark</option>
+        </select>
+      </p>
+
+      <p class="dropdown-line">
+        <label class="skin-variant-container">background</label>
+        <select class="skin-variant skin-variant-color" data-container="background">
+          <option value="super-light">Super Light</option>
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+          <option value="super-dark">Super Dark</option>
+        </select>
+      </p>
+
+      <p class="dropdown-line">
+        <label class="skin-variant-container">editor</label>
+        <select class="skin-variant skin-variant-color" data-container="editor">
+          <option value="super-light">Super Light</option>
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+          <option value="super-dark">Super Dark</option>
+        </select>
+      </p>
+
+    </div>
+
+    <p>
+      <input type="checkbox" id="skin-variant-full-width" class="skin-variant"/>
+      <label for="skin-variant-full-width">Full Width Editor</label>
+    </p>
+
+    <p>
+      <label>Result to copy in settings.json</label>
+      <input id="skin-variants-result" type="text" readonly class="disabled" />
+    </p>
+  </div></div>
+
+
+
+
+</div> <!-- End of #editorcontainerbox -->
+
+
+
+
+<!----------------------------->
+<!-------- JAVASCRIPT --------->
+<!----------------------------->
+
+<script type="text/javascript" src="../static/skins/colibris/pad.js?v=5ba315cd"></script>
+
+<div style="display:none"><a href="/javascript" data-jslicense="1">JavaScript license information</a></div>
+<script type="module" src="./node_modules/ep_etherpad-lite/templates/padViteBootstrap.js"></script>
+</body>
+</html>

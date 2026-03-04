@@ -1,0 +1,25 @@
+:version: {VERSION}
+
+= Etherpad v{version} Manual &amp; Documentation
+:stylesheet: assets/style.css
+:toc:
+:toclevels: 4
+:source-highlighter: highlight.js
+
+include::./documentation.adoc[]
+
+include::./stats.adoc[]
+
+include::./localization.adoc[]
+
+include::./docker.adoc[]
+
+include::./skins.adoc[]
+
+include::./api/api.adoc[]
+
+include::./plugins.adoc[]
+
+include::./cookies.adoc[]
+
+include::./database.adoc[]

@@ -1,0 +1,16 @@
+{
+	"@metadata": {
+		"authors": [
+			"Robby",
+			"Volvox"
+		]
+	},
+	"ep_adminpads2_confirm": "Wëllt Dir de Pad {{padID}} wierklech läschen?",
+	"ep_adminpads2_delete.value": "Läschen",
+	"ep_adminpads2_loading": "Lueden...",
+	"ep_adminpads2_no-results": "Keng Resultater",
+	"ep_adminpads2_padname": "Padnumm",
+	"ep_adminpads2_search-box.placeholder": "Sichbegrëff",
+	"ep_adminpads2_search-button.value": "Sichen",
+	"ep_adminpads2_unknown-error": "Onbekannte Feeler"
+}

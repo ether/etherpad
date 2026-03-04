@@ -1,0 +1,27 @@
+{
+	"@metadata": {
+		"authors": [
+			"Adr mm"
+		]
+	},
+	"ep_adminpads2_action": "Atzione",
+	"ep_adminpads2_autoupdate-label": "Atualizatzione automàtica de is modìficas de su pad",
+	"ep_adminpads2_autoupdate.title": "Ativat o disativat is atualizatziones automàticas pro sa chirca atuale.",
+	"ep_adminpads2_confirm": "Seguru chi boles cantzellare su pad {{padID}}?",
+	"ep_adminpads2_delete.value": "Cantzella",
+	"ep_adminpads2_last-edited": "Ùrtima modìfica",
+	"ep_adminpads2_loading": "Carrighende...",
+	"ep_adminpads2_manage-pads": "Gesti is pads",
+	"ep_adminpads2_no-results": "Nissunu resurtadu",
+	"ep_adminpads2_pad-user-count": "Nùmeru de utentes de pads",
+	"ep_adminpads2_padname": "Nòmine de su pad",
+	"ep_adminpads2_search-box.placeholder": "Tèrmine de chirca",
+	"ep_adminpads2_search-button.value": "Chirca",
+	"ep_adminpads2_search-done": "Chirca cumpleta",
+	"ep_adminpads2_search-error-explanation": "Su serbidore at agatadu un'errore chirchende pads:",
+	"ep_adminpads2_search-error-title": "Impossìbile otènnere sa lista de pads",
+	"ep_adminpads2_search-heading": "Chirca pads",
+	"ep_adminpads2_title": "Amministratzione de su pad",
+	"ep_adminpads2_unknown-error": "Errore disconnotu",
+	"ep_adminpads2_unknown-status": "Istadu disconnotu"
+}

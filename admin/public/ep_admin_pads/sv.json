@@ -1,0 +1,28 @@
+{
+	"@metadata": {
+		"authors": [
+			"Bengtsson96",
+			"WikiPhoenix"
+		]
+	},
+	"ep_adminpads2_action": "Åtgärd",
+	"ep_adminpads2_autoupdate-label": "Uppdatera automatiskt när blocket ändras",
+	"ep_adminpads2_autoupdate.title": "Aktivera eller inaktivera automatiska uppdatering för nuvarande förfrågan.",
+	"ep_adminpads2_confirm": "Vill du verkligen radera blocket {{padID}}?",
+	"ep_adminpads2_delete.value": "Radera",
+	"ep_adminpads2_last-edited": "Senast redigerad",
+	"ep_adminpads2_loading": "Läser in …",
+	"ep_adminpads2_manage-pads": "Hantera block",
+	"ep_adminpads2_no-results": "Inga resultat",
+	"ep_adminpads2_pad-user-count": "Antal blockanvändare",
+	"ep_adminpads2_padname": "Blocknamn",
+	"ep_adminpads2_search-box.placeholder": "Sökord",
+	"ep_adminpads2_search-button.value": "Sök",
+	"ep_adminpads2_search-done": "Sökning slutförd",
+	"ep_adminpads2_search-error-explanation": "Servern stötte på ett fel vid sökning efter block:",
+	"ep_adminpads2_search-error-title": "Misslyckades att hämta blocklista",
+	"ep_adminpads2_search-heading": "Sök efter block",
+	"ep_adminpads2_title": "Blockadministration",
+	"ep_adminpads2_unknown-error": "Okänt fel",
+	"ep_adminpads2_unknown-status": "Okänd status"
+}

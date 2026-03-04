@@ -9,12 +9,27 @@ cmd /C node -e "" || ( echo "Please install node.js ( https://nodejs.org )" && e
 echo _
 echo Ensure that all dependencies are up to date...  If this is the first time you have run Etherpad please be patient.
 
-mkdir node_modules
-cd /D node_modules
-mklink /D "ep_etherpad-lite" "..\src"
 
-cd /D "ep_etherpad-lite"
-cmd /C npm ci || exit /B 1
+:: Install admin ui only if available
+IF EXIST admin (
+ cd /D .\admin
+ dir
+ cmd /C pnpm i || exit /B 1
+ cmd /C pnpm run build || exit /B 1
+ cd /D ..
+)
+
+:: Install ui only if available
+IF EXIST ui (
+ cd /D .\ui
+ dir
+ cmd /C pnpm i || exit /B 1
+ cmd /C pnpm run build || exit /B 1
+ cd /D ..
+)
+
+
+cmd /C pnpm i || exit /B 1
 
 cd /D "%~dp0\.."
 

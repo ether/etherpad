@@ -1,0 +1,274 @@
+name: "Backend tests"
+
+# any branch is useful for testing before a PR is submitted
+on:
+  push:
+    paths-ignore:
+      - "doc/**"
+  pull_request:
+    paths-ignore:
+      - "doc/**"
+
+permissions:
+  contents: read
+
+
+jobs:
+  withoutpluginsLinux:
+    env:
+      PNPM_HOME: ~/.pnpm-store
+    # run on pushes to any branch
+    # run on PRs from external forks
+    if: |
+      (github.event_name != 'pull_request')
+      || (github.event.pull_request.head.repo.id != github.event.pull_request.base.repo.id)
+    name: Linux without plugins
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [">=20.0.0 <21.0.0", ">=22.0.0 <23.0.0", ">=24.0.0 <25.0.0"]
+    steps:
+      -
+        name: Checkout repository
+        uses: actions/checkout@v6
+      - uses: actions/cache@v5
+        name: Setup gnpm cache
+        if: always()
+        with:
+          path: |
+             ${{ env.PNPM_HOME }}
+             ~/.local/share/gnpm
+             /usr/local/bin/gnpm
+             /usr/local/bin/gnpm-0.0.12
+          key: ${{ runner.os }}-gnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+                  ${{ runner.os }}-gnpm-store-
+      - name: Setup gnpm
+        uses: SamTV12345/gnpm-setup@main
+        with:
+          version: 0.0.12
+      -
+        name: Install libreoffice
+        uses: awalsh128/cache-apt-pkgs-action@v1.6.0
+        with:
+          packages: libreoffice libreoffice-pdfimport
+          version: 1.0
+      -
+        name: Install all dependencies and symlink for ep_etherpad-lite
+        run: gnpm i --frozen-lockfile --runtimeVersion="${{ matrix.node }}"
+      - name: Install admin ui
+        working-directory: admin
+        run: gnpm install  --runtimeVersion="${{ matrix.node }}"
+      - name: Build admin ui
+        working-directory: admin
+        run: gnpm build  --runtimeVersion="${{ matrix.node }}"
+      -
+        name: Run the backend tests
+        run: gnpm test  --runtimeVersion="${{ matrix.node }}"
+      - name: Run the new vitest tests
+        working-directory: src
+        run: gnpm run test:vitest  --runtimeVersion="${{ matrix.node }}"
+
+  withpluginsLinux:
+    env:
+      PNPM_HOME: ~/.pnpm-store
+    # run on pushes to any branch
+    # run on PRs from external forks
+    if: |
+      (github.event_name != 'pull_request')
+      || (github.event.pull_request.head.repo.id != github.event.pull_request.base.repo.id)
+    name: Linux with Plugins
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [">=20.0.0 <21.0.0", ">=22.0.0 <23.0.0", ">=24.0.0 <25.0.0"]
+    steps:
+      -
+        name: Checkout repository
+        uses: actions/checkout@v6
+      - uses: actions/cache@v5
+        name: Setup pnpm cache
+        if: always()
+        with:
+          path: |
+            ${{ env.PNPM_HOME }}
+            ~/.local/share/gnpm
+            /usr/local/bin/gnpm
+            /usr/local/bin/gnpm-0.0.12
+          key: ${{ runner.os }}-gnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-gnpm-store-
+      - name: Setup gnpm
+        uses: SamTV12345/gnpm-setup@main
+        with:
+          version: 0.0.12
+      -
+        name: Install libreoffice
+        uses: awalsh128/cache-apt-pkgs-action@v1.6.0
+        with:
+          packages: libreoffice libreoffice-pdfimport
+          version: 1.0
+      -
+        name: Install all dependencies and symlink for ep_etherpad-lite
+        run: gnpm install --frozen-lockfile --runtimeVersion="${{ matrix.node }}"
+      - name: Build admin ui
+        working-directory: admin
+        run: gnpm build   --runtimeVersion="${{ matrix.node }}"
+      -
+        name: Install Etherpad plugins
+        run: >
+          gnpm install --workspace-root
+          ep_align
+          ep_author_hover
+          ep_cursortrace
+          ep_font_size
+          ep_hash_auth
+          ep_headings2
+          ep_markdown
+          ep_readonly_guest
+          ep_set_title_on_pad
+          ep_spellcheck
+          ep_subscript_and_superscript
+          ep_table_of_contents   --runtimeVersion="${{ matrix.node }}"
+      -
+        name: Run the backend tests
+        run: gnpm test   --runtimeVersion="${{ matrix.node }}"
+      - name: Run the new vitest tests
+        working-directory: src
+        run: gnpm run test:vitest   --runtimeVersion="${{ matrix.node }}"
+
+  withoutpluginsWindows:
+    env:
+      PNPM_HOME: ~\\.pnpm-store
+    # run on pushes to any branch
+    # run on PRs from external forks
+    if: |
+      (github.event_name != 'pull_request')
+      || (github.event.pull_request.head.repo.id != github.event.pull_request.base.repo.id)
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [">=20.0.0 <21.0.0", ">=22.0.0 <23.0.0", ">=24.0.0 <25.0.0"]
+    name: Windows without plugins
+    runs-on: windows-latest
+    steps:
+      -
+        name: Checkout repository
+        uses: actions/checkout@v6
+      - uses: actions/cache@v5
+        name: Setup pnpm cache
+        if: always()
+        with:
+          path: |
+            ${{ env.PNPM_HOME }}
+            C:\gnpm\
+            C:\Users\runneradmin\AppData\Roaming\gnpm\
+          key: ${{ runner.os }}-gnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-gnpm-store-
+      - name: Setup gnpm
+        uses: SamTV12345/gnpm-setup@main
+        with:
+          version: 0.0.12
+      -
+        name: Install all dependencies and symlink for ep_etherpad-lite
+        run: gnpm install --frozen-lockfile   --runtimeVersion="${{ matrix.node }}"
+      - name: Build admin ui
+        working-directory: admin
+        run: gnpm build   --runtimeVersion="${{ matrix.node }}"
+      -
+        name:  Fix up the settings.json
+        run: |
+          powershell -Command "(gc settings.json.template) -replace '\"max\": 10', '\"max\": 10000' | Out-File -encoding ASCII settings.json.holder"
+          powershell -Command "(gc settings.json.holder) -replace '\"points\": 10', '\"points\": 1000' | Out-File -encoding ASCII settings.json"
+      -
+        name: Run the backend tests
+        working-directory: src
+        run: gnpm test  --runtimeVersion="${{ matrix.node }}"
+      - name: Run the new vitest tests
+        working-directory: src
+        run: gnpm run test:vitest  --runtimeVersion="${{ matrix.node }}"
+
+  withpluginsWindows:
+    env:
+      PNPM_HOME: ~\\.pnpm-store
+    # run on pushes to any branch
+    # run on PRs from external forks
+    if: |
+      (github.event_name != 'pull_request')
+      || (github.event.pull_request.head.repo.id != github.event.pull_request.base.repo.id)
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [">=20.0.0 <21.0.0", ">=22.0.0 <23.0.0", ">=24.0.0 <25.0.0"]
+    name: Windows with Plugins
+    runs-on: windows-latest
+
+    steps:
+      -
+        name: Checkout repository
+        uses: actions/checkout@v6
+      - uses: actions/cache@v5
+        name: Setup pnpm cache
+        if: always()
+        with:
+          path: |
+            ${{ env.PNPM_HOME }}
+            C:\gnpm\
+            C:\Users\runneradmin\AppData\Roaming\gnpm\
+          key: ${{ runner.os }}-gnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-gnpm-store-
+      - name: Setup gnpm
+        uses: SamTV12345/gnpm-setup@main
+        with:
+          version: 0.0.12
+      - name: Install dependencies
+        run: gnpm install --runtimeVersion="${{ matrix.node }}"
+      - name: Build admin ui
+        working-directory: admin
+        run: gnpm build --runtimeVersion="${{ matrix.node }}"
+      -
+        name: Install Etherpad plugins
+        # The --legacy-peer-deps flag is required to work around a bug in npm
+        # v7: https://github.com/npm/cli/issues/2199
+        run: >
+          gnpm install --workspace-root
+          ep_align
+          ep_author_hover
+          ep_cursortrace
+          ep_font_size
+          ep_hash_auth
+          ep_headings2
+          ep_markdown
+          ep_readonly_guest
+          ep_set_title_on_pad
+          ep_spellcheck
+          ep_subscript_and_superscript
+          ep_table_of_contents   --runtimeVersion="${{ matrix.node }}"
+      # Etherpad core dependencies must be installed after installing the
+      # plugin's dependencies, otherwise npm will try to hoist common
+      # dependencies by removing them from src/node_modules and installing them
+      # in the top-level node_modules. As of v6.14.10, npm's hoist logic appears
+      # to be buggy, because it sometimes removes dependencies from
+      # src/node_modules but fails to add them to the top-level node_modules.
+      # Even if npm correctly hoists the dependencies, the hoisting seems to
+      # confuse tools such as `npm outdated`, `npm update`, and some ESLint
+      # rules.
+      -
+        name: Install all dependencies and symlink for ep_etherpad-lite
+        run: gnpm install --frozen-lockfile   --runtimeVersion="${{ matrix.node }}"
+      -
+        name:  Fix up the settings.json
+        run: |
+          powershell -Command "(gc settings.json.template) -replace '\"max\": 10', '\"max\": 10000' | Out-File -encoding ASCII settings.json.holder"
+          powershell -Command "(gc settings.json.holder) -replace '\"points\": 10', '\"points\": 1000' | Out-File -encoding ASCII settings.json"
+      -
+        name: Run the backend tests
+        working-directory: src
+        run: gnpm test   --runtimeVersion="${{ matrix.node }}"
+      - name: Run the new vitest tests
+        working-directory: src
+        run: gnpm run test:vitest   --runtimeVersion="${{ matrix.node }}"

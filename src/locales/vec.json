@@ -1,13 +1,14 @@
 {
 	"@metadata": {
 		"authors": [
+			"Candalua",
 			"Fierodelveneto"
 		]
 	},
 	"index.newPad": "Novo Pad",
 	"index.createOpenPad": "O creare o verxare on Pad co'l nome:",
 	"pad.toolbar.bold.title": "Groseto (Ctrl-B)",
-	"pad.toolbar.italic.title": "Corivo (Ctrl-I)",
+	"pad.toolbar.italic.title": "Corsivo (Ctrl-I)",
 	"pad.toolbar.underline.title": "Sotolineà (Ctrl-U)",
 	"pad.toolbar.strikethrough.title": "Barà (Ctrl+5)",
 	"pad.toolbar.ol.title": "Ełenco numarà (Ctrl+Shift+N)",
@@ -27,11 +28,11 @@
 	"pad.colorpicker.cancel": "Descançełare",
 	"pad.loading": "Drio cargar...",
 	"pad.noCookie": "El cookie no el xé sta catà. Cosenti i cookie n'tel to navegadore web.",
-	"timeslider.month.january": "Xenaro",
+	"timeslider.month.january": "Zenaro",
 	"timeslider.month.march": "Marso",
 	"timeslider.month.april": "Apriłe",
 	"timeslider.month.may": "Majo",
-	"timeslider.month.june": "Xugno",
+	"timeslider.month.june": "Zugno",
 	"timeslider.month.july": "Lujo",
 	"timeslider.month.august": "Agosto",
 	"timeslider.month.september": "Setenbre",

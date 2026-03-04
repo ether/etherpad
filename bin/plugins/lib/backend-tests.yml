@@ -1,0 +1,92 @@
+name: Backend Tests
+
+# any branch is useful for testing before a PR is submitted
+on:
+  workflow_call:
+
+jobs:
+  withplugins:
+    # run on pushes to any branch
+    # run on PRs from external forks
+    if: |
+      (github.event_name != 'pull_request')
+      || (github.event.pull_request.head.repo.id != github.event.pull_request.base.repo.id)
+    name: with Plugins
+    runs-on: ubuntu-latest
+    steps:
+      -
+        name: Install libreoffice
+        uses: awalsh128/cache-apt-pkgs-action@v1.4.2
+        with:
+          packages: libreoffice libreoffice-pdfimport
+          version: 1.0
+      -
+        name: Install etherpad core
+        uses: actions/checkout@v3
+        with:
+          repository: ether/etherpad-lite
+          path: etherpad-lite
+      - uses: pnpm/action-setup@v3
+        name: Install pnpm
+        with:
+          version: 10
+          run_install: false
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+      - uses: actions/cache@v4
+        name: Setup pnpm cache
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+      -
+        name: Checkout plugin repository
+        uses: actions/checkout@v3
+        with:
+          path: plugin
+      -
+        name: Determine plugin name
+        id: plugin_name
+        working-directory: ./plugin
+        run: |
+          npx -c 'printf %s\\n "::set-output name=plugin_name::${npm_package_name}"'
+      -
+        name: Link plugin directory
+        working-directory: ./plugin
+        run: |
+          pnpm link --global
+      - name: Remove tests
+        working-directory: ./etherpad-lite
+        run: rm -rf ./src/tests/backend/specs
+      -
+        name: Install Etherpad core dependencies
+        working-directory: ./etherpad-lite
+        run: bin/installDeps.sh
+      - name: Link plugin to etherpad-lite
+        working-directory: ./etherpad-lite
+        run: |
+          pnpm link --global $PLUGIN_NAME
+          pnpm run plugins i --path  ../../plugin
+        env:
+          PLUGIN_NAME: ${{ steps.plugin_name.outputs.plugin_name }}
+      - name: Link ep_etherpad-lite
+        working-directory: ./etherpad-lite/src
+        run: |
+          pnpm link --global
+      - name: Link etherpad to plugin
+        working-directory: ./plugin
+        run: |
+          pnpm link --global ep_etherpad-lite
+      -
+        name: Run the backend tests
+        working-directory: ./etherpad-lite
+        run: |
+          res=$(find .. -path "./node_modules/ep_*/static/tests/backend/specs/**" | wc -l)
+          if [ $res -eq 0 ]; then
+          echo "No backend tests found"
+          else
+          pnpm run test
+          fi

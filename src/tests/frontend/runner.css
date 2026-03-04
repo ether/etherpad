@@ -1,0 +1,241 @@
+html {
+  height: 100%;
+}
+
+body {
+  padding: 0px;
+  margin: 0px;
+  height: 100%;
+  overflow: hidden;
+}
+
+#console {
+  display: none;
+}
+
+#split-view {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  grid-template-columns: 20% 10px 1fr;
+}
+
+#separator {
+  grid-column: 2;
+  grid-row: 1/-1;
+  cursor: col-resize;
+  background-color: #999;
+}
+
+#iframe-container {
+  height: 100%;
+  overflow: auto hidden;
+}
+
+#iframe-container iframe {
+  border: 0;
+  height: 100%;
+  width: 100%;
+  min-width: 820px;
+}
+
+#mocha {
+  font: 20px/1.5 "Helvetica Neue", Helvetica, Arial, sans-serif;
+  height: 100%;
+  min-height: 100%; /* https://css-tricks.com/preventing-a-grid-blowout/ */
+  font-size:80%;
+  display: flex;
+  flex-direction: column;
+}
+
+#mocha ul {
+  list-style: none;
+}
+
+#mocha h1, #mocha h2 {
+  margin: 0;
+}
+
+#mocha h1 {
+  padding-top: 15px; /* margin-top breaks autoscrolling */
+  font-size: 1em;
+  font-weight: 200;
+}
+
+#mocha h1 a:visited
+{
+  color: #00E;
+}
+
+#mocha .suite .suite h1 {
+  padding-top: 0;
+  font-size: .8em;
+}
+
+#mocha h2 {
+  font-size: 12px;
+  font-weight: normal;
+  cursor: pointer;
+}
+
+#mocha .suite {
+  margin-left: 0px;
+}
+
+#mocha .test {
+  margin-left: 5px;
+}
+
+#mocha .test:hover h2::after {
+  position: relative;
+  top: 0;
+  right: -10px;
+  content: '(view source)';
+  font-size: 12px;
+  font-family: arial;
+  color: #888;
+}
+
+#mocha .test.pending:hover h2::after {
+  content: '(pending)';
+  font-family: arial;
+}
+
+#mocha .test.pass.medium .duration {
+  background: #ffd285;
+}
+
+#mocha .test.pass.slow .duration {
+  background: #ffc2c0;
+}
+
+#mocha .test.pass::before {
+  content: '✓';
+  font-size: 12px;
+  display: block;
+  float: left;
+  margin-right: 5px;
+  color: #00d6b2;
+}
+
+#mocha .test.pass .duration {
+  font-size: 9px;
+  margin-left: 5px;
+  padding: 2px 5px;
+  border-radius: 5px;
+}
+
+#mocha .test.pass.fast .duration {
+  background: #d3ffe9;
+}
+
+#mocha .test.pending {
+  color: #0b97c4;
+}
+
+#mocha .test.pending::before {
+  content: '◦';
+  color: #0b97c4;
+}
+
+#mocha .test.fail {
+  color: #c00;
+}
+
+#mocha .test.fail pre {
+  color: black;
+}
+
+#mocha .test.fail::before {
+  content: '✖';
+  font-size: 12px;
+  display: block;
+  float: left;
+  margin-right: 5px;
+  color: #c00;
+}
+
+#mocha .test pre.error {
+  color: #c00;
+}
+
+#mocha .test pre {
+  display: inline-block;
+  font: 12px/1.5 monaco, monospace;
+  margin: 5px;
+  padding: 15px;
+  border: 1px solid #eee;
+  border-bottom-color: #ddd;
+  -webkit-border-radius: 3px;
+  -webkit-box-shadow: 0 1px 3px #eee;
+}
+
+#mocha-report {
+  flex: 1 1 auto;
+  overflow: auto;
+  margin: 0;
+}
+
+#mocha-report ul {
+  padding: 0;
+}
+
+#mocha-report.pass .test.fail {
+  display: none;
+}
+
+#mocha-report.fail .test.pass {
+  display: none;
+}
+
+#mocha-error {
+  color: #c00;
+  font-size: 1.5  em;
+  font-weight: 100;
+  letter-spacing: 1px;
+}
+
+#mocha-stats {
+  flex: 0 0 auto;
+  padding: 10px;
+  font-size: 12px;
+  margin: 0;
+  color: #888;
+  text-align: right;
+}
+
+#mocha-stats .progress {
+  float: right;
+  padding-top: 0;
+  margin-right:5px;
+}
+
+#mocha-stats em {
+  color: black;
+}
+
+#mocha-stats a {
+  text-decoration: none;
+  color: inherit;
+}
+
+#mocha-stats a:hover {
+  border-bottom: 1px solid #eee;
+}
+
+#mocha-stats li {
+  display: inline-block;
+  margin: 0 5px;
+  list-style: none;
+  padding-top: 11px;
+}
+
+code .comment { color: #ddd }
+code .init { color: #2F6FAD }
+code .string { color: #5890AD }
+code .keyword { color: #8A6343 }
+code .number { color: #2F6FAD }
+
+ul{
+  padding-left:5px;
+}

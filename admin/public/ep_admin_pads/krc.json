@@ -1,0 +1,27 @@
+{
+	"@metadata": {
+		"authors": [
+			"Къарачайлы"
+		]
+	},
+	"ep_adminpads2_action": "Этиу",
+	"ep_adminpads2_autoupdate-label": "Блокнот тюрлендириулеринде автомат халда джангыртыу",
+	"ep_adminpads2_autoupdate.title": "Баргъан излем ючюн автомат халда джангыртыуланы джандын неда джукълат.",
+	"ep_adminpads2_confirm": "{{padID}} блокнотну керти да кетерирге излеймисиз?",
+	"ep_adminpads2_delete.value": "Кетер",
+	"ep_adminpads2_last-edited": "Ахыр тюзетиу",
+	"ep_adminpads2_loading": "Джюклениу…",
+	"ep_adminpads2_manage-pads": "Блокнотланы оноуун эт",
+	"ep_adminpads2_no-results": "Эсебле джокъдула",
+	"ep_adminpads2_pad-user-count": "Блокнот хайырланыучуланы саны",
+	"ep_adminpads2_padname": "Блокнот ат",
+	"ep_adminpads2_search-box.placeholder": "Терминни изле",
+	"ep_adminpads2_search-button.value": "Изле",
+	"ep_adminpads2_search-done": "Излеу тамамланды",
+	"ep_adminpads2_search-error-explanation": "Сервер, блокнотланы излеген заманда халат  табды:",
+	"ep_adminpads2_search-error-title": "Блокнот тизмеси алынамады",
+	"ep_adminpads2_search-heading": "Блокнотла ючюн излеу",
+	"ep_adminpads2_title": "Блокнот башчылыкъ",
+	"ep_adminpads2_unknown-error": "Билинмеген халат",
+	"ep_adminpads2_unknown-status": "Билинмеген турум"
+}

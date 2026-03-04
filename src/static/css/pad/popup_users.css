@@ -8,6 +8,7 @@
   height: auto;
 }
 .popup#users #myuser {
+  display: flex;
   flex-shrink: 0;
 }
 .popup#users #otherusers {
@@ -42,12 +43,12 @@
 /* --------------- */
 
 #myswatchbox {
-  float: left;
   width: 24px;
   height: 24px;
-  border: 1px solid #ccc
+  border: 1px solid #ccc;
   background: transparent;
   cursor: pointer;
+  flex-shrink: 0;
 }
 #myswatch {
   width: 100%;
@@ -56,7 +57,7 @@
 }
 
 #myusernameform {
-  margin-left: 30px;
+  margin-left: 10px;
 }
 input#myusernameedit {
   height: 26px;
@@ -98,13 +99,15 @@ input#myusernameedit:not(.editable) {
   right: calc(100% + 15px);
   z-index: 101;
 }
-@media (max-width: 800px) {
-  #mycolorpicker.popup {
-    top: auto;
-    bottom: 0;
-    left: auto !important;
-    right: 0 !important;
-  }
+.mobile-layout #users.popup {
+  right: 1rem;
+  left: auto;
+}
+.mobile-layout #mycolorpicker.popup {
+  top: auto;
+  bottom: 0;
+  left: auto !important;
+  right: 0 !important;
 }
 #mycolorpicker.popup .btn-container {
   margin-top: 10px;

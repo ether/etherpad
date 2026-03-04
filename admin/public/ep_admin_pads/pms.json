@@ -1,0 +1,27 @@
+{
+	"@metadata": {
+		"authors": [
+			"Borichèt"
+		]
+	},
+	"ep_adminpads2_action": "Assion",
+	"ep_adminpads2_autoupdate-label": "Agiornament automàtich an sle modìfiche ëd plancia",
+	"ep_adminpads2_autoupdate.title": "Abilité o disabilité j'agiornament automàtich për l'arcesta atual.",
+	"ep_adminpads2_confirm": "Veul-lo për da bon dëscancelé la plancia {{padID}}?",
+	"ep_adminpads2_delete.value": "Dëscancelé",
+	"ep_adminpads2_last-edited": "Modificà l'ùltima vira",
+	"ep_adminpads2_loading": "Cariament…",
+	"ep_adminpads2_manage-pads": "Gestì le plance",
+	"ep_adminpads2_no-results": "Gnun arzultà",
+	"ep_adminpads2_pad-user-count": "Conteur ëd plancia dl'utent",
+	"ep_adminpads2_padname": "Nòm ëd plancia",
+	"ep_adminpads2_search-box.placeholder": "Tèrmin d'arserca",
+	"ep_adminpads2_search-button.value": "Arserca",
+	"ep_adminpads2_search-done": "Arserca completà",
+	"ep_adminpads2_search-error-explanation": "Ël servent a l'ha rancontrà n'eror an sërcand dle plance:",
+	"ep_adminpads2_search-error-title": "Falì a oten-e la lista ëd plance",
+	"ep_adminpads2_search-heading": "Arserca ëd plance",
+	"ep_adminpads2_title": "Aministrassion ëd plance",
+	"ep_adminpads2_unknown-error": "Eror nen conossù",
+	"ep_adminpads2_unknown-status": "Statù nen conossù"
+}

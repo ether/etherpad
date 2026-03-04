@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg fill="#0f775b" width="355px" height="355px" viewBox="0 0 355 355" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>Group 10</title>
+    <defs>
+        <!-- top line -->
+        <rect id="path-4" x="41" y="110" width="142" height="25" rx="12.5" fill="#0f775b">
+          <animate attributeName="width" from="0" to="142" dur="3s" fill="freeze"/>
+        </rect>
+
+        <!-- middle line -->
+        <rect id="path-2" x="42" y="167" width="168" height="27" rx="13.5" fill="#0f775b">
+          <animate attributeName="width" from="0" to="168" dur="5s" fill="freeze"/>
+        </rect>
+
+        <!-- bottom line -->
+        <rect id="path-6" x="41" y="226" width="105" height="25" rx="12.5" fill="#0f775b">
+          <animate attributeName="width" from="0" to="105" dur="2s" fill="freeze"/>
+        </rect>
+    </defs>
+    <g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd" >
+        <g id="Group-5-Copy-2" transform="translate(-415.000000, -351.000000)">
+            <g id="Group-10" transform="translate(415.000000, 351.000000)">
+                <g id="Group-9" transform="translate(0.000000, 15.000000)">
+                    <!-- small radio wave -->
+                    <path stroke="0f775b" d="M237.612214,138.157654 C234.725783,135.28192 230.051254,135.279644 227.164823,138.157654 C224.278392,141.035663 224.278392,145.698831 227.164823,148.57684 C234.93988,156.329214 239.222735,166.601382 239.222735,177.499403 C239.222735,188.397423 234.93988,198.669591 227.164823,206.424696 C224.278392,209.30043 224.278392,213.965873 227.164823,216.841607 C228.608267,218.280384 230.497251,219 232.388518,219 C234.277503,219 236.16877,218.280384 237.612214,216.841607 C248.18012,206.304532 254,192.334147 254,177.499403 C254,162.665114 248.18012,148.694728 237.612214,138.157654 Z" id="Path-Copy-26" fill-opacity="0.200482" fill="#000000" fill-rule="nonzero" opacity="0.754065225">
+                      <animate attributeName="opacity" from="0" to="1" dur="3s" repeatCount="indefinite"/>
+                    </path>
+                    <!-- large radio wave -->
+                    <path stroke="0f775b" d="M267.333026,113.158661 C264.51049,110.280446 259.939438,110.280446 257.116902,113.158661 C254.294366,116.039154 254.294366,120.709078 257.116902,123.586837 C285.703837,152.763042 285.703837,200.237641 257.116902,229.413847 C254.294366,232.292061 254.294366,236.96153 257.116902,239.839744 C258.528393,241.280219 260.375562,242 262.224964,242 C264.074365,242 265.921535,241.279763 267.333026,239.837011 C301.555658,204.912576 301.555658,148.084007 267.333026,113.158661 Z" id="Path-Copy-27" fill-opacity="0.250565" fill="#131514" fill-rule="nonzero" opacity="0.754065225">
+                      <animate attributeName="opacity" from="0" to="1" dur="3s" repeatCount="indefinite"/>
+                    </path>
+                    <!-- top line -->
+                    <g stroke="0f775b" id="Rectangle-Copy-56">
+                      <use fill="#000000" fill-opacity="0.200482" fill-rule="evenodd" xlink:href="#path-4"></use>
+                    </g>
+                    <!-- middle line -->
+                    <g  stroke="0f775b" id="Rectangle-Copy-55">
+                      <use fill="black" fill-opacity="1" filter="url(#filter-3)" xlink:href="#path-2"></use>
+                      <use fill="#000000" fill-opacity="0.200482" fill-rule="evenodd" xlink:href="#path-2"></use>
+                    </g>
+                    <!-- bottom line -->
+                    <g stroke="0f775b" id="Rectangle-Copy-57">
+                      <use fill="black" fill-opacity="1" filter="url(#filter-7)" xlink:href="#path-6"></use>
+                      <use fill="#000000" fill-opacity="0.200482" xlink:href="#path-6"></use>
+                    </g>
+                </g>
+            </g>
+        </g>
+    </g>
+</svg>

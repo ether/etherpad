@@ -1,29 +1,130 @@
 {
   "parts": [
-    { "name": "express", "hooks": {
-      "createServer": "ep_etherpad-lite/node/hooks/express:createServer",
-      "restartServer": "ep_etherpad-lite/node/hooks/express:restartServer"
-      } },
-    { "name": "static", "hooks": { "expressCreateServer": "ep_etherpad-lite/node/hooks/express/static:expressCreateServer" } },
-    { "name": "i18n", "hooks": { "expressCreateServer": "ep_etherpad-lite/node/hooks/i18n:expressCreateServer" } },
-    { "name": "specialpages", "hooks": { "expressCreateServer": "ep_etherpad-lite/node/hooks/express/specialpages:expressCreateServer" } },
-    { "name": "padurlsanitize", "hooks": { "expressCreateServer": "ep_etherpad-lite/node/hooks/express/padurlsanitize:expressCreateServer" } },
-    { "name": "padreadonly", "hooks": { "expressCreateServer": "ep_etherpad-lite/node/hooks/express/padreadonly:expressCreateServer" } },
-    { "name": "webaccess", "hooks": { "expressConfigure": "ep_etherpad-lite/node/hooks/express/webaccess:expressConfigure" } },
-    { "name": "apicalls", "hooks": { "expressCreateServer": "ep_etherpad-lite/node/hooks/express/apicalls:expressCreateServer" } },
-    { "name": "importexport", "hooks": { "expressCreateServer": "ep_etherpad-lite/node/hooks/express/importexport:expressCreateServer" } },
-    { "name": "errorhandling", "hooks": { "expressCreateServer": "ep_etherpad-lite/node/hooks/express/errorhandling:expressCreateServer" } },
-    { "name": "socketio", "hooks": { "expressCreateServer": "ep_etherpad-lite/node/hooks/express/socketio:expressCreateServer" } },
-    { "name": "tests", "hooks": { "expressCreateServer": "ep_etherpad-lite/node/hooks/express/tests:expressCreateServer" } },
-    { "name": "admin", "hooks": { "expressCreateServer": "ep_etherpad-lite/node/hooks/express/admin:expressCreateServer" } },
-    { "name": "adminplugins", "hooks": {
-      "expressCreateServer": "ep_etherpad-lite/node/hooks/express/adminplugins:expressCreateServer",
-      "socketio": "ep_etherpad-lite/node/hooks/express/adminplugins:socketio" }
+    {
+      "name": "DB",
+      "hooks": {
+        "shutdown": "ep_etherpad-lite/node/db/DB"
+      }
     },
-    { "name": "adminsettings", "hooks": {
-      "expressCreateServer": "ep_etherpad-lite/node/hooks/express/adminsettings:expressCreateServer",
-      "socketio": "ep_etherpad-lite/node/hooks/express/adminsettings:socketio" }
+    {
+      "name": "Minify",
+      "hooks": {
+        "shutdown": "ep_etherpad-lite/node/utils/Minify"
+      }
     },
-    { "name": "openapi", "hooks": { "expressCreateServer": "ep_etherpad-lite/node/hooks/express/openapi:expressCreateServer" } }
+    {
+      "name": "express",
+      "hooks": {
+        "createServer": "ep_etherpad-lite/node/hooks/express",
+        "restartServer": "ep_etherpad-lite/node/hooks/express",
+        "shutdown": "ep_etherpad-lite/node/hooks/express"
+      }
+    },
+    {
+      "name": "static",
+      "hooks": {
+        "expressPreSession": "ep_etherpad-lite/node/hooks/express/static"
+      }
+    },
+    {
+      "name": "stats",
+      "hooks": {
+        "shutdown": "ep_etherpad-lite/node/stats"
+      }
+    },
+    {
+      "name": "i18n",
+      "hooks": {
+        "expressPreSession": "ep_etherpad-lite/node/hooks/i18n"
+      }
+    },
+    {
+      "name": "specialpages",
+      "hooks": {
+        "expressCreateServer": "ep_etherpad-lite/node/hooks/express/specialpages",
+        "expressPreSession": "ep_etherpad-lite/node/hooks/express/specialpages",
+        "socketio": "ep_etherpad-lite/node/hooks/express/specialpages"
+      }
+    },
+    {
+      "name": "oauth2",
+        "hooks": {
+            "expressCreateServer": "ep_etherpad-lite/node/security/OAuth2Provider"
+        }
+    },
+    {
+      "name": "padurlsanitize",
+      "hooks": {
+        "expressCreateServer": "ep_etherpad-lite/node/hooks/express/padurlsanitize"
+      }
+    },
+    {
+      "name": "transferToken",
+      "hooks": {
+        "expressCreateServer": "ep_etherpad-lite/node/hooks/express/tokenTransfer"
+      }
+    },
+    {
+      "name": "pwa",
+      "hooks": {
+        "expressCreateServer": "ep_etherpad-lite/node/hooks/express/pwa"
+      }
+    },
+    {
+      "name": "apicalls",
+      "hooks": {
+        "expressPreSession": "ep_etherpad-lite/node/hooks/express/apicalls"
+      }
+    },
+    {
+      "name": "importexport",
+      "hooks": {
+        "expressCreateServer": "ep_etherpad-lite/node/hooks/express/importexport"
+      }
+    },
+    {
+      "name": "errorhandling",
+      "hooks": {
+        "expressCreateServer": "ep_etherpad-lite/node/hooks/express/errorhandling"
+      }
+    },
+    {
+      "name": "restApi",
+      "hooks": {
+        "expressCreateServer": "ep_etherpad-lite/node/handler/RestAPI"
+      }
+    },
+    {
+      "name": "socketio",
+      "hooks": {
+        "expressCloseServer": "ep_etherpad-lite/node/hooks/express/socketio",
+        "expressCreateServer": "ep_etherpad-lite/node/hooks/express/socketio",
+        "socketio": "ep_etherpad-lite/node/handler/PadMessageHandler"
+      }
+    },
+    {
+      "name": "admin",
+      "hooks": {
+        "expressCreateServer": "ep_etherpad-lite/node/hooks/express/admin"
+      }
+    },
+    {
+      "name": "adminplugins",
+      "hooks": {
+        "socketio": "ep_etherpad-lite/node/hooks/express/adminplugins"
+      }
+    },
+    {
+      "name": "adminsettings",
+      "hooks": {
+        "socketio": "ep_etherpad-lite/node/hooks/express/adminsettings"
+      }
+    },
+    {
+      "name": "openapi",
+      "hooks": {
+        "expressPreSession": "ep_etherpad-lite/node/hooks/express/openapi"
+      }
+    }
   ]
 }

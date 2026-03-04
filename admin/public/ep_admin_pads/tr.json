@@ -1,0 +1,28 @@
+{
+	"@metadata": {
+		"authors": [
+			"Hedda",
+			"MuratTheTurkish"
+		]
+	},
+	"ep_adminpads2_action": "Eylem",
+	"ep_adminpads2_autoupdate-label": "Bloknot değişikliklerinde otomatik güncelleme",
+	"ep_adminpads2_autoupdate.title": "Mevcut sorgu için otomatik güncellemeleri etkinleştirir veya devre dışı bırakır.",
+	"ep_adminpads2_confirm": "{{padID}} bloknotunu gerçekten silmek istiyor musunuz?",
+	"ep_adminpads2_delete.value": "Sil",
+	"ep_adminpads2_last-edited": "Son düzenleme",
+	"ep_adminpads2_loading": "Yükleniyor...",
+	"ep_adminpads2_manage-pads": "Bloknotları yönet",
+	"ep_adminpads2_no-results": "Sonuç yok",
+	"ep_adminpads2_pad-user-count": "Bloknot kullanıcı sayısı",
+	"ep_adminpads2_padname": "Bloknot adı",
+	"ep_adminpads2_search-box.placeholder": "Terimi ara",
+	"ep_adminpads2_search-button.value": "Ara",
+	"ep_adminpads2_search-done": "Arama tamamlandı",
+	"ep_adminpads2_search-error-explanation": "Sunucu, bloknotları ararken bir hatayla karşılaştı:",
+	"ep_adminpads2_search-error-title": "Bloknot listesi alınamadı",
+	"ep_adminpads2_search-heading": "Bloknotları ara",
+	"ep_adminpads2_title": "Bloknot yönetimi",
+	"ep_adminpads2_unknown-error": "Bilinmeyen hata",
+	"ep_adminpads2_unknown-status": "Bilinmeyen durum"
+}

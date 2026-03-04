@@ -1,0 +1,27 @@
+{
+	"@metadata": {
+		"authors": [
+			"Nokeoo"
+		]
+	},
+	"ep_adminpads2_action": "Veiksmas",
+	"ep_adminpads2_autoupdate-label": "Automatinis bloknoto keitimų naujinimas",
+	"ep_adminpads2_autoupdate.title": "Įjungia arba išjungia automatinius dabartinės užklausos atnaujinimus.",
+	"ep_adminpads2_confirm": "Ar tikrai norite ištrinti bloknotą {{padID}}?",
+	"ep_adminpads2_delete.value": "Ištrinti",
+	"ep_adminpads2_last-edited": "Paskutinis pakeitimas",
+	"ep_adminpads2_loading": "Įkeliama…",
+	"ep_adminpads2_manage-pads": "Tvarkyti bloknotą",
+	"ep_adminpads2_no-results": "Nėra rezultatų",
+	"ep_adminpads2_pad-user-count": "Bloknoto naudotojų skaičius",
+	"ep_adminpads2_padname": "Bloknoto pavadinimas",
+	"ep_adminpads2_search-box.placeholder": "Paieškos terminas",
+	"ep_adminpads2_search-button.value": "Paieška",
+	"ep_adminpads2_search-done": "Paieška baigta",
+	"ep_adminpads2_search-error-explanation": "Serveris susidūrė su klaida ieškant bloknotų:",
+	"ep_adminpads2_search-error-title": "Nepavyko gauti bloknotų sąrašo",
+	"ep_adminpads2_search-heading": "Ieškokite bloknotų",
+	"ep_adminpads2_title": "Bloknotų administravimas",
+	"ep_adminpads2_unknown-error": "Nežinoma klaida",
+	"ep_adminpads2_unknown-status": "Nežinoma būsena"
+}

@@ -1,0 +1,28 @@
+{
+	"@metadata": {
+		"authors": [
+			"Ykhwong",
+			"그냥기여자"
+		]
+	},
+	"ep_adminpads2_action": "동작",
+	"ep_adminpads2_autoupdate-label": "패드 변경 시 자동 업데이트",
+	"ep_adminpads2_autoupdate.title": "현재 쿼리의 자동 업데이트를 활성화하거나 비활성화합니다.",
+	"ep_adminpads2_confirm": "{{padID}} 패드를 삭제하시겠습니까?",
+	"ep_adminpads2_delete.value": "삭제",
+	"ep_adminpads2_last-edited": "최근 편집",
+	"ep_adminpads2_loading": "불러오는 중...",
+	"ep_adminpads2_manage-pads": "패드 관리",
+	"ep_adminpads2_no-results": "결과 없음",
+	"ep_adminpads2_pad-user-count": "패드 사용자 수",
+	"ep_adminpads2_padname": "패드 이름",
+	"ep_adminpads2_search-box.placeholder": "검색어",
+	"ep_adminpads2_search-button.value": "검색",
+	"ep_adminpads2_search-done": "검색 완료",
+	"ep_adminpads2_search-error-explanation": "패드 검색 중 서버에 오류가 발생했습니다:",
+	"ep_adminpads2_search-error-title": "패드 목록 가져오기 실패",
+	"ep_adminpads2_search-heading": "패드 검색",
+	"ep_adminpads2_title": "패드 관리",
+	"ep_adminpads2_unknown-error": "알 수 없는 오류",
+	"ep_adminpads2_unknown-status": "알 수 없는 상태"
+}

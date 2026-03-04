@@ -1,0 +1,71 @@
+name: "rate limit"
+
+# any branch is useful for testing before a PR is submitted
+on:
+  push:
+    paths-ignore:
+      - "doc/**"
+  pull_request:
+    paths-ignore:
+      - "doc/**"
+
+permissions:
+  contents: read
+
+env:
+  PNPM_HOME: ~/.pnpm-store
+
+jobs:
+  ratelimit:
+    # run on pushes to any branch
+    # run on PRs from external forks
+    if: |
+      (github.event_name != 'pull_request')
+      || (github.event.pull_request.head.repo.id != github.event.pull_request.base.repo.id)
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      -
+        name: Checkout repository
+        uses: actions/checkout@v6
+      - uses: actions/cache@v5
+        name: Setup gnpm cache
+        if: always()
+        with:
+          path: |
+            ${{ env.STORE_PATH }}
+            ~/.local/share/gnpm
+            ~/.cache/ms-playwright
+            /usr/local/bin/gnpm
+            /usr/local/bin/gnpm-0.0.12
+          key: ${{ runner.os }}-gnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-gnpm-store-
+      - name: Setup gnpm
+        uses: SamTV12345/gnpm-setup@main
+        with:
+          version: 0.0.12
+
+      -
+        name: docker network
+        run: docker network create --subnet=172.23.0.0/16 ep_net
+      -
+        name: build docker image
+        run: |
+          docker build -f Dockerfile -t epl-debian-slim --build-arg NODE_ENV=develop .
+          docker build -f src/tests/ratelimit/Dockerfile.nginx -t nginx-latest .
+          docker build -f src/tests/ratelimit/Dockerfile.anotherip -t anotherip .
+      -
+        name: run docker images
+        run: |
+          docker run --name etherpad-docker -p 9000:9001 --rm --network ep_net --ip 172.23.42.2 -e 'TRUST_PROXY=true' epl-debian-slim &
+          docker run -p 8081:80 --rm --network ep_net --ip 172.23.42.1 -d nginx-latest
+          docker run --rm --network ep_net --ip 172.23.42.3 --name anotherip -dt anotherip
+      -
+        name: install dependencies and create symlink for ep_etherpad-lite
+        run: gnpm install --frozen-lockfile
+      -
+        name: run rate limit test
+        run: |
+          cd src/tests/ratelimit
+          ./testlimits.sh

@@ -1,9 +1,16 @@
 {
 	"@metadata": {
 		"authors": [
+			"Armenoid",
 			"Kareyac"
 		]
 	},
+	"admin_plugins.available_install.value": "Տեղադրել",
+	"admin_plugins.description": "Նկարագրություն",
+	"admin_plugins.version": "Տարբերակ",
+	"admin_settings": "Կարգավորումներ",
+	"index.newPad": "Ստեղծել",
+	"pad.toolbar.bold.title": "Թավատառ (Ctrl+B)",
 	"pad.toolbar.underline.title": "ընդգծելով (Ctrl-U)",
 	"pad.toolbar.undo.title": "Չեղարկել (Ctrl-Z)",
 	"pad.toolbar.redo.title": "Վերադարձնել (Ctrl-Y)",
@@ -15,13 +22,12 @@
 	"pad.colorpicker.save": "Պահպանել",
 	"pad.colorpicker.cancel": "Չեղարկել",
 	"pad.loading": "Բեռնվում է…",
-	"pad.wrongPassword": "Սխալ գաղտնաբառ",
 	"pad.settings.myView": "Իմ տեսարան",
 	"pad.settings.rtlcheck": "Կարդալ բովանդակությունը աջից ձախ",
 	"pad.settings.fontType": "Տառատեսակի տեսակը",
 	"pad.settings.language": "Լեզու",
 	"pad.importExport.import_export": "Ներմուծում/արտահանում",
-	"pad.importExport.import": "Բեռնել ցանկացած տեքստային ֆայլը կամ փաստաթուղթ",
+	"pad.importExport.import": "Վերբեռնել ցանկացած տեքստային նիշք կամ փաստաթուղթ",
 	"pad.importExport.importSuccessful": "Հաջողություն",
 	"pad.importExport.export": "Արտահանել ընթացիկ փաստաթուղթ է որպես",
 	"pad.importExport.exportplain": "Պարզ տեքստ",
@@ -50,9 +56,6 @@
 	"timeslider.month.december": "Դեկտեմբեր",
 	"pad.userlist.entername": "Մուտքագրեք ձեր անունը",
 	"pad.userlist.unnamed": "անանուն",
-	"pad.userlist.guest": "Հյուր",
-	"pad.userlist.deny": "Մերժել",
-	"pad.userlist.approve": "Հաստատել",
 	"pad.impexp.importbutton": "Ներմուծել հիմա",
 	"pad.impexp.copypaste": "Խնդրում ենք պատճենել"
 }

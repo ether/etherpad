@@ -75,6 +75,13 @@
   background-color: var(--bg-color);
 }
 
+@media (prefers-reduced-motion) {
+  .chat-content {
+    transform: scale(1);
+    transition: none;
+  }
+}
+
 @media (max-width: 800px) {
   #chaticon {
     right: 0;
