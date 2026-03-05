@@ -32,7 +32,6 @@
   "admin_settings.current_restart.value": "Restart Etherpad",
   "admin_settings.current_save.value": "Save Settings",
   "admin_settings.page-title": "Settings - Etherpad",
-
   "index.newPad": "New Pad",
   "index.settings": "Settings",
   "index.transferSessionTitle": "Transfer session",
@@ -55,8 +54,6 @@
   "index.placeholderPadEnter": "Please enter a pad name...",
   "index.createAndShareDocuments": "Create and share documents in real time",
   "index.createAndShareDocumentsDescription": "Etherpad allows you to edit documents collaboratively in real-time, much like a live multi-player editor that runs in your browser.",
-
-
   "pad.toolbar.bold.title": "Bold (Ctrl+B)",
   "pad.toolbar.italic.title": "Italic (Ctrl+I)",
   "pad.toolbar.underline.title": "Underline (Ctrl+U)",
@@ -75,14 +72,11 @@
   "pad.toolbar.embed.title": "Share and Embed this pad",
   "pad.toolbar.home.title": "Back to home",
   "pad.toolbar.showusers.title": "Show the users on this pad",
-
   "pad.colorpicker.save": "Save",
   "pad.colorpicker.cancel": "Cancel",
-
   "pad.loading": "Loading...",
   "pad.noCookie": "Cookie could not be found. Please allow cookies in your browser!  Your session and settings will not be saved between visits.  This may be due to Etherpad being included in an iFrame in some Browsers.  Please ensure Etherpad is on the same subdomain/domain as the parent iFrame",
   "pad.permissionDenied": "You do not have permission to access this pad",
-
   "pad.settings.padSettings": "Pad Settings",
   "pad.settings.myView": "My View",
   "pad.settings.stickychat": "Chat always on screen",
@@ -97,7 +91,6 @@
   "pad.delete.confirm": "Do you really want to delete this pad?",
   "pad.settings.about": "About",
   "pad.settings.poweredBy": "Powered by",
-
   "pad.importExport.import_export": "Import/Export",
   "pad.importExport.import": "Upload any text file or document",
   "pad.importExport.importSuccessful": "Successful!",
@@ -109,59 +102,47 @@
   "pad.importExport.exportpdf": "PDF",
   "pad.importExport.exportopen": "ODF (Open Document Format)",
   "pad.importExport.abiword.innerHTML": "You only can import from plain text or HTML formats. For more advanced import features please <a href=\"https://github.com/ether/etherpad-lite/wiki/How-to-enable-importing-and-exporting-different-file-formats-with-AbiWord\">install AbiWord or LibreOffice</a>.",
-
   "pad.modals.connected": "Connected.",
   "pad.modals.reconnecting": "Reconnecting to your pad…",
   "pad.modals.forcereconnect": "Force reconnect",
   "pad.modals.reconnecttimer": "Trying to reconnect in",
   "pad.modals.cancel": "Cancel",
-
   "pad.modals.userdup": "Opened in another window",
   "pad.modals.userdup.explanation": "This pad seems to be opened in more than one browser window on this computer.",
   "pad.modals.userdup.advice": "Reconnect to use this window instead.",
-
   "pad.modals.unauth": "Not authorized",
   "pad.modals.unauth.explanation": "Your permissions have changed while viewing this page. Try to reconnect.",
-
   "pad.modals.looping.explanation": "There are communication problems with the synchronization server.",
   "pad.modals.looping.cause": "Perhaps you connected through an incompatible firewall or proxy.",
-
   "pad.modals.initsocketfail": "Server is unreachable.",
   "pad.modals.initsocketfail.explanation": "Couldn't connect to the synchronization server.",
   "pad.modals.initsocketfail.cause": "This is probably due to a problem with your browser or your internet connection.",
-
   "pad.modals.slowcommit.explanation": "The server is not responding.",
   "pad.modals.slowcommit.cause": "This could be due to problems with network connectivity.",
-
   "pad.modals.badChangeset.explanation": "An edit you have made was classified illegal by the synchronization server.",
   "pad.modals.badChangeset.cause": "This could be due to a wrong server configuration or some other unexpected behavior. Please contact the service administrator, if you feel this is an error. Try to reconnect in order to continue editing.",
-
   "pad.modals.corruptPad.explanation": "The pad you are trying to access is corrupt.",
   "pad.modals.corruptPad.cause": "This may be due to a wrong server configuration or some other unexpected behavior. Please contact the service administrator.",
-
   "pad.modals.deleted": "Deleted.",
   "pad.modals.deleted.explanation": "This pad has been removed.",
-
   "pad.modals.rateLimited": "Rate Limited.",
   "pad.modals.rateLimited.explanation": "You sent too many messages to this pad so it disconnected you.",
-
   "pad.modals.rejected.explanation": "The server rejected a message that was sent by your browser.",
   "pad.modals.rejected.cause": "The server may have been updated while you were viewing the pad, or maybe there is a bug in Etherpad. Try reloading the page.",
-
   "pad.modals.disconnected": "You have been disconnected.",
   "pad.modals.disconnected.explanation": "The connection to the server was lost",
   "pad.modals.disconnected.cause": "The server may be unavailable. Please notify the service administrator if this continues to happen.",
-
   "pad.share": "Share this pad",
   "pad.share.readonly": "Read only",
   "pad.share.link": "Link",
   "pad.share.emebdcode": "Embed URL",
+  "pad.aria.editor": "Etherpad editor",
+  "pad.aria.pad_content": "Pad content",
   "pad.chat": "Chat",
   "pad.chat.title": "Open the chat for this pad.",
   "pad.chat.loadmessages": "Load more messages",
   "pad.chat.stick.title": "Stick chat to screen",
   "pad.chat.writeMessage.placeholder": "Write your message here",
-
   "timeslider.followContents": "Follow pad content updates",
   "timeslider.pageTitle": "{{appTitle}} Timeslider",
   "timeslider.toolbar.returnbutton": "Return to pad",
@@ -171,11 +152,9 @@
   "timeslider.exportCurrent": "Export current version as:",
   "timeslider.version": "Version {{version}}",
   "timeslider.saved": "Saved {{month}} {{day}}, {{year}}",
-
   "timeslider.playPause": "Playback / Pause Pad Contents",
-  "timeslider.backRevision":"Go back a revision in this Pad",
-  "timeslider.forwardRevision":"Go forward a revision in this Pad",
-
+  "timeslider.backRevision": "Go back a revision in this Pad",
+  "timeslider.forwardRevision": "Go forward a revision in this Pad",
   "timeslider.dateformat": "{{month}}/{{day}}/{{year}} {{hours}}:{{minutes}}:{{seconds}}",
   "timeslider.month.january": "January",
   "timeslider.month.february": "February",
@@ -189,14 +168,12 @@
   "timeslider.month.october": "October",
   "timeslider.month.november": "November",
   "timeslider.month.december": "December",
-
   "timeslider.unnamedauthors": "{{num}} unnamed {[plural(num) one: author, other: authors ]}",
   "pad.savedrevs.marked": "This revision is now marked as a saved revision",
   "pad.savedrevs.timeslider": "You can see saved revisions by visiting the timeslider",
   "pad.userlist.entername": "Enter your name",
   "pad.userlist.unnamed": "unnamed",
   "pad.editbar.clearcolors": "Clear authorship colors on entire document? This cannot be undone",
-
   "pad.impexp.importbutton": "Import Now",
   "pad.impexp.importing": "Importing...",
   "pad.impexp.confirmimport": "Importing a file will overwrite the current text of the pad. Are you sure you want to proceed?",

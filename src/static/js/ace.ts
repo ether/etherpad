@@ -32,6 +32,7 @@ const ace2_inner = require('ep_etherpad-lite/static/js/ace2_inner')
 const debugLog = (...args) => { };
 const cl_plugins = require('ep_etherpad-lite/static/js/pluginfw/client_plugins')
 const rJQuery = require('ep_etherpad-lite/static/js/rjquery')
+const html10n = require('ep_etherpad-lite/static/js/vendors/html10n');
 // The inner and outer iframe's locations are about:blank, so relative URLs are relative to that.
 // Firefox and Chrome seem to do what the developer intends if given a relative URL, but Safari
 // errors out unless given an absolute URL for a JavaScript-created element.
@@ -186,8 +187,10 @@ const Ace2Editor = function () {
     outerFrame.name = 'ace_outer';
     outerFrame.frameBorder = 0; // for IE
     outerFrame.title = 'Ether';
-    outerFrame.setAttribute('role', 'application');
-    outerFrame.setAttribute('aria-label', 'Etherpad editor');
+    if (clientVars.padOptions.accessibilityAttributes) {
+      outerFrame.setAttribute('role', 'application');
+      outerFrame.setAttribute('aria-label', html10n.get('pad.aria.editor'));
+    }
     // Some browsers do strange things unless the iframe has a src or srcdoc property:
     //   - Firefox replaces the frame's contentWindow.document object with a different object after
     //     the frame is created. This can be worked around by waiting for the window's load event
@@ -240,8 +243,10 @@ const Ace2Editor = function () {
     const innerFrame = outerDocument.createElement('iframe');
     innerFrame.name = 'ace_inner';
     innerFrame.title = 'pad';
-    innerFrame.setAttribute('role', 'document');
-    innerFrame.setAttribute('aria-label', 'Pad content');
+    if (clientVars.padOptions.accessibilityAttributes) {
+      innerFrame.setAttribute('role', 'document');
+      innerFrame.setAttribute('aria-label', html10n.get('pad.aria.pad_content'));
+    }
     innerFrame.scrolling = 'no';
     innerFrame.frameBorder = 0;
     innerFrame.allowTransparency = true; // for IE
@@ -290,9 +295,11 @@ const Ace2Editor = function () {
     innerDocument.body.id = 'innerdocbody';
     innerDocument.body.classList.add('innerdocbody');
     innerDocument.body.setAttribute('spellcheck', 'false');
-    innerDocument.body.setAttribute('role', 'textbox');
-    innerDocument.body.setAttribute('aria-multiline', 'true');
-    innerDocument.body.setAttribute('aria-label', 'Pad content');
+    if (clientVars.padOptions.accessibilityAttributes) {
+      innerDocument.body.setAttribute('role', 'textbox');
+      innerDocument.body.setAttribute('aria-multiline', 'true');
+      innerDocument.body.setAttribute('aria-label', html10n.get('pad.aria.pad_content'));
+    }
     innerDocument.body.appendChild(innerDocument.createTextNode('\u00A0')); // &nbsp;
     /*
         debugLog('Ace2Editor.init() waiting for require kernel load');

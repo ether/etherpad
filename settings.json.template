@@ -261,7 +261,9 @@
     "rtl":              false,
     "alwaysShowChat":   false,
     "chatAndUsers":     false,
-    "lang":             null
+    "lang":             null,
+    /* whether to enable ARIA accessibility attributes or not */
+    "accessibilityAttributes": true
   },
 
   /*

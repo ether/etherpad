@@ -87,6 +87,8 @@
 	"pad.share.readonly": "Used as checkbox label",
 	"pad.share.link": "Used as label for a field providing URL of the pad.\n{{Identical|Link}}",
 	"pad.share.emebdcode": "Label for a field providing code that allows you to embed the pad into your website.",
+	"pad.aria.editor": "ARIA label for the outer iframe that contains the editor.",
+	"pad.aria.pad_content": "ARIA label for the inner iframe and the content body of the pad.",
 	"pad.chat": "Used as button text and as title of Chat window.\n{{Identical|Chat}}",
 	"pad.chat.title": "Used as tooltip for the Chat button",
 	"pad.chat.loadmessages": "chat messages",
