@@ -82,7 +82,7 @@ jobs:
         name: Docker meta
         if: github.event_name == 'push'
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: etherpad/etherpad
           tags: |
