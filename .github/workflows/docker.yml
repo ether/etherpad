@@ -36,7 +36,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
       -
         name: Build and export to Docker
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ./etherpad
           target: production
@@ -101,7 +101,7 @@ jobs:
         name: Build and push
         id: build-docker
         if: github.event_name == 'push'
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ./etherpad
           target: production
