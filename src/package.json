@@ -116,7 +116,7 @@
     "nodeify": "^1.0.1",
     "openapi-schema-validation": "^0.4.2",
     "set-cookie-parser": "^3.0.1",
-    "sinon": "^21.0.2",
+    "sinon": "^21.0.3",
     "split-grid": "^1.0.11",
     "supertest": "^7.2.2",
     "typescript": "^5.9.3",
