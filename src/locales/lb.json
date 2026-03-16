@@ -10,6 +10,7 @@
 	"admin_plugins.available_install.value": "Installéieren",
 	"admin_plugins.description": "Beschreiwung",
 	"admin_plugins.installed_uninstall.value": "Desinstalléieren",
+	"admin_plugins.last-update": "Lescht Aktualiséierung",
 	"admin_plugins.name": "Numm",
 	"admin_plugins.version": "Versioun",
 	"admin_plugins_info.version": "Etherpad-Versioun",
