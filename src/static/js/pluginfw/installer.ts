@@ -124,7 +124,11 @@ export const checkForMigration = async () => {
 
   for (const plugin of installedPlugins.plugins) {
     if (plugin.name.startsWith(plugins.prefix) && plugin.name !== 'ep_etherpad-lite') {
-      await linkInstaller.installPlugin(plugin.name, plugin.version);
+      try {
+        await linkInstaller.installPlugin(plugin.name, plugin.version);
+      } catch (e) {
+        logger.error(`Error installing plugin ${plugin.name} with version ${plugin.version}: ${e}`);
+      }
     }
   }
 };
