@@ -50,5 +50,10 @@
   },
   "engineStrict": true,
   "version": "2.6.1",
-  "license": "Apache-2.0"
+  "license": "Apache-2.0",
+  "pnpm": {
+    "overrides": {
+      "basic-ftp": "5.2.0"
+    }
+  }
 }
