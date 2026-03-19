@@ -187,8 +187,8 @@ importers:
         specifier: ^2.0.1
         version: 2.0.1
       jose:
-        specifier: ^6.2.1
-        version: 6.2.1
+        specifier: ^6.2.2
+        version: 6.2.2
       js-cookie:
         specifier: ^3.0.5
         version: 3.0.5
@@ -3464,8 +3464,8 @@ packages:
   jackspeak@3.4.3:
     resolution: {integrity: sha512-OGlZQpz2yfahA/Rd1Y8Cd9SIEsqvXkLVoSw/cgwhnhFMDbsQFeZYoJJ7bIZBS9BcamUW96asq/npPWugM+RQBw==}
 
-  jose@6.2.1:
-    resolution: {integrity: sha512-jUaKr1yrbfaImV7R2TN/b3IcZzsw38/chqMpo2XJ7i2F8AfM/lA4G1goC3JVEwg0H7UldTmSt3P68nt31W7/mw==}
+  jose@6.2.2:
+    resolution: {integrity: sha512-d7kPDd34KO/YnzaDOlikGpOurfF0ByC2sEV4cANCtdqLlTfBlw2p14O/5d/zv40gJPbIQxfES3nSx1/oYNyuZQ==}
 
   js-cookie@3.0.5:
     resolution: {integrity: sha512-cEiJEAEoIbWfCZYKWhVwFuvPX1gETRYPw6LlaTKoxD3s2AkXzkCjnp6h0V77ozyqj0jakteJ4YqDJT830+lVGw==}
@@ -8303,7 +8303,7 @@ snapshots:
     optionalDependencies:
       '@pkgjs/parseargs': 0.11.0
 
-  jose@6.2.1: {}
+  jose@6.2.2: {}
 
   js-cookie@3.0.5: {}
 
@@ -8786,7 +8786,7 @@ snapshots:
       '@koa/router': 15.4.0(koa@3.1.2)
       debug: 4.4.3(supports-color@8.1.1)
       eta: 4.5.1
-      jose: 6.2.1
+      jose: 6.2.2
       jsesc: 3.1.0
       koa: 3.1.2
       nanoid: 5.1.7
