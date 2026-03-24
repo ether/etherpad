@@ -119,7 +119,7 @@
     "sinon": "^21.0.3",
     "split-grid": "^1.0.11",
     "supertest": "^7.2.2",
-    "typescript": "^5.9.3",
+    "typescript": "^6.0.2",
     "vitest": "^4.1.1"
   },
   "engines": {
