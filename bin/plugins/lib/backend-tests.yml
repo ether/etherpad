@@ -16,13 +16,13 @@ jobs:
     steps:
       -
         name: Install libreoffice
-        uses: awalsh128/cache-apt-pkgs-action@v1.4.2
+        uses: awalsh128/cache-apt-pkgs-action@v1.6.0
         with:
           packages: libreoffice libreoffice-pdfimport
           version: 1.0
       -
         name: Install etherpad core
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: ether/etherpad-lite
           path: etherpad-lite
@@ -44,7 +44,7 @@ jobs:
             ${{ runner.os }}-pnpm-store-
       -
         name: Checkout plugin repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           path: plugin
       -
