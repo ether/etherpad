@@ -50,7 +50,7 @@ jobs:
         with:
           version: 0.0.12
       - name: Setup Pages
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@v6
       - name: Install dependencies
         run: gnpm install
       - name: Build app
