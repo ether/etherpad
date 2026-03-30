@@ -47,17 +47,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           path: plugin
-      -
-        name: Determine plugin name
-        id: plugin_name
-        working-directory: ./plugin
-        run: |
-          npx -c 'printf %s\\n "::set-output name=plugin_name::${npm_package_name}"'
-      -
-        name: Link plugin directory
-        working-directory: ./plugin
-        run: |
-          pnpm link --global
       - name: Remove tests
         working-directory: ./etherpad-lite
         run: rm -rf ./src/tests/backend/specs
@@ -65,21 +54,10 @@ jobs:
         name: Install Etherpad core dependencies
         working-directory: ./etherpad-lite
         run: bin/installDeps.sh
-      - name: Link plugin to etherpad-lite
+      - name: Install plugin
         working-directory: ./etherpad-lite
         run: |
-          pnpm link --global $PLUGIN_NAME
           pnpm run plugins i --path  ../../plugin
-        env:
-          PLUGIN_NAME: ${{ steps.plugin_name.outputs.plugin_name }}
-      - name: Link ep_etherpad-lite
-        working-directory: ./etherpad-lite/src
-        run: |
-          pnpm link --global
-      - name: Link etherpad to plugin
-        working-directory: ./plugin
-        run: |
-          pnpm link --global ep_etherpad-lite
       -
         name: Run the backend tests
         working-directory: ./etherpad-lite
