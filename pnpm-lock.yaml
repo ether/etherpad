@@ -107,8 +107,8 @@ importers:
   bin:
     dependencies:
       axios:
-        specifier: ^1.13.6
-        version: 1.13.6
+        specifier: ^1.14.0
+        version: 1.14.0
       ep_etherpad-lite:
         specifier: workspace:../src
         version: link:../src
@@ -143,7 +143,7 @@ importers:
     devDependencies:
       vitepress:
         specifier: ^2.0.0-alpha.17
-        version: 2.0.0-alpha.17(@types/node@25.5.0)(axios@1.13.6)(jwt-decode@4.0.0)(lightningcss@1.30.2)(postcss@8.5.8)(tsx@4.21.0)(typescript@5.9.3)
+        version: 2.0.0-alpha.17(@types/node@25.5.0)(axios@1.14.0)(jwt-decode@4.0.0)(lightningcss@1.30.2)(postcss@8.5.8)(tsx@4.21.0)(typescript@5.9.3)
 
   src:
     dependencies:
@@ -151,8 +151,8 @@ importers:
         specifier: ^3.2.6
         version: 3.2.6
       axios:
-        specifier: ^1.13.6
-        version: 1.13.6
+        specifier: ^1.14.0
+        version: 1.14.0
       cookie-parser:
         specifier: ^1.4.7
         version: 1.4.7
@@ -2259,8 +2259,8 @@ packages:
     resolution: {integrity: sha512-wvUjBtSGN7+7SjNpq/9M2Tg350UZD3q62IFZLbRAR1bSMlCo1ZaeW+BJ+D090e4hIIZLBcTDWe4Mh4jvUDajzQ==}
     engines: {node: '>= 0.4'}
 
-  axios@1.13.6:
-    resolution: {integrity: sha512-ChTCHMouEe2kn713WHbQGcuYrr6fXTBiu460OTwWrWob16g1bXn4vtz07Ope7ewMozJAnEquLk5lWQWtBig9DQ==}
+  axios@1.14.0:
+    resolution: {integrity: sha512-3Y8yrqLSwjuzpXuZ0oIYZ/XGgLwUIBU3uLvbcpb0pidD9ctpShJd43KSlEEkVQg6DS0G9NKyzOvBfUtDKEyHvQ==}
 
   babel-plugin-react-compiler@19.1.0-rc.3:
     resolution: {integrity: sha512-mjRn69WuTz4adL0bXGx8Rsyk1086zFJeKmes6aK0xPuK3aaXmDJdLHqwKKMrpm6KAI1MCoUK72d2VeqQbu8YIA==}
@@ -4079,6 +4079,10 @@ packages:
 
   proxy-from-env@1.1.0:
     resolution: {integrity: sha512-D+zkORCbA9f1tdWRK0RaCR3GPv50cMxcrz4X8k5LTSUD1Dkw47mKJEZQNunItRTkWwgtaUSo1RVFRIG9ZXiFYg==}
+
+  proxy-from-env@2.1.0:
+    resolution: {integrity: sha512-cJ+oHTW1VAEa8cJslgmUZrc+sjRKgAKl3Zyse6+PV38hZe/V6Z14TbCuXcan9F9ghlz4QrFr2c92TNF82UkYHA==}
+    engines: {node: '>=10'}
 
   punycode@2.3.1:
     resolution: {integrity: sha512-vYt7UD1U9Wg6138shLtLOvdAu+8DsC/ilFtEVHcH+wydcSpNE20AfSOduf6MkRFahL5FY7X1oU7nKVZFtfq8Fg==}
@@ -6728,13 +6732,13 @@ snapshots:
       '@vueuse/shared': 14.2.1(vue@3.5.30(typescript@5.9.3))
       vue: 3.5.30(typescript@5.9.3)
 
-  '@vueuse/integrations@14.2.1(axios@1.13.6)(focus-trap@8.0.0)(jwt-decode@4.0.0)(vue@3.5.30(typescript@5.9.3))':
+  '@vueuse/integrations@14.2.1(axios@1.14.0)(focus-trap@8.0.0)(jwt-decode@4.0.0)(vue@3.5.30(typescript@5.9.3))':
     dependencies:
       '@vueuse/core': 14.2.1(vue@3.5.30(typescript@5.9.3))
       '@vueuse/shared': 14.2.1(vue@3.5.30(typescript@5.9.3))
       vue: 3.5.30(typescript@5.9.3)
     optionalDependencies:
-      axios: 1.13.6
+      axios: 1.14.0
       focus-trap: 8.0.0
       jwt-decode: 4.0.0
 
@@ -6871,11 +6875,11 @@ snapshots:
     dependencies:
       possible-typed-array-names: 1.1.0
 
-  axios@1.13.6:
+  axios@1.14.0:
     dependencies:
       follow-redirects: 1.15.11
       form-data: 4.0.5
-      proxy-from-env: 1.1.0
+      proxy-from-env: 2.1.0
     transitivePeerDependencies:
       - debug
 
@@ -8955,6 +8959,8 @@ snapshots:
 
   proxy-from-env@1.1.0: {}
 
+  proxy-from-env@2.1.0: {}
+
   punycode@2.3.1: {}
 
   qs@6.14.0:
@@ -9881,7 +9887,7 @@ snapshots:
       lightningcss: 1.30.2
       tsx: 4.21.0
 
-  vitepress@2.0.0-alpha.17(@types/node@25.5.0)(axios@1.13.6)(jwt-decode@4.0.0)(lightningcss@1.30.2)(postcss@8.5.8)(tsx@4.21.0)(typescript@5.9.3):
+  vitepress@2.0.0-alpha.17(@types/node@25.5.0)(axios@1.14.0)(jwt-decode@4.0.0)(lightningcss@1.30.2)(postcss@8.5.8)(tsx@4.21.0)(typescript@5.9.3):
     dependencies:
       '@docsearch/css': 4.6.0
       '@docsearch/js': 4.6.0
@@ -9895,7 +9901,7 @@ snapshots:
       '@vue/devtools-api': 8.1.0
       '@vue/shared': 3.5.30
       '@vueuse/core': 14.2.1(vue@3.5.30(typescript@5.9.3))
-      '@vueuse/integrations': 14.2.1(axios@1.13.6)(focus-trap@8.0.0)(jwt-decode@4.0.0)(vue@3.5.30(typescript@5.9.3))
+      '@vueuse/integrations': 14.2.1(axios@1.14.0)(focus-trap@8.0.0)(jwt-decode@4.0.0)(vue@3.5.30(typescript@5.9.3))
       focus-trap: 8.0.0
       mark.js: 8.11.1
       minisearch: 7.2.0
