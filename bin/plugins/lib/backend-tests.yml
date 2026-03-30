@@ -62,7 +62,7 @@ jobs:
         name: Run the backend tests
         working-directory: ./etherpad-lite
         run: |
-          res=$(find .. -path "./node_modules/ep_*/static/tests/backend/specs/**" | wc -l)
+          res=$(find . -path "./src/plugin_packages/ep_*/static/tests/backend/specs/**" | wc -l)
           if [ $res -eq 0 ]; then
           echo "No backend tests found"
           else
