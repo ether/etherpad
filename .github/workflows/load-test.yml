@@ -1,11 +1,7 @@
 name: "Loadtest"
 
-# any branch is useful for testing before a PR is submitted
 on:
   push:
-    paths-ignore:
-      - "doc/**"
-  pull_request:
     paths-ignore:
       - "doc/**"
 
