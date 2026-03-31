@@ -403,6 +403,12 @@ log4js.configure({
     logger.warn('Test files not found, please create tests.  https://github.com/ether/etherpad-lite/wiki/Creating-a-plugin#writing-and-running-front-end-tests-for-your-plugin');
   }
 
+  // Update all dependencies to their latest compatible versions.
+  if (autoFix) {
+    logger.info('Updating dependencies...');
+    execSync('pnpm update', {cwd: `${pluginPath}/`, stdio: 'inherit'});
+  }
+
   // Install dependencies so we can run ESLint. This should also create or update package-lock.json
   // if autoFix is enabled.
   const npmInstall = `pnpm install`;
