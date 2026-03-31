@@ -22,7 +22,7 @@ export const enableStickyChatviaSettings = async (page: Page) => {
     const stickyChat = page.locator('#options-stickychat')
     const checked = await stickyChat.isChecked()
     if(checked) return
-    await stickyChat.click()
+    await page.locator('label[for="options-stickychat"]').click()
     await page.waitForFunction(() => document.querySelector('#chatbox')?.classList.contains('stickyChat'))
 }
 
@@ -30,6 +30,6 @@ export const disableStickyChat = async (page: Page) => {
     const stickyChat = page.locator('#options-stickychat')
     const checked = await stickyChat.isChecked()
     if(!checked) return
-    await stickyChat.click()
+    await page.locator('label[for="options-stickychat"]').click()
     await page.waitForFunction(() => !document.querySelector('#chatbox')?.classList.contains('stickyChat'))
 }
