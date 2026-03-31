@@ -43,6 +43,10 @@ jobs:
           # List all ep_* repos from ether org
           plugins=$(gh repo list ether --limit 200 --json name --jq '.[] | select(.name | startswith("ep_")) | .name')
 
+          failed=""
+          succeeded=""
+          skipped=""
+
           for plugin in $plugins; do
             echo "============================================================"
             echo "Processing $plugin"
@@ -50,14 +54,26 @@ jobs:
 
             # Clone if not present
             if [ ! -d "$plugin" ]; then
-              git clone "https://github.com/ether/${plugin}.git" "$plugin" || { echo "SKIP: clone failed"; continue; }
+              git clone "https://github.com/ether/${plugin}.git" "$plugin" || { echo "SKIP: clone failed"; skipped="$skipped $plugin"; continue; }
             fi
 
             # Pull latest
-            (cd "$plugin" && git pull --ff-only) || { echo "SKIP: pull failed"; continue; }
+            (cd "$plugin" && git pull --ff-only) || { echo "SKIP: pull failed"; skipped="$skipped $plugin"; continue; }
 
-            # Run checkPlugin with autopush
-            cd etherpad-lite/bin
-            pnpm run checkPlugin "$plugin" autopush 2>&1 | tail -20 || echo "WARN: checkPlugin failed for $plugin"
+            # Run checkPlugin with autopush — continue on failure
+            if cd etherpad-lite/bin && pnpm run checkPlugin "$plugin" autopush 2>&1; then
+              succeeded="$succeeded $plugin"
+            else
+              echo "WARN: checkPlugin failed for $plugin"
+              failed="$failed $plugin"
+            fi
             cd ../..
           done
+
+          echo ""
+          echo "============================================================"
+          echo "SUMMARY"
+          echo "============================================================"
+          echo "Succeeded:$(echo $succeeded | wc -w) -$succeeded"
+          echo "Failed:$(echo $failed | wc -w) -$failed"
+          echo "Skipped:$(echo $skipped | wc -w) -$skipped"
