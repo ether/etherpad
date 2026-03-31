@@ -15,7 +15,7 @@ jobs:
           node-version: 20
           registry-url: https://registry.npmjs.org/
       - name: Check out Etherpad core
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: ether/etherpad-lite
       - uses: pnpm/action-setup@v3
@@ -35,7 +35,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pnpm-store-
       -
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
       -
