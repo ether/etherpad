@@ -16,7 +16,7 @@ export default defineConfig({
     reporter: process.env.CI ? 'github' : 'html',
     expect: { timeout: defaultExpectTimeout },
     timeout: defaultTestTimeout,
-    retries: 2,
+    retries: 0,
     workers: 5,
     /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
     use: {
