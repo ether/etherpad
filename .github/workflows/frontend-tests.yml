@@ -1,8 +1,10 @@
-# Leave the powered by Sauce Labs bit in as this means we get additional concurrency
-name: "Frontend tests powered by Sauce Labs"
+name: "Frontend tests"
 
 on:
   push:
+    paths-ignore:
+      - 'doc/**'
+  pull_request:
     paths-ignore:
       - 'doc/**'
 
