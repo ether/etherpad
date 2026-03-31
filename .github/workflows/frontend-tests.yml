@@ -192,7 +192,7 @@ jobs:
           done
           cd src
           gnpm exec playwright install webkit --with-deps
-          gnpm run test-ui --project=webkit || true
+          gnpm run test-ui --project=webkit
       - uses: actions/upload-artifact@v7
         if: always()
         with:
