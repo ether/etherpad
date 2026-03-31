@@ -12,6 +12,7 @@ test('should go to home on pad', async ({page}) => {
   expect(attribute).toBe('pad.toolbar.home.title');
 
   await homeButton.click();
+  await page.waitForURL((url) => !url.pathname.includes('/p/'));
   const url = page.url();
   expect(url).not.toContain('/p/');
 })
