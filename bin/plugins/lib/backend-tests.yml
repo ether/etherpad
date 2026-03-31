@@ -60,11 +60,11 @@ jobs:
           pnpm run plugins i --path  ../../plugin
       -
         name: Run the backend tests
-        working-directory: ./etherpad-lite
+        working-directory: ./etherpad-lite/src
         run: |
-          res=$(find . -path "./src/plugin_packages/ep_*@*/static/tests/backend/specs/**" | wc -l)
+          res=$(find ./plugin_packages -path "*/static/tests/backend/specs/*" 2>/dev/null | wc -l)
           if [ $res -eq 0 ]; then
           echo "No backend tests found"
           else
-          pnpm run test
+          npx cross-env NODE_ENV=production mocha --import=tsx --timeout 120000 --recursive node_modules/ep_*/static/tests/backend/specs/**
           fi
