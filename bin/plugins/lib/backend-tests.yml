@@ -62,6 +62,7 @@ jobs:
         name: Run the backend tests
         working-directory: ./etherpad-lite/src
         run: |
+          shopt -s globstar
           res=$(find ./plugin_packages -path "*/static/tests/backend/specs/*" 2>/dev/null | wc -l)
           if [ $res -eq 0 ]; then
           echo "No backend tests found"
