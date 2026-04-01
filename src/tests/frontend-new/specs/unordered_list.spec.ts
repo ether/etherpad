@@ -80,11 +80,8 @@ test.describe('unordered_list.js', function () {
             const padBody = await getPadBody(page);
             await clearPadContent(page)
 
-            // get the first text element out of the inner iframe
-            const $firstTextElement = padBody.locator('div').first();
-
-            // select this text element
-            await $firstTextElement.selectText();
+            // re-query after clear since the DOM gets rebuilt
+            await padBody.locator('div').first().selectText();
 
             const $insertunorderedlistButton = page.locator('.buttonicon-insertunorderedlist');
             await $insertunorderedlistButton.click();
