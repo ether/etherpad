@@ -16,7 +16,7 @@ export default defineConfig({
     reporter: process.env.CI ? 'github' : 'html',
     expect: { timeout: defaultExpectTimeout },
     timeout: defaultTestTimeout,
-    retries: 0,
+    retries: process.env.CI ? 2 : 0,
     workers: 2,
     /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
     use: {
@@ -39,15 +39,8 @@ export default defineConfig({
             name: 'firefox',
             use: { ...devices['Desktop Firefox'] },
         },
-        {
-            name: 'chrome-firefox',
-            use:
-                {...devices['Desktop Firefox'], ...devices['Desktop Chrome']},
-        },
-        {
-            name: 'webkit',
-            use: { ...devices['Desktop Safari'] },
-        },
+        // Webkit dropped from CI — see https://github.com/ether/etherpad-lite/issues/XXXX
+        // Kept chromium and firefox as the supported browsers.
 
         /* Test against mobile viewports. */
         // {

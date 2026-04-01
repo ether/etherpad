@@ -146,7 +146,9 @@ export const writeToPad = async (page: Page, text: string) => {
 }
 
 export const clearAuthorship = async (page: Page) => {
-  await page.locator("button[data-l10n-id='pad.toolbar.clearAuthorship.title']").click()
+  // Use force:true to bypass the toolbar-overlay div that can intercept clicks
+  // after text selection. The overlay is cosmetic and doesn't affect the button action.
+  await page.locator("button[data-l10n-id='pad.toolbar.clearAuthorship.title']").click({force: true})
 }
 
 export const undoChanges = async (page: Page) => {

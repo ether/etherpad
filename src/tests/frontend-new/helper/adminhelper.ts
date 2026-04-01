@@ -21,17 +21,19 @@ export const restartEtherpad = async (page: Page) => {
   // Click restart
   const restartButton = page.locator('.settings-button-bar').locator('.settingsButton').nth(1)
   const settings =  page.locator('.settings');
-  await expect(settings).not.toBeEmpty();
-  await expect(restartButton).toBeVisible()
+  await expect(settings).not.toHaveValue('', {timeout: 30000});
+  await expect(restartButton).toBeVisible({timeout: 10000})
   await restartButton.click()
-  // Wait for the server to come back up by polling
-  for (let i = 0; i < 30; i++) {
-    await page.waitForTimeout(500)
+  // Wait for the server to come back up by polling.
+  // The server needs time to shut down and restart, so poll with longer intervals.
+  for (let i = 0; i < 60; i++) {
+    await page.waitForTimeout(1000)
     try {
-      const response = await page.goto('http://localhost:9001/')
-      if (response && response.status() !== 0) return;
+      const response = await page.goto('http://localhost:9001/', {timeout: 5000})
+      if (response && response.status() === 200) return;
     } catch {
-      // connection refused — server still restarting
+      // connection refused or timeout — server still restarting
     }
   }
+  throw new Error('Etherpad did not restart within 60 seconds');
 }
