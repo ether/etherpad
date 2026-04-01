@@ -4,19 +4,19 @@ import {useAnimationFrame} from "./AnimationFrameHook";
 const defaultDeps: DependencyList = []
 
 export const useDebounce = (
-    fn:EffectCallback,
-    wait = 0,
-    deps = defaultDeps
+  fn:EffectCallback,
+  wait = 0,
+  deps = defaultDeps
 ):void => {
-    const isFirstRender = useRef(true)
-    const render = useAnimationFrame(fn, wait)
+  const isFirstRender = useRef(true)
+  const render = useAnimationFrame(fn, wait)
 
-    useMemo(()=>{
-        if(isFirstRender.current){
-            isFirstRender.current = false
-            return
-        }
+  useMemo(()=>{
+    if(isFirstRender.current){
+      isFirstRender.current = false
+      return
+    }
 
-        render()
-    }, deps)
+    render()
+  }, deps)
 }

@@ -1,14 +1,14 @@
 #colorpicker a.brightColorPicker-cancelButton {
-    background: none;
-    padding: 0;
-    padding-top: 10px;
-    font-weight: bold;
-    border: none;
+  background: none;
+  padding: 0;
+  padding-top: 10px;
+  font-weight: bold;
+  border: none;
 }
 
 .brightColorPicker-colorPanel {
-    background-color: white !important;
-    box-shadow: 0 0 0 1px rgba(99, 114, 130, 0.16), 0 8px 16px rgba(27, 39, 51, 0.08) !important;
-    border-radius: 3px !important;
-    padding: 15px !important;
+  background-color: white !important;
+  box-shadow: 0 0 0 1px rgba(99, 114, 130, 0.16), 0 8px 16px rgba(27, 39, 51, 0.08) !important;
+  border-radius: 3px !important;
+  padding: 15px !important;
 }

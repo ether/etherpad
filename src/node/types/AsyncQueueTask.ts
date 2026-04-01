@@ -1,5 +1,5 @@
 export type AsyncQueueTask = {
-    srcFile: string,
-    destFile: string,
-    type: string
+  srcFile: string,
+  destFile: string,
+  type: string
 }
