@@ -72,42 +72,57 @@ describe(__filename, function () {
   };
 
   /**
-   * Wait for an ACCEPT_COMMIT message, skipping any other COLLABROOM messages
-   * (like USER_NEWINFO, NEW_CHANGES, etc.) that may arrive first.
+   * Wait for an ACCEPT_COMMIT or disconnect message, ignoring other messages.
+   * Uses a single persistent listener to avoid missing messages between on/off cycles.
    */
+  const waitForCommitOrDisconnect = (socket: any, timeoutMs = 10000): Promise<any> => {
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        socket.off('message', handler);
+        reject(new Error(`timed out waiting for ACCEPT_COMMIT or disconnect after ${timeoutMs}ms`));
+      }, timeoutMs);
+      const handler = (msg: any) => {
+        if (msg.disconnect) {
+          clearTimeout(timeout);
+          socket.off('message', handler);
+          resolve(msg);
+        } else if (msg.type === 'COLLABROOM' && msg.data?.type === 'ACCEPT_COMMIT') {
+          clearTimeout(timeout);
+          socket.off('message', handler);
+          resolve(msg);
+        }
+        // Ignore USER_NEWINFO, NEW_CHANGES, etc.
+      };
+      socket.on('message', handler);
+    });
+  };
+
   const waitForAcceptCommit = async (socket: any, wantRev: number) => {
-    for (;;) {
-      const msg = await common.waitForSocketEvent(socket, 'message');
-      if (msg.disconnect) {
-        throw new Error(`Unexpected disconnect: ${JSON.stringify(msg)}`);
-      }
-      if (msg.type === 'COLLABROOM' && msg.data?.type === 'ACCEPT_COMMIT') {
-        assert.equal(msg.data.newRev, wantRev);
-        return;
-      }
-      // Skip non-ACCEPT_COMMIT messages (USER_NEWINFO, NEW_CHANGES, etc.)
+    const msg = await waitForCommitOrDisconnect(socket);
+    if (msg.disconnect) {
+      throw new Error(`Unexpected disconnect: ${JSON.stringify(msg)}`);
     }
+    assert.equal(msg.data.newRev, wantRev);
   };
 
   /**
-   * Drain messages from a socket until we get an ACCEPT_COMMIT or disconnect.
-   * Returns the message for assertion.
+   * Wait for a specific message type, ignoring others. Used for cross-user sync.
    */
-  const waitForNextCommitOrDisconnect = async (socket: any): Promise<any> => {
-    for (;;) {
-      const msg = await common.waitForSocketEvent(socket, 'message');
-      if (msg.disconnect) return msg;
-      if (msg.type === 'COLLABROOM' && msg.data?.type === 'ACCEPT_COMMIT') return msg;
-      // Skip USER_NEWINFO, NEW_CHANGES, etc.
-    }
-  };
-
-  /**
-   * Drain non-ACCEPT_COMMIT messages so the socket is ready for the next operation.
-   * Waits briefly then consumes any queued messages.
-   */
-  const drainMessages = async (socket: any) => {
-    await new Promise(resolve => setTimeout(resolve, 500));
+  const waitForNewChanges = (socket: any, timeoutMs = 10000): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        socket.off('message', handler);
+        reject(new Error(`timed out waiting for NEW_CHANGES after ${timeoutMs}ms`));
+      }, timeoutMs);
+      const handler = (msg: any) => {
+        if (msg.type === 'COLLABROOM' && msg.data?.type === 'NEW_CHANGES') {
+          clearTimeout(timeout);
+          socket.off('message', handler);
+          resolve();
+        }
+      };
+      socket.on('message', handler);
+    });
   };
 
   describe('undo of clear authorship colors (bug #2802)', function () {
@@ -129,24 +144,22 @@ describe(__filename, function () {
       revA += 1;
 
       // Step 3: Connect User B (after User A's text is committed)
-      await drainMessages(socketA);
       const userB = await connectUser();
       socketB = userB.socket;
       revB = userB.rev;
-      // User B joins and sees the pad at the current head revision
-      await drainMessages(socketA);
 
       // Step 4: User B types " world" with their author attribute
       const apoolB = new AttributePool();
       apoolB.putAttrib(['author', userB.author]);
+      const userASeesB = waitForNewChanges(socketA);
       await Promise.all([
         waitForAcceptCommit(socketB, revB + 1),
         sendUserChanges(socketB, revB, 'Z:6>6=5*0+6$ world', apoolB),
       ]);
       revB += 1;
 
-      // Wait for User A to see the change
-      await drainMessages(socketA);
+      // Wait for User A to see User B's change
+      await userASeesB;
       revA = revB;
 
       // The pad now has "hello world\n" with two different authors
@@ -160,14 +173,10 @@ describe(__filename, function () {
         sendUserChanges(socketB, revB, 'Z:c>0*0=b$', clearPool),
       ]);
       revB += 1;
-      await drainMessages(socketA);
-      revA = revB;
 
       // Step 6: User B undoes the clear authorship
       // This is the critical part - the undo changeset re-applies the original
       // author attributes, which include User A's author ID.
-      // The server currently rejects this because User B is submitting changes
-      // with User A's author ID.
       const undoPool = new AttributePool();
       undoPool.putAttrib(['author', userA.author]); // 0 = author A
       undoPool.putAttrib(['author', userB.author]); // 1 = author B
@@ -175,12 +184,10 @@ describe(__filename, function () {
       const undoChangeset = 'Z:c>0*0=5*1=6$';
 
       // This should NOT disconnect User B - that's the bug (#2802)
-      const result = await Promise.all([
-        waitForNextCommitOrDisconnect(socketB),
-        sendUserChanges(socketB, revB, undoChangeset, undoPool),
-      ]);
+      const resultP = waitForCommitOrDisconnect(socketB);
+      await sendUserChanges(socketB, revB, undoChangeset, undoPool);
+      const msg = await resultP;
 
-      const msg = result[0];
       assert.notDeepEqual(msg, {disconnect: 'badChangeset'},
           'User was disconnected with badChangeset - bug #2802');
       assert.equal(msg.type, 'COLLABROOM');
@@ -250,24 +257,19 @@ describe(__filename, function () {
       socketA = userA.socket;
       revA = userA.rev;
 
-      await drainMessages(socketA);
-
       const userB = await connectUser();
       socketB = userB.socket;
       revB = userB.rev;
-
-      await drainMessages(socketA);
 
       // User B tries to insert text attributed to User A - this should be rejected
       const fakePool = new AttributePool();
       fakePool.putAttrib(['author', userA.author]);
 
-      const result = await Promise.all([
-        waitForNextCommitOrDisconnect(socketB),
-        sendUserChanges(socketB, revB, 'Z:1>5*0+5$hello', fakePool),
-      ]);
+      const resultP = waitForCommitOrDisconnect(socketB);
+      await sendUserChanges(socketB, revB, 'Z:1>5*0+5$hello', fakePool);
+      const msg = await resultP;
 
-      assert.deepEqual(result[0], {disconnect: 'badChangeset'},
+      assert.deepEqual(msg, {disconnect: 'badChangeset'},
           'Should reject changeset that impersonates another author for new text');
     });
 
@@ -291,12 +293,11 @@ describe(__filename, function () {
       const fakePool = new AttributePool();
       fakePool.putAttrib(['author', 'a.fabricatedAuthorId']);
 
-      const result = await Promise.all([
-        waitForNextCommitOrDisconnect(socketA),
-        sendUserChanges(socketA, revA, 'Z:6>0*0=5$', fakePool),
-      ]);
+      const resultP = waitForCommitOrDisconnect(socketA);
+      await sendUserChanges(socketA, revA, 'Z:6>0*0=5$', fakePool);
+      const msg = await resultP;
 
-      assert.deepEqual(result[0], {disconnect: 'badChangeset'},
+      assert.deepEqual(msg, {disconnect: 'badChangeset'},
           'Should reject = op with fabricated author not in pad pool');
     });
   });
