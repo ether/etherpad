@@ -47,7 +47,9 @@ test.describe('undo button', function () {
         const modifiedValue = await firstTextElement.textContent(); // get the modified value
         expect(modifiedValue).not.toBe(originalValue); // expect the value to change
 
-        // undo the change
+        // undo the change — Ctrl+Z undoes one keystroke at a time
+        await page.keyboard.press('Control+Z');
+        await page.keyboard.press('Control+Z');
         await page.keyboard.press('Control+Z');
 
         await expect(padBody.locator('div').first()).toHaveText(originalValue!);
