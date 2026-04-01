@@ -35,8 +35,6 @@ test.describe('undo button', function () {
 
     test('undo some typing using a keypress', async function ({page}) {
         const padBody = await getPadBody(page);
-        await padBody.click()
-        await clearPadContent(page)
 
         // get the first text element inside the editable space
         const firstTextElement = padBody.locator('div').first()
@@ -44,12 +42,9 @@ test.describe('undo button', function () {
 
         await firstTextElement.focus()
         await writeToPad(page, 'foo'); // send line 1 to the pad
-        const modifiedValue = await firstTextElement.textContent(); // get the modified value
-        expect(modifiedValue).not.toBe(originalValue); // expect the value to change
+        await expect(firstTextElement).not.toHaveText(originalValue!);
 
-        // undo the change — Ctrl+Z undoes one keystroke at a time
-        await page.keyboard.press('Control+Z');
-        await page.keyboard.press('Control+Z');
+        // undo the change
         await page.keyboard.press('Control+Z');
 
         await expect(padBody.locator('div').first()).toHaveText(originalValue!);
