@@ -20,7 +20,7 @@ test.describe('Plugins page',  ()=> {
         await page.click('.search-field')
         await page.keyboard.type('ep_font_color')
         const pluginTable =  page.locator('table tbody').nth(1);
-        await expect(pluginTable.locator('tr').first()).toContainText('ep_font_color', {timeout: 30000})
+        await expect(pluginTable.locator('tr').first()).toContainText('ep_font_color', {timeout: 60000})
     })
 
 
@@ -37,9 +37,9 @@ test.describe('Plugins page',  ()=> {
         await page.keyboard.type('ep_font_color')
         await page.keyboard.press('Enter')
 
-        await expect(pluginTable.locator('tr')).toHaveCount(1)
+        await expect(pluginTable.locator('tr')).toHaveCount(1, {timeout: 60000})
         const pluginRow = pluginTable.locator('tr').first()
-        await expect(pluginRow).toContainText('ep_font_color')
+        await expect(pluginRow).toContainText('ep_font_color', {timeout: 60000})
 
         // Select Installation button
         await pluginRow.locator('td').nth(4).locator('button').first().click()

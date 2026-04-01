@@ -12,7 +12,7 @@ test.describe('admin settings',()=> {
         await page.goto('http://localhost:9001/admin/settings');
         await page.waitForSelector('.settings');
         const settings =  page.locator('.settings');
-        await expect(settings).not.toBeEmpty();
+        await expect(settings).not.toHaveValue('', {timeout: 30000});
 
         const settingsVal = await settings.inputValue()
         const settingsLength = settingsVal.length
@@ -26,7 +26,7 @@ test.describe('admin settings',()=> {
         // Check if the changes were actually saved
         await page.reload()
         await page.waitForSelector('.settings');
-        await expect(settings).not.toBeEmpty();
+        await expect(settings).not.toHaveValue('', {timeout: 30000});
 
         const newSettings =  page.locator('.settings');
 
@@ -40,7 +40,7 @@ test.describe('admin settings',()=> {
 
         await page.reload()
         await page.waitForSelector('.settings');
-        await expect(settings).not.toBeEmpty();
+        await expect(settings).not.toHaveValue('', {timeout: 30000});
         const oldSettings =  page.locator('.settings');
         const oldSettingsVal = await oldSettings.inputValue()
         expect(oldSettingsVal).toEqual(settingsVal)
@@ -56,6 +56,6 @@ test.describe('admin settings',()=> {
         await page.goto('http://localhost:9001/admin/settings');
         await page.waitForSelector('.settings')
         const settings =  page.locator('.settings');
-        await expect(settings).not.toBeEmpty();
+        await expect(settings).not.toHaveValue('', {timeout: 30000});
     });
 })

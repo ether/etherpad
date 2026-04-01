@@ -43,16 +43,20 @@ jobs:
         uses: SamTV12345/gnpm-setup@main
         with:
           version: 0.0.12
-      - name: Cache playwright binaries
-        uses: actions/cache@v5
-        id: playwright-cache
-        with:
-          path: |
-            ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ env.PLAYWRIGHT_VERSION }}
       -
         name: Install all dependencies and symlink for ep_etherpad-lite
         run: gnpm i --runtimeVersion="${{ matrix.node }}"
+      - name: Cache Playwright browsers
+        uses: actions/cache@v5
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('src/package.json') }}
+      - name: Install Playwright browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: cd src && npx playwright install
+      - name: Install Playwright system dependencies
+        run: cd src && npx playwright install-deps
       -
         name: Create settings.json
         run: cp settings.json.template settings.json
@@ -85,8 +89,6 @@ jobs:
           sleep 1
           done
           cd src
-          gnpm exec playwright install --runtimeVersion="${{ matrix.node }}"
-          gnpm exec playwright install-deps --runtimeVersion="${{ matrix.node }}"
           gnpm run test-admin --runtimeVersion="${{ matrix.node }}"
       - uses: actions/upload-artifact@v7
         if: always()
