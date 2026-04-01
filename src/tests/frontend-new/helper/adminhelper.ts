@@ -23,10 +23,15 @@ export const restartEtherpad = async (page: Page) => {
     const settings =  page.locator('.settings');
     await expect(settings).not.toBeEmpty();
     await expect(restartButton).toBeVisible()
-    await page.locator('.settings-button-bar')
-        .locator('.settingsButton')
-        .nth(1)
-        .click()
-    await page.waitForTimeout(500)
-    await page.waitForSelector('.settings')
+    await restartButton.click()
+    // Wait for the server to come back up by polling
+    for (let i = 0; i < 30; i++) {
+        await page.waitForTimeout(1000)
+        try {
+            const response = await page.goto('http://localhost:9001/')
+            if (response && response.ok()) return;
+        } catch {
+            // connection refused — server still restarting
+        }
+    }
 }
