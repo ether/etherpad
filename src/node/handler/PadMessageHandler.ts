@@ -235,7 +235,7 @@ const handlePadDelete = async (socket: any, padDeleteMessage: PadDeleteMessage) 
     // Only the one doing the first revision can delete the pad, otherwise people could troll a lot
     const firstContributor = await retrievedPad.getRevisionAuthor(0)
     if (session.author === firstContributor) {
-      retrievedPad.remove()
+      await retrievedPad.remove()
     } else {
 
       type ShoutMessage = {

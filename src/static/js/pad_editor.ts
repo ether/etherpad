@@ -86,9 +86,16 @@ const padeditor = (() => {
       // delete pad
       $('#delete-pad').on('click', () => {
         if (window.confirm(html10n.get('pad.delete.confirm'))) {
+          // Wait for the server to confirm deletion before navigating away.
+          // Navigating immediately caused a race condition where the browser
+          // (especially Firefox) would close the WebSocket before the delete
+          // message reached the server. See #7306.
+          pad.socket.on('message', (data: any) => {
+            if (data && data.disconnect === 'deleted') {
+              window.location.href = '/';
+            }
+          });
           pad.collabClient.sendMessage({type: 'PAD_DELETE', data:{padId: pad.getPadId()}});
-          // redirect to home page after deletion
-          window.location.href = '/';
         }
       })
 
