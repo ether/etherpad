@@ -74,7 +74,7 @@ const getIds = async (id:string) => {
   return {readOnlyPadId, padId, readonly};
 };
 
-export default {
+const readOnlyManager = {
   isReadOnlyId,
   getReadOnlyId,
   getPadId,
@@ -82,4 +82,8 @@ export default {
   // Export for testing purposes
   __getReadOnlyId: getReadOnlyId, // eslint-disable-line no-underscore-dangle
   __getPadId: getPadId, // eslint-disable-line no-underscore-dangle
-}
+};
+export default readOnlyManager;
+// CJS compat for plugins using require('ep_etherpad-lite/node/db/ReadOnlyManager')
+module.exports = readOnlyManager;
+module.exports.default = readOnlyManager;

@@ -658,6 +658,9 @@ const settings: SettingsType = {
 }
 
 export default settings;
+// CJS compat for plugins using require('ep_etherpad-lite/node/utils/Settings')
+module.exports = settings;
+module.exports.default = settings;
 
 /**
  * This setting is passed with dbType to ueberDB to set up the database
