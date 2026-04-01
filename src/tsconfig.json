@@ -2,7 +2,8 @@
   "compilerOptions": {
     /* Visit https://aka.ms/tsconfig to read more about this file */
     "moduleDetection": "force",
-    "lib": ["ES2023"],
+    "lib": ["ES2023", "DOM"],
+    "types": ["node", "jquery"],
     /* Language and Environment */
     "target": "es6",                                  /* Set the JavaScript language version for emitted JavaScript and include compatible library declarations. */
     /* Modules */
