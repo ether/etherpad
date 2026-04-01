@@ -79,12 +79,10 @@ test.describe('unordered_list.js', function () {
         test('indent and de-indent list item with keypress', async function ({page}) {
             const padBody = await getPadBody(page);
             await clearPadContent(page)
+            await expect(padBody.locator('div')).toHaveCount(1);
 
-            // get the first text element out of the inner iframe
-            const $firstTextElement = padBody.locator('div').first();
-
-            // select this text element
-            await $firstTextElement.selectText();
+            // re-query after clear since the DOM gets rebuilt
+            await padBody.locator('div').first().click();
 
             const $insertunorderedlistButton = page.locator('.buttonicon-insertunorderedlist');
             await $insertunorderedlistButton.click();

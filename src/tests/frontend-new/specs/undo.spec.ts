@@ -41,15 +41,15 @@ test.describe('undo button', function () {
         // get the first text element inside the editable space
         const firstTextElement = padBody.locator('div').first()
         const originalValue = await firstTextElement.textContent(); // get the original value
-
         await firstTextElement.focus()
+
         await writeToPad(page, 'foo'); // send line 1 to the pad
+
         const modifiedValue = await firstTextElement.textContent(); // get the modified value
         expect(modifiedValue).not.toBe(originalValue); // expect the value to change
 
         // undo the change
         await page.keyboard.press('Control+Z');
-        await page.waitForTimeout(1000)
 
         await expect(firstTextElement).toHaveText(originalValue!);
     });
