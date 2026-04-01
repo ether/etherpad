@@ -90,12 +90,26 @@ const padeditor = (() => {
           // Navigating immediately caused a race condition where the browser
           // (especially Firefox) would close the WebSocket before the delete
           // message reached the server. See #7306.
+          let handled = false;
           pad.socket.on('message', (data: any) => {
             if (data && data.disconnect === 'deleted') {
+              handled = true;
               window.location.href = '/';
             }
           });
+          // If the user is not the pad creator, the server sends a shout
+          // message instead of deleting. Listen for it and show the error.
+          pad.socket.on('shout', (data: any) => {
+            handled = true;
+            const msg = data?.data?.payload?.message?.message;
+            if (msg) window.alert(msg);
+          });
           pad.collabClient.sendMessage({type: 'PAD_DELETE', data:{padId: pad.getPadId()}});
+          // Fallback: if the server doesn't respond within 5 seconds
+          // (e.g. socket dropped), navigate away anyway.
+          setTimeout(() => {
+            if (!handled) window.location.href = '/';
+          }, 5000);
         }
       })
 
