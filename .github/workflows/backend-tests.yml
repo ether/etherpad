@@ -126,7 +126,7 @@ jobs:
           ep_font_size@0.4.65
           ep_hash_auth
           ep_headings2@0.2.76
-          ep_markdown@10.0.1
+          ep_markdown
           ep_readonly_guest
           ep_set_title_on_pad
           ep_spellcheck
@@ -242,7 +242,7 @@ jobs:
           ep_font_size@0.4.65
           ep_hash_auth
           ep_headings2@0.2.76
-          ep_markdown@10.0.1
+          ep_markdown
           ep_readonly_guest
           ep_set_title_on_pad
           ep_spellcheck
