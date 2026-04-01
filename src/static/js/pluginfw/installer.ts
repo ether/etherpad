@@ -178,7 +178,18 @@ export const getAvailablePlugins = async (maxCacheAge: number | false) => {
   }
 
   const pluginsLoaded: AxiosResponse<MapArrayType<PackageInfo>> = await axios.get(`${settings.updateServer}/plugins.json`, {headers})
-  availablePlugins = pluginsLoaded.data;
+  const data = pluginsLoaded.data;
+  // Normalize: the registry may use numeric keys instead of plugin names
+  const normalized: MapArrayType<PackageInfo> = {};
+  for (const key in data) {
+    const entry = data[key];
+    if (entry && entry.name) {
+      normalized[entry.name] = entry;
+    } else {
+      normalized[key] = entry;
+    }
+  }
+  availablePlugins = normalized;
   cacheTimestamp = nowTimestamp;
   return availablePlugins;
 };
