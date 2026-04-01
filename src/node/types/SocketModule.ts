@@ -1,3 +1,3 @@
 export type SocketModule = {
-    setSocketIO: (io: any) => void;
+  setSocketIO: (io: any) => void;
 }
