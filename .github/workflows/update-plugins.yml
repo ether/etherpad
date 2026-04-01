@@ -12,7 +12,7 @@ jobs:
       - name: Check out etherpad-lite
         uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v3
+      - uses: pnpm/action-setup@v5
         name: Install pnpm
         with:
           version: 10
