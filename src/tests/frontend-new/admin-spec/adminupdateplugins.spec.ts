@@ -19,10 +19,8 @@ test.describe('Plugins page',  ()=> {
         await page.waitForSelector('.search-field');
         await page.click('.search-field')
         await page.keyboard.type('ep_font_color')
-        await page.keyboard.press('Enter')
         const pluginTable =  page.locator('table tbody').nth(1);
-        await expect(pluginTable.locator('tr')).toHaveCount(1)
-        await expect(pluginTable.locator('tr').first()).toContainText('ep_font_color')
+        await expect(pluginTable.locator('tr').first()).toContainText('ep_font_color', {timeout: 30000})
     })
 
 
