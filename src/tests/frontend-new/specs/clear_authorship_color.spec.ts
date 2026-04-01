@@ -35,7 +35,10 @@ test('clear authorship color', async ({page}) => {
 })
 
 
-test("makes text clear authorship colors and checks it can't be undone", async function ({page}) {
+test("clear authorship colors can be undone to restore author colors", async function ({page}) {
+  // Fix for https://github.com/ether/etherpad-lite/issues/2802
+  // Previously, undo of clear authorship was blocked as a workaround.
+  // Now the server properly allows it, so undo should restore author colors.
   const innnerPad = await getPadBody(page);
   const padText = "Hello"
 
@@ -48,19 +51,20 @@ test("makes text clear authorship colors and checks it can't be undone", async f
   const retrievedClasses = await innnerPad.locator('div span').nth(0).getAttribute('class')
   expect(retrievedClasses).toContain('author');
 
-
   await firstDivClass.focus()
   await clearAuthorship(page);
   expect(await firstDivClass.getAttribute('class')).not.toContain('author');
 
+  // Undo should restore authorship colors
   await undoChanges(page);
-  const changedFirstDiv = innnerPad.locator('div').nth(0)
-  expect(await changedFirstDiv.getAttribute('class')).not.toContain('author');
+  await page.waitForTimeout(1000);
+  const spanAfterUndo = innnerPad.locator('div span').nth(0);
+  const classesAfterUndo = await spanAfterUndo.getAttribute('class');
+  expect(classesAfterUndo).toContain('author');
 
-
-  await pressUndoButton(page);
-  const secondChangedFirstDiv = innnerPad.locator('div').nth(0)
-  expect(await secondChangedFirstDiv.getAttribute('class')).not.toContain('author');
+  // User should not be disconnected
+  const disconnected = page.locator('.disconnected, .unreachable');
+  expect(await disconnected.isVisible()).toBe(false);
 });
 
 
