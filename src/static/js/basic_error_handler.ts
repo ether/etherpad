@@ -23,24 +23,15 @@
     box.textContent = '';
     const summary = document.createElement('p');
     box.appendChild(summary);
-    summary.appendChild(document.createTextNode('An error occurred while loading the page:'));
-    const msgBlock = document.createElement('blockquote');
-    box.appendChild(msgBlock);
-    msgBlock.style.fontWeight = 'bold';
-    msgBlock.appendChild(document.createTextNode(msg));
-    const loc = document.createElement('p');
-    box.appendChild(loc);
-    loc.appendChild(document.createTextNode(`in ${url}`));
-    loc.appendChild(document.createElement('br'));
-    loc.appendChild(document.createTextNode(`at line ${line}:${col}`));
-    const stackSummary = document.createElement('p');
-    box.appendChild(stackSummary);
-    stackSummary.appendChild(document.createTextNode('Stack trace:'));
-    const stackBlock = document.createElement('blockquote');
-    box.appendChild(stackBlock);
-    const stack = document.createElement('pre');
-    stackBlock.appendChild(stack);
-    stack.appendChild(document.createTextNode(err.stack || err.toString()));
+    summary.appendChild(document.createTextNode('An error occurred while loading the page.'));
+    const reload = document.createElement('p');
+    box.appendChild(reload);
+    reload.appendChild(document.createTextNode(
+      'Please press Ctrl+F5 to reload. If the problem persists, contact your webmaster.'));
+
+    // Log the error details to the console for debugging, but don't show them to the user.
+    // See https://github.com/ether/etherpad-lite/issues/5765
+    console.error('Page load error:', msg, `\n  at ${url}:${line}:${col}`, err?.stack || err);
 
     if (typeof originalHandler === 'function') originalHandler(...args);
   };

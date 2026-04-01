@@ -425,20 +425,36 @@ class PadUtils {
         });
 
         if (!msgAlreadyVisible) {
-          const txt = document.createTextNode.bind(document); // Convenience shorthand.
-          const errorMsg = [
-            $('<p>')
-              .append($('<b>').text('Please press and hold Ctrl and press F5 to reload this page')),
-            $('<p>')
-              .text('If the problem persists, please send this error message to your webmaster:'),
-            $('<div>').css('text-align', 'left').css('font-size', '.8em').css('margin-top', '1em')
-              .append($('<b>').addClass('error-msg').text(msg)).append($('<br>'))
-              .append(txt(`at ${url} at line ${linenumber}`)).append($('<br>'))
-              .append(txt(`ErrorId: ${errorId}`)).append($('<br>'))
-              .append(txt(type)).append($('<br>'))
-              .append(txt(`URL: ${window.location.href}`)).append($('<br>'))
-              .append(txt(`UserAgent: ${navigator.userAgent}`)).append($('<br>')),
-          ];
+          // In production mode, hide internal error details (file paths, line numbers,
+          // error messages) from end users. Only show a generic reload message.
+          // See https://github.com/ether/etherpad-lite/issues/5765
+          const isProduction = (window as any).clientVars?.mode === 'production';
+
+          const errorMsg = isProduction
+            ? [
+              $('<p>')
+                .append($('<b>').text('Please press and hold Ctrl and press F5 to reload this page')),
+              $('<p>')
+                .text('If the problem persists, please contact your webmaster.')
+                .append($('<br>'))
+                .append($('<span>').css('font-size', '.8em').text(`ErrorId: ${errorId}`)),
+            ]
+            : (() => {
+              const txt = document.createTextNode.bind(document);
+              return [
+                $('<p>')
+                  .append($('<b>').text('Please press and hold Ctrl and press F5 to reload this page')),
+                $('<p>')
+                  .text('If the problem persists, please send this error message to your webmaster:'),
+                $('<div>').css('text-align', 'left').css('font-size', '.8em').css('margin-top', '1em')
+                  .append($('<b>').addClass('error-msg').text(msg)).append($('<br>'))
+                  .append(txt(`at ${url} at line ${linenumber}`)).append($('<br>'))
+                  .append(txt(`ErrorId: ${errorId}`)).append($('<br>'))
+                  .append(txt(type)).append($('<br>'))
+                  .append(txt(`URL: ${window.location.href}`)).append($('<br>'))
+                  .append(txt(`UserAgent: ${navigator.userAgent}`)).append($('<br>')),
+              ];
+            })();
 
           // @ts-ignore
           $.gritter.add({
