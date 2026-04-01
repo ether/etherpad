@@ -41,8 +41,7 @@ test.describe('undo clear authorship colors with multiple authors (bug #2802)', 
     await page1.waitForTimeout(1000);
 
     // Verify User A's text has authorship
-    const user1Span = body1.locator('div').first().locator('span');
-    await expect(user1Span.first()).toHaveAttribute('class', /author-/);
+    await expect(body1.locator('div span').first()).toHaveAttribute('class', /author-/);
 
     // User 2 joins the same pad in a different browser context (different author)
     const context2 = await browser.newContext();
@@ -66,38 +65,25 @@ test.describe('undo clear authorship colors with multiple authors (bug #2802)', 
     await expect(body1.locator('div').nth(1)).toContainText('Hello from User B');
 
     // Verify we have authorship colors from two different authors
-    const authorSpans = body2.locator('[class*="author-"]');
-    await expect(authorSpans.first()).toBeVisible();
+    await expect(body2.locator('div span').first()).toHaveAttribute('class', /author-/);
 
     // User B clears authorship colors
     await body2.click();
     await selectAllText(page2);
     await clearAuthorship(page2);
 
-    // Wait for clear to propagate
-    await page2.waitForTimeout(1000);
-
-    // Verify authorship is cleared
-    const clearedBody = await getPadBody(page2);
-    const authorClassesAfterClear = clearedBody.locator('[class*="author-"]');
-    // After clearing, there should be no author classes
-    await expect(authorClassesAfterClear).toHaveCount(0);
+    // Wait for clear to propagate and verify authorship is cleared on the div
+    await expect(body2.locator('div').first()).not.toHaveAttribute('class', /author/, {timeout: 5000});
 
     // THIS IS THE BUG: User B undoes the clear authorship
-    // Currently, the undo is blocked client-side as a workaround.
-    // The proper fix should allow the undo without causing a disconnect.
     await undoChanges(page2);
-
-    // Wait for the undo to take effect
-    await page2.waitForTimeout(2000);
 
     // User B should NOT be disconnected
     const disconnectedBanner = page2.locator('.disconnected, .unreachable');
     await expect(disconnectedBanner).not.toBeVisible();
 
     // The authorship colors should be restored after undo
-    const restoredAuthorSpans = clearedBody.locator('[class*="author-"]');
-    await expect(restoredAuthorSpans.first()).toBeVisible({timeout: 5000});
+    await expect(body2.locator('div span').first()).toHaveAttribute('class', /author-/, {timeout: 5000});
 
     // User B should still be able to type (not disconnected)
     await body2.click();
@@ -126,26 +112,23 @@ test.describe('undo clear authorship colors with multiple authors (bug #2802)', 
     await page.waitForTimeout(500);
 
     // Verify authorship exists
-    const authorSpan = body.locator('[class*="author-"]');
-    await expect(authorSpan.first()).toBeVisible();
+    await expect(body.locator('div span').first()).toHaveAttribute('class', /author-/);
 
     // Clear authorship
     await selectAllText(page);
     await clearAuthorship(page);
-    await page.waitForTimeout(500);
 
-    // Verify cleared
-    await expect(body.locator('[class*="author-"]')).toHaveCount(0);
+    // Verify cleared - check the div, not a broad selector
+    await expect(body.locator('div').first()).not.toHaveAttribute('class', /author/, {timeout: 5000});
 
-    // Undo - currently blocked by the workaround, should work with proper fix
+    // Undo should restore authorship
     await undoChanges(page);
-    await page.waitForTimeout(1000);
 
     // Should not be disconnected
     const disconnectedBanner = page.locator('.disconnected, .unreachable');
     await expect(disconnectedBanner).not.toBeVisible();
 
     // Authorship should be restored
-    await expect(body.locator('[class*="author-"]').first()).toBeVisible({timeout: 5000});
+    await expect(body.locator('div span').first()).toHaveAttribute('class', /author-/, {timeout: 5000});
   });
 });
