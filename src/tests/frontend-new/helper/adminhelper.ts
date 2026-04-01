@@ -2,7 +2,7 @@ import {expect, Page} from "@playwright/test";
 
 export const loginToAdmin = async (page: Page, username: string, password: string) => {
 
-    await page.goto('http://localhost:9001/admin/');
+    await page.goto('http://localhost:9001/admin/login');
 
     await page.waitForSelector('input[name="username"]');
     await page.fill('input[name="username"]', username);
