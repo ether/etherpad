@@ -658,6 +658,20 @@ const settings: SettingsType = {
 }
 
 export default settings;
+// CJS compatibility: plugins use require('ep_etherpad-lite/node/utils/Settings')
+// and expect settings properties directly on the module object, not under .default
+if (typeof module !== 'undefined' && module.exports) {
+  const currentExports = module.exports;
+  for (const key of Object.keys(settings)) {
+    if (!(key in currentExports)) {
+      Object.defineProperty(currentExports, key, {
+        get: () => (settings as any)[key],
+        enumerable: true,
+        configurable: true,
+      });
+    }
+  }
+}
 
 /**
  * This setting is passed with dbType to ueberDB to set up the database
