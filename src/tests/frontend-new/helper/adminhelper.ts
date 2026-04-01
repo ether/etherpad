@@ -26,10 +26,10 @@ export const restartEtherpad = async (page: Page) => {
     await restartButton.click()
     // Wait for the server to come back up by polling
     for (let i = 0; i < 30; i++) {
-        await page.waitForTimeout(1000)
+        await page.waitForTimeout(500)
         try {
             const response = await page.goto('http://localhost:9001/')
-            if (response && response.ok()) return;
+            if (response && response.status() !== 0) return;
         } catch {
             // connection refused — server still restarting
         }
