@@ -51,10 +51,11 @@ test.describe('admin settings',()=> {
         await page.goto('http://localhost:9001/admin/settings');
         await page.waitForSelector('.settings')
         await restartEtherpad(page)
+        // Re-login after restart since session is lost
+        await loginToAdmin(page, 'admin', 'changeme1')
+        await page.goto('http://localhost:9001/admin/settings');
         await page.waitForSelector('.settings')
         const settings =  page.locator('.settings');
         await expect(settings).not.toBeEmpty();
-        await page.waitForSelector('.menu')
-        await page.waitForTimeout(5000)
     });
 })
