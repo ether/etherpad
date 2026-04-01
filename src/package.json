@@ -83,7 +83,7 @@
     "etherpad-lite": "node/server.ts"
   },
   "devDependencies": {
-    "@playwright/test": "^1.58.2",
+    "@playwright/test": "^1.59.0",
     "@types/async": "^3.2.25",
     "@types/cookie-parser": "^1.4.10",
     "@types/cross-spawn": "^6.0.6",
@@ -119,8 +119,8 @@
     "sinon": "^21.0.3",
     "split-grid": "^1.0.11",
     "supertest": "^7.2.2",
-    "typescript": "^5.9.3",
-    "vitest": "^4.1.1"
+    "typescript": "^6.0.2",
+    "vitest": "^4.1.2"
   },
   "engines": {
     "node": ">=20.0.0",
