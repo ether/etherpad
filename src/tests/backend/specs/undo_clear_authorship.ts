@@ -300,5 +300,38 @@ describe(__filename, function () {
       assert.deepEqual(msg, {disconnect: 'badChangeset'},
           'Should reject = op with fabricated author not in pad pool');
     });
+
+    it('should reject - op with foreign author to prevent pool injection', async function () {
+      // Security: a '-' op with a foreign author's attribs should be rejected.
+      // While '-' attribs are discarded from the document, they are added to the
+      // pad's attribute pool by moveOpsToNewPool. Without this check, an attacker
+      // could inject a fabricated author ID into the pool via a '-' op, then use
+      // a '=' op to attribute text to that fabricated author.
+      const userA = await connectUser();
+      socketA = userA.socket;
+      revA = userA.rev;
+
+      // User A types text
+      const apoolA = new AttributePool();
+      apoolA.putAttrib(['author', userA.author]);
+      await Promise.all([
+        waitForAcceptCommit(socketA, revA + 1),
+        sendUserChanges(socketA, revA, 'Z:1>5*0+5$hello', apoolA),
+      ]);
+      revA += 1;
+
+      // User A tries to delete a char with a fabricated author attrib via a - op
+      // This would inject the fabricated author into the pad pool
+      const fakePool = new AttributePool();
+      fakePool.putAttrib(['author', 'a.fabricatedAuthorId']);
+
+      const resultP = waitForCommitOrDisconnect(socketA);
+      // Delete 1 char with fabricated author attrib
+      await sendUserChanges(socketA, revA, 'Z:6<1*0-1$', fakePool);
+      const msg = await resultP;
+
+      assert.deepEqual(msg, {disconnect: 'badChangeset'},
+          'Should reject - op with fabricated author to prevent pool injection');
+    });
   });
 });

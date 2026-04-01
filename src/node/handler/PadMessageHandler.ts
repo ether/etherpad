@@ -669,11 +669,6 @@ const handleUserChanges = async (socket:any, message: {
       // an attribute number isn't in the pool).
       const opAuthorId = AttributeMap.fromString(op.attribs, wireApool).get('author');
       if (opAuthorId && opAuthorId !== thisSession.author) {
-        if (op.opcode === '+') {
-          // Inserting new text as another author is always impersonation.
-          throw new Error(`Author ${thisSession.author} tried to submit changes as author ` +
-                          `${opAuthorId} in changeset ${changeset}`);
-        }
         if (op.opcode === '=') {
           // Allow restoring author attributes on existing text (undo of clear authorship),
           // but only if the author ID is already known to this pad. This prevents a user
@@ -683,6 +678,14 @@ const handleUserChanges = async (socket:any, message: {
             throw new Error(`Author ${thisSession.author} tried to set unknown author ` +
                             `${opAuthorId} on existing text in changeset ${changeset}`);
           }
+        } else {
+          // Reject '+' ops (inserting new text as another author) and '-' ops (deleting
+          // with another author's attribs). While '-' attribs are discarded from the
+          // document, they are added to the pad's attribute pool by moveOpsToNewPool,
+          // which could be exploited to inject fabricated author IDs into the pool and
+          // bypass the '=' op pool check above.
+          throw new Error(`Author ${thisSession.author} tried to submit changes as author ` +
+                          `${opAuthorId} in changeset ${changeset}`);
         }
       }
     }
