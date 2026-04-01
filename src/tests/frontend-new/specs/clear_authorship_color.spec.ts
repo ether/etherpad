@@ -47,21 +47,23 @@ test("clear authorship colors can be undone to restore author colors", async fun
   await writeToPad(page, padText);
 
   // verify authorship exists on the span
-  const span = padBody.locator('div span').nth(0);
-  await expect(span).toHaveAttribute('class', /author-/);
+  await expect(padBody.locator('div span').first()).toHaveAttribute('class', /author-/);
 
-  await padBody.locator('div').nth(0).focus()
-  await selectAllText(page);
+  // Accept the confirm dialog triggered by clearAuthorship when no text is selected
+  page.on('dialog', dialog => dialog.accept());
+
+  // Click somewhere in the pad to deselect, then clear (triggers whole-pad clear via confirm)
+  await padBody.click();
   await clearAuthorship(page);
 
   // verify authorship is cleared
-  await expect(padBody.locator('div').nth(0)).not.toHaveAttribute('class', /author/);
+  await expect(padBody.locator('div span').first()).toHaveAttribute('class', /^(?!.*author-)/, {timeout: 5000});
 
   // Undo should restore authorship colors
   await undoChanges(page);
 
   // verify authorship is restored and user is not disconnected
-  await expect(padBody.locator('div span').nth(0)).toHaveAttribute('class', /author-/, {timeout: 5000});
+  await expect(padBody.locator('div span').first()).toHaveAttribute('class', /author-/, {timeout: 5000});
   const disconnected = page.locator('.disconnected, .unreachable');
   await expect(disconnected).not.toBeVisible();
 });

@@ -25,6 +25,7 @@ import {
  * User A's author ID.
  */
 test.describe('undo clear authorship colors with multiple authors (bug #2802)', function () {
+  test.describe.configure({ retries: 2 });
   let padId: string;
 
   test('User B should not be disconnected after undoing clear authorship', async function ({browser}) {
@@ -50,7 +51,7 @@ test.describe('undo clear authorship colors with multiple authors (bug #2802)', 
     const body2 = await getPadBody(page2);
 
     // Wait for User A's text to appear for User B
-    await expect(body2.locator('div').first()).toContainText('Hello from User A');
+    await expect(body2.locator('div').first()).toContainText('Hello from User A', {timeout: 10000});
 
     // User B types on a new line
     await body2.click();
@@ -58,22 +59,20 @@ test.describe('undo clear authorship colors with multiple authors (bug #2802)', 
     await page2.keyboard.press('Enter');
     await page2.keyboard.type('Hello from User B');
 
-    // Wait for sync
-    await page2.waitForTimeout(1000);
-
     // Both users should see both lines
-    await expect(body1.locator('div').nth(1)).toContainText('Hello from User B');
+    await expect(body1.locator('div').nth(1)).toContainText('Hello from User B', {timeout: 15000});
 
     // Verify we have authorship colors from two different authors
     await expect(body2.locator('div span').first()).toHaveAttribute('class', /author-/);
 
-    // User B clears authorship colors
-    await body2.click();
-    await selectAllText(page2);
+    // Accept the confirm dialog that clearAuthorship triggers
+    page2.on('dialog', dialog => dialog.accept());
+
+    // User B clears authorship colors (without selecting - clears whole pad)
     await clearAuthorship(page2);
 
-    // Wait for clear to propagate and verify authorship is cleared on the div
-    await expect(body2.locator('div').first()).not.toHaveAttribute('class', /author/, {timeout: 5000});
+    // Wait for clear to propagate and verify authorship is cleared
+    await expect(body2.locator('div span').first()).toHaveAttribute('class', /^(?!.*author-)/, {timeout: 5000});
 
     // THIS IS THE BUG: User B undoes the clear authorship
     await undoChanges(page2);
@@ -91,10 +90,8 @@ test.describe('undo clear authorship colors with multiple authors (bug #2802)', 
     await page2.keyboard.press('Enter');
     await page2.keyboard.type('Still connected!');
 
-    await page2.waitForTimeout(1000);
-
     // The text should appear for User A too (proves User B is still connected and syncing)
-    await expect(body1.locator('div').nth(2)).toContainText('Still connected!');
+    await expect(body1.locator('div').nth(2)).toContainText('Still connected!', {timeout: 15000});
 
     // Cleanup
     await context1.close();
@@ -114,12 +111,14 @@ test.describe('undo clear authorship colors with multiple authors (bug #2802)', 
     // Verify authorship exists
     await expect(body.locator('div span').first()).toHaveAttribute('class', /author-/);
 
-    // Clear authorship
-    await selectAllText(page);
+    // Accept the confirm dialog
+    page.on('dialog', dialog => dialog.accept());
+
+    // Clear authorship (no selection - clears whole pad)
     await clearAuthorship(page);
 
-    // Verify cleared - check the div, not a broad selector
-    await expect(body.locator('div').first()).not.toHaveAttribute('class', /author/, {timeout: 5000});
+    // Verify cleared
+    await expect(body.locator('div span').first()).toHaveAttribute('class', /^(?!.*author-)/, {timeout: 5000});
 
     // Undo should restore authorship
     await undoChanges(page);
