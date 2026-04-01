@@ -119,7 +119,7 @@ jobs:
       -
         name: Install Etherpad plugins
         run: >
-          pnpm install --workspace-root
+          gnpm exec pnpm install --workspace-root
           ep_align
           ep_author_hover
           ep_cursortrace
@@ -233,7 +233,7 @@ jobs:
       -
         name: Install Etherpad plugins
         run: >
-          pnpm install --workspace-root
+          gnpm exec pnpm install --workspace-root
           ep_align
           ep_author_hover
           ep_cursortrace
