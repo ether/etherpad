@@ -262,7 +262,7 @@ class PadUtils {
     }
 
     if (onEscape) {
-      node.on('keydown', (evt) => {
+      node.on('keydown', (evt: JQuery.KeyDownEvent) => {
         if (evt.which === 27) {
           onEscape(evt);
         }
@@ -418,7 +418,7 @@ class PadUtils {
         const errorId = randomString(20);
 
         let msgAlreadyVisible = false;
-        $('.gritter-item .error-msg').each(function () {
+        $('.gritter-item .error-msg').each(function (this: HTMLElement) {
           if ($(this).text() === msg) {
             msgAlreadyVisible = true;
           }
