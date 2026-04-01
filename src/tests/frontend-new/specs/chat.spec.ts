@@ -14,7 +14,8 @@ import {
 import {disableStickyChat, enableStickyChatviaSettings, hideSettings, showSettings} from "../helper/settingsHelper";
 
 
-test.beforeEach(async ({ page })=>{
+test.beforeEach(async ({ page, context })=>{
+    await context.clearCookies();
     await goToNewPad(page);
 })
 
