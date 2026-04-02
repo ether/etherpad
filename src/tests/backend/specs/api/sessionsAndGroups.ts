@@ -421,6 +421,54 @@ describe(__filename, function () {
           });
     });
   });
+  // Regression test for https://github.com/ether/etherpad-lite/issues/5798
+  describe('API: deleteGroup after deleteSession (bug #5798)', function () {
+    let testGroupID: string;
+    let testAuthorID: string;
+    let testSessionID: string;
+
+    it('creates group, author, and session', async function () {
+      let res = await preparedAgent.get(endPoint('createGroup'))
+          .set("Authorization", await generateJWTToken())
+          .expect(200);
+      assert.equal(res.body.code, 0);
+      testGroupID = res.body.data.groupID;
+
+      res = await preparedAgent.get(`${endPoint('createAuthor')}?name=testuser`)
+          .set("Authorization", await generateJWTToken())
+          .expect(200);
+      assert.equal(res.body.code, 0);
+      testAuthorID = res.body.data.authorID;
+
+      res = await preparedAgent.get(
+          `${endPoint('createSession')}?authorID=${testAuthorID}&groupID=${testGroupID}` +
+          '&validUntil=999999999999')
+          .set("Authorization", await generateJWTToken())
+          .expect(200);
+      assert.equal(res.body.code, 0);
+      testSessionID = res.body.data.sessionID;
+    });
+
+    it('deleteSession succeeds', async function () {
+      await preparedAgent.get(`${endPoint('deleteSession')}?sessionID=${testSessionID}`)
+          .set("Authorization", await generateJWTToken())
+          .expect(200)
+          .expect((res: any) => {
+            assert.equal(res.body.code, 0);
+          });
+    });
+
+    it('deleteGroup succeeds after session was already deleted', async function () {
+      // This used to fail with "sessionID does not exist" because deleteSession
+      // left a null entry in group2sessions that deleteGroup tried to re-delete.
+      await preparedAgent.get(`${endPoint('deleteGroup')}?groupID=${testGroupID}`)
+          .set("Authorization", await generateJWTToken())
+          .expect(200)
+          .expect((res: any) => {
+            assert.equal(res.body.code, 0);
+          });
+    });
+  });
 });
 
 function makeid() {
