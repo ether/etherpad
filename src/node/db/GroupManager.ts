@@ -59,8 +59,10 @@ exports.deleteGroup = async (groupID: string): Promise<void> => {
 
   // Delete associated sessions in parallel. This should be done before deleting the group2sessions
   // record because deleting a session updates the group2sessions record.
+  // Filter out already-deleted sessions: deleteSession sets the value to null/undefined via setSub,
+  // but the key remains in the object. See https://github.com/ether/etherpad-lite/issues/5798
   const {sessionIDs = {}} = await db.get(`group2sessions:${groupID}`) || {};
-  await Promise.all(Object.keys(sessionIDs).map(async (sessionId) => {
+  await Promise.all(Object.keys(sessionIDs).filter((id) => sessionIDs[id]).map(async (sessionId) => {
     await sessionManager.deleteSession(sessionId);
   }));
 
