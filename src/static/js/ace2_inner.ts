@@ -2307,14 +2307,23 @@ function Ace2Inner(editorInfo, cssManagers) {
       let position = 1;
       let curLevel = level;
       let listType;
+      let prevType = '';
       // loop over the lines
       while ((listType = getLineListType(line))) {
         // apply new num
         listType = /([a-z]+)([0-9]+)/.exec(listType);
         curLevel = Number(listType[2]);
+        const curType = listType[1];
         if (isNaN(curLevel) || listType[0] === 'indent') {
           return line;
         } else if (curLevel === level) {
+          // Reset position when switching between list types at the same level
+          // (e.g., bullet -> number). See https://github.com/ether/etherpad-lite/issues/5160
+          if (prevType && prevType !== curType) {
+            position = 1;
+          }
+          prevType = curType;
+
           buildKeepRange(rep, builder, loc, (loc = [line, 0]));
           buildKeepRange(rep, builder, loc, (loc = [line, 1]), [
             ['start', position],
