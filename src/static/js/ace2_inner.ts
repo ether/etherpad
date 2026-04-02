@@ -2840,35 +2840,18 @@ function Ace2Inner(editorInfo, cssManagers) {
             const numberOfLinesInViewport = newVisibleLineRange[1] - newVisibleLineRange[0];
 
             if (isPageUp && padShortcutEnabled.pageUp) {
-              // move to the bottom line +1 in the viewport (essentially skipping over a page)
-              rep.selEnd[0] -= numberOfLinesInViewport;
-              // move to the bottom line +1 in the viewport (essentially skipping over a page)
               rep.selStart[0] -= numberOfLinesInViewport;
+              rep.selEnd[0] -= numberOfLinesInViewport;
             }
 
-            // if we hit page down
             if (isPageDown && padShortcutEnabled.pageDown) {
-              // If the new viewpoint position is actually further than where we are right now
-              if (rep.selEnd[0] >= oldVisibleLineRange[0]) {
-                // dont go further in the page down than what's visible IE go from 0 to 50
-                //  if 50 is visible on screen but dont go below that else we miss content
-                rep.selStart[0] = oldVisibleLineRange[1] - 1;
-                // dont go further in the page down than what's visible IE go from 0 to 50
-                // if 50 is visible on screen but dont go below that else we miss content
-                rep.selEnd[0] = oldVisibleLineRange[1] - 1;
-              }
+              rep.selStart[0] += numberOfLinesInViewport;
+              rep.selEnd[0] += numberOfLinesInViewport;
             }
 
-            // ensure min and max
-            if (rep.selEnd[0] < 0) {
-              rep.selEnd[0] = 0;
-            }
-            if (rep.selStart[0] < 0) {
-              rep.selStart[0] = 0;
-            }
-            if (rep.selEnd[0] >= linesCount) {
-              rep.selEnd[0] = linesCount - 1;
-            }
+            // clamp to valid line range
+            rep.selStart[0] = Math.max(0, Math.min(rep.selStart[0], linesCount - 1));
+            rep.selEnd[0] = Math.max(0, Math.min(rep.selEnd[0], linesCount - 1));
             updateBrowserSelectionFromRep();
             // get the current caret selection, can't use rep. here because that only gives
             // us the start position not the current
