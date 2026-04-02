@@ -26,7 +26,7 @@
 const makeCSSManager = require('./cssmanager').makeCSSManager;
 const domline = require('./domline').domline;
 import AttribPool from './AttributePool';
-import {compose, deserializeOps, inverse, moveOpsToNewPool, mutateAttributionLines, mutateTextLines, splitAttributionLines, splitTextLines, unpack} from './Changeset';
+import {compose, deserializeOps, identity, inverse, isIdentity, moveOpsToNewPool, mutateAttributionLines, mutateTextLines, splitAttributionLines, splitTextLines, unpack} from './Changeset';
 const attributes = require('./attributes');
 const linestylefilter = require('./linestylefilter').linestylefilter;
 const colorutils = require('./colorutils').colorutils;
@@ -201,7 +201,9 @@ const loadBroadcastJS = (socket, sendSocketMsg, fireWhenAllScriptsAreLoaded, Bro
     revisionInfo.addChangeset(
         revision, revision + 1, changesetForward, changesetBackward, timeDelta);
     BroadcastSlider.setSliderLength(revisionInfo.latest);
-    if (broadcasting) applyChangeset(changesetForward, revision + 1, false, timeDelta);
+    if (broadcasting && !isIdentity(changesetForward)) {
+      applyChangeset(changesetForward, revision + 1, false, timeDelta);
+    }
   };
 
   /*
@@ -276,7 +278,11 @@ const loadBroadcastJS = (socket, sendSocketMsg, fireWhenAllScriptsAreLoaded, Bro
         changeset = compose(changeset, cs[i], padContents.apool);
         timeDelta += path.times[i];
       }
-      if (changeset) applyChangeset(changeset, path.rev, true, timeDelta);
+      // Skip identity changesets — they represent no actual change and can cause
+      // errors during timeslider playback. See https://github.com/ether/etherpad-lite/issues/5214
+      if (changeset && !isIdentity(changeset)) {
+        applyChangeset(changeset, path.rev, true, timeDelta);
+      }
     } else if (path.status === 'partial') {
       // callback is called after changeset information is pulled from server
       // this may never get called, if the changeset has already been loaded
@@ -294,7 +300,9 @@ const loadBroadcastJS = (socket, sendSocketMsg, fireWhenAllScriptsAreLoaded, Bro
         changeset = compose(changeset, cs[i], padContents.apool);
         timeDelta += path.times[i];
       }
-      if (changeset) applyChangeset(changeset, path.rev, true, timeDelta);
+      if (changeset && !isIdentity(changeset)) {
+        applyChangeset(changeset, path.rev, true, timeDelta);
+      }
 
       // Loading changeset history for new revision
       loadChangesetsForRevision(newRevision, update);
