@@ -55,12 +55,72 @@ pnpm --filter ep_etherpad-lite run prod         # Start production server
 
 ### Testing & Validation
 - **Requirement:** Every bug fix MUST include a regression test in the same commit.
-- **Backend Tests:** `pnpm --filter ep_etherpad-lite run test`
-- **Frontend E2E Tests:** `pnpm --filter ep_etherpad-lite run test-ui`
-- **Admin Tests:** `pnpm --filter ep_etherpad-lite run test-admin`
+- **Always run tests locally before pushing to CI.**
 - **Linting:** `pnpm run lint`
 - **Type Check:** `pnpm --filter ep_etherpad-lite run ts-check`
 - **Build:** `pnpm run build:etherpad` before production deployment
+
+#### Running Backend Tests Locally
+
+Backend tests use Mocha with tsx and run against a real server instance (started automatically by the test harness). No separate server process is needed.
+
+```bash
+# Run ALL backend tests (includes plugin tests)
+pnpm --filter ep_etherpad-lite run test
+
+# Run only utility tests (faster, ~5s timeout)
+pnpm --filter ep_etherpad-lite run test-utils
+
+# Run a single test file directly
+cd src && cross-env NODE_ENV=production npx mocha --import=tsx --timeout 120000 tests/backend/specs/YOUR_TEST.ts
+
+# Run unit tests (Vitest)
+cd src && npx vitest
+```
+
+- Tests run with `NODE_ENV=production`.
+- Default timeout is 120 seconds per test.
+- Test files live in `src/tests/backend/specs/`.
+- Plugin backend tests live in `src/node_modules/ep_*/static/tests/backend/specs/` and are included automatically.
+
+#### Running Frontend E2E Tests Locally
+
+Frontend tests use Playwright. **You must have a running Etherpad server** before launching them — the Playwright config does not auto-start the server.
+
+```bash
+# 1. Start the dev server in a separate terminal
+pnpm --filter ep_etherpad-lite run dev
+
+# 2. Install Playwright browsers (first time only)
+cd src && npx playwright install
+
+# 3. Run frontend E2E tests
+pnpm --filter ep_etherpad-lite run test-ui
+
+# 4. Run with interactive Playwright UI (useful for debugging)
+pnpm --filter ep_etherpad-lite run test-ui:ui
+
+# Run a single test file
+cd src && cross-env NODE_ENV=production npx playwright test tests/frontend-new/specs/YOUR_TEST.spec.ts
+```
+
+- Tests expect the server at `localhost:9001`.
+- Test files live in `src/tests/frontend-new/specs/`.
+- Runs against chromium, firefox, and webkit by default.
+- Playwright config is at `src/playwright.config.ts`.
+
+#### Running Admin Panel Tests Locally
+
+```bash
+# Requires a running server (same as frontend tests)
+pnpm --filter ep_etherpad-lite run test-admin
+
+# Interactive UI mode
+pnpm --filter ep_etherpad-lite run test-admin:ui
+```
+
+- Admin tests run with `--workers 1` (sequential) on chromium and firefox only.
+- Test files live in `src/tests/frontend-new/admin-spec/`.
 
 ### Backend Test Auth
 Tests use JWT authentication, not API keys. Pattern:
