@@ -93,9 +93,9 @@ Frontend tests use Playwright. **You must have a running Etherpad server** befor
 # Check which browsers are installed
 cd src && npx playwright install --dry-run
 
-# Install all browsers (chromium, firefox, webkit) and their system dependencies
+# Install all browsers and their system dependencies (must run from src/)
 cd src && npx playwright install
-sudo npx playwright install-deps
+cd src && sudo npx playwright install-deps
 ```
 
 If `sudo` is unavailable, install system dependencies for webkit manually:
