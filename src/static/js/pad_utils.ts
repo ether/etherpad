@@ -395,6 +395,7 @@ class PadUtils {
    * particular author.
    */
   generateAuthorToken = () => `t.${randomString()}`
+  _seenErrors: Set<string> = new Set();
   setupGlobalExceptionHandler = () => {
     if (this.globalExceptionHandler == null) {
       this.globalExceptionHandler = (e: any) => {
@@ -417,18 +418,16 @@ class PadUtils {
         }
         const errorId = randomString(20);
 
-        let msgAlreadyVisible = false;
-        $('.gritter-item .error-msg').each(function (this: HTMLElement) {
-          if ($(this).text() === msg) {
-            msgAlreadyVisible = true;
-          }
-        });
+        const errorKey = `${type}:${msg}:${url}:${linenumber}`;
+        const msgAlreadyVisible = this._seenErrors.has(errorKey);
 
         if (!msgAlreadyVisible) {
-          // In production mode, hide internal error details (file paths, line numbers,
-          // error messages) from end users. Only show a generic reload message.
+          this._seenErrors.add(errorKey);
+          // Hide internal error details from end users unless explicitly in development mode.
+          // Default to hiding details (secure by default) since clientVars.mode may not be
+          // available before the CLIENT_VARS handshake completes.
           // See https://github.com/ether/etherpad-lite/issues/5765
-          const isProduction = (window as any).clientVars?.mode === 'production';
+          const isProduction = (window as any).clientVars?.mode !== 'development';
 
           const errorMsg = isProduction
             ? [
