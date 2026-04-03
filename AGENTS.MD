@@ -87,17 +87,33 @@ cd src && npx vitest
 
 Frontend tests use Playwright. **You must have a running Etherpad server** before launching them — the Playwright config does not auto-start the server.
 
+**Before running frontend or admin tests, ensure Playwright browsers are installed.** Check and install if needed:
+
+```bash
+# Check which browsers are installed
+cd src && npx playwright install --dry-run
+
+# Install all browsers (chromium, firefox, webkit) and their system dependencies
+cd src && npx playwright install
+sudo npx playwright install-deps
+```
+
+If `sudo` is unavailable, install system dependencies for webkit manually:
+```bash
+# Check which system libraries are missing for webkit
+ldd ~/.cache/ms-playwright/webkit-*/minibrowser-wpe/MiniBrowser 2>&1 | grep "not found"
+```
+
+If browsers or system dependencies are missing, tests will fail silently or timeout — **always verify browser installation before debugging test failures.**
+
 ```bash
 # 1. Start the dev server in a separate terminal
 pnpm --filter ep_etherpad-lite run dev
 
-# 2. Install Playwright browsers (first time only)
-cd src && npx playwright install
-
-# 3. Run frontend E2E tests
+# 2. Run frontend E2E tests
 pnpm --filter ep_etherpad-lite run test-ui
 
-# 4. Run with interactive Playwright UI (useful for debugging)
+# 3. Run with interactive Playwright UI (useful for debugging)
 pnpm --filter ep_etherpad-lite run test-ui:ui
 
 # Run a single test file
@@ -112,7 +128,7 @@ cd src && cross-env NODE_ENV=production npx playwright test tests/frontend-new/s
 #### Running Admin Panel Tests Locally
 
 ```bash
-# Requires a running server (same as frontend tests)
+# Requires a running server and Playwright browsers installed (same as frontend tests)
 pnpm --filter ep_etherpad-lite run test-admin
 
 # Interactive UI mode
