@@ -81,7 +81,7 @@ cd src && npx vitest
 - Tests run with `NODE_ENV=production`.
 - Default timeout is 120 seconds per test.
 - Test files live in `src/tests/backend/specs/`.
-- Plugin backend tests live in `src/node_modules/ep_*/static/tests/backend/specs/` and are included automatically.
+- Plugin backend tests live in `node_modules/ep_*/static/tests/backend/specs/` (at repo root) and are included automatically by the test script.
 
 #### Running Frontend E2E Tests Locally
 
@@ -122,7 +122,7 @@ cd src && cross-env NODE_ENV=production npx playwright test tests/frontend-new/s
 
 - Tests expect the server at `localhost:9001`.
 - Test files live in `src/tests/frontend-new/specs/`.
-- Runs against chromium, firefox, and webkit by default.
+- Runs against chromium and firefox by default (webkit is disabled).
 - Playwright config is at `src/playwright.config.ts`.
 
 #### Running Admin Panel Tests Locally
