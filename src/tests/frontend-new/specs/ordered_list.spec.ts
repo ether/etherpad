@@ -54,6 +54,44 @@ test.describe('ordered_list.js', function () {
     });
   });
 
+  // Regression test for https://github.com/ether/etherpad-lite/issues/5160
+  test('issue #5160 ordered list increments correctly after unordered list', async function ({page}) {
+    const padBody = await getPadBody(page);
+    await clearPadContent(page);
+
+    // Create two unordered list items
+    const $insertUnorderedButton = page.locator('.buttonicon-insertunorderedlist');
+    await $insertUnorderedButton.click({force: true});
+    await writeToPad(page, 'bullet a');
+    await page.keyboard.press('Enter');
+    await writeToPad(page, 'bullet b');
+    await page.keyboard.press('Enter');
+
+    // Now switch to ordered list for the next items
+    const $insertOrderedButton = page.locator('.buttonicon-insertorderedlist');
+    await $insertOrderedButton.click({force: true});
+    await writeToPad(page, 'number 1');
+    await page.keyboard.press('Enter');
+    await writeToPad(page, 'number 2');
+    await page.keyboard.press('Enter');
+    await writeToPad(page, 'number 3');
+
+    // Wait for renumbering
+    await page.waitForTimeout(500);
+
+    // The first ordered list item (line 3) should have start=1
+    const thirdLine = padBody.locator('div').nth(2);
+    await expect(thirdLine.locator('ol')).toHaveAttribute('start', '1', {timeout: 5000});
+
+    // The second ordered list item (line 4) should have start=2
+    const fourthLine = padBody.locator('div').nth(3);
+    await expect(fourthLine.locator('ol')).toHaveAttribute('start', '2', {timeout: 5000});
+
+    // The third ordered list item (line 5) should have start=3
+    const fifthLine = padBody.locator('div').nth(4);
+    await expect(fifthLine.locator('ol')).toHaveAttribute('start', '3', {timeout: 5000});
+  });
+
   test.describe('Pressing Tab in an OL increases and decreases indentation', function () {
 
     test('indent and de-indent list item with keypress', async function ({page}) {
