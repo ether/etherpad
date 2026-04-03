@@ -19,43 +19,28 @@
       el.remove();
     }
 
-    // Generate an errorId for correlation between user reports and server logs.
-    const errorId = String(Date.now()) + Math.random().toString(36).slice(2, 10);
-
     const box = document.body;
     box.textContent = '';
     const summary = document.createElement('p');
     box.appendChild(summary);
-    summary.appendChild(document.createTextNode('An error occurred while loading the page.'));
-    const reload = document.createElement('p');
-    box.appendChild(reload);
-    reload.appendChild(document.createTextNode(
-      'Please press Ctrl+F5 to reload. If the problem persists, contact your webmaster.'));
-    const errorIdEl = document.createElement('p');
-    box.appendChild(errorIdEl);
-    errorIdEl.style.fontSize = '0.8em';
-    errorIdEl.appendChild(document.createTextNode(`ErrorId: ${errorId}`));
-
-    // Log the error details to the console for debugging, but don't show them to the user.
-    // See https://github.com/ether/etherpad-lite/issues/5765
-    console.error('Page load error:', msg, `\n  at ${url}:${line}:${col}`, err?.stack || err);
-
-    // Report the error to the server for monitoring/debugging.
-    try {
-      const formData = new FormData();
-      formData.append('errorInfo', JSON.stringify({
-        errorId,
-        type: 'Page load error',
-        msg,
-        url: window.location.href,
-        source: url,
-        linenumber: line,
-        column: col,
-        userAgent: navigator.userAgent,
-        stack: err?.stack,
-      }));
-      navigator.sendBeacon('../jserror', formData);
-    } catch (e) { /* best effort */ }
+    summary.appendChild(document.createTextNode('An error occurred while loading the page:'));
+    const msgBlock = document.createElement('blockquote');
+    box.appendChild(msgBlock);
+    msgBlock.style.fontWeight = 'bold';
+    msgBlock.appendChild(document.createTextNode(msg));
+    const loc = document.createElement('p');
+    box.appendChild(loc);
+    loc.appendChild(document.createTextNode(`in ${url}`));
+    loc.appendChild(document.createElement('br'));
+    loc.appendChild(document.createTextNode(`at line ${line}:${col}`));
+    const stackSummary = document.createElement('p');
+    box.appendChild(stackSummary);
+    stackSummary.appendChild(document.createTextNode('Stack trace:'));
+    const stackBlock = document.createElement('blockquote');
+    box.appendChild(stackBlock);
+    const stack = document.createElement('pre');
+    stackBlock.appendChild(stack);
+    stack.appendChild(document.createTextNode(err.stack || err.toString()));
 
     if (typeof originalHandler === 'function') originalHandler(...args);
   };
