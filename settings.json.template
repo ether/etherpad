@@ -386,9 +386,9 @@
    */
   "cookie": {
     /*
-     * Prefix for all cookie names set by Etherpad. Change this if Etherpad's
-     * cookie names conflict with those of another application on the same domain.
-     * Default: "ep_"
+     * Prefix for all cookie names set by Etherpad. Set this to "ep_" or similar
+     * if Etherpad's cookie names (token, sessionID, etc.) conflict with those
+     * of another application on the same domain. Default: "" (no prefix).
      */
     // "prefix": "ep_",
 
