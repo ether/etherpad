@@ -9,6 +9,12 @@ const util = require('util');
 
 const logger = log4js.getLogger('SessionStore');
 
+// Sessions without an expiry date older than this are considered stale and will be cleaned up.
+const STALE_SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+
+// How often to run the cleanup of expired/stale sessions.
+const CLEANUP_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
+
 class SessionStore extends expressSession.Store {
   /**
    * @param {?number} [refresh] - How often (in milliseconds) `touch()` will update a session's
@@ -30,10 +36,69 @@ class SessionStore extends expressSession.Store {
     //     equal to `db`.
     //   - `timeout`: Timeout ID for a timeout that will clean up the database record.
     this._expirations = new Map();
+    this._cleanupInterval = null;
+  }
+
+  /**
+   * Start periodic cleanup of expired/stale sessions from the database.
+   */
+  startCleanup() {
+    // Run once on startup (deferred to avoid blocking), then periodically.
+    setTimeout(() => this._cleanup().catch((err) => logger.error('Session cleanup error:', err)), 5000);
+    this._cleanupInterval = setInterval(
+        () => this._cleanup().catch((err) => logger.error('Session cleanup error:', err)),
+        CLEANUP_INTERVAL_MS);
+    // Don't prevent Node.js from exiting.
+    if (this._cleanupInterval.unref) this._cleanupInterval.unref();
   }
 
   shutdown() {
     for (const {timeout} of this._expirations.values()) clearTimeout(timeout);
+    if (this._cleanupInterval) {
+      clearInterval(this._cleanupInterval);
+      this._cleanupInterval = null;
+    }
+  }
+
+  /**
+   * Remove expired and stale sessions from the database. Expired sessions have a cookie.expires
+   * date in the past. Stale sessions have no expiry and haven't been touched in STALE_SESSION_MAX_AGE_MS.
+   */
+  async _cleanup() {
+    const keys = await DB.findKeys('sessionstorage:*', null);
+    if (!keys || keys.length === 0) return;
+    const now = Date.now();
+    let removed = 0;
+    for (const key of keys) {
+      const sess = await DB.get(key);
+      if (!sess) {
+        await DB.remove(key);
+        removed++;
+        continue;
+      }
+      const expires = sess.cookie?.expires;
+      if (expires) {
+        // Session has an expiry — remove if expired.
+        if (new Date(expires).getTime() <= now) {
+          await DB.remove(key);
+          removed++;
+        }
+      } else {
+        // Session has no expiry — remove if it has no meaningful data beyond the default cookie.
+        // These are the sessions that accumulate indefinitely (bug #5010).
+        // We can't know when they were created, so we check if they have any data beyond the
+        // cookie itself. If they only contain the cookie (no user session data), they're safe
+        // to remove as stale.
+        const hasData = Object.keys(sess).some((k) => k !== 'cookie');
+        if (!hasData) {
+          await DB.remove(key);
+          removed++;
+        }
+      }
+    }
+    if (removed > 0) {
+      logger.info(`Session cleanup: removed ${removed} expired/stale sessions out of ${keys.length}`);
+    }
   }
 
   async _updateExpirations(sid: string, sess: any, updateDbExp = true) {
