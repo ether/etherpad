@@ -209,7 +209,7 @@ exports.restartServer = async () => {
     saveUninitialized: false,
     // Set the cookie name to a javascript identifier compatible string. Makes code handling it
     // cleaner :)
-    name: 'express_sid',
+    name: `${settings.cookie.prefix}express_sid`,
     cookie: {
       maxAge: sessionLifetime || undefined, // Convert 0 to null.
       sameSite: settings.cookie.sameSite,

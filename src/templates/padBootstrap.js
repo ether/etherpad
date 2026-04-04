@@ -7,6 +7,7 @@
     // This is needed to fetch /pluginfw/plugin-definitions.json, which happens before the server
     // sends the CLIENT_VARS message.
     randomVersionString: <%-JSON.stringify(settings.randomVersionString)%>,
+    cookiePrefix: <%-JSON.stringify(settings.cookie.prefix)%>,
   };
 
   // Allow other frames to access this frame's modules.

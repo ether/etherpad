@@ -252,6 +252,7 @@ export type SettingsType = {
   trustProxy: boolean,
   cookie: {
     keyRotationInterval: number,
+    prefix: string,
     sameSite: boolean | "lax" | "strict" | "none" | undefined,
     sessionLifetime: number,
     sessionRefreshInterval: number,
@@ -530,6 +531,7 @@ const settings: SettingsType = {
  */
   cookie: {
     keyRotationInterval: 1 * 24 * 60 * 60 * 1000,
+    prefix: 'ep_',
     sameSite: 'lax',
     sessionLifetime: 10 * 24 * 60 * 60 * 1000,
     sessionRefreshInterval: 1 * 24 * 60 * 60 * 1000,

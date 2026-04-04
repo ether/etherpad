@@ -5,6 +5,7 @@ window.clientVars = {
   // This is needed to fetch /pluginfw/plugin-definitions.json, which happens before the server
   // sends the CLIENT_VARS message.
   randomVersionString: "7a7bdbad",
+  cookiePrefix: "ep_",
 };
 
 (async () => {

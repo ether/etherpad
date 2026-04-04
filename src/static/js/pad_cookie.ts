@@ -21,7 +21,8 @@ import {Cookies} from "./pad_utils";
 
 exports.padcookie = new class {
   constructor() {
-    this.cookieName_ = window.location.protocol === 'https:' ? 'prefs' : 'prefsHttp';
+    const prefix = (window as any).clientVars?.cookiePrefix || '';
+    this.cookieName_ = prefix + (window.location.protocol === 'https:' ? 'prefs' : 'prefsHttp');
   }
 
   init() {

@@ -1058,6 +1058,7 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
             settings.scrollWhenFocusLineIsOutOfViewport.percentageToScrollWhenUserPressesArrowUp,
       },
       initialChangesets: [], // FIXME: REMOVE THIS SHIT,
+      cookiePrefix: settings.cookie.prefix,
       mode: process.env.NODE_ENV
     };
 

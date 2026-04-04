@@ -48,10 +48,11 @@ const init = () => {
     document.title = `${padId.replace(/_+/g, ' ')} | ${document.title}`;
 
     // ensure we have a token
-    token = Cookies.get('token');
+    const cp = (window as any).clientVars?.cookiePrefix || '';
+    token = Cookies.get(`${cp}token`) || Cookies.get('token');
     if (token == null) {
       token = `t.${randomString()}`;
-      Cookies.set('token', token, {expires: 60});
+      Cookies.set(`${cp}token`, token, {expires: 60});
     }
 
     socket = socketio.connect(exports.baseURL, '/', {query: {padId}});

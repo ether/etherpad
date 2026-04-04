@@ -386,6 +386,13 @@
    */
   "cookie": {
     /*
+     * Prefix for all cookie names set by Etherpad. Change this if Etherpad's
+     * cookie names conflict with those of another application on the same domain.
+     * Default: "ep_"
+     */
+    // "prefix": "ep_",
+
+    /*
      * How often (in milliseconds) the key used to sign the express_sid cookie
      * should be rotated. Long rotation intervals reduce signature verification
      * overhead (because there are fewer historical keys to check) and database
