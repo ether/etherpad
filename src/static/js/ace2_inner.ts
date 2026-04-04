@@ -2350,6 +2350,7 @@ function Ace2Inner(editorInfo, cssManagers) {
   };
   editorInfo.ace_renumberList = renumberList;
 
+  let _skipRenumber = false;
   const setLineListType = (lineNum, listType) => {
     if (listType === '') {
       documentAttributeManager.removeAttributeOnLine(lineNum, listAttributeName);
@@ -2357,6 +2358,8 @@ function Ace2Inner(editorInfo, cssManagers) {
     } else {
       documentAttributeManager.setAttributeOnLine(lineNum, listAttributeName, listType);
     }
+
+    if (_skipRenumber) return;
 
     // if the list has been removed, it is necessary to renumber
     // starting from the *next* line because the list may have been
@@ -2430,7 +2433,15 @@ function Ace2Inner(editorInfo, cssManagers) {
       }
     }
 
+    _skipRenumber = true;
     for (const mod of mods) setLineListType(mod[0], mod[1]);
+    _skipRenumber = false;
+    // Renumber once after all lines have been updated.
+    if (mods.length > 0) {
+      if (renumberList(mods[0][0] + 1) == null) {
+        renumberList(mods[0][0]);
+      }
+    }
     return true;
   };
   editorInfo.ace_doIndentOutdent = doIndentOutdent;
@@ -3413,7 +3424,15 @@ function Ace2Inner(editorInfo, cssManagers) {
       }
     }
 
+    _skipRenumber = true;
     for (const mod of mods) setLineListType(mod[0], mod[1]);
+    _skipRenumber = false;
+    // Renumber once after all lines have been updated.
+    if (mods.length > 0) {
+      if (renumberList(mods[0][0] + 1) == null) {
+        renumberList(mods[0][0]);
+      }
+    }
   };
 
   const doInsertUnorderedList = () => {

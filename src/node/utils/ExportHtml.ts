@@ -388,22 +388,15 @@ const getHTMLFromAtext = async (pad:PadType, atext: AText, authorColors?: string
             }
 
             if (line.listTypeName === 'number') {
-              // We introduce line.start here, this is useful for continuing
-              // Ordered list line numbers
-              // in case you have a bullet in a list IE you Want
-              // 1. hello
-              //   * foo
-              // 2. world
-              // Without this line.start logic it would be
-              // 1. hello * foo 1. world because the bullet would kill the OL
-
-              // TODO: This logic could also be used to continue OL with indented content
-              // but that's a job for another day....
               if (line.start) {
                 pieces.push(`<ol start="${Number(line.start)}" class="${line.listTypeName}">`);
               } else {
                 pieces.push(`<ol class="${line.listTypeName}">`);
               }
+            } else if (line.listTypeName === 'indent') {
+              // Indent lines are plain indented text, not list items.
+              // Use a ul with list-style-type:none so they don't show bullets.
+              pieces.push(`<ul class="${line.listTypeName}" style="list-style-type: none;">`);
             } else {
               pieces.push(`<ul class="${line.listTypeName}">`);
             }
