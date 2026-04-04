@@ -125,6 +125,7 @@ class Pad {
       authorId && authorManager.addPad(authorId, this.id),
       hooks.aCallAll(hook, {
         pad: this,
+        padId: this.id,
         authorId,
         get author() {
           pad_utils.warnDeprecated(`${hook} hook author context is deprecated; use authorId instead`);
