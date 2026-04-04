@@ -1066,6 +1066,13 @@ export const reloadSettings = () => {
             'use automatic key rotation instead (see the cookie.keyRotationInterval setting).');
     }
 
+    // Validate cookie prefix to prevent header injection via cookie names
+    if (settings.cookie.prefix && !/^[a-zA-Z0-9_-]*$/.test(settings.cookie.prefix)) {
+      logger.error(`cookie.prefix "${settings.cookie.prefix}" contains invalid characters. ` +
+          'Only alphanumeric characters, hyphens, and underscores are allowed. Using empty prefix.');
+      settings.cookie.prefix = '';
+    }
+
     if (settings.dbType === 'dirty') {
         const dirtyWarning = 'DirtyDB is used. This is not recommended for production.';
         if (!settings.suppressErrorsInPadText) {
