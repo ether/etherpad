@@ -2689,22 +2689,25 @@ function Ace2Inner(editorInfo, cssManagers) {
         if (!specialHandled && isTypeForSpecialKey &&
             keyCode === 27 &&
             padShortcutEnabled.esc) {
-          // Escape key: close gritter notifications and move focus to the toolbar
-          // so keyboard-only users can escape the editor (WCAG 2.1.2).
+          // Escape key: if gritter popups are visible, close them and stay in editor.
+          // Otherwise, move focus to the toolbar (WCAG 2.1.2 keyboard trap escape).
           fastIncorp(4);
           evt.preventDefault();
           specialHandled = true;
 
+          const hasGritters = window.$('.gritter-item').length > 0;
           window.$.gritter.removeAll();
 
-          // Move focus to the first toolbar button so the user can navigate
-          // away from the editor with Tab.
-          try {
-            const toolbar = window.parent.document.querySelector('[role="toolbar"]');
-            const firstButton = toolbar?.querySelector('button');
-            if (firstButton) firstButton.focus();
-          } catch (e) {
-            // Cross-origin frame restrictions — ignore.
+          if (!hasGritters) {
+            // No popups to dismiss — move focus to the toolbar so the user
+            // can navigate away from the editor with Tab.
+            try {
+              const toolbar = window.parent.document.querySelector('[role="toolbar"]');
+              const firstButton = toolbar?.querySelector('button');
+              if (firstButton) firstButton.focus();
+            } catch (e) {
+              // Cross-origin frame restrictions — ignore.
+            }
           }
         }
         if (!specialHandled && isTypeForCmdKey &&
