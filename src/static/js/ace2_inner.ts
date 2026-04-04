@@ -464,6 +464,7 @@ function Ace2Inner(editorInfo, cssManagers) {
   const setEditable = (newVal) => {
     isEditable = newVal;
     targetBody.contentEditable = isEditable ? 'true' : 'false';
+    targetBody.setAttribute('aria-readonly', isEditable ? 'false' : 'true');
     targetBody.classList.toggle('static', !isEditable);
   };
 
