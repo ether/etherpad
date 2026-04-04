@@ -2689,15 +2689,23 @@ function Ace2Inner(editorInfo, cssManagers) {
         if (!specialHandled && isTypeForSpecialKey &&
             keyCode === 27 &&
             padShortcutEnabled.esc) {
-          // prevent esc key;
-          // in mozilla versions 14-19 avoid reconnecting pad.
-
+          // Escape key: close gritter notifications and move focus to the toolbar
+          // so keyboard-only users can escape the editor (WCAG 2.1.2).
           fastIncorp(4);
           evt.preventDefault();
           specialHandled = true;
 
-          // close all gritters when the user hits escape key
           window.$.gritter.removeAll();
+
+          // Move focus to the first toolbar button so the user can navigate
+          // away from the editor with Tab.
+          try {
+            const toolbar = window.parent.document.querySelector('[role="toolbar"]');
+            const firstButton = toolbar?.querySelector('button');
+            if (firstButton) firstButton.focus();
+          } catch (e) {
+            // Cross-origin frame restrictions — ignore.
+          }
         }
         if (!specialHandled && isTypeForCmdKey &&
             /* Do a saved revision on ctrl S */

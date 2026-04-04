@@ -284,6 +284,9 @@ const Ace2Editor = function () {
     // <body> tag
     innerDocument.body.id = 'innerdocbody';
     innerDocument.body.classList.add('innerdocbody');
+    innerDocument.body.setAttribute('role', 'textbox');
+    innerDocument.body.setAttribute('aria-multiline', 'true');
+    innerDocument.body.setAttribute('aria-label', 'Pad content');
     innerDocument.body.setAttribute('spellcheck', 'false');
     innerDocument.body.appendChild(innerDocument.createTextNode('\u00A0')); // &nbsp;
 /*

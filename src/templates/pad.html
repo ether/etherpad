@@ -84,7 +84,8 @@
       <!--- PAD EDITOR (in iframe) -->
       <!----------------------------->
 
-      <div id="editorcontainer" class="editorcontainer"></div>
+      <div id="editorcontainer" class="editorcontainer" aria-label="Document editor" aria-describedby="editor-keyboard-hint"></div>
+      <div id="editor-keyboard-hint" class="sr-only">Press Escape to exit the editor. Press Alt+F9 to access the toolbar.</div>
 
       <div id="editorloadingbox">
         <% e.begin_block("permissionDenied"); %>
@@ -363,7 +364,7 @@
                   <input type="text" id="myusernameedit" disabled="disabled" data-l10n-id="pad.userlist.entername">
                 </div>
             </div>
-            <div id="otherusers" aria-role="document">
+            <div id="otherusers" role="document">
                 <table id="otheruserstable" cellspacing="0" cellpadding="0" border="0">
                     <tr><td></td></tr>
                 </table>
