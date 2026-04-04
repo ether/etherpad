@@ -3268,18 +3268,24 @@ function Ace2Inner(editorInfo, cssManagers) {
 
         // Save attributes of lines adjacent to the dragged content
         savedLineAttrs = [];
-        const startLine = rep.lines.indexOfEntry(rep.lines.atKey(firstLineSelected.id));
-        const endLine = rep.lines.indexOfEntry(rep.lines.atKey(lastLineSelected.id));
+        const startEntry = firstLineSelected.id && rep.lines.atKey(firstLineSelected.id);
+        const endEntry = lastLineSelected.id && rep.lines.atKey(lastLineSelected.id);
+        if (!startEntry || !endEntry) {
+          // Can't determine line numbers — skip attribute saving
+          savedLineAttrs = null;
+        }
+        const startLine = startEntry ? rep.lines.indexOfEntry(startEntry) : -1;
+        const endLine = endEntry ? rep.lines.indexOfEntry(endEntry) : -1;
         // Save attributes of lines adjacent to the selection, including lines
         // with NO list type (empty string). A line with no list type can get
         // corrupted to inherit the dragged line's type during browser merging.
-        if (endLine + 1 < rep.lines.length()) {
+        if (savedLineAttrs && endLine >= 0 && endLine + 1 < rep.lines.length()) {
           savedLineAttrs.push({
             lineNum: endLine + 1,
             listType: getLineListType(endLine + 1) || '',
           });
         }
-        if (startLine > 0) {
+        if (savedLineAttrs && startLine > 0) {
           savedLineAttrs.push({
             lineNum: startLine - 1,
             listType: getLineListType(startLine - 1) || '',
