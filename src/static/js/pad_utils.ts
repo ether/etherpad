@@ -416,6 +416,13 @@ class PadUtils {
         if (err.name != null && msg !== err.name && !msg.startsWith(`${err.name}: `)) {
           msg = `${err.name}: ${msg}`;
         }
+
+        // Ignore errors from browser extensions — they are unrelated to Etherpad
+        // and should not block the pad from loading.
+        // See https://github.com/ether/etherpad-lite/issues/6802
+        const source = url || err.stack || '';
+        if (/^(moz|chrome|safari)-extension:\/\//.test(source)) return;
+
         const errorId = randomString(20);
 
         const errorKey = `${type}:${msg}:${url}:${linenumber}`;
