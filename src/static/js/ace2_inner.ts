@@ -2434,13 +2434,14 @@ function Ace2Inner(editorInfo, cssManagers) {
     }
 
     _skipRenumber = true;
-    for (const mod of mods) setLineListType(mod[0], mod[1]);
-    _skipRenumber = false;
+    try {
+      for (const mod of mods) setLineListType(mod[0], mod[1]);
+    } finally {
+      _skipRenumber = false;
+    }
     // Renumber once after all lines have been updated.
-    if (mods.length > 0) {
-      if (renumberList(mods[0][0] + 1) == null) {
-        renumberList(mods[0][0]);
-      }
+    if (renumberList(firstLine + 1) == null) {
+      renumberList(firstLine);
     }
     return true;
   };
@@ -3413,25 +3414,25 @@ function Ace2Inner(editorInfo, cssManagers) {
         mods.push([n, allLinesAreList ? `indent${level}` : (t ? type + level : `${type}1`)]);
       } else {
         // scrap the entire indentation and list type
-        if (level === 1) { // if outdending but are the first item in the list then outdent
-          setLineListType(n, ''); // outdent
-        }
-        // else change to indented not bullet
-        if (level > 1) {
-          setLineListType(n, ''); // remove bullet
-          setLineListType(n, `indent${level}`); // in/outdent
+        if (level === 1) {
+          mods.push([n, '']);
+        } else if (level > 1) {
+          mods.push([n, '']);
+          mods.push([n, `indent${level}`]);
         }
       }
     }
 
     _skipRenumber = true;
-    for (const mod of mods) setLineListType(mod[0], mod[1]);
-    _skipRenumber = false;
+    try {
+      for (const mod of mods) setLineListType(mod[0], mod[1]);
+    } finally {
+      _skipRenumber = false;
+    }
     // Renumber once after all lines have been updated.
-    if (mods.length > 0) {
-      if (renumberList(mods[0][0] + 1) == null) {
-        renumberList(mods[0][0]);
-      }
+    // Try from firstLine since the first mod may be an indent/removal.
+    if (renumberList(firstLine + 1) == null) {
+      renumberList(firstLine);
     }
   };
 
