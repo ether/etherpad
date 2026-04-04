@@ -285,8 +285,6 @@ const loadBroadcastJS = (socket, sendSocketMsg, fireWhenAllScriptsAreLoaded, Bro
         changeset = compose(changeset, cs[i], padContents.apool);
         timeDelta += path.times[i];
       }
-      // Skip identity changesets — they represent no actual change and can cause
-      // errors during timeslider playback. See https://github.com/ether/etherpad-lite/issues/5214
       if (changeset) {
         applyChangeset(changeset, path.rev, true, timeDelta);
       }
