@@ -106,6 +106,11 @@ test.describe('ordered_list.js', function () {
     // Indent to create a sub-bullet
     await page.keyboard.press('Tab');
     await writeToPad(page, 'Sub-bullet');
+
+    // Verify the sub-bullet is actually indented (level 2)
+    const subBulletLine = padBody.locator('div').nth(1);
+    await expect(subBulletLine.locator('.list-bullet2')).toHaveCount(1, {timeout: 5000});
+
     await page.keyboard.press('Enter');
 
     // De-indent back to level 1
@@ -119,9 +124,6 @@ test.describe('ordered_list.js', function () {
     await writeToPad(page, 'Number 2');
     await page.keyboard.press('Enter');
     await writeToPad(page, 'Number 3');
-
-    // Wait for renumbering
-    await page.waitForTimeout(500);
 
     // Lines 3, 4, 5 should be numbered 1, 2, 3
     const line3 = padBody.locator('div').nth(2);
