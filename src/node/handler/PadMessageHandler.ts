@@ -1030,7 +1030,7 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
       // tell the client the number of the latest chat-message, which will be
       // used to request the latest 100 chat-messages later (GET_CHAT_MESSAGES)
       chatHead: pad.chatHead,
-      numConnectedUsers: roomSockets.length,
+      numConnectedUsers: roomSockets.length + 1, // +1 for this user (not yet in room)
       readOnlyId: sessionInfo.readOnlyPadId,
       readonly: sessionInfo.readonly,
       serverTimestamp: Date.now(),
