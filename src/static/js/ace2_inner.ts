@@ -3250,8 +3250,24 @@ function Ace2Inner(editorInfo, cssManagers) {
         const hasFormatting = doc.querySelector('b, strong, i, em, u, s, del, ins');
         if (hasFormatting) {
           e.preventDefault();
-          // Insert the parsed HTML into the editor so the content collector can
-          // properly extract formatting from intact tags.
+
+          // Sanitize: remove dangerous elements and event handler attributes
+          // to prevent XSS via clipboard content.
+          for (const el of doc.body.querySelectorAll(
+              'script, style, iframe, object, embed, form, link, meta')) {
+            el.remove();
+          }
+          for (const el of doc.body.querySelectorAll('*')) {
+            for (const attr of Array.from(el.attributes)) {
+              if (attr.name.startsWith('on') ||
+                  (attr.name === 'href' && /^\s*javascript:/i.test(attr.value))) {
+                el.removeAttribute(attr.name);
+              }
+            }
+          }
+
+          // Insert the sanitized HTML into the editor so the content collector
+          // can properly extract formatting from intact tags.
           const sel = targetDoc.getSelection();
           if (sel && sel.rangeCount > 0) {
             const range = sel.getRangeAt(0);
