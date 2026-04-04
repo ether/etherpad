@@ -3251,6 +3251,11 @@ function Ace2Inner(editorInfo, cssManagers) {
       // in order to make content be observed by incorporateUserChanges() (see
       // observeSuspiciousNodes() for more info)
       const selection = getSelection();
+      // Capture line attributes of neighboring lines before the browser processes
+      // the drop. Chrome/Safari can corrupt these attributes when merging lines
+      // after removing the dragged content.
+      // See https://github.com/ether/etherpad-lite/issues/3120
+      let savedLineAttrs: {lineNum: number, listType: string}[] | null = null;
       if (selection) {
         const firstLineSelected = topLevel(selection.startPoint.node);
         const lastLineSelected = topLevel(selection.endPoint.node);
@@ -3260,6 +3265,25 @@ function Ace2Inner(editorInfo, cssManagers) {
 
         const neighbor = lineBeforeSelection || lineAfterSelection;
         neighbor.appendChild(targetDoc.createElement('style'));
+
+        // Save attributes of lines adjacent to the dragged content
+        savedLineAttrs = [];
+        const startLine = rep.lines.indexOfEntry(rep.lines.atKey(firstLineSelected.id));
+        const endLine = rep.lines.indexOfEntry(rep.lines.atKey(lastLineSelected.id));
+        // Save the line after the selection (most commonly corrupted)
+        if (endLine + 1 < rep.lines.length()) {
+          const afterType = getLineListType(endLine + 1);
+          if (afterType) {
+            savedLineAttrs.push({lineNum: endLine + 1, listType: afterType});
+          }
+        }
+        // Save the line before the selection
+        if (startLine > 0) {
+          const beforeType = getLineListType(startLine - 1);
+          if (beforeType) {
+            savedLineAttrs.push({lineNum: startLine - 1, listType: beforeType});
+          }
+        }
       }
 
       // Call drop hook
@@ -3269,6 +3293,28 @@ function Ace2Inner(editorInfo, cssManagers) {
         documentAttributeManager,
         e,
       });
+
+      // After the browser processes the drop and incorporateUserChanges runs,
+      // restore any corrupted line attributes.
+      if (savedLineAttrs && savedLineAttrs.length > 0) {
+        scheduler.setTimeout(() => {
+          inCallStackIfNecessary('dropRestore', () => {
+            incorporateUserChanges();
+            // Check if any saved line attributes were corrupted
+            for (const {lineNum, listType} of savedLineAttrs!) {
+              // Line numbers shift after the drag, so find the line by checking
+              // if its current type differs from what we saved
+              if (lineNum < rep.lines.length()) {
+                const currentType = getLineListType(lineNum);
+                if (currentType !== listType) {
+                  // Restore the original attribute
+                  documentAttributeManager.setAttributeOnLine(lineNum, 'list', listType);
+                }
+              }
+            }
+          });
+        }, 100);
+      }
     });
 
     $(targetDoc.documentElement).on('compositionstart', () => {
