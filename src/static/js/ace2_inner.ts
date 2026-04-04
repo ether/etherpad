@@ -3270,19 +3270,20 @@ function Ace2Inner(editorInfo, cssManagers) {
         savedLineAttrs = [];
         const startLine = rep.lines.indexOfEntry(rep.lines.atKey(firstLineSelected.id));
         const endLine = rep.lines.indexOfEntry(rep.lines.atKey(lastLineSelected.id));
-        // Save the line after the selection (most commonly corrupted)
+        // Save attributes of lines adjacent to the selection, including lines
+        // with NO list type (empty string). A line with no list type can get
+        // corrupted to inherit the dragged line's type during browser merging.
         if (endLine + 1 < rep.lines.length()) {
-          const afterType = getLineListType(endLine + 1);
-          if (afterType) {
-            savedLineAttrs.push({lineNum: endLine + 1, listType: afterType});
-          }
+          savedLineAttrs.push({
+            lineNum: endLine + 1,
+            listType: getLineListType(endLine + 1) || '',
+          });
         }
-        // Save the line before the selection
         if (startLine > 0) {
-          const beforeType = getLineListType(startLine - 1);
-          if (beforeType) {
-            savedLineAttrs.push({lineNum: startLine - 1, listType: beforeType});
-          }
+          savedLineAttrs.push({
+            lineNum: startLine - 1,
+            listType: getLineListType(startLine - 1) || '',
+          });
         }
       }
 
@@ -3302,13 +3303,17 @@ function Ace2Inner(editorInfo, cssManagers) {
             incorporateUserChanges();
             // Check if any saved line attributes were corrupted
             for (const {lineNum, listType} of savedLineAttrs!) {
-              // Line numbers shift after the drag, so find the line by checking
-              // if its current type differs from what we saved
               if (lineNum < rep.lines.length()) {
-                const currentType = getLineListType(lineNum);
+                const currentType = getLineListType(lineNum) || '';
                 if (currentType !== listType) {
-                  // Restore the original attribute
-                  documentAttributeManager.setAttributeOnLine(lineNum, 'list', listType);
+                  if (listType) {
+                    // Restore the original list attribute
+                    documentAttributeManager.setAttributeOnLine(lineNum, 'list', listType);
+                  } else {
+                    // Line should have no list type — remove the corrupted one
+                    documentAttributeManager.removeAttributeOnLine(lineNum, 'list');
+                    documentAttributeManager.removeAttributeOnLine(lineNum, 'start');
+                  }
                 }
               }
             }
