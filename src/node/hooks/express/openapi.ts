@@ -629,7 +629,13 @@ exports.expressPreSession = async (hookName:string, {app}:any) => {
             }
           }
 
-          const fields = Object.assign({}, headers, params, query, formData);
+          // Merge parameters with clear precedence: body > query > path params.
+          // Only pass the authorization header explicitly — don't merge all headers
+          // into fields to prevent parameter pollution.
+          const fields = Object.assign({}, params, query, formData);
+          if (headers.authorization) {
+            fields.authorization = fields.authorization || headers.authorization;
+          }
           if (logger.isDebugEnabled()) {
             logger.debug(`REQUEST, v${version}:${funcName}, ${JSON.stringify(fields)}`);
           }
