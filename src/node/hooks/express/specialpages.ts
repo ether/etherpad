@@ -278,6 +278,7 @@ exports.expressCreateServer = async (_hookName: string, args: ArgsExpressType, c
   })
 
   const indexString = eejs.require('ep_etherpad-lite/templates/indexBootstrap.js', {
+    settings,
   })
 
   const timeSliderString = eejs.require('ep_etherpad-lite/templates/timeSliderBootstrap.js', {

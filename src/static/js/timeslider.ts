@@ -33,6 +33,7 @@ import padutils from './pad_utils'
 const socketio = require('./socketio');
 import html10n from '../js/vendors/html10n'
 let token, padId, exportLinks, socket, changesetLoader, BroadcastSlider;
+let cp = '';
 
 const init = () => {
   padutils.setupGlobalExceptionHandler();
@@ -48,7 +49,7 @@ const init = () => {
     document.title = `${padId.replace(/_+/g, ' ')} | ${document.title}`;
 
     // ensure we have a token
-    const cp = (window as any).clientVars?.cookiePrefix || '';
+    cp = (window as any).clientVars?.cookiePrefix || '';
     token = Cookies.get(`${cp}token`) || Cookies.get('token');
     if (token == null) {
       token = `t.${randomString()}`;
@@ -102,7 +103,7 @@ const sendSocketMsg = (type, data) => {
     data,
     padId,
     token,
-    sessionID: Cookies.get('sessionID'),
+    sessionID: Cookies.get(`${cp}sessionID`) || Cookies.get('sessionID'),
   });
 };
 
