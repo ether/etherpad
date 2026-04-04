@@ -20,9 +20,7 @@ const LazyImportPlugin: BackendModule = {
       baseURL+=`/${namespace}/${language}.json`
     }
 
-    const localeJSON = await fetch(baseURL, {
-      cache: "force-cache"
-    })
+    const localeJSON = await fetch(baseURL)
     let json;
 
     try {
