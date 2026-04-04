@@ -612,12 +612,19 @@ exports.expressPreSession = async (hookName:string, {app}:any) => {
 
           // read form data if method was POST
           let formData:MapArrayType<any> = {};
-          if (c.request.method === 'post') {
-            const form = new IncomingForm();
-            formData = (await form.parse(req))[0];
-            for (const k of Object.keys(formData)) {
-              if (formData[k] instanceof Array) {
-                formData[k] = formData[k][0];
+          if (c.request.method.toLowerCase() === 'post') {
+            // If express.json() already parsed the body (application/json),
+            // use req.body directly. Formidable would hang waiting for an
+            // already-consumed stream, causing the request to time out.
+            if (req.body && typeof req.body === 'object' && Object.keys(req.body).length > 0) {
+              formData = req.body;
+            } else {
+              const form = new IncomingForm();
+              formData = (await form.parse(req))[0];
+              for (const k of Object.keys(formData)) {
+                if (formData[k] instanceof Array) {
+                  formData[k] = formData[k][0];
+                }
               }
             }
           }
