@@ -154,6 +154,12 @@ const getCollabClient = (ace2editor, serverVars, initialUserInfo, options, _pad)
     doDeferredActions();
 
     initialStartConnectTime = Date.now();
+
+    // Flush any pending local changes immediately after (re)connect.
+    // Without this, changes made while disconnected are not sent to the
+    // server until the user makes another edit.
+    // See https://github.com/ether/etherpad-lite/issues/5108
+    handleUserChanges();
   };
 
   const sendMessage = (msg) => {
