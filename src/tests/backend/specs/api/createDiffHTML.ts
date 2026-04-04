@@ -5,7 +5,16 @@ const common = require('../../common');
 
 let agent: any;
 let apiVersion = 1;
-const testPadId = `createDiffHTML_${Date.now()}`;
+const testPadId = `createDiffHTML_${makeid()}`;
+
+function makeid() {
+  let text = '';
+  const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  for (let i = 0; i < 10; i++) {
+    text += possible.charAt(Math.floor(Math.random() * possible.length));
+  }
+  return text;
+}
 
 const endPoint = (point: string) => `/api/${apiVersion}/${point}`;
 
@@ -67,6 +76,7 @@ describe(__filename, function () {
 
   after(async function () {
     await agent.get(`${endPoint('deletePad')}?padID=${testPadId}`)
-        .set('Authorization', await common.generateJWTToken());
+        .set('Authorization', await common.generateJWTToken())
+        .expect(200);
   });
 });
