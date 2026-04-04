@@ -2902,7 +2902,14 @@ function Ace2Inner(editorInfo, cssManagers) {
       const isSafariHalfCharacter =
           (browser.safari && evt.altKey && keyCode === 229);
 
-      if (thisKeyDoesntTriggerNormalize || isFirefoxHalfCharacter || isSafariHalfCharacter) {
+      // keyCode 229 indicates an IME/composition event (dead keys, compose key, etc.).
+      // On Firefox Linux, the keydown for a dead key fires before compositionstart,
+      // so inInternationalComposition may not be set yet.
+      // See https://github.com/ether/etherpad-lite/issues/5623
+      const isCompositionKeyCode = (keyCode === 229);
+
+      if (thisKeyDoesntTriggerNormalize || isFirefoxHalfCharacter ||
+          isSafariHalfCharacter || isCompositionKeyCode) {
         idleWorkTimer.atLeast(3000); // give user time to type
         // if this is a keydown, e.g., the keyup shouldn't trigger a normalize
         thisKeyDoesntTriggerNormalize = true;
