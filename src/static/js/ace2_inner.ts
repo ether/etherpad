@@ -2314,7 +2314,7 @@ function Ace2Inner(editorInfo, cssManagers) {
         listType = /([a-z]+)([0-9]+)/.exec(listType);
         curLevel = Number(listType[2]);
         const curType = listType[1];
-        if (isNaN(curLevel) || listType[0] === 'indent') {
+        if (isNaN(curLevel) || listType[1] === 'indent') {
           return line;
         } else if (curLevel === level) {
           // Reset position when switching between list types at the same level
