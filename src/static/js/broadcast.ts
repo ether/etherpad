@@ -26,7 +26,7 @@
 const makeCSSManager = require('./cssmanager').makeCSSManager;
 const domline = require('./domline').domline;
 import AttribPool from './AttributePool';
-import {compose, deserializeOps, inverse, moveOpsToNewPool, mutateAttributionLines, mutateTextLines, splitAttributionLines, splitTextLines, unpack} from './Changeset';
+import {compose, deserializeOps, inverse, isIdentity, moveOpsToNewPool, mutateAttributionLines, mutateTextLines, splitAttributionLines, splitTextLines, unpack} from './Changeset';
 const attributes = require('./attributes');
 const linestylefilter = require('./linestylefilter').linestylefilter;
 const colorutils = require('./colorutils').colorutils;
@@ -139,52 +139,59 @@ const loadBroadcastJS = (socket, sendSocketMsg, fireWhenAllScriptsAreLoaded, Bro
       BroadcastSlider.setSliderPosition(revision);
     }
 
-    const oldAlines = padContents.alines.slice();
-    try {
-      // must mutate attribution lines before text lines
-      mutateAttributionLines(changeset, padContents.alines, padContents.apool);
-    } catch (e) {
-      debugLog(e);
-    }
-
-    // scroll to the area that is changed before the lines are mutated
-    if ($('#options-followContents').is(':checked') ||
-        $('#options-followContents').prop('checked')) {
-      // get the index of the first line that has mutated attributes
-      // the last line in `oldAlines` should always equal to "|1+1", ie newline without attributes
-      // so it should be safe to assume this line has changed attributes when inserting content at
-      // the bottom of a pad
-      let lineChanged;
-      _.some(oldAlines, (line, index) => {
-        if (line !== padContents.alines[index]) {
-          lineChanged = index;
-          return true; // break
-        }
-      });
-      // some chars are replaced (no attributes change and no length change)
-      // test if there are keep ops at the start of the cs
-      if (lineChanged === undefined) {
-        const [op] = deserializeOps(unpack(changeset).ops);
-        lineChanged = op != null && op.opcode === '=' ? op.lines : 0;
+    // Skip mutation for identity changesets (no actual change), but still advance
+    // revision/time state. Identity changesets can appear when compose() of multiple
+    // revisions produces a net-zero change, or from import/save sequences.
+    // See https://github.com/ether/etherpad-lite/issues/5214
+    if (!isIdentity(changeset)) {
+      const oldAlines = padContents.alines.slice();
+      try {
+        // must mutate attribution lines before text lines
+        mutateAttributionLines(changeset, padContents.alines, padContents.apool);
+      } catch (e) {
+        debugLog(e);
       }
 
-      const goToLineNumber = (lineNumber) => {
-        // Sets the Y scrolling of the browser to go to this line
-        const line = $('#innerdocbody').find(`div:nth-child(${lineNumber + 1})`);
-        const newY = $(line)[0].offsetTop;
-        const ecb = document.getElementById('editorcontainerbox');
-        // Chrome 55 - 59 bugfix
-        if (ecb.scrollTo) {
-          ecb.scrollTo({top: newY, behavior: 'auto'});
-        } else {
-          $('#editorcontainerbox').scrollTop(newY);
+      // scroll to the area that is changed before the lines are mutated
+      if ($('#options-followContents').is(':checked') ||
+          $('#options-followContents').prop('checked')) {
+        // get the index of the first line that has mutated attributes
+        // the last line in `oldAlines` should always equal to "|1+1", ie newline without attributes
+        // so it should be safe to assume this line has changed attributes when inserting content at
+        // the bottom of a pad
+        let lineChanged;
+        _.some(oldAlines, (line, index) => {
+          if (line !== padContents.alines[index]) {
+            lineChanged = index;
+            return true; // break
+          }
+        });
+        // some chars are replaced (no attributes change and no length change)
+        // test if there are keep ops at the start of the cs
+        if (lineChanged === undefined) {
+          const [op] = deserializeOps(unpack(changeset).ops);
+          lineChanged = op != null && op.opcode === '=' ? op.lines : 0;
         }
-      };
 
-      goToLineNumber(lineChanged);
+        const goToLineNumber = (lineNumber) => {
+          // Sets the Y scrolling of the browser to go to this line
+          const line = $('#innerdocbody').find(`div:nth-child(${lineNumber + 1})`);
+          const newY = $(line)[0].offsetTop;
+          const ecb = document.getElementById('editorcontainerbox');
+          // Chrome 55 - 59 bugfix
+          if (ecb.scrollTo) {
+            ecb.scrollTo({top: newY, behavior: 'auto'});
+          } else {
+            $('#editorcontainerbox').scrollTop(newY);
+          }
+        };
+
+        goToLineNumber(lineChanged);
+      }
+
+      mutateTextLines(changeset, padContents);
     }
 
-    mutateTextLines(changeset, padContents);
     padContents.currentRevision = revision;
     padContents.currentTime += timeDelta;
 
@@ -201,7 +208,9 @@ const loadBroadcastJS = (socket, sendSocketMsg, fireWhenAllScriptsAreLoaded, Bro
     revisionInfo.addChangeset(
         revision, revision + 1, changesetForward, changesetBackward, timeDelta);
     BroadcastSlider.setSliderLength(revisionInfo.latest);
-    if (broadcasting) applyChangeset(changesetForward, revision + 1, false, timeDelta);
+    if (broadcasting) {
+      applyChangeset(changesetForward, revision + 1, false, timeDelta);
+    }
   };
 
   /*
@@ -276,7 +285,9 @@ const loadBroadcastJS = (socket, sendSocketMsg, fireWhenAllScriptsAreLoaded, Bro
         changeset = compose(changeset, cs[i], padContents.apool);
         timeDelta += path.times[i];
       }
-      if (changeset) applyChangeset(changeset, path.rev, true, timeDelta);
+      if (changeset) {
+        applyChangeset(changeset, path.rev, true, timeDelta);
+      }
     } else if (path.status === 'partial') {
       // callback is called after changeset information is pulled from server
       // this may never get called, if the changeset has already been loaded
@@ -294,7 +305,9 @@ const loadBroadcastJS = (socket, sendSocketMsg, fireWhenAllScriptsAreLoaded, Bro
         changeset = compose(changeset, cs[i], padContents.apool);
         timeDelta += path.times[i];
       }
-      if (changeset) applyChangeset(changeset, path.rev, true, timeDelta);
+      if (changeset) {
+        applyChangeset(changeset, path.rev, true, timeDelta);
+      }
 
       // Loading changeset history for new revision
       loadChangesetsForRevision(newRevision, update);
