@@ -20,7 +20,6 @@ class PadDiff {
     private readonly _toRev: string;
     private _html: any;
     public _authors: any[];
-    private self: PadDiff | undefined
   constructor(pad: PadType, fromRev:string, toRev:string) {
     // check parameters
     if (!pad || !pad.id || !pad.atext || !pad.pool) {
@@ -121,12 +120,10 @@ class PadDiff {
     return {changesets, authors};
   }
   _addAuthors(authors: PadAuthor[]){
-      this.self = this;
-
     // add to array if not in the array
     authors.forEach((author) => {
-      if (this.self!._authors.indexOf(author) === -1) {
-        this.self!._authors.push(author);
+      if (this._authors.indexOf(author) === -1) {
+        this._authors.push(author);
       }
     });
   }
@@ -209,7 +206,7 @@ class PadDiff {
       await this.getHtml();
     }
 
-    return this.self!._authors;
+    return this._authors;
   }
 
   _extendChangesetWithAuthor(changeset: any, author: any, apool: any){
@@ -457,13 +454,6 @@ class PadDiff {
 
 }
 
-
-// this method is 80% like Changeset.inverse. I just changed so instead of reverting,
-// it adds deletions and attribute changes to the atext.
-// @ts-ignore
-PadDiff.prototype._createDeletionChangeset = function (cs, startAText, apool) {
-
-};
 
 // export the constructor
 module.exports = PadDiff;
