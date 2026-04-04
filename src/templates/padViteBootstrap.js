@@ -5,6 +5,8 @@ window.clientVars = {
   // This is needed to fetch /pluginfw/plugin-definitions.json, which happens before the server
   // sends the CLIENT_VARS message.
   randomVersionString: "7a7bdbad",
+  // Must match cookie.prefix in settings.json (default: "").
+  // This file is only used in Vite dev mode and is not template-processed.
   cookiePrefix: "",
 };
 
