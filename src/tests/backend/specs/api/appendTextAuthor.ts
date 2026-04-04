@@ -64,14 +64,16 @@ describe(__filename, function () {
 
   it('appendText without authorId does not attribute to any author', async function () {
     const newPadId = `appendTextNoAuthor_${makeid()}`;
-    await agent.get(`${endPoint('createPad')}?padID=${newPadId}`)
+    const createRes = await agent.get(`${endPoint('createPad')}?padID=${newPadId}`)
         .set('Authorization', await common.generateJWTToken())
         .expect(200);
+    assert.equal(createRes.body.code, 0);
 
-    await agent.post(endPoint('appendText'))
+    const appendRes = await agent.post(endPoint('appendText'))
         .set('Authorization', await common.generateJWTToken())
         .send({padID: newPadId, text: 'anonymous text'})
         .expect(200);
+    assert.equal(appendRes.body.code, 0);
 
     const authorsRes = await agent.get(
         `${endPoint('listAuthorsOfPad')}?padID=${newPadId}`)
