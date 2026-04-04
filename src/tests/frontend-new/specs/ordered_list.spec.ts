@@ -92,6 +92,50 @@ test.describe('ordered_list.js', function () {
     await expect(fifthLine.locator('ol')).toHaveAttribute('start', '3', {timeout: 5000});
   });
 
+  // Regression test for https://github.com/ether/etherpad-lite/issues/5718
+  test('issue #5718 consecutive numbering works after indented sub-bullets', async function ({page}) {
+    const padBody = await getPadBody(page);
+    await clearPadContent(page);
+
+    // Create a bullet point
+    const $insertUnorderedButton = page.locator('.buttonicon-insertunorderedlist');
+    await $insertUnorderedButton.click({force: true});
+    await writeToPad(page, 'Bullet item');
+    await page.keyboard.press('Enter');
+
+    // Indent to create a sub-bullet
+    await page.keyboard.press('Tab');
+    await writeToPad(page, 'Sub-bullet');
+
+    // Verify the sub-bullet is actually indented (level 2)
+    const subBulletLine = padBody.locator('div').nth(1);
+    await expect(subBulletLine.locator('.list-bullet2')).toHaveCount(1, {timeout: 5000});
+
+    await page.keyboard.press('Enter');
+
+    // De-indent back to level 1
+    await page.keyboard.press('Shift+Tab');
+
+    // Switch to numbered list
+    const $insertOrderedButton = page.locator('.buttonicon-insertorderedlist');
+    await $insertOrderedButton.click({force: true});
+    await writeToPad(page, 'Number 1');
+    await page.keyboard.press('Enter');
+    await writeToPad(page, 'Number 2');
+    await page.keyboard.press('Enter');
+    await writeToPad(page, 'Number 3');
+
+    // Lines 3, 4, 5 should be numbered 1, 2, 3
+    const line3 = padBody.locator('div').nth(2);
+    await expect(line3.locator('ol')).toHaveAttribute('start', '1', {timeout: 5000});
+
+    const line4 = padBody.locator('div').nth(3);
+    await expect(line4.locator('ol')).toHaveAttribute('start', '2', {timeout: 5000});
+
+    const line5 = padBody.locator('div').nth(4);
+    await expect(line5.locator('ol')).toHaveAttribute('start', '3', {timeout: 5000});
+  });
+
   test.describe('Pressing Tab in an OL increases and decreases indentation', function () {
 
     test('indent and de-indent list item with keypress', async function ({page}) {
