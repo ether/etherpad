@@ -9,9 +9,6 @@ const util = require('util');
 
 const logger = log4js.getLogger('SessionStore');
 
-// Sessions without an expiry date older than this are considered stale and will be cleaned up.
-const STALE_SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
-
 // How often to run the cleanup of expired/stale sessions.
 const CLEANUP_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
 
@@ -36,33 +33,47 @@ class SessionStore extends expressSession.Store {
     //     equal to `db`.
     //   - `timeout`: Timeout ID for a timeout that will clean up the database record.
     this._expirations = new Map();
-    this._cleanupInterval = null;
+    this._cleanupTimer = null;
+    this._cleanupRunning = false;
   }
 
   /**
    * Start periodic cleanup of expired/stale sessions from the database.
+   * Uses chained setTimeout (not setInterval) to prevent overlapping runs.
    */
   startCleanup() {
-    // Run once on startup (deferred to avoid blocking), then periodically.
-    setTimeout(() => this._cleanup().catch((err) => logger.error('Session cleanup error:', err)), 5000);
-    this._cleanupInterval = setInterval(
-        () => this._cleanup().catch((err) => logger.error('Session cleanup error:', err)),
-        CLEANUP_INTERVAL_MS);
+    this._scheduleCleanup(5000); // First run 5s after startup.
+  }
+
+  _scheduleCleanup(delay: number) {
+    this._cleanupTimer = setTimeout(async () => {
+      try {
+        await this._cleanup();
+      } catch (err) {
+        logger.error('Session cleanup error:', err);
+      }
+      // Schedule the next run only after this one completes.
+      this._scheduleCleanup(CLEANUP_INTERVAL_MS);
+    }, delay);
     // Don't prevent Node.js from exiting.
-    if (this._cleanupInterval.unref) this._cleanupInterval.unref();
+    if (this._cleanupTimer.unref) this._cleanupTimer.unref();
   }
 
   shutdown() {
     for (const {timeout} of this._expirations.values()) clearTimeout(timeout);
-    if (this._cleanupInterval) {
-      clearInterval(this._cleanupInterval);
-      this._cleanupInterval = null;
+    if (this._cleanupTimer) {
+      clearTimeout(this._cleanupTimer);
+      this._cleanupTimer = null;
     }
   }
 
   /**
-   * Remove expired and stale sessions from the database. Expired sessions have a cookie.expires
-   * date in the past. Stale sessions have no expiry and haven't been touched in STALE_SESSION_MAX_AGE_MS.
+   * Remove expired and empty sessions from the database.
+   *
+   * - Sessions with an `expires` date in the past are removed (expired).
+   * - Sessions with no expiry that contain no data beyond the default cookie are removed.
+   *   These are the empty sessions that accumulate indefinitely (bug #5010) — they have
+   *   `{cookie: {path: "/", _expires: null, ...}}` and nothing else.
    */
   async _cleanup() {
     const keys = await DB.findKeys('sessionstorage:*', null);
@@ -84,11 +95,7 @@ class SessionStore extends expressSession.Store {
           removed++;
         }
       } else {
-        // Session has no expiry — remove if it has no meaningful data beyond the default cookie.
-        // These are the sessions that accumulate indefinitely (bug #5010).
-        // We can't know when they were created, so we check if they have any data beyond the
-        // cookie itself. If they only contain the cookie (no user session data), they're safe
-        // to remove as stale.
+        // Session has no expiry and no user data beyond the cookie — remove as empty/stale.
         const hasData = Object.keys(sess).some((k) => k !== 'cookie');
         if (!hasData) {
           await DB.remove(key);
