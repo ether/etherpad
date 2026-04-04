@@ -294,7 +294,8 @@ class Pad {
         (!ins && start > 0 && orig[start - 1] === '\n');
     if (!willEndWithNewline) ins += '\n';
     if (ndel === 0 && ins.length === 0) return;
-    const changeset = makeSplice(orig, start, ndel, ins);
+    const attribs = authorId ? [['author', authorId] as [string, string]] : undefined;
+    const changeset = makeSplice(orig, start, ndel, ins, attribs, this.pool);
     await this.appendRevision(changeset, authorId);
   }
 
@@ -394,7 +395,8 @@ class Pad {
         if (context.type !== 'text') throw new Error(`unsupported content type: ${context.type}`);
         text = exports.cleanText(context.content);
       }
-      const firstChangeset = makeSplice('\n', 0, 0, text);
+      const firstAttribs = authorId ? [['author', authorId] as [string, string]] : undefined;
+      const firstChangeset = makeSplice('\n', 0, 0, text, firstAttribs, this.pool);
       await this.appendRevision(firstChangeset, authorId);
     }
     await hooks.aCallAll('padLoad', {pad: this});
