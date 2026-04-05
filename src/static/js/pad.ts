@@ -122,6 +122,7 @@ const getParameters = [
     checkVal: null,
     callback: (val) => {
       settings.rtlIsTrue = val === 'true';
+      settings.rtlIsExplicit = true;
     },
   },
   {
@@ -551,7 +552,9 @@ const pad = {
       this.changeViewOption('noColors', true);
     }
 
-    this.changeViewOption('rtlIsTrue', settings.rtlIsTrue === true);
+    if (settings.rtlIsExplicit) {
+      this.changeViewOption('rtlIsTrue', settings.rtlIsTrue === true);
+    }
 
     // If the Monospacefont value is set to true then change it to monospace.
     if (settings.useMonospaceFontGlobal === true) {
@@ -782,6 +785,7 @@ const settings = {
   globalUserName: false,
   globalUserColor: false,
   rtlIsTrue: false,
+  rtlIsExplicit: false,
 };
 
 pad.settings = settings;
