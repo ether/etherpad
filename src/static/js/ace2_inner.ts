@@ -3267,6 +3267,61 @@ function Ace2Inner(editorInfo, cssManagers) {
         documentAttributeManager,
         e,
       });
+
+      // Extract HTML from clipboard before the browser normalizes it.
+      // Browser contentEditable normalization strips inline formatting (bold, italic, etc.)
+      // from pasted Etherpad content because it flattens nested ace-line divs.
+      // See https://github.com/ether/etherpad-lite/issues/5037
+      const clipboardData = e.originalEvent?.clipboardData || (window as any).clipboardData;
+      const pastedHtml = clipboardData?.getData('text/html');
+      if (pastedHtml) {
+        // Parse the pasted HTML in a detached document to extract content
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(pastedHtml, 'text/html');
+        const hasFormatting = doc.querySelector('b, strong, i, em, u, s, del, ins');
+        if (hasFormatting) {
+          e.preventDefault();
+
+          // Sanitize: remove dangerous elements and event handler attributes
+          // to prevent XSS via clipboard content.
+          for (const el of doc.body.querySelectorAll(
+              'script, style, iframe, object, embed, form, link, meta')) {
+            el.remove();
+          }
+          for (const el of doc.body.querySelectorAll('*')) {
+            for (const attr of Array.from(el.attributes)) {
+              if (attr.name.startsWith('on') ||
+                  (attr.name === 'href' && /^\s*javascript:/i.test(attr.value))) {
+                el.removeAttribute(attr.name);
+              }
+            }
+          }
+
+          // Insert the sanitized HTML into the editor so the content collector
+          // can properly extract formatting from intact tags.
+          const sel = targetDoc.getSelection();
+          if (sel && sel.rangeCount > 0) {
+            const range = sel.getRangeAt(0);
+            range.deleteContents();
+            // Create a temporary container with the parsed body content
+            const frag = targetDoc.createDocumentFragment();
+            for (const child of Array.from(doc.body.childNodes)) {
+              frag.appendChild(targetDoc.importNode(child, true));
+            }
+            range.insertNode(frag);
+            // Move cursor to end of inserted content
+            range.collapse(false);
+            sel.removeAllRanges();
+            sel.addRange(range);
+          }
+          // Trigger incorporation of the inserted content
+          scheduler.setTimeout(() => {
+            inCallStackIfNecessary('paste', () => {
+              incorporateUserChanges();
+            });
+          }, 0);
+        }
+      }
     });
 
     // We reference document here, this is because if we don't this will expose a bug
