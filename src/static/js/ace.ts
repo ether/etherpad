@@ -50,7 +50,15 @@ const eventFired = async (obj, event, cleanups = [], predicate = () => true) => 
       cleanup();
       resolve();
     };
-    const errorCb = () => {
+    const errorCb = (evt) => {
+      // Ignore error events from browser extension scripts — they are unrelated
+      // to Etherpad and should not block editor initialization.
+      // See https://github.com/ether/etherpad-lite/issues/6802
+      const src = evt?.target?.src || evt?.filename || '';
+      if (/^(moz|chrome|safari)-extension:\/\//.test(src)) {
+        debugLog('Ace2Editor.init() ignoring error from browser extension:', src);
+        return;
+      }
       const err = new Error(`Ace2Editor.init() error event while waiting for ${event} event`);
       debugLog(`${err} on object`, obj);
       cleanup();
