@@ -144,7 +144,8 @@ const getParameters = [
     callback: (val) => {
       console.log('Val is', val)
       html10n.localize([val, 'en']);
-      Cookies.set('language', val);
+      const prefix = (window as any).clientVars?.cookiePrefix || '';
+      Cookies.set(`${prefix}language`, val);
     },
   },
 ];
@@ -183,10 +184,11 @@ const sendClientReady = (isReconnect) => {
     document.title = `${padId.replace(/_+/g, ' ')} | ${title}`;
   }
 
-  let token = Cookies.get('token');
+  const cp = (window as any).clientVars?.cookiePrefix || '';
+  let token = Cookies.get(`${cp}token`) || Cookies.get('token');
   if (token == null || !padutils.isValidAuthorToken(token)) {
     token = padutils.generateAuthorToken();
-    Cookies.set('token', token, {expires: 60});
+    Cookies.set(`${cp}token`, token, {expires: 60});
   }
 
   // If known, propagate the display name and color to the server in the CLIENT_READY message. This
@@ -203,7 +205,7 @@ const sendClientReady = (isReconnect) => {
     component: 'pad',
     type: 'CLIENT_READY',
     padId,
-    sessionID: Cookies.get('sessionID'),
+    sessionID: Cookies.get(`${cp}sessionID`) || Cookies.get('sessionID'),
     token,
     userInfo,
   };

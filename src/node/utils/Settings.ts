@@ -252,6 +252,7 @@ export type SettingsType = {
   trustProxy: boolean,
   cookie: {
     keyRotationInterval: number,
+    prefix: string,
     sameSite: boolean | "lax" | "strict" | "none" | undefined,
     sessionLifetime: number,
     sessionRefreshInterval: number,
@@ -530,6 +531,7 @@ const settings: SettingsType = {
  */
   cookie: {
     keyRotationInterval: 1 * 24 * 60 * 60 * 1000,
+    prefix: '',
     sameSite: 'lax',
     sessionLifetime: 10 * 24 * 60 * 60 * 1000,
     sessionRefreshInterval: 1 * 24 * 60 * 60 * 1000,
@@ -1062,6 +1064,13 @@ export const reloadSettings = () => {
     if (settings.sessionKey) {
         logger.warn(`The sessionKey setting and ${sessionkeyFilename} file are deprecated; ` +
             'use automatic key rotation instead (see the cookie.keyRotationInterval setting).');
+    }
+
+    // Validate cookie prefix to prevent header injection via cookie names
+    if (settings.cookie.prefix && !/^[a-zA-Z0-9_-]*$/.test(settings.cookie.prefix)) {
+      logger.error(`cookie.prefix "${settings.cookie.prefix}" contains invalid characters. ` +
+          'Only alphanumeric characters, hyphens, and underscores are allowed. Using empty prefix.');
+      settings.cookie.prefix = '';
     }
 
     if (settings.dbType === 'dirty') {
