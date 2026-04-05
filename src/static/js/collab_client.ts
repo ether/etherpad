@@ -152,6 +152,7 @@ const getCollabClient = (ace2editor, serverVars, initialUserInfo, options, _pad)
   const setUpSocket = () => {
     setChannelState('CONNECTED');
     doDeferredActions();
+    handleUserChanges();
 
     initialStartConnectTime = Date.now();
 
