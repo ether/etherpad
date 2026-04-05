@@ -47,7 +47,7 @@ jobs:
       - name: Run the frontend tests
         shell: bash
         run: |
-          gnpm run prod  &
+          gnpm run prod > /tmp/etherpad-server.log 2>&1 &
           connected=false
           can_connect() {
           curl -sSfo /dev/null http://localhost:9001/ || return 1
@@ -61,6 +61,13 @@ jobs:
           cd src
           gnpm exec playwright install chromium  --with-deps
           gnpm run test-ui --project=chromium
+      - name: Upload server log on failure
+        uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: server-log-chrome
+          path: /tmp/etherpad-server.log
+          retention-days: 7
       - uses: actions/upload-artifact@v7
         if: always()
         with:
@@ -99,7 +106,7 @@ jobs:
       - name: Run the frontend tests
         shell: bash
         run: |
-          gnpm run prod &
+          gnpm run prod > /tmp/etherpad-server.log 2>&1 &
           connected=false
           can_connect() {
           curl -sSfo /dev/null http://localhost:9001/ || return 1
@@ -113,6 +120,13 @@ jobs:
           cd src
           gnpm exec playwright install firefox  --with-deps
           gnpm run test-ui --project=firefox
+      - name: Upload server log on failure
+        uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: server-log-firefox
+          path: /tmp/etherpad-server.log
+          retention-days: 7
       - uses: actions/upload-artifact@v7
         if: always()
         with:

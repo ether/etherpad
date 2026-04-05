@@ -27,7 +27,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: [20, 22, 24]
+        # PRs: single Node version. Push: full matrix.
+        node: ${{ github.event_name == 'pull_request' && fromJSON('[24]') || fromJSON('[20, 22, 24]') }}
     steps:
       -
         name: Check out latest release
@@ -52,12 +53,6 @@ jobs:
         with:
           version: 0.0.12
       - name: Install libreoffice
-        uses: awalsh128/cache-apt-pkgs-action@v1.6.0
-        with:
-          packages: libreoffice libreoffice-pdfimport
-          version: 1.0
-      -
-        name: Install libreoffice
         uses: awalsh128/cache-apt-pkgs-action@v1.6.0
         with:
           packages: libreoffice libreoffice-pdfimport

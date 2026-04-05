@@ -21,7 +21,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: [20, 22, 24]
+        # PRs: single Node version. Push: full matrix.
+        node: ${{ github.event_name == 'pull_request' && fromJSON('[24]') || fromJSON('[20, 22, 24]') }}
 
     steps:
       -
@@ -77,7 +78,7 @@ jobs:
       - name: Run the frontend admin tests
         shell: bash
         run: |
-          gnpm run prod --runtimeVersion="${{ matrix.node }}" &
+          gnpm run prod --runtimeVersion="${{ matrix.node }}" > /tmp/etherpad-server.log 2>&1 &
           connected=false
           can_connect() {
           curl -sSfo /dev/null http://localhost:9001/ || return 1
@@ -90,6 +91,13 @@ jobs:
           done
           cd src
           gnpm run test-admin --runtimeVersion="${{ matrix.node }}"
+      - name: Upload server log on failure
+        uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: server-log-admin-${{ matrix.node }}
+          path: /tmp/etherpad-server.log
+          retention-days: 7
       - uses: actions/upload-artifact@v7
         if: always()
         with:
