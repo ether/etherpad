@@ -119,9 +119,9 @@ const getParameters = [
   },
   {
     name: 'rtl',
-    checkVal: 'true',
+    checkVal: null,
     callback: (val) => {
-      settings.rtlIsTrue = true;
+      settings.rtlIsTrue = val === 'true';
     },
   },
   {
@@ -551,9 +551,7 @@ const pad = {
       this.changeViewOption('noColors', true);
     }
 
-    if (settings.rtlIsTrue === true) {
-      this.changeViewOption('rtlIsTrue', true);
-    }
+    this.changeViewOption('rtlIsTrue', settings.rtlIsTrue === true);
 
     // If the Monospacefont value is set to true then change it to monospace.
     if (settings.useMonospaceFontGlobal === true) {
