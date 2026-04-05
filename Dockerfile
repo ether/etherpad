@@ -125,8 +125,13 @@ COPY --chown=etherpad:etherpad ./pnpm-workspace.yaml ./package.json ./
 
 
 FROM build AS build_git
-ONBUILD COPY --chown=etherpad:etherpad ./.git/HEA[D] ./.git/HEAD
-ONBUILD COPY --chown=etherpad:etherpad ./.git/ref[s] ./.git/refs
+# When checked out as a git submodule, .git is a file (gitlink) instead of a
+# directory, so .git/HEAD and .git/refs do not exist.  Copy the whole .git
+# entry (the .dockerignore already strips the heavy objects) and normalise it
+# with a shell step so the build succeeds in both cases and across builders
+# (Docker, buildah, podman).  See #6663 and containers/buildah#5742.
+ONBUILD COPY --chown=etherpad:etherpad ./.git ./.git
+ONBUILD RUN if [ -f .git ]; then rm .git; fi
 
 FROM build AS build_copy
 
