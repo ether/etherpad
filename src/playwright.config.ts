@@ -13,7 +13,7 @@ export default defineConfig({
     fullyParallel: true,
     /* Fail the build on CI if you accidentally left test.only in the source code. */
     /* Reporter to use. See https://playwright.dev/docs/test-reporters */
-    reporter: process.env.CI ? 'github' : 'html',
+    reporter: process.env.CI ? [['github'], ['list']] : 'html',
     expect: { timeout: defaultExpectTimeout },
     timeout: defaultTestTimeout,
     retries: process.env.CI ? 2 : 0,
