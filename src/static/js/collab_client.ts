@@ -155,11 +155,12 @@ const getCollabClient = (ace2editor, serverVars, initialUserInfo, options, _pad)
 
     initialStartConnectTime = Date.now();
 
-    // Flush any pending local changes immediately after (re)connect.
+    // Flush any pending local changes after (re)connect.
     // Without this, changes made while disconnected are not sent to the
     // server until the user makes another edit.
+    // Deferred to allow the editor to finish initialization on first connect.
     // See https://github.com/ether/etherpad-lite/issues/5108
-    handleUserChanges();
+    setTimeout(handleUserChanges, 500);
   };
 
   const sendMessage = (msg) => {
