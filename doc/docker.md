@@ -9,7 +9,7 @@ If you are ok downloading a [prebuilt image from Docker Hub](https://hub.docker.
 docker pull etherpad/etherpad
 
 # gets a specific version
-docker pull etherpad/etherpad:1.8.0
+docker pull etherpad/etherpad:2.6.1
 ```
 
 ## Build a personalized container
