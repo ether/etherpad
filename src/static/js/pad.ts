@@ -467,7 +467,10 @@ const pad = {
       if (padcookie.getPref('showLineNumbers') === false) {
         pad.changeViewOption('showLineNumbers', false);
       }
-      if (padcookie.getPref('rtlIsTrue') === true) {
+      if (settings.rtlIsExplicit) {
+        // URL or server config explicitly set RTL — takes priority over cookie
+        pad.changeViewOption('rtlIsTrue', settings.rtlIsTrue === true);
+      } else if (padcookie.getPref('rtlIsTrue') === true) {
         pad.changeViewOption('rtlIsTrue', true);
       }
       pad.changeViewOption('padFontFamily', padcookie.getPref('padFontFamily'));
@@ -552,9 +555,8 @@ const pad = {
       this.changeViewOption('noColors', true);
     }
 
-    if (settings.rtlIsExplicit) {
-      this.changeViewOption('rtlIsTrue', settings.rtlIsTrue === true);
-    }
+    // RTL override is applied in postAceInit (after padeditor.init resolves)
+    // to avoid a race where setViewOptions(initialViewOptions) overwrites it.
 
     // If the Monospacefont value is set to true then change it to monospace.
     if (settings.useMonospaceFontGlobal === true) {
