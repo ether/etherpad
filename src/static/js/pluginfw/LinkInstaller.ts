@@ -3,7 +3,6 @@ import path from "path";
 import {node_modules, pluginInstallPath} from "./installer";
 import {accessSync, constants, rmSync, symlinkSync, unlinkSync} from "node:fs";
 import {dependencies, name} from '../../../package.json'
-import {pathToFileURL} from 'node:url';
 import settings from '../../../node/utils/Settings';
 import {readFileSync} from "fs";
 
@@ -100,7 +99,7 @@ export class LinkInstaller {
     // Read sub dependencies
     try {
       const json:IPluginInfo = JSON.parse(
-        readFileSync(pathToFileURL(path.join(pluginInstallPath, dependency, 'package.json'))) as unknown as string);
+        readFileSync(path.join(pluginInstallPath, dependency, 'package.json'), 'utf-8'));
       if(json.dependencies){
         for (let [subDependency] of Object.entries(json.dependencies)) {
           await this.removeSubDependency(dependency, subDependency)
@@ -158,7 +157,7 @@ export class LinkInstaller {
     // Read sub dependencies
     try {
       const json:IPluginInfo = JSON.parse(
-        readFileSync(pathToFileURL(path.join(pluginInstallPath, dependency, 'package.json'))) as unknown as string);
+        readFileSync(path.join(pluginInstallPath, dependency, 'package.json'), 'utf-8'));
       if(json.dependencies){
         for (let [subDependency] of Object.entries(json.dependencies)) {
           await this.unlinkSubDependency(dependency, subDependency)
@@ -188,14 +187,14 @@ export class LinkInstaller {
         this.linkDependency(dependency)
         // Read sub dependencies
         const json:IPluginInfo = JSON.parse(
-          readFileSync(pathToFileURL(path.join(pluginInstallPath, dependency, 'package.json'))) as unknown as string);
+          readFileSync(path.join(pluginInstallPath, dependency, 'package.json'), 'utf-8'));
         if(json.dependencies){
           Object.keys(json.dependencies).forEach((subDependency: string) => {
             this.addSubDependency(dependency, subDependency)
           })
         }
       } catch (err) {
-        console.error(`Error reading package.json ${err} for ${pathToFileURL(path.join(pluginInstallPath, dependency, 'package.json')).toString()}`)
+        console.error(`Error reading package.json ${err} for ${path.join(pluginInstallPath, dependency, 'package.json')}`)
       }
       this.dependenciesMap.set(dependency, new Set([plugin]))
     }
