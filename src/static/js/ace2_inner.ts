@@ -3337,6 +3337,11 @@ function Ace2Inner(editorInfo, cssManagers) {
       // in order to make content be observed by incorporateUserChanges() (see
       // observeSuspiciousNodes() for more info)
       const selection = getSelection();
+      // Capture line attributes of neighboring lines before the browser processes
+      // the drop. Chrome/Safari can corrupt these attributes when merging lines
+      // after removing the dragged content.
+      // See https://github.com/ether/etherpad-lite/issues/3120
+      let savedLineAttrs: {lineNum: number, listType: string}[] | null = null;
       if (selection) {
         const firstLineSelected = topLevel(selection.startPoint.node);
         const lastLineSelected = topLevel(selection.endPoint.node);
@@ -3346,6 +3351,32 @@ function Ace2Inner(editorInfo, cssManagers) {
 
         const neighbor = lineBeforeSelection || lineAfterSelection;
         neighbor.appendChild(targetDoc.createElement('style'));
+
+        // Save attributes of lines adjacent to the dragged content
+        savedLineAttrs = [];
+        const startEntry = firstLineSelected.id && rep.lines.atKey(firstLineSelected.id);
+        const endEntry = lastLineSelected.id && rep.lines.atKey(lastLineSelected.id);
+        if (!startEntry || !endEntry) {
+          // Can't determine line numbers — skip attribute saving
+          savedLineAttrs = null;
+        }
+        const startLine = startEntry ? rep.lines.indexOfEntry(startEntry) : -1;
+        const endLine = endEntry ? rep.lines.indexOfEntry(endEntry) : -1;
+        // Save attributes of lines adjacent to the selection, including lines
+        // with NO list type (empty string). A line with no list type can get
+        // corrupted to inherit the dragged line's type during browser merging.
+        if (savedLineAttrs && endLine >= 0 && endLine + 1 < rep.lines.length()) {
+          savedLineAttrs.push({
+            lineNum: endLine + 1,
+            listType: getLineListType(endLine + 1) || '',
+          });
+        }
+        if (savedLineAttrs && startLine > 0) {
+          savedLineAttrs.push({
+            lineNum: startLine - 1,
+            listType: getLineListType(startLine - 1) || '',
+          });
+        }
       }
 
       // Call drop hook
@@ -3355,6 +3386,32 @@ function Ace2Inner(editorInfo, cssManagers) {
         documentAttributeManager,
         e,
       });
+
+      // After the browser processes the drop and incorporateUserChanges runs,
+      // restore any corrupted line attributes.
+      if (savedLineAttrs && savedLineAttrs.length > 0) {
+        scheduler.setTimeout(() => {
+          inCallStackIfNecessary('dropRestore', () => {
+            incorporateUserChanges();
+            // Check if any saved line attributes were corrupted
+            for (const {lineNum, listType} of savedLineAttrs!) {
+              if (lineNum < rep.lines.length()) {
+                const currentType = getLineListType(lineNum) || '';
+                if (currentType !== listType) {
+                  if (listType) {
+                    // Restore the original list attribute
+                    documentAttributeManager.setAttributeOnLine(lineNum, 'list', listType);
+                  } else {
+                    // Line should have no list type — remove the corrupted one
+                    documentAttributeManager.removeAttributeOnLine(lineNum, 'list');
+                    documentAttributeManager.removeAttributeOnLine(lineNum, 'start');
+                  }
+                }
+              }
+            }
+          });
+        }, 100);
+      }
     });
 
     $(targetDoc.documentElement).on('compositionstart', () => {
