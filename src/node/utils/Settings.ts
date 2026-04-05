@@ -255,6 +255,7 @@ export type SettingsType = {
     prefix: string,
     sameSite: boolean | "lax" | "strict" | "none" | undefined,
     sessionLifetime: number,
+    sessionCleanup: boolean,
     sessionRefreshInterval: number,
   },
   requireAuthentication: boolean,
@@ -534,6 +535,7 @@ const settings: SettingsType = {
     prefix: '',
     sameSite: 'lax',
     sessionLifetime: 10 * 24 * 60 * 60 * 1000,
+    sessionCleanup: true,
     sessionRefreshInterval: 1 * 24 * 60 * 60 * 1000,
   },
   /*

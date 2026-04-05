@@ -201,7 +201,9 @@ exports.restartServer = async () => {
   app.use(cookieParser(secret, {}));
 
   const store = new SessionStore(settings.cookie.sessionRefreshInterval);
-  store.startCleanup();
+  if (settings.cookie.sessionCleanup !== false) {
+    store.startCleanup();
+  }
   sessionStore = store;
   exports.sessionMiddleware = expressSession({
     rolling: true,

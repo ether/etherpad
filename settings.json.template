@@ -463,7 +463,13 @@
      * Automatic session refreshes can be disabled (not recommended) by setting
      * this to null.
      */
-    "sessionRefreshInterval": 86400000 // = 1d * 24h/d * 60m/h * 60s/m * 1000ms/s
+    "sessionRefreshInterval": 86400000, // = 1d * 24h/d * 60m/h * 60s/m * 1000ms/s
+
+    /*
+     * Whether to periodically clean up expired and stale sessions from the
+     * database. Set to false to disable. Default: true.
+     */
+    "sessionCleanup": true
   },
 
   /*
