@@ -13,6 +13,19 @@
 @import url("pad/loadingbox.css");
 @import url("pad/form.css");
 
+/* Screen reader only — visually hidden but announced by assistive technology */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 html {
   font-size: 15px;
   color: #3e3e3e;

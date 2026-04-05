@@ -464,6 +464,7 @@ function Ace2Inner(editorInfo, cssManagers) {
   const setEditable = (newVal) => {
     isEditable = newVal;
     targetBody.contentEditable = isEditable ? 'true' : 'false';
+    targetBody.setAttribute('aria-readonly', isEditable ? 'false' : 'true');
     targetBody.classList.toggle('static', !isEditable);
   };
 
@@ -2689,15 +2690,26 @@ function Ace2Inner(editorInfo, cssManagers) {
         if (!specialHandled && isTypeForSpecialKey &&
             keyCode === 27 &&
             padShortcutEnabled.esc) {
-          // prevent esc key;
-          // in mozilla versions 14-19 avoid reconnecting pad.
-
+          // Escape key: if gritter popups are visible, close them and stay in editor.
+          // Otherwise, move focus to the toolbar (WCAG 2.1.2 keyboard trap escape).
           fastIncorp(4);
           evt.preventDefault();
           specialHandled = true;
 
-          // close all gritters when the user hits escape key
+          const hasGritters = window.$('.gritter-item').length > 0;
           window.$.gritter.removeAll();
+
+          if (!hasGritters) {
+            // No popups to dismiss — move focus to the toolbar so the user
+            // can navigate away from the editor with Tab.
+            try {
+              const toolbar = window.parent.document.querySelector('[role="toolbar"]');
+              const firstButton = toolbar?.querySelector('button');
+              if (firstButton) firstButton.focus();
+            } catch (e) {
+              // Cross-origin frame restrictions — ignore.
+            }
+          }
         }
         if (!specialHandled && isTypeForCmdKey &&
             /* Do a saved revision on ctrl S */

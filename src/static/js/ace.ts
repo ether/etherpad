@@ -284,7 +284,17 @@ const Ace2Editor = function () {
     // <body> tag
     innerDocument.body.id = 'innerdocbody';
     innerDocument.body.classList.add('innerdocbody');
+    innerDocument.body.setAttribute('role', 'textbox');
+    innerDocument.body.setAttribute('aria-multiline', 'true');
+    innerDocument.body.setAttribute('aria-label', 'Pad content');
+    innerDocument.body.setAttribute('aria-describedby', 'editor-keyboard-hint');
     innerDocument.body.setAttribute('spellcheck', 'false');
+    // Screen-reader-only keyboard hint inside the iframe so it's announced on focus.
+    const hint = innerDocument.createElement('div');
+    hint.id = 'editor-keyboard-hint';
+    hint.style.cssText = 'position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)';
+    hint.textContent = 'Press Escape to exit the editor. Press Alt+F9 to access the toolbar.';
+    innerDocument.body.appendChild(hint);
     innerDocument.body.appendChild(innerDocument.createTextNode('\u00A0')); // &nbsp;
 /*
     debugLog('Ace2Editor.init() waiting for require kernel load');

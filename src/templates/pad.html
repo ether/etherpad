@@ -84,7 +84,7 @@
       <!--- PAD EDITOR (in iframe) -->
       <!----------------------------->
 
-      <div id="editorcontainer" class="editorcontainer"></div>
+      <div id="editorcontainer" class="editorcontainer" aria-label="Document editor"></div>
 
       <div id="editorloadingbox">
         <% e.begin_block("permissionDenied"); %>
@@ -363,7 +363,7 @@
                   <input type="text" id="myusernameedit" disabled="disabled" data-l10n-id="pad.userlist.entername">
                 </div>
             </div>
-            <div id="otherusers" aria-role="document">
+            <div id="otherusers" role="document">
                 <table id="otheruserstable" cellspacing="0" cellpadding="0" border="0">
                     <tr><td></td></tr>
                 </table>
