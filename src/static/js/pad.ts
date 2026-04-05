@@ -120,9 +120,9 @@ const getParameters = [
   {
     name: 'rtl',
     checkVal: null,
-    callback: (val) => {
+    callback: (val, fromUrl) => {
       settings.rtlIsTrue = val === 'true';
-      settings.rtlIsExplicit = true;
+      if (fromUrl) settings.rtlIsExplicit = true;
     },
   },
   {
@@ -160,7 +160,7 @@ const getParams = () => {
     // (e.g., lang setting triggers html10n.localize twice).
     const urlValue = params.get(setting.name);
     if (urlValue && (urlValue === setting.checkVal || setting.checkVal == null)) {
-      setting.callback(urlValue);
+      setting.callback(urlValue, true);
       continue;
     }
 
@@ -169,7 +169,7 @@ const getParams = () => {
     if (serverValue == null) continue;
     serverValue = serverValue.toString();
     if (serverValue === setting.checkVal || setting.checkVal == null) {
-      setting.callback(serverValue);
+      setting.callback(serverValue, false);
     }
   }
 };
