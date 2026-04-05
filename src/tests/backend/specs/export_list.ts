@@ -34,7 +34,7 @@ describe(__filename, function () {
   });
 
   // Regression test for https://github.com/ether/etherpad-lite/issues/6471
-  it('ordered list numbering preserved across bullet interruptions', async function () {
+  it('ordered list numbering preserved across bullet interruptions (round-trip)', async function () {
     const padId = `exportOlBullet_${common.randomString()}`;
     const pad = await padManager.getPad(padId, 'placeholder');
 
@@ -47,15 +47,58 @@ describe(__filename, function () {
 
     const html = await exportHtml.getPadHTML(pad, undefined);
 
-    // The second ol should have a start value > 1, showing the numbering continues
+    // The second ol should have a start value of 2, showing the numbering continues
     // after the bullet interruption (not reset to 1)
-    const startMatches = html.match(/start="(\d+)"/g) || [];
-    assert(startMatches.length >= 2,
-        `Expected at least 2 ol start attributes in: ${html}`);
-    // Verify at least one start value is > 1
-    const hasHighStart = startMatches.some((m: string) => parseInt(m.match(/\d+/)![0]) > 1);
-    assert(hasHighStart,
-        `Expected a start value > 1 for continued numbering in: ${html}`);
+    assert(html.includes('start="2"'),
+        `Expected start="2" for continued numbering in: ${html}`);
+
+    await pad.remove();
+  });
+
+  // Regression test for https://github.com/ether/etherpad-lite/issues/6471
+  // Tests that the export counter-based fix works even when the pad content
+  // does not carry explicit start attributes (e.g. content created without
+  // import start values).
+  it('ordered list numbering preserved across bullet interruptions (no explicit start)', async function () {
+    const padId = `exportOlBulletNoStart_${common.randomString()}`;
+    const pad = await padManager.getPad(padId, 'placeholder');
+
+    // Import HTML without start attributes — the second <ol> has no start="2"
+    await importHtml.setPadHTML(pad,
+        '<html><body>' +
+        '<ol class="number"><li>First</li></ol>' +
+        '<ul class="bullet"><li>Bullet A</li></ul>' +
+        '<ol class="number"><li>Second</li></ol>' +
+        '</body></html>');
+
+    const html = await exportHtml.getPadHTML(pad, undefined);
+
+    // Even though the import had no start attribute, the export should add
+    // start="2" to continue the numbering after the bullet interruption
+    assert(html.includes('start="2"'),
+        `Expected start="2" for continued numbering in: ${html}`);
+
+    await pad.remove();
+  });
+
+  // Regression test for https://github.com/ether/etherpad-lite/issues/6471
+  // Tests multiple ordered list items before and after bullet interruptions.
+  it('ordered list numbering preserved with multiple items', async function () {
+    const padId = `exportOlMulti_${common.randomString()}`;
+    const pad = await padManager.getPad(padId, 'placeholder');
+
+    await importHtml.setPadHTML(pad,
+        '<html><body>' +
+        '<ol class="number"><li>First</li><li>Second</li></ol>' +
+        '<ul class="bullet"><li>Bullet</li></ul>' +
+        '<ol class="number"><li>Third</li></ol>' +
+        '</body></html>');
+
+    const html = await exportHtml.getPadHTML(pad, undefined);
+
+    // After two ordered items then a bullet, the next ol should start at 3
+    assert(html.includes('start="3"'),
+        `Expected start="3" for continued numbering in: ${html}`);
 
     await pad.remove();
   });

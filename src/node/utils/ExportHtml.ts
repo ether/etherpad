@@ -309,6 +309,9 @@ const getHTMLFromAtext = async (pad:PadType, atext: AText, authorColors?: string
   }
 
   let openLists: openList[] = [];
+  // Track running ordered-list item counts per indent level so that when an <ol>
+  // is reopened after an unordered-list interruption we can emit start="N".
+  const olItemCounts: MapArrayType<number> = {};
   for (let i = 0; i < textLines.length; i++) {
     let context;
     const line = _analyzeLine(textLines[i], attribLines[i], apool);
@@ -388,7 +391,11 @@ const getHTMLFromAtext = async (pad:PadType, atext: AText, authorColors?: string
             }
 
             if (line.listTypeName === 'number') {
-              if (line.start) {
+              if (olItemCounts[line.listLevel] && olItemCounts[line.listLevel] > 0) {
+                // Continue numbering after an unordered-list interruption
+                const startNum = olItemCounts[line.listLevel] + 1;
+                pieces.push(`<ol start="${startNum}" class="${line.listTypeName}">`);
+              } else if (line.start) {
                 pieces.push(`<ol start="${Number(line.start)}" class="${line.listTypeName}">`);
               } else {
                 pieces.push(`<ol class="${line.listTypeName}">`);
@@ -406,6 +413,14 @@ const getHTMLFromAtext = async (pad:PadType, atext: AText, authorColors?: string
       // if we're going up a level we shouldn't be adding..
       if (context.lineContent) {
         pieces.push('<li>', context.lineContent);
+        // Track ordered-list item counts so we can continue numbering after interruptions
+        if (line.listTypeName === 'number') {
+          if (!olItemCounts[line.listLevel]) {
+            olItemCounts[line.listLevel] = 1;
+          } else {
+            olItemCounts[line.listLevel]++;
+          }
+        }
       }
 
       // To close list elements
@@ -451,6 +466,10 @@ const getHTMLFromAtext = async (pad:PadType, atext: AText, authorColors?: string
         }
       }
     } else {
+      // outside any list — reset ordered-list counters for all levels
+      for (const key of Object.keys(olItemCounts)) {
+        delete olItemCounts[key];
+      }
       // outside any list, need to close line.listLevel of lists
       context = {
         line,
