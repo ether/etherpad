@@ -995,8 +995,7 @@ export default html10n
 // @ts-ignore
 window.html10n = html10n
 
-// gettext-like shortcut
-if (window._ === undefined){
-  // @ts-ignore
-  window._ = html10n.get;
-}
+// gettext-like shortcut — always set this so plugins can use window._() for localization.
+// Internal code uses underscore via require(), not window._, so this is safe.
+// @ts-ignore
+window._ = html10n.get;

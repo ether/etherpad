@@ -151,22 +151,24 @@ const getParameters = [
 ];
 
 const getParams = () => {
-  // Tries server enforced options first..
-  for (const setting of getParameters) {
-    let value = clientVars.padOptions[setting.name];
-    if (value == null) continue;
-    value = value.toString();
-    if (value === setting.checkVal || setting.checkVal == null) {
-      setting.callback(value);
-    }
-  }
-
-  // Then URL applied stuff
   const params = getUrlVars();
+
   for (const setting of getParameters) {
-    const value = params.get(setting.name);
-    if (value && (value === setting.checkVal || setting.checkVal == null)) {
-      setting.callback(value);
+    // URL query params take priority over server-enforced options.
+    // This prevents race conditions where both fire async callbacks
+    // (e.g., lang setting triggers html10n.localize twice).
+    const urlValue = params.get(setting.name);
+    if (urlValue && (urlValue === setting.checkVal || setting.checkVal == null)) {
+      setting.callback(urlValue);
+      continue;
+    }
+
+    // Fall back to server-enforced option
+    let serverValue = clientVars.padOptions[setting.name];
+    if (serverValue == null) continue;
+    serverValue = serverValue.toString();
+    if (serverValue === setting.checkVal || setting.checkVal == null) {
+      setting.callback(serverValue);
     }
   }
 };
