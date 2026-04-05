@@ -2351,6 +2351,7 @@ function Ace2Inner(editorInfo, cssManagers) {
   };
   editorInfo.ace_renumberList = renumberList;
 
+  let _skipRenumber = false;
   const setLineListType = (lineNum, listType) => {
     if (listType === '') {
       documentAttributeManager.removeAttributeOnLine(lineNum, listAttributeName);
@@ -2358,6 +2359,8 @@ function Ace2Inner(editorInfo, cssManagers) {
     } else {
       documentAttributeManager.setAttributeOnLine(lineNum, listAttributeName, listType);
     }
+
+    if (_skipRenumber) return;
 
     // if the list has been removed, it is necessary to renumber
     // starting from the *next* line because the list may have been
@@ -2431,7 +2434,16 @@ function Ace2Inner(editorInfo, cssManagers) {
       }
     }
 
-    for (const mod of mods) setLineListType(mod[0], mod[1]);
+    _skipRenumber = true;
+    try {
+      for (const mod of mods) setLineListType(mod[0], mod[1]);
+    } finally {
+      _skipRenumber = false;
+    }
+    // Renumber once after all lines have been updated.
+    if (renumberList(firstLine + 1) == null) {
+      renumberList(firstLine);
+    }
     return true;
   };
   editorInfo.ace_doIndentOutdent = doIndentOutdent;
@@ -3414,18 +3426,26 @@ function Ace2Inner(editorInfo, cssManagers) {
         mods.push([n, allLinesAreList ? `indent${level}` : (t ? type + level : `${type}1`)]);
       } else {
         // scrap the entire indentation and list type
-        if (level === 1) { // if outdending but are the first item in the list then outdent
-          setLineListType(n, ''); // outdent
-        }
-        // else change to indented not bullet
-        if (level > 1) {
-          setLineListType(n, ''); // remove bullet
-          setLineListType(n, `indent${level}`); // in/outdent
+        if (level === 1) {
+          mods.push([n, '']);
+        } else if (level > 1) {
+          mods.push([n, '']);
+          mods.push([n, `indent${level}`]);
         }
       }
     }
 
-    for (const mod of mods) setLineListType(mod[0], mod[1]);
+    _skipRenumber = true;
+    try {
+      for (const mod of mods) setLineListType(mod[0], mod[1]);
+    } finally {
+      _skipRenumber = false;
+    }
+    // Renumber once after all lines have been updated.
+    // Try from firstLine since the first mod may be an indent/removal.
+    if (renumberList(firstLine + 1) == null) {
+      renumberList(firstLine);
+    }
   };
 
   const doInsertUnorderedList = () => {
