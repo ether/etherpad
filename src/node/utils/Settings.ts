@@ -366,7 +366,7 @@ const settings: SettingsType = {
      * properly, but increasing the value increases susceptibility to denial of service attacks
      * (malicious clients can exhaust memory).
      */
-    maxHttpBufferSize: 50000,
+    maxHttpBufferSize: 1000000,
   },
   /*
   The authentication method used by the server.
