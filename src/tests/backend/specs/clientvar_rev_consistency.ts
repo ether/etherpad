@@ -84,27 +84,28 @@ describe(__filename, function () {
     const res = await agent.get(`/p/${padId}`).expect(200);
     const socket = await common.connect(res);
     try {
+      // Collect all messages received during and after handshake so we don't
+      // miss NEW_CHANGES that arrive before we start explicitly listening.
+      const messages: any[] = [];
+      socket.on('message', (msg: any) => messages.push(msg));
+
       const {type, data: clientVars} = await common.handshake(socket, padId);
       assert.equal(type, 'CLIENT_VARS');
       assert.ok(hookCalled, 'clientVars hook should have been called');
 
       const collabVars = clientVars.collab_client_vars;
       const clientRev = collabVars.rev;
-
-      // The pad was mutated during the hook. Thanks to the post-join
-      // updatePadClients() call the server should push the missed revision(s)
-      // to this socket. Collect any NEW_CHANGES messages that arrive.
       const headRev = pad.getHeadRevisionNumber();
 
       if (clientRev < headRev) {
-        // We expect the server to send catch-up changesets.
-        const msg = await common.waitForSocketEvent(socket, 'message');
-        assert.equal(msg.type, 'COLLABROOM');
-        assert.equal(msg.data.type, 'NEW_CHANGES');
-        assert.ok(msg.data.newRev > clientRev,
-          `Expected catch-up rev > ${clientRev}, got ${msg.data.newRev}`);
+        // Wait a moment for any in-flight messages to arrive.
+        await new Promise((r) => setTimeout(r, 500));
+        const catchUp = messages.find(
+          (m: any) => m.type === 'COLLABROOM' && m.data?.type === 'NEW_CHANGES');
+        assert.ok(catchUp, 'Expected a NEW_CHANGES catch-up message');
+        assert.ok(catchUp.data.newRev > clientRev,
+          `Expected catch-up rev > ${clientRev}, got ${catchUp.data.newRev}`);
       }
-      // Either way, the client should end up consistent — rev must be reachable.
       assert.ok(clientRev <= headRev,
         `CLIENT_VARS rev (${clientRev}) must not exceed head rev (${headRev})`);
     } finally {
