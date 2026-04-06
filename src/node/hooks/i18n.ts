@@ -106,9 +106,17 @@ const getAllLocales = () => {
 // returns a hash of all available languages availables with nativeName and direction
 // e.g. { es: {nativeName: "español", direction: "ltr"}, ... }
 const getAvailableLangs = (locales:MapArrayType<any>) => {
-  const result:MapArrayType<string> = {};
+  const unsorted:MapArrayType<string> = {};
   for (const langcode of Object.keys(locales)) {
-    result[langcode] = languages.getLanguageInfo(langcode);
+    unsorted[langcode] = languages.getLanguageInfo(langcode);
+  }
+  // Sort by native name so the language dropdown is alphabetical
+  const sorted = Object.entries(unsorted).sort(([, a]: any, [, b]: any) =>
+    (a.nativeName || '').localeCompare(b.nativeName || '', undefined, {sensitivity: 'base'})
+  );
+  const result:MapArrayType<string> = {};
+  for (const [langcode, info] of sorted) {
+    result[langcode] = info;
   }
   return result;
 };
