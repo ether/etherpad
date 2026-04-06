@@ -1090,6 +1090,11 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
 
     // Save the revision in sessioninfos — must match what was sent in clientVars
     sessionInfo.rev = headRev;
+
+    // Flush any revisions that may have been appended while we were awaiting the
+    // clientVars hook (before socket.join).  Those revisions were broadcast to
+    // existing room members but this socket hadn't joined yet so it missed them.
+    await exports.updatePadClients(pad);
   }
 
   // Notify other users about this new user.
