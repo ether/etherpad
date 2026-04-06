@@ -670,6 +670,7 @@ if (typeof module !== 'undefined' && module.exports) {
     if (!(key in currentExports)) {
       Object.defineProperty(currentExports, key, {
         get: () => (settings as any)[key],
+        set: (v: any) => { (settings as any)[key] = v; },
         enumerable: true,
         configurable: true,
       });
