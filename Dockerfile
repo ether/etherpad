@@ -3,6 +3,8 @@
 # https://github.com/ether/etherpad-lite
 #
 # Author: muxator
+# Set to "copy" for builds without git metadata (source tarballs, some CI):
+#   docker build --build-arg BUILD_ENV=copy .
 ARG BUILD_ENV=git
 
 ARG PnpmVersion=10.28.2
