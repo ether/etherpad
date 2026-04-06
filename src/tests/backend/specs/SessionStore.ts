@@ -224,10 +224,10 @@ describe(__filename, function () {
 
     it('touch after eligible for refresh updates db', async function () {
       const start = Date.now();
-      const sess:any  = {foo: 'bar', cookie: {expires: new Date(start + 200)}};
+      const sess:any  = {foo: 'bar', cookie: {expires: new Date(start + 2000)}};
       await set(sess);
       await new Promise((resolve) => setTimeout(resolve, 100));
-      const sess2:any  = {foo: 'bar', cookie: {expires: new Date(start + 400)}};
+      const sess2:any  = {foo: 'bar', cookie: {expires: new Date(start + 4000)}};
       await touch(sess2);
       await new Promise((resolve) => setTimeout(resolve, 110));
       assert.equal(JSON.stringify(await db.get(`sessionstorage:${sid}`)), JSON.stringify(sess2));
