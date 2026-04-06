@@ -742,7 +742,7 @@ const pad = {
   },
   asyncSendDiagnosticInfo: () => {
     const currentUrl = window.location.href;
-    fetch('../ep/pad/connection-diagnostic-info', {
+    fetch(`${exports.baseURL}ep/pad/connection-diagnostic-info`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
