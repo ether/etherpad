@@ -193,10 +193,10 @@ export class LinkInstaller {
             this.addSubDependency(dependency, subDependency)
           })
         }
+        this.dependenciesMap.set(dependency, new Set([plugin]))
       } catch (err) {
         console.error(`Error reading package.json ${err} for ${path.join(pluginInstallPath, dependency, 'package.json')}`)
       }
-      this.dependenciesMap.set(dependency, new Set([plugin]))
     }
   }
 
