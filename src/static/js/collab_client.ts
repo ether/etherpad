@@ -442,7 +442,15 @@ const getCollabClient = (ace2editor, serverVars, initialUserInfo, options, _pad)
   };
 
   const setIsPendingRevision = (value) => {
+    const wasPending = isPendingRevision;
     isPendingRevision = value;
+    // After reconnect, once all pending revisions from the server have been applied
+    // (isPendingRevision transitions from true to false), flush any unsent local changes
+    // that were queued while disconnected. The handleUserChanges() call in setChannelState
+    // (CONNECTED) is not sufficient because isPendingRevision is still true at that point.
+    if (wasPending && !value) {
+      handleUserChanges();
+    }
   };
 
   const idleFuncs = [];
