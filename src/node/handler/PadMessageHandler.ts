@@ -984,8 +984,15 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
     // This is a normal first connect
     let atext;
     let apool;
+    let headRev: number;
     // prepare all values for the wire, there's a chance that this throws, if the pad is corrupted
     try {
+      // Capture atext AND head revision atomically to prevent a race condition where
+      // concurrent edits advance the revision between these two reads. If the client
+      // receives initialAttributedText from rev N but rev=N+3, the first NEW_CHANGES
+      // changeset will fail with "mismatched apply" because it expects rev N+3 text.
+      // See https://github.com/ether/etherpad-lite/issues/4040
+      headRev = pad.getHeadRevisionNumber();
       atext = cloneAText(pad.atext);
       const attribsForWire = prepareForWire(atext.attribs, pad.pool);
       apool = attribsForWire.pool.toJsonable();
@@ -1016,7 +1023,7 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
         padId: sessionInfo.auth.padID,
         historicalAuthorData,
         apool,
-        rev: pad.getHeadRevisionNumber(),
+        rev: headRev,
         time: currentTime,
       },
       colorPalette: authorManager.getColorPalette(),
@@ -1081,8 +1088,8 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
     // Send the clientVars to the Client
     socket.emit('message', {type: 'CLIENT_VARS', data: clientVars});
 
-    // Save the current revision in sessioninfos, should be the same as in clientVars
-    sessionInfo.rev = pad.getHeadRevisionNumber();
+    // Save the revision in sessioninfos — must match what was sent in clientVars
+    sessionInfo.rev = headRev;
   }
 
   // Notify other users about this new user.
