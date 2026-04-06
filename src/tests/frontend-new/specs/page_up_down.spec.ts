@@ -84,6 +84,39 @@ test.describe('Page Up / Page Down', function () {
     expect(selection).toBeLessThan(50);
   });
 
+  // Regression test: long wrapping lines should still allow PageDown to scroll
+  // the viewport. Before the fix, outerWin.document was accessed on an iframe
+  // element (which has no .document property), causing the handler to break.
+  test('PageDown scrolls viewport when pad has long wrapping lines', async function ({page}) {
+    const padBody = await getPadBody(page);
+    await clearPadContent(page);
+
+    // Create 3 very long lines that will wrap many times in the viewport
+    const longText = 'This is a very long line that should wrap multiple times in the editor viewport to ensure that page down scrolling works correctly even when lines are longer than the visible area. '.repeat(20);
+    for (let i = 0; i < 3; i++) {
+      await writeToPad(page, longText);
+      if (i < 2) await page.keyboard.press('Enter');
+    }
+
+    // Move caret to the very top
+    await page.keyboard.down('Control');
+    await page.keyboard.press('Home');
+    await page.keyboard.up('Control');
+    await page.waitForTimeout(200);
+
+    // Record the scroll position before PageDown
+    const outerFrame = page.frame('ace_outer')!;
+    const scrollBefore = await outerFrame.evaluate(() => document.documentElement.scrollTop);
+
+    // Press PageDown
+    await page.keyboard.press('PageDown');
+    await page.waitForTimeout(1000);
+
+    // The viewport should have scrolled
+    const scrollAfter = await outerFrame.evaluate(() => document.documentElement.scrollTop);
+    expect(scrollAfter).toBeGreaterThan(scrollBefore);
+  });
+
   test('PageDown then PageUp returns to approximately same position', async function ({page}) {
     const padBody = await getPadBody(page);
     await clearPadContent(page);

@@ -2888,7 +2888,7 @@ function Ace2Inner(editorInfo, cssManagers) {
             // Scroll by actual viewport height in pixels, not by line count.
             // This fixes the case where very long wrapped lines consume the
             // entire viewport, making line-count-based scrolling useless.
-            const viewportHeight = outerWin.document.documentElement.clientHeight;
+            const viewportHeight = outerDoc.documentElement.clientHeight;
             // Keep a small overlap so the user doesn't lose context
             const scrollAmount = viewportHeight - 40;
             const currentScrollY = scroll.getScrollY();
