@@ -582,9 +582,9 @@
      * increasing the value increases susceptibility to denial of service
      * attacks (malicious clients can exhaust memory).
      *
-     * 10MB accommodates large pastes while still preventing abuse.
+     * 1MB accommodates large pastes while still preventing abuse.
      */
-    "maxHttpBufferSize": "${SOCKETIO_MAX_HTTP_BUFFER_SIZE:10000000}"
+    "maxHttpBufferSize": "${SOCKETIO_MAX_HTTP_BUFFER_SIZE:1000000}"
   },
 
   /*

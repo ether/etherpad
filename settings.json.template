@@ -581,9 +581,9 @@
      * increasing the value increases susceptibility to denial of service
      * attacks (malicious clients can exhaust memory).
      *
-     * 10MB accommodates large pastes while still preventing abuse.
+     * 1MB accommodates large pastes while still preventing abuse.
      */
-    "maxHttpBufferSize": 10000000
+    "maxHttpBufferSize": 1000000
   },
 
   /*
