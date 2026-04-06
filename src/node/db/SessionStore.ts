@@ -50,15 +50,22 @@ class SessionStore extends expressSession.Store {
       // If reading from the database, update the expiration with the latest value from touch() so
       // that touch() appears to write to the database every time even though it doesn't.
       if (typeof expires === 'string') sess.cookie.expires = new Date(exp.real).toJSON();
-      // Use this._get(), not this._destroy(), to destroy the DB record for the expired session.
-      // This is done in case multiple Etherpad instances are sharing the same database and users
-      // are bouncing between the instances. By using this._get(), this instance will query the DB
-      // for the latest expiration time written by any of the instances, ensuring that the record
-      // isn't prematurely deleted if the expiration time was updated by a different Etherpad
-      // instance. (Important caveat: Client-side database caching, which ueberdb does by default,
-      // could still cause the record to be prematurely deleted because this instance might get a
-      // stale expiration time from cache.)
-      exp.timeout = setTimeout(() => this._get(sid), exp.real - now);
+      // Schedule cleanup when the session is expected to expire. When the timeout fires, check
+      // the in-memory expiry first — touch() may have extended it without rescheduling the timeout
+      // (e.g., if touch's clearTimeout raced with the timer on a slow system). If the session was
+      // extended, reschedule instead of reading from the DB which may return stale cached data.
+      exp.timeout = setTimeout(() => {
+        const currentExp = this._expirations.get(sid);
+        if (currentExp && currentExp.real > Date.now()) {
+          // Expiry was extended (e.g., by touch). Reschedule.
+          currentExp.timeout = setTimeout(() => this._get(sid), currentExp.real - Date.now());
+          return;
+        }
+        // Use this._get(), not this._destroy(), to query the DB for the latest expiration in case
+        // multiple Etherpad instances share the database. (Caveat: client-side DB caching could
+        // still cause premature deletion if the cache returns a stale expiration time.)
+        this._get(sid);
+      }, exp.real - now);
       this._expirations.set(sid, exp);
     } else {
       this._expirations.delete(sid);
