@@ -173,7 +173,7 @@ class Pad {
 
   async getRevisionAuthor(revNum: number) {
     // @ts-ignore
-    return await this.db.getSub(`pad:${this.id}:revs:${revNum}`, ['meta', 'author']);
+    return await this.db.getSub(`pad:${this.id}:revs:${revNum}`, ['meta', 'author']) ?? '';
   }
 
   async getRevisionDate(revNum: number) {
