@@ -574,13 +574,17 @@
 
   "socketIo": {
     /*
-     * Maximum permitted client message size (in bytes). All messages from
-     * clients that are larger than this will be rejected. Large values make it
-     * possible to paste large amounts of text, and plugins may require a larger
-     * value to work properly, but increasing the value increases susceptibility
-     * to denial of service attacks (malicious clients can exhaust memory).
+     * Maximum permitted client message size (in bytes). This controls the
+     * maximum single-message size for socket.io and directly affects large
+     * paste operations. All messages from clients that are larger than this
+     * will be rejected. Large values make it possible to paste large amounts
+     * of text, and plugins may require a larger value to work properly, but
+     * increasing the value increases susceptibility to denial of service
+     * attacks (malicious clients can exhaust memory).
+     *
+     * 10MB accommodates large pastes while still preventing abuse.
      */
-    "maxHttpBufferSize": "${SOCKETIO_MAX_HTTP_BUFFER_SIZE:50000}"
+    "maxHttpBufferSize": "${SOCKETIO_MAX_HTTP_BUFFER_SIZE:10000000}"
   },
 
   /*
