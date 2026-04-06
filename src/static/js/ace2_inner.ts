@@ -2883,43 +2883,54 @@ function Ace2Inner(editorInfo, cssManagers) {
           const isPageDown = evt.which === 34;
           const isPageUp = evt.which === 33;
 
-          if ((isPageDown && padShortcutEnabled.pageDown) ||
-              (isPageUp && padShortcutEnabled.pageUp)) {
-            // Scroll by actual viewport height in pixels, not by line count.
-            // This fixes the case where very long wrapped lines consume the
-            // entire viewport, making line-count-based scrolling useless.
-            const viewportHeight = outerDoc.documentElement.clientHeight;
-            // Keep a small overlap so the user doesn't lose context
-            const scrollAmount = viewportHeight - 40;
-            const currentScrollY = scroll.getScrollY();
+          const oldVisibleLineRange = scroll.getVisibleLineRange(rep);
+          let topOffset = rep.selStart[0] - oldVisibleLineRange[0];
+          if (topOffset < 0) topOffset = 0;
 
-            if (isPageDown) {
-              scroll.setScrollY(currentScrollY + scrollAmount);
-            } else {
-              scroll.setScrollY(Math.max(0, currentScrollY - scrollAmount));
+          scheduler.setTimeout(() => {
+            const newVisibleLineRange = scroll.getVisibleLineRange(rep);
+            const linesCount = rep.lines.length();
+
+            // Calculate lines to skip based on viewport pixel height divided by
+            // the average rendered line height. This correctly handles long wrapped
+            // lines that consume multiple visual rows (fixes #4562).
+            const viewportHeight = outerDoc.documentElement.clientHeight;
+            const visibleStart = newVisibleLineRange[0];
+            const visibleEnd = newVisibleLineRange[1];
+            let totalPixelHeight = 0;
+            for (let i = visibleStart; i <= Math.min(visibleEnd, linesCount - 1); i++) {
+              const entry = rep.lines.atIndex(i);
+              if (entry && entry.lineNode) {
+                totalPixelHeight += entry.lineNode.offsetHeight;
+              }
+            }
+            const visibleLogicalLines = visibleEnd - visibleStart;
+            // Use pixel-based count: how many logical lines fit in one viewport
+            const numberOfLinesInViewport = visibleLogicalLines > 0 && totalPixelHeight > 0
+                ? Math.max(1, Math.round(visibleLogicalLines * viewportHeight / totalPixelHeight))
+                : Math.max(1, visibleLogicalLines);
+
+            if (isPageUp && padShortcutEnabled.pageUp) {
+              rep.selStart[0] -= numberOfLinesInViewport;
+              rep.selEnd[0] -= numberOfLinesInViewport;
             }
 
-            // Move cursor into the new visible area
-            scheduler.setTimeout(() => {
-              const linesCount = rep.lines.length();
-              const newVisibleRange = scroll.getVisibleLineRange(rep);
+            if (isPageDown && padShortcutEnabled.pageDown) {
+              rep.selStart[0] += numberOfLinesInViewport;
+              rep.selEnd[0] += numberOfLinesInViewport;
+            }
 
-              if (isPageDown) {
-                // Place cursor at the first line of the new viewport
-                rep.selStart[0] = newVisibleRange[0];
-                rep.selEnd[0] = newVisibleRange[0];
-              } else {
-                // Place cursor at the last line of the new viewport
-                rep.selEnd[0] = newVisibleRange[1];
-                rep.selStart[0] = newVisibleRange[1];
-              }
-
-              // clamp to valid line range
-              rep.selStart[0] = Math.max(0, Math.min(rep.selStart[0], linesCount - 1));
-              rep.selEnd[0] = Math.max(0, Math.min(rep.selEnd[0], linesCount - 1));
-              updateBrowserSelectionFromRep();
-            }, 0);
-          }
+            // clamp to valid line range
+            rep.selStart[0] = Math.max(0, Math.min(rep.selStart[0], linesCount - 1));
+            rep.selEnd[0] = Math.max(0, Math.min(rep.selEnd[0], linesCount - 1));
+            updateBrowserSelectionFromRep();
+            // scroll to the caret position
+            const myselection = targetDoc.getSelection();
+            let caretOffsetTop = myselection.focusNode.parentNode.offsetTop ||
+                myselection.focusNode.offsetTop;
+            if (caretOffsetTop === -1) caretOffsetTop = myselection.focusNode.offsetTop;
+            scroll.setScrollY(caretOffsetTop);
+          }, 200);
         }
       }
 
