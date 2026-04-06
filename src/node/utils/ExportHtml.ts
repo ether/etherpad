@@ -309,6 +309,9 @@ const getHTMLFromAtext = async (pad:PadType, atext: AText, authorColors?: string
   }
 
   let openLists: openList[] = [];
+  // Track running ordered-list item counts per indent level so that when an <ol>
+  // is reopened after an unordered-list interruption we can emit start="N".
+  const olItemCounts: MapArrayType<number> = {};
   for (let i = 0; i < textLines.length; i++) {
     let context;
     const line = _analyzeLine(textLines[i], attribLines[i], apool);
@@ -388,10 +391,25 @@ const getHTMLFromAtext = async (pad:PadType, atext: AText, authorColors?: string
             }
 
             if (line.listTypeName === 'number') {
-              if (line.start) {
-                pieces.push(`<ol start="${Number(line.start)}" class="${line.listTypeName}">`);
-              } else {
+              if (olItemCounts[line.listLevel] != null && olItemCounts[line.listLevel] > 0) {
+                // Continue numbering after an unordered-list interruption
+                const startNum = olItemCounts[line.listLevel] + 1;
+                pieces.push(`<ol start="${startNum}" class="${line.listTypeName}">`);
+              } else if (olItemCounts[line.listLevel] != null) {
+                // Counter exists but is 0 — level was explicitly reset (e.g. a
+                // nested list was closed). Start fresh without a start attribute.
                 pieces.push(`<ol class="${line.listTypeName}">`);
+              } else {
+                // No counter yet. Use explicit start attribute when present
+                // (e.g. from import or internal logic) and seed the counter so
+                // subsequent continuations stay aligned.
+                const explicitStart = Number(line.start);
+                if (Number.isFinite(explicitStart) && explicitStart > 0) {
+                  pieces.push(`<ol start="${explicitStart}" class="${line.listTypeName}">`);
+                  olItemCounts[line.listLevel] = explicitStart - 1;
+                } else {
+                  pieces.push(`<ol class="${line.listTypeName}">`);
+                }
               }
             } else if (line.listTypeName === 'indent') {
               // Indent lines are plain indented text, not list items.
@@ -406,6 +424,14 @@ const getHTMLFromAtext = async (pad:PadType, atext: AText, authorColors?: string
       // if we're going up a level we shouldn't be adding..
       if (context.lineContent) {
         pieces.push('<li>', context.lineContent);
+        // Track ordered-list item counts so we can continue numbering after interruptions
+        if (line.listTypeName === 'number') {
+          if (!olItemCounts[line.listLevel]) {
+            olItemCounts[line.listLevel] = 1;
+          } else {
+            olItemCounts[line.listLevel]++;
+          }
+        }
       }
 
       // To close list elements
@@ -431,12 +457,23 @@ const getHTMLFromAtext = async (pad:PadType, atext: AText, authorColors?: string
         if (nextLine && nextLine.listLevel) {
           nextLevel = nextLine.listLevel;
         }
+        // The actual depth the next line lives at (ignoring type changes)
+        const actualNextLevel = (nextLine && nextLine.listLevel) ? nextLine.listLevel : 0;
         if (nextLine && line.listTypeName !== nextLine.listTypeName) {
           nextLevel = 0;
         }
 
         for (let diff = nextLevel; diff < line.listLevel; diff++) {
           openLists = openLists.filter((el) => el.level !== diff && el.type !== line.listTypeName);
+
+          // Reset counter for levels that are genuinely closing (depth decrease),
+          // not merely changing type at the same depth. Type changes should
+          // preserve counters so numbering can continue after interruptions.
+          // Use 0 as sentinel (not delete) so the ol-opening logic knows this
+          // level was explicitly reset and won't fall back to line.start.
+          if (diff + 1 > actualNextLevel) {
+            olItemCounts[diff + 1] = 0;
+          }
 
           if (pieces[pieces.length - 1].indexOf('</ul') === 0 ||
               pieces[pieces.length - 1].indexOf('</ol') === 0) {
@@ -451,6 +488,10 @@ const getHTMLFromAtext = async (pad:PadType, atext: AText, authorColors?: string
         }
       }
     } else {
+      // outside any list — reset ordered-list counters for all levels
+      for (const key of Object.keys(olItemCounts)) {
+        delete olItemCounts[key];
+      }
       // outside any list, need to close line.listLevel of lists
       context = {
         line,
