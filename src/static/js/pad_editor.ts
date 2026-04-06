@@ -72,6 +72,9 @@ const padeditor = (() => {
         pad.changeViewOption('rtlIsTrue', padutils.getCheckbox($('#options-rtlcheck')));
       });
       html10n.bind('localized', () => {
+        // Don't override RTL when explicitly set via URL/server or user cookie
+        if (settings && settings.rtlIsExplicit) return;
+        if (padcookie.getPref('rtlIsTrue') === true) return;
         pad.changeViewOption('rtlIsTrue', ('rtl' === html10n.getDirection()));
         padutils.setCheckbox($('#options-rtlcheck'), ('rtl' === html10n.getDirection()));
       });

@@ -119,9 +119,10 @@ const getParameters = [
   },
   {
     name: 'rtl',
-    checkVal: 'true',
-    callback: (val) => {
-      settings.rtlIsTrue = true;
+    checkVal: null,
+    callback: (val, fromUrl) => {
+      settings.rtlIsTrue = val === 'true';
+      if (fromUrl) settings.rtlIsExplicit = true;
     },
   },
   {
@@ -159,7 +160,7 @@ const getParams = () => {
     // (e.g., lang setting triggers html10n.localize twice).
     const urlValue = params.get(setting.name);
     if (urlValue && (urlValue === setting.checkVal || setting.checkVal == null)) {
-      setting.callback(urlValue);
+      setting.callback(urlValue, true);
       continue;
     }
 
@@ -168,7 +169,7 @@ const getParams = () => {
     if (serverValue == null) continue;
     serverValue = serverValue.toString();
     if (serverValue === setting.checkVal || setting.checkVal == null) {
-      setting.callback(serverValue);
+      setting.callback(serverValue, false);
     }
   }
 };
@@ -466,7 +467,10 @@ const pad = {
       if (padcookie.getPref('showLineNumbers') === false) {
         pad.changeViewOption('showLineNumbers', false);
       }
-      if (padcookie.getPref('rtlIsTrue') === true) {
+      if (settings.rtlIsExplicit) {
+        // URL or server config explicitly set RTL — takes priority over cookie
+        pad.changeViewOption('rtlIsTrue', settings.rtlIsTrue === true);
+      } else if (padcookie.getPref('rtlIsTrue') === true) {
         pad.changeViewOption('rtlIsTrue', true);
       }
       pad.changeViewOption('padFontFamily', padcookie.getPref('padFontFamily'));
@@ -551,9 +555,8 @@ const pad = {
       this.changeViewOption('noColors', true);
     }
 
-    if (settings.rtlIsTrue === true) {
-      this.changeViewOption('rtlIsTrue', true);
-    }
+    // RTL override is applied in postAceInit (after padeditor.init resolves)
+    // to avoid a race where setViewOptions(initialViewOptions) overwrites it.
 
     // If the Monospacefont value is set to true then change it to monospace.
     if (settings.useMonospaceFontGlobal === true) {
@@ -784,6 +787,7 @@ const settings = {
   globalUserName: false,
   globalUserColor: false,
   rtlIsTrue: false,
+  rtlIsExplicit: false,
 };
 
 pad.settings = settings;
