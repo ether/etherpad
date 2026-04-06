@@ -1270,7 +1270,7 @@ function Ace2Inner(editorInfo, cssManagers) {
       const thisLine = rep.lines.atIndex(lineNum);
       const prevLine = rep.lines.prev(thisLine);
       const prevLineText = prevLine.text;
-      let theIndent = /^ *(?:)/.exec(prevLineText)[0];
+      let theIndent = /^[ \xa0]*(?:)/.exec(prevLineText)[0];
       const shouldIndent = window.clientVars.indentationOnNewLine;
       if (shouldIndent && /[[(:{]\s*$/.exec(prevLineText)) {
         theIndent += THE_TAB;
