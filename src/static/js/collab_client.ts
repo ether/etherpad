@@ -152,7 +152,6 @@ const getCollabClient = (ace2editor, serverVars, initialUserInfo, options, _pad)
   const setUpSocket = () => {
     setChannelState('CONNECTED');
     doDeferredActions();
-    handleUserChanges();
 
     initialStartConnectTime = Date.now();
 
@@ -364,6 +363,11 @@ const getCollabClient = (ace2editor, serverVars, initialUserInfo, options, _pad)
     if (newChannelState !== channelState) {
       channelState = newChannelState;
       callbacks.onChannelStateChange(channelState, moreInfo);
+      if (channelState === 'CONNECTED') {
+        // Flush any pending user changes whenever we become connected,
+        // including after a reconnect (not just the initial connection).
+        handleUserChanges();
+      }
     }
   };
 
