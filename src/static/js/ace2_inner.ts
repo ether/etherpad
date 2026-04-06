@@ -2879,51 +2879,47 @@ function Ace2Inner(editorInfo, cssManagers) {
           // This is required, browsers will try to do normal default behavior on
           // page up / down and the default behavior SUCKS
           evt.preventDefault();
-          const oldVisibleLineRange = scroll.getVisibleLineRange(rep);
-          let topOffset = rep.selStart[0] - oldVisibleLineRange[0];
-          if (topOffset < 0) {
-            topOffset = 0;
-          }
 
           const isPageDown = evt.which === 34;
           const isPageUp = evt.which === 33;
 
-          scheduler.setTimeout(() => {
-            // the visible lines IE 1,10
-            const newVisibleLineRange = scroll.getVisibleLineRange(rep);
-            // total count of lines in pad IE 10
-            const linesCount = rep.lines.length();
-            // How many lines are in the viewport right now?
-            const numberOfLinesInViewport = newVisibleLineRange[1] - newVisibleLineRange[0];
+          if ((isPageDown && padShortcutEnabled.pageDown) ||
+              (isPageUp && padShortcutEnabled.pageUp)) {
+            // Scroll by actual viewport height in pixels, not by line count.
+            // This fixes the case where very long wrapped lines consume the
+            // entire viewport, making line-count-based scrolling useless.
+            const viewportHeight = outerWin.document.documentElement.clientHeight;
+            // Keep a small overlap so the user doesn't lose context
+            const scrollAmount = viewportHeight - 40;
+            const currentScrollY = scroll.getScrollY();
 
-            if (isPageUp && padShortcutEnabled.pageUp) {
-              rep.selStart[0] -= numberOfLinesInViewport;
-              rep.selEnd[0] -= numberOfLinesInViewport;
+            if (isPageDown) {
+              scroll.setScrollY(currentScrollY + scrollAmount);
+            } else {
+              scroll.setScrollY(Math.max(0, currentScrollY - scrollAmount));
             }
 
-            if (isPageDown && padShortcutEnabled.pageDown) {
-              rep.selStart[0] += numberOfLinesInViewport;
-              rep.selEnd[0] += numberOfLinesInViewport;
-            }
+            // Move cursor into the new visible area
+            scheduler.setTimeout(() => {
+              const linesCount = rep.lines.length();
+              const newVisibleRange = scroll.getVisibleLineRange(rep);
 
-            // clamp to valid line range
-            rep.selStart[0] = Math.max(0, Math.min(rep.selStart[0], linesCount - 1));
-            rep.selEnd[0] = Math.max(0, Math.min(rep.selEnd[0], linesCount - 1));
-            updateBrowserSelectionFromRep();
-            // get the current caret selection, can't use rep. here because that only gives
-            // us the start position not the current
-            const myselection = targetDoc.getSelection();
-            // get the carets selection offset in px IE 214
-            let caretOffsetTop = myselection.focusNode.parentNode.offsetTop ||
-                myselection.focusNode.offsetTop;
+              if (isPageDown) {
+                // Place cursor at the first line of the new viewport
+                rep.selStart[0] = newVisibleRange[0];
+                rep.selEnd[0] = newVisibleRange[0];
+              } else {
+                // Place cursor at the last line of the new viewport
+                rep.selEnd[0] = newVisibleRange[1];
+                rep.selStart[0] = newVisibleRange[1];
+              }
 
-            // sometimes the first selection is -1 which causes problems
-            // (Especially with ep_page_view)
-            // so use focusNode.offsetTop value.
-            if (caretOffsetTop === -1) caretOffsetTop = myselection.focusNode.offsetTop;
-            // set the scrollY offset of the viewport on the document
-            scroll.setScrollY(caretOffsetTop);
-          }, 200);
+              // clamp to valid line range
+              rep.selStart[0] = Math.max(0, Math.min(rep.selStart[0], linesCount - 1));
+              rep.selEnd[0] = Math.max(0, Math.min(rep.selEnd[0], linesCount - 1));
+              updateBrowserSelectionFromRep();
+            }, 0);
+          }
         }
       }
 
