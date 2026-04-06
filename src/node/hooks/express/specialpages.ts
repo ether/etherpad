@@ -17,6 +17,13 @@ import prometheus from "../../prometheus";
 
 let ioI: { sockets: { sockets: any[]; }; } | null = null
 
+// Sanitize x-proxy-path header to prevent XSS via header injection.
+// Only allow path-like characters (letters, digits, hyphens, underscores, slashes, dots).
+const sanitizeProxyPath = (req: any): string => {
+  const raw = req.header('x-proxy-path') || '';
+  return raw.replace(/[^a-zA-Z0-9\-_\/\.]/g, '');
+};
+
 
 exports.socketio = (hookName: string, {io}: any) => {
   ioI = io
@@ -164,7 +171,8 @@ const handleLiveReload = async (args: ArgsExpressType, padString: string, timeSl
         res.send(output)
       })
       setRouteHandler('/', (req: any, res: any) => {
-        res.send(eejs.require('ep_etherpad-lite/templates/index.html', {req, entrypoint: '/watch/index?hash=' + hash, settings}));
+        const proxyPath = sanitizeProxyPath(req);
+        res.send(eejs.require('ep_etherpad-lite/templates/index.html', {req, entrypoint: proxyPath + '/watch/index?hash=' + hash, settings}));
       })
     })
 
@@ -187,11 +195,12 @@ const handleLiveReload = async (args: ArgsExpressType, padString: string, timeSl
           isReadOnly
         });
 
+        const proxyPath = sanitizeProxyPath(req);
         const content = eejs.require('ep_etherpad-lite/templates/pad.html', {
           req,
           toolbar,
           isReadOnly,
-          entrypoint: '/watch/pad?hash=' + hash,
+          entrypoint: proxyPath + '/watch/pad?hash=' + hash,
           settings: settings.getPublicSettings()
         })
         res.send(content);
@@ -217,11 +226,12 @@ const handleLiveReload = async (args: ArgsExpressType, padString: string, timeSl
           isReadOnly
         });
 
+        const proxyPath = sanitizeProxyPath(req);
         const content = eejs.require('ep_etherpad-lite/templates/timeslider.html', {
           req,
           toolbar,
           isReadOnly,
-          entrypoint: '/watch/timeslider?hash=' + hash,
+          entrypoint: proxyPath + '/watch/timeslider?hash=' + hash,
           settings: settings.getPublicSettings()
         })
         res.send(content);
