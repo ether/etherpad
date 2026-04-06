@@ -164,7 +164,8 @@ const handleLiveReload = async (args: ArgsExpressType, padString: string, timeSl
         res.send(output)
       })
       setRouteHandler('/', (req: any, res: any) => {
-        res.send(eejs.require('ep_etherpad-lite/templates/index.html', {req, entrypoint: '/watch/index?hash=' + hash, settings}));
+        const proxyPath = req.header('x-proxy-path') || '';
+        res.send(eejs.require('ep_etherpad-lite/templates/index.html', {req, entrypoint: proxyPath + '/watch/index?hash=' + hash, settings}));
       })
     })
 
@@ -187,11 +188,12 @@ const handleLiveReload = async (args: ArgsExpressType, padString: string, timeSl
           isReadOnly
         });
 
+        const proxyPath = req.header('x-proxy-path') || '';
         const content = eejs.require('ep_etherpad-lite/templates/pad.html', {
           req,
           toolbar,
           isReadOnly,
-          entrypoint: '/watch/pad?hash=' + hash,
+          entrypoint: proxyPath + '/watch/pad?hash=' + hash,
           settings: settings.getPublicSettings()
         })
         res.send(content);
@@ -217,11 +219,12 @@ const handleLiveReload = async (args: ArgsExpressType, padString: string, timeSl
           isReadOnly
         });
 
+        const proxyPath = req.header('x-proxy-path') || '';
         const content = eejs.require('ep_etherpad-lite/templates/timeslider.html', {
           req,
           toolbar,
           isReadOnly,
-          entrypoint: '/watch/timeslider?hash=' + hash,
+          entrypoint: proxyPath + '/watch/timeslider?hash=' + hash,
           settings: settings.getPublicSettings()
         })
         res.send(content);
