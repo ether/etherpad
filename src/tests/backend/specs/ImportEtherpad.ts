@@ -171,6 +171,49 @@ describe(__filename, function () {
     }
   });
 
+  // Regression test for https://github.com/ether/etherpad-lite/issues/6785
+  describe('old .etherpad imports without author metadata', function () {
+    // Old exports (circa 2014) have revisions where meta.author is missing entirely
+    const makeOldExportNoAuthor = () => ({
+      'pad:testing': {
+        atext: {
+          text: 'foo\n',
+          attribs: '|1+4',
+        },
+        pool: {
+          numToAttrib: {},
+          nextNum: 0,
+        },
+        head: 0,
+        savedRevisions: [],
+      },
+      // Revision 0 has no meta.author — this is how very old etherpads exported
+      'pad:testing:revs:0': {
+        changeset: 'Z:1>3+3$foo',
+        meta: {
+          timestamp: 1273769875976,
+          atext: {
+            text: 'foo\n',
+            attribs: '|1+4',
+          },
+        },
+      },
+    });
+
+    it('imports without error when revision lacks meta.author', async function () {
+      await importEtherpad.setPadRaw(padId, JSON.stringify(makeOldExportNoAuthor()));
+      const pad = await padManager.getPad(padId);
+      assert.equal(pad.text(), 'foo\n');
+      assert.equal(pad.head, 0);
+    });
+
+    it('getRevisionAuthor returns empty string for missing author', async function () {
+      await importEtherpad.setPadRaw(padId, JSON.stringify(makeOldExportNoAuthor()));
+      const pad = await padManager.getPad(padId);
+      assert.equal(await pad.getRevisionAuthor(0), '');
+    });
+  });
+
   describe('exportEtherpadAdditionalContent', function () {
     let hookBackup: Function;
 
