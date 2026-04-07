@@ -1091,6 +1091,17 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
     // Save the revision in sessioninfos — must match what was sent in clientVars
     sessionInfo.rev = headRev;
 
+    // Initialize sessionInfo.time to the timestamp of the snapshot revision so
+    // that subsequent NEW_CHANGES timeDelta calculations are valid.  Without
+    // this, the catch-up updatePadClients() call below would emit timeDelta=NaN
+    // which breaks the client's broadcast/timeslider time tracking.
+    try {
+      sessionInfo.time = await pad.getRevisionDate(headRev);
+    } catch (err) {
+      // Fallback: if we can't read the revision timestamp, use now.
+      sessionInfo.time = Date.now();
+    }
+
     // Flush any revisions that may have been appended while we were awaiting the
     // clientVars hook (before socket.join).  Those revisions were broadcast to
     // existing room members but this socket hadn't joined yet so it missed them.

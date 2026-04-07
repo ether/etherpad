@@ -27,7 +27,7 @@ describe(__filename, function () {
     plugins.hooks.clientVars = clientVarsBackup;
   });
 
-  it('CLIENT_VARS rev matches initialAttributedText state', async function () {
+  it('CLIENT_VARS rev matches initialAttributedText state at that exact rev', async function () {
     this.timeout(30000);
     const padId = randomString(10);
 
@@ -38,7 +38,6 @@ describe(__filename, function () {
     await pad.setText('edit one\n');
     await pad.setText('edit two\n');
     await pad.setText('edit three\n');
-    const expectedText = pad.text();
 
     // Now connect a new client — CLIENT_VARS should be consistent
     const res = await agent.get(`/p/${padId}`).expect(200);
@@ -48,16 +47,62 @@ describe(__filename, function () {
       assert.equal(type, 'CLIENT_VARS');
 
       const collabVars = clientVars.collab_client_vars;
-
-      // The rev in CLIENT_VARS must correspond to the initialAttributedText
       assert.equal(typeof collabVars.rev, 'number');
 
-      // Verify the text from initialAttributedText matches the pad text
-      const iatText = collabVars.initialAttributedText.text;
-      assert.equal(iatText, expectedText,
-        `initialAttributedText.text doesn't match pad text at rev ${collabVars.rev}`);
+      // The core invariant: the initialAttributedText must correspond to the
+      // EXACT revision advertised in collabVars.rev (not just the latest pad
+      // text). Validate this by fetching the historical AText for that rev.
+      const atextAtRev = await pad.getInternalRevisionAText(collabVars.rev);
+      assert.equal(atextAtRev.text, collabVars.initialAttributedText.text,
+        `initialAttributedText.text doesn't match pad AText at rev ${collabVars.rev}`);
+      assert.equal(atextAtRev.attribs, collabVars.initialAttributedText.attribs,
+        `initialAttributedText.attribs doesn't match pad AText at rev ${collabVars.rev}`);
     } finally {
       socket.close();
+      await pad.remove();
+    }
+  });
+
+  it('CLIENT_VARS is consistent under concurrent edits during handshake', async function () {
+    // Reproduces the original race: a new client opens the pad while another
+    // process is rapidly mutating it. The advertised rev/initialAttributedText
+    // must always correspond, even if the pad has advanced past that rev by
+    // the time the client receives CLIENT_VARS.
+    this.timeout(60000);
+    const padId = randomString(10);
+    const pad = await padManager.getPad(padId, 'rev0\n');
+
+    // Spawn a background "load" that hammers the pad with edits.
+    let stopLoad = false;
+    let editCount = 0;
+    const loadPromise = (async () => {
+      while (!stopLoad) {
+        await pad.setText(`load-edit-${editCount++}\n`);
+      }
+    })();
+
+    try {
+      // While the load is running, connect 5 clients in sequence and assert
+      // each one's CLIENT_VARS is internally consistent.
+      for (let i = 0; i < 5; i++) {
+        const res = await agent.get(`/p/${padId}`).expect(200);
+        const socket = await common.connect(res);
+        try {
+          const {type, data: clientVars} = await common.handshake(socket, padId);
+          assert.equal(type, 'CLIENT_VARS');
+          const collabVars = clientVars.collab_client_vars;
+          // Validate the AText corresponds to the advertised rev — this is the
+          // exact invariant whose violation produced "mismatched apply" errors.
+          const atextAtRev = await pad.getInternalRevisionAText(collabVars.rev);
+          assert.equal(atextAtRev.text, collabVars.initialAttributedText.text,
+            `Iteration ${i}: AText mismatch at rev ${collabVars.rev}`);
+        } finally {
+          socket.close();
+        }
+      }
+    } finally {
+      stopLoad = true;
+      await loadPromise;
       await pad.remove();
     }
   });
