@@ -136,9 +136,15 @@ jobs:
         run: |
           Push-Location $env:ETHERPAD_DIR
           $logPath = Join-Path $env:RUNNER_TEMP 'etherpad.log'
-          $proc = Start-Process -FilePath pnpm -ArgumentList 'run','prod' -RedirectStandardOutput $logPath -RedirectStandardError "$logPath.err" -PassThru -NoNewWindow
+          # pnpm on Windows is a .cmd shim, which Start-Process can't run
+          # directly — wrap it in cmd.exe.
+          $proc = Start-Process -FilePath cmd.exe `
+                                -ArgumentList '/c','pnpm','run','prod' `
+                                -RedirectStandardOutput $logPath `
+                                -RedirectStandardError "$logPath.err" `
+                                -PassThru -NoNewWindow
           $ok = $false
-          for ($i = 1; $i -le 60; $i++) {
+          for ($i = 1; $i -le 90; $i++) {
             try {
               Invoke-WebRequest -UseBasicParsing -Uri http://localhost:9001/api -TimeoutSec 2 | Out-Null
               Write-Host "Etherpad answered on /api after ${i}s"
@@ -147,8 +153,10 @@ jobs:
             } catch { Start-Sleep -Seconds 1 }
           }
           if (-not $ok) {
-            Write-Host 'Etherpad did not start within 60s. Last 200 lines of log:'
+            Write-Host 'Etherpad did not start within 90s. Last 200 lines of log (stdout):'
             if (Test-Path $logPath) { Get-Content $logPath -Tail 200 }
+            Write-Host 'Last 200 lines of stderr:'
+            if (Test-Path "$logPath.err") { Get-Content "$logPath.err" -Tail 200 }
             Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
             Pop-Location
             exit 1
