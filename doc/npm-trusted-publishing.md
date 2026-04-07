@@ -23,21 +23,40 @@ No `NPM_TOKEN` secret is needed in any plugin or in core.
 
 ## One-time setup per package
 
-Trusted publishing has to be enabled **once per package** on npmjs.com — there
-is no API for it. For each package (`ep_etherpad`, every `ep_*` plugin):
+Trusted publishing has to be enabled **once per package**. Use the bundled
+script to do every package in one go via the `npm trust` CLI (npm >= 11.5.1):
 
-1. Sign in to npmjs.com as a maintainer of the package.
-2. Open `https://www.npmjs.com/package/<name>/access`.
-3. Scroll to **Trusted Publisher** and click **Add trusted publisher**.
-4. Fill in:
-   - **Publisher**: GitHub Actions
-   - **Organization or user**: `ether`
-   - **Repository**: the plugin repo (e.g. `ep_align`) — for `ep_etherpad`
-     use `etherpad-lite`
-   - **Workflow filename**: `.github/workflows/test-and-release.yml` for
-     plugins, `.github/workflows/releaseEtherpad.yml` for core
-   - **Environment name**: leave blank
-5. Click **Add**.
+```sh
+# 1. Make sure npm CLI is recent enough
+npm install -g npm@latest
+
+# 2. Log in to npmjs.com as a maintainer
+npm login
+
+# 3. Bulk-configure every ether/ep_* plugin + ep_etherpad
+bin/setup-trusted-publishers.sh
+
+# Or preview without changing anything
+bin/setup-trusted-publishers.sh --dry-run
+
+# Or target a specific subset
+bin/setup-trusted-publishers.sh --packages ep_align,ep_webrtc
+
+# Or ignore packages that are already configured (the registry only allows
+# one trust relationship per package today)
+bin/setup-trusted-publishers.sh --skip-existing
+```
+
+The script discovers all non-archived `ether/ep_*` repos via `gh repo list`
+and runs `npm trust github <pkg> --repository <org>/<repo> --file <workflow>
+--yes` for each one. `ep_etherpad` is mapped to the `etherpad-lite` repo and
+the `releaseEtherpad.yml` workflow; everything else is mapped to its
+same-named repo and `test-and-release.yml`.
+
+If you'd rather click through the npmjs.com UI for a single package: open
+`https://www.npmjs.com/package/<name>/access` → **Trusted Publisher** →
+**Add trusted publisher** → Publisher: GitHub Actions, Organization: `ether`,
+Repository: as above, Workflow filename: as above, Environment: blank.
 
 Once added, the next push to `main`/`master` will publish via OIDC with no
 token at all.
