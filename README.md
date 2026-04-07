@@ -43,6 +43,31 @@ We're looking for maintainers and have some funding available.  Please contact J
 
 ## Installation
 
+### Quick install (one-liner)
+
+The fastest way to get Etherpad running. Requires `git` and Node.js >= 18.
+
+**macOS / Linux / WSL:**
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/ether/etherpad-lite/master/bin/installer.sh | sh
+```
+
+This clones Etherpad into `./etherpad-lite`, installs dependencies, and builds
+the frontend. When it finishes, run:
+
+```sh
+cd etherpad-lite && pnpm run prod
+```
+
+Then open <http://localhost:9001>.
+
+To install and start in one go:
+
+```sh
+ETHERPAD_RUN=1 sh -c "$(curl -fsSL https://raw.githubusercontent.com/ether/etherpad-lite/master/bin/installer.sh)"
+```
+
 ### Docker-Compose
 
 ```yaml
