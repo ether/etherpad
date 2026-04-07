@@ -63,46 +63,50 @@ describe(__filename, function () {
     }
   });
 
-  it('CLIENT_VARS is consistent under concurrent edits during handshake', async function () {
+  it('CLIENT_VARS is consistent when an edit lands between handshake start and finish',
+      async function () {
     // Reproduces the original race: a new client opens the pad while another
-    // process is rapidly mutating it. The advertised rev/initialAttributedText
-    // must always correspond, even if the pad has advanced past that rev by
-    // the time the client receives CLIENT_VARS.
-    this.timeout(60000);
+    // process mutates it. The advertised rev / initialAttributedText must
+    // always correspond, even if the pad has advanced past that rev by the
+    // time the client receives CLIENT_VARS.
+    this.timeout(30000);
     const padId = randomString(10);
     const pad = await padManager.getPad(padId, 'rev0\n');
 
-    // Spawn a background "load" that hammers the pad with edits.
-    let stopLoad = false;
-    let editCount = 0;
-    const loadPromise = (async () => {
-      while (!stopLoad) {
-        await pad.setText(`load-edit-${editCount++}\n`);
-      }
-    })();
+    // Inject a slow clientVars hook that mutates the pad mid-handshake.
+    // This is the most reliable way to force the race window without an
+    // open-ended background loop that can stall ueberDB at shutdown.
+    let edits = 0;
+    plugins.hooks.clientVars = [{
+      hook_fn: async () => {
+        // Land a couple of edits while the server is still preparing
+        // CLIENT_VARS — the bug surfaces when the rev advances after the
+        // atext snapshot but before the rev is read.
+        for (let i = 0; i < 3; i++) {
+          await pad.setText(`mid-handshake-edit-${edits++}\n`);
+        }
+        return {};
+      },
+    }];
 
     try {
-      // While the load is running, connect 5 clients in sequence and assert
-      // each one's CLIENT_VARS is internally consistent.
-      for (let i = 0; i < 5; i++) {
-        const res = await agent.get(`/p/${padId}`).expect(200);
-        const socket = await common.connect(res);
-        try {
-          const {type, data: clientVars} = await common.handshake(socket, padId);
-          assert.equal(type, 'CLIENT_VARS');
-          const collabVars = clientVars.collab_client_vars;
-          // Validate the AText corresponds to the advertised rev — this is the
-          // exact invariant whose violation produced "mismatched apply" errors.
-          const atextAtRev = await pad.getInternalRevisionAText(collabVars.rev);
-          assert.equal(atextAtRev.text, collabVars.initialAttributedText.text,
-            `Iteration ${i}: AText mismatch at rev ${collabVars.rev}`);
-        } finally {
-          socket.close();
-        }
+      const res = await agent.get(`/p/${padId}`).expect(200);
+      const socket = await common.connect(res);
+      try {
+        const {type, data: clientVars} = await common.handshake(socket, padId);
+        assert.equal(type, 'CLIENT_VARS');
+        const collabVars = clientVars.collab_client_vars;
+        // Validate that initialAttributedText matches the AText at the
+        // advertised rev — the exact invariant whose violation produced
+        // "mismatched apply" errors.
+        const atextAtRev = await pad.getInternalRevisionAText(collabVars.rev);
+        assert.equal(atextAtRev.text, collabVars.initialAttributedText.text,
+          `AText mismatch at rev ${collabVars.rev}`);
+      } finally {
+        socket.close();
       }
     } finally {
-      stopLoad = true;
-      await loadPromise;
+      plugins.hooks.clientVars = clientVarsBackup;
       await pad.remove();
     }
   });
