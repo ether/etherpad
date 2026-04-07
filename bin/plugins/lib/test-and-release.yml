@@ -1,6 +1,11 @@
 name: Node.js Package
 on: [push]
 
+# id-token: write must be granted here so the reusable npmpublish workflow
+# can request an OIDC token for npm trusted publishing.
+permissions:
+  contents: write
+  id-token: write
 
 jobs:
   backend:
@@ -14,5 +19,8 @@ jobs:
     needs:
       - backend
       - frontend
+    permissions:
+      contents: write   # for the version bump push
+      id-token: write   # for npm OIDC trusted publishing
     uses: ./.github/workflows/npmpublish.yml
     secrets: inherit

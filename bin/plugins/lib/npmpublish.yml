@@ -1,5 +1,10 @@
 # This workflow will run tests using node and then publish a package to the npm registry when a release is created
 # For more information see: https://help.github.com/actions/language-and-framework-guides/publishing-nodejs-packages
+#
+# Publishing uses npm Trusted Publishing (OIDC) — no NPM_TOKEN secret is
+# required. Each package must have a trusted publisher configured on npmjs.com
+# pointing at this workflow file. See:
+# https://docs.npmjs.com/trusted-publishers
 
 name: Node.js Package
 
@@ -9,16 +14,22 @@ on:
 jobs:
   publish-npm:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write   # for `git push --follow-tags` of the version bump
+      id-token: write   # for npm OIDC trusted publishing
     steps:
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
-          node-version: 20
+          # npm Trusted Publishing requires Node >= 22.14.0
+          node-version: 22
           registry-url: https://registry.npmjs.org/
+      - name: Upgrade npm to >=11.5.1 (required for trusted publishing)
+        run: npm install -g npm@latest
       - name: Check out Etherpad core
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: ether/etherpad-lite
-      - uses: pnpm/action-setup@v3
+      - uses: pnpm/action-setup@v5
         name: Install pnpm
         with:
           version: 10
@@ -27,7 +38,7 @@ jobs:
         shell: bash
         run: |
           echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         name: Setup pnpm cache
         with:
           path: ${{ env.STORE_PATH }}
@@ -35,7 +46,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pnpm-store-
       -
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
       -
@@ -63,12 +74,10 @@ jobs:
       # already-used version number. By running `npm publish` after `git push`,
       # back-to-back merges will cause the first merge's workflow to fail but
       # the second's will succeed.
-      -
-        run: pnpm publish
-        env:
-          NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
-      #-
-      #  name: Add package to etherpad organization
-      #  run: pnpm access grant read-write etherpad:developers
-      #  env:
-      #    NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
+      #
+      # Use `npm publish` directly (not `pnpm publish`) because OIDC trusted
+      # publishing requires npm CLI >= 11.5.1 and `pnpm publish` shells out to
+      # whichever `npm` is on PATH; calling `npm` directly avoids any shim
+      # ambiguity.
+      - name: Publish to npm via OIDC
+        run: npm publish --provenance --access public

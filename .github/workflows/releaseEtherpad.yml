@@ -1,6 +1,7 @@
 name: releaseEtherpad.yaml
 permissions:
   contents: read
+  id-token: write   # for npm OIDC trusted publishing
 on:
   workflow_dispatch:
 
@@ -13,6 +14,13 @@ jobs:
     steps:
         - name: Checkout repository
           uses: actions/checkout@v6
+        - uses: actions/setup-node@v6
+          with:
+            # npm Trusted Publishing requires Node >= 22.14.0
+            node-version: 22
+            registry-url: https://registry.npmjs.org/
+        - name: Upgrade npm to >=11.5.1 (required for trusted publishing)
+          run: npm install -g npm@latest
         - name: Get pnpm store directory
           shell: bash
           run: |
@@ -38,8 +46,12 @@ jobs:
         - name: Rename etherpad
           working-directory: ./src
           run: sed -i 's/ep_etherpad-lite/ep_etherpad/g' package.json
-        - name: Release to npm
-          run: gnpm publish --no-git-checks
+        # Use `npm publish` directly (not `gnpm`/`pnpm` wrappers) because OIDC
+        # trusted publishing requires npm CLI >= 11.5.1 and the wrappers shell
+        # out to npm; calling npm directly avoids any shim ambiguity. The
+        # ep_etherpad package must have a trusted publisher configured on
+        # npmjs.com pointing at this workflow file. See:
+        # https://docs.npmjs.com/trusted-publishers
+        - name: Release to npm via OIDC
+          run: npm publish --provenance --access public
           working-directory: ./src
-          env:
-            NODE_AUTH_TOKEN: ${{ secrets.NPM_PRIVATE_TOKEN }}
