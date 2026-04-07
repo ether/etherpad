@@ -45,7 +45,7 @@ We're looking for maintainers and have some funding available.  Please contact J
 
 ### Quick install (one-liner)
 
-The fastest way to get Etherpad running. Requires `git` and Node.js >= 18.
+The fastest way to get Etherpad running. Requires `git` and Node.js >= 20.
 
 **macOS / Linux / WSL:**
 
@@ -137,7 +137,7 @@ volumes:
 
 ### Requirements
 
-[Node.js](https://nodejs.org/).
+[Node.js](https://nodejs.org/) >= 20.
 
 ### Windows, macOS, Linux
 

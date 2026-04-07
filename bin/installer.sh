@@ -34,7 +34,7 @@ is_cmd() { command -v "$1" >/dev/null 2>&1; }
 ETHERPAD_DIR="${ETHERPAD_DIR:-etherpad-lite}"
 ETHERPAD_BRANCH="${ETHERPAD_BRANCH:-master}"
 ETHERPAD_REPO="${ETHERPAD_REPO:-https://github.com/ether/etherpad-lite.git}"
-REQUIRED_NODE_MAJOR=18
+REQUIRED_NODE_MAJOR=20
 
 step "Etherpad installer"
 
@@ -66,9 +66,44 @@ fi
 # ---------- clone ----------
 if [ -d "$ETHERPAD_DIR" ]; then
   if [ -d "$ETHERPAD_DIR/.git" ]; then
-    warn "$ETHERPAD_DIR already exists; pulling latest changes."
-    (cd "$ETHERPAD_DIR" && git pull --ff-only) || \
-      fatal "git pull failed in existing $ETHERPAD_DIR"
+    warn "$ETHERPAD_DIR already exists; updating to $ETHERPAD_BRANCH."
+    cd "$ETHERPAD_DIR" || fatal "Cannot cd into $ETHERPAD_DIR"
+
+    # Verify the existing checkout points at the expected remote.
+    EXISTING_REMOTE=$(git remote get-url origin 2>/dev/null || echo "")
+    if [ -n "$EXISTING_REMOTE" ] && [ "$EXISTING_REMOTE" != "$ETHERPAD_REPO" ]; then
+      fatal "$ETHERPAD_DIR is checked out from '$EXISTING_REMOTE', expected '$ETHERPAD_REPO'. Refusing to overwrite."
+    fi
+
+    # Refuse to clobber meaningful local changes. pnpm-lock.yaml is excluded
+    # because `pnpm i` rewrites it during installation, which would otherwise
+    # make every re-run of the installer fail.
+    DIRTY=$(git status --porcelain 2>/dev/null | awk '$2 != "pnpm-lock.yaml" {print}')
+    if [ -n "$DIRTY" ]; then
+      printf '%s\n' "$DIRTY" >&2
+      fatal "$ETHERPAD_DIR has uncommitted changes. Commit/stash them or remove the directory."
+    fi
+
+    git fetch --tags --prune origin || fatal "git fetch failed in $ETHERPAD_DIR"
+
+    # Discard any pnpm-lock.yaml changes from a prior pnpm install so the
+    # subsequent checkout doesn't refuse to overwrite local changes.
+    git checkout -- pnpm-lock.yaml 2>/dev/null || true
+
+    # Switch to the requested branch / tag and fast-forward to it.
+    if git show-ref --verify --quiet "refs/remotes/origin/$ETHERPAD_BRANCH"; then
+      git checkout -B "$ETHERPAD_BRANCH" "origin/$ETHERPAD_BRANCH" || \
+        fatal "git checkout $ETHERPAD_BRANCH failed"
+    elif git show-ref --verify --quiet "refs/tags/$ETHERPAD_BRANCH"; then
+      git checkout --detach "refs/tags/$ETHERPAD_BRANCH" || \
+        fatal "git checkout tag $ETHERPAD_BRANCH failed"
+    else
+      fatal "Branch or tag '$ETHERPAD_BRANCH' not found on origin."
+    fi
+
+    INSTALLED_REV=$(git rev-parse --short HEAD)
+    step "Updated $ETHERPAD_DIR to $ETHERPAD_BRANCH @ $INSTALLED_REV"
+    cd - >/dev/null || exit 1
   else
     fatal "$ETHERPAD_DIR exists and is not a git checkout. Aborting."
   fi

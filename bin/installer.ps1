@@ -38,7 +38,7 @@ function Test-Cmd([string]$name) {
 $EtherpadDir    = if ($env:ETHERPAD_DIR)    { $env:ETHERPAD_DIR }    else { 'etherpad-lite' }
 $EtherpadBranch = if ($env:ETHERPAD_BRANCH) { $env:ETHERPAD_BRANCH } else { 'master' }
 $EtherpadRepo   = if ($env:ETHERPAD_REPO)   { $env:ETHERPAD_REPO }   else { 'https://github.com/ether/etherpad-lite.git' }
-$RequiredNodeMajor = 18
+$RequiredNodeMajor = 20
 
 Write-Step 'Etherpad installer'
 
@@ -73,11 +73,53 @@ if (-not (Test-Cmd pnpm)) {
 # ---------- clone ----------
 if (Test-Path $EtherpadDir) {
     if (Test-Path (Join-Path $EtherpadDir '.git')) {
-        Write-Warn "$EtherpadDir already exists; pulling latest changes."
+        Write-Warn "$EtherpadDir already exists; updating to $EtherpadBranch."
         Push-Location $EtherpadDir
-        git pull --ff-only
-        if ($LASTEXITCODE -ne 0) { Pop-Location; Write-Fatal "git pull failed in existing $EtherpadDir" }
-        Pop-Location
+        try {
+            # Verify the existing checkout points at the expected remote.
+            $existingRemote = (git remote get-url origin 2>$null)
+            if ($existingRemote -and $existingRemote -ne $EtherpadRepo) {
+                Write-Fatal "$EtherpadDir is checked out from '$existingRemote', expected '$EtherpadRepo'. Refusing to overwrite."
+            }
+
+            # Refuse to clobber meaningful local changes. pnpm-lock.yaml is
+            # excluded because `pnpm i` rewrites it during installation,
+            # which would otherwise make every re-run of the installer fail.
+            $statusLines = (git status --porcelain) -split "`n" |
+                Where-Object { $_ -and ($_ -notmatch '\bpnpm-lock\.yaml$') }
+            if ($statusLines) {
+                $statusLines | ForEach-Object { Write-Host $_ }
+                Write-Fatal "$EtherpadDir has uncommitted changes. Commit/stash them or remove the directory."
+            }
+
+            git fetch --tags --prune origin
+            if ($LASTEXITCODE -ne 0) { Write-Fatal "git fetch failed in $EtherpadDir" }
+
+            # Discard any pnpm-lock.yaml changes from a prior pnpm install
+            # so the subsequent checkout doesn't refuse to overwrite.
+            git checkout -- pnpm-lock.yaml 2>$null
+
+            # Switch to the requested branch / tag and fast-forward to it.
+            git show-ref --verify --quiet "refs/remotes/origin/$EtherpadBranch"
+            $isBranch = ($LASTEXITCODE -eq 0)
+            git show-ref --verify --quiet "refs/tags/$EtherpadBranch"
+            $isTag = ($LASTEXITCODE -eq 0)
+
+            if ($isBranch) {
+                git checkout -B $EtherpadBranch "origin/$EtherpadBranch"
+                if ($LASTEXITCODE -ne 0) { Write-Fatal "git checkout $EtherpadBranch failed" }
+            } elseif ($isTag) {
+                git checkout --detach "refs/tags/$EtherpadBranch"
+                if ($LASTEXITCODE -ne 0) { Write-Fatal "git checkout tag $EtherpadBranch failed" }
+            } else {
+                Write-Fatal "Branch or tag '$EtherpadBranch' not found on origin."
+            }
+
+            $installedRev = (git rev-parse --short HEAD)
+            Write-Step "Updated $EtherpadDir to $EtherpadBranch @ $installedRev"
+        } finally {
+            Pop-Location
+        }
     } else {
         Write-Fatal "$EtherpadDir exists and is not a git checkout. Aborting."
     }
