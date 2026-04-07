@@ -6,21 +6,34 @@
  * Verifies that CLIENT_VARS sends a rev that matches the initialAttributedText.
  * Previously, pad.atext was captured at one point and pad.getHeadRevisionNumber()
  * was called later, creating a gap when concurrent edits advanced the revision.
+ *
+ * The whole suite runs with `settings.loadTest = true`. That mode bypasses
+ * socket.io auth and is the documented way to run "load-style" tests against
+ * Etherpad, so this is the configuration where the original "mismatched apply"
+ * production failures were observed.
  */
 
 const assert = require('assert').strict;
 const common = require('../common');
 const padManager = require('../../../node/db/PadManager');
 const plugins = require('../../../static/js/pluginfw/plugin_defs');
+const settings = require('../../../node/utils/Settings');
 import {randomString} from '../../../static/js/pad_utils';
 
 describe(__filename, function () {
   let agent: any;
   let clientVarsBackup: any;
+  let loadTestBackup: boolean;
 
   before(async function () {
+    loadTestBackup = settings.loadTest;
+    settings.loadTest = true;
     agent = await common.init();
     clientVarsBackup = plugins.hooks.clientVars || [];
+  });
+
+  after(function () {
+    settings.loadTest = loadTestBackup;
   });
 
   afterEach(function () {
@@ -63,28 +76,44 @@ describe(__filename, function () {
     }
   });
 
-  it('CLIENT_VARS is consistent when an edit lands between handshake start and finish',
+  it('CLIENT_VARS stays consistent under concurrent edits during handshake (delay race)',
       async function () {
-    // Reproduces the original race: a new client opens the pad while another
-    // process mutates it. The advertised rev / initialAttributedText must
-    // always correspond, even if the pad has advanced past that rev by the
-    // time the client receives CLIENT_VARS.
-    this.timeout(30000);
+    // Reproduces the original "mismatched apply" race condition:
+    //   1. The server captures pad.atext for CLIENT_VARS.
+    //   2. Time passes (a slow plugin hook, network jitter, GC pause, ...).
+    //   3. While that's happening, another process mutates the pad.
+    //   4. CLIENT_VARS is finally sent — pre-fix this advertised the
+    //      *new* rev with the *old* atext.
+    // We exercise this exact window via a slow clientVars hook that
+    //   (a) introduces a measurable delay so steps 1 and 4 are not adjacent,
+    //   (b) lands several edits during that delay.
+    // The bug also applied at higher load — to also reproduce the load
+    // scenario, we pre-populate the pad with many revisions before connecting.
+    this.timeout(60000);
     const padId = randomString(10);
     const pad = await padManager.getPad(padId, 'rev0\n');
 
-    // Inject a slow clientVars hook that mutates the pad mid-handshake.
-    // This is the most reliable way to force the race window without an
-    // open-ended background loop that can stall ueberDB at shutdown.
+    // Pre-populate to put the pad in a "busy" state (high rev count).
+    // Bounded so it can't hang on shutdown.
+    for (let i = 0; i < 20; i++) {
+      await pad.setText(`pre-load-${i}\n`);
+    }
+    const preConnectRev = pad.getHeadRevisionNumber();
+
+    // Inject a slow clientVars hook that:
+    //  - waits long enough to make the race window observable, and
+    //  - lands additional edits during that wait.
     let edits = 0;
     plugins.hooks.clientVars = [{
       hook_fn: async () => {
-        // Land a couple of edits while the server is still preparing
-        // CLIENT_VARS — the bug surfaces when the rev advances after the
-        // atext snapshot but before the rev is read.
-        for (let i = 0; i < 3; i++) {
+        // Sleep to widen the window between atext snapshot and CLIENT_VARS send.
+        await new Promise((r) => setTimeout(r, 200));
+        for (let i = 0; i < 5; i++) {
           await pad.setText(`mid-handshake-edit-${edits++}\n`);
         }
+        // Sleep again so any catch-up logic on the server has to deal with
+        // a long-since-stale snapshot.
+        await new Promise((r) => setTimeout(r, 200));
         return {};
       },
     }];
@@ -93,15 +122,39 @@ describe(__filename, function () {
       const res = await agent.get(`/p/${padId}`).expect(200);
       const socket = await common.connect(res);
       try {
+        // Listen for catch-up NEW_CHANGES messages alongside the handshake.
+        const messages: any[] = [];
+        socket.on('message', (msg: any) => messages.push(msg));
+
         const {type, data: clientVars} = await common.handshake(socket, padId);
         assert.equal(type, 'CLIENT_VARS');
         const collabVars = clientVars.collab_client_vars;
-        // Validate that initialAttributedText matches the AText at the
-        // advertised rev — the exact invariant whose violation produced
-        // "mismatched apply" errors.
-        const atextAtRev = await pad.getInternalRevisionAText(collabVars.rev);
+        const advertisedRev = collabVars.rev;
+
+        // Pre-fix this would have been violated: rev would point past atext.
+        // Validate the AText matches the pad AText AT THE ADVERTISED REV
+        // (not just the latest pad text), which is the exact invariant whose
+        // violation produced "mismatched apply" errors.
+        const atextAtRev = await pad.getInternalRevisionAText(advertisedRev);
         assert.equal(atextAtRev.text, collabVars.initialAttributedText.text,
-          `AText mismatch at rev ${collabVars.rev}`);
+          `AText mismatch at rev ${advertisedRev}`);
+        assert.equal(atextAtRev.attribs, collabVars.initialAttributedText.attribs,
+          `AText attribs mismatch at rev ${advertisedRev}`);
+
+        // The advertised rev must be at least the pre-connect head — anything
+        // older would mean we shipped a stale snapshot.
+        assert.ok(advertisedRev >= preConnectRev,
+          `CLIENT_VARS rev (${advertisedRev}) is older than pre-connect head (${preConnectRev})`);
+
+        // Wait briefly for in-flight catch-up messages.
+        await new Promise((r) => setTimeout(r, 500));
+        const finalHead = pad.getHeadRevisionNumber();
+        if (advertisedRev < finalHead) {
+          const catchUp = messages.find(
+            (m: any) => m.type === 'COLLABROOM' && m.data?.type === 'NEW_CHANGES');
+          assert.ok(catchUp,
+            `Expected NEW_CHANGES catch-up after CLIENT_VARS (rev ${advertisedRev} -> ${finalHead})`);
+        }
       } finally {
         socket.close();
       }
