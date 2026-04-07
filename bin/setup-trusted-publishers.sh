@@ -125,8 +125,12 @@ configure_one() {
   if [ "$STATUS" -eq 0 ]; then
     printf '  ok\n'
   else
+    # The npm registry returns 409 Conflict when a trust relationship
+    # already exists (you can only have one per package today). Treat
+    # that as success when --skip-existing is set, alongside the older
+    # "already exists/configured" string match.
     if [ "$SKIP_EXISTING" = "1" ] && \
-       echo "$OUTPUT" | grep -qiE "already (exists|configured)"; then
+       echo "$OUTPUT" | grep -qiE "409 Conflict|already (exists|configured)"; then
       printf '  already configured (skipped)\n'
       return 0
     fi
