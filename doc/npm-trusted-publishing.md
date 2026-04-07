@@ -73,9 +73,12 @@ If a package previously had an `NPM_TOKEN` secret in CI:
 
 ## Requirements
 
-- **Node.js**: >= 22.14.0 on the runner (for the npm CLI bundled with it).
-- **npm CLI**: >= 11.5.1. The publish workflow installs the latest npm before
-  running `npm publish`.
+- **Node.js**: >= 20.17.0 on the runner. npm 11 requires
+  `^20.17.0 || >=22.9.0`. The npm docs nominally recommend Node 22.14+, but
+  Node 20.17+ works fine — the project's `engines.node` already requires
+  `>=20.0.0`, and `setup-node@v6 with version: 20` resolves to the latest 20.x.
+- **npm CLI**: >= 11.5.1. The publish workflow runs `npm install -g npm@latest`
+  before publishing so the bundled npm version doesn't matter.
 - **Runner**: must be a GitHub-hosted (cloud) runner. Self-hosted runners are
   not yet supported by npm trusted publishing.
 - **`package.json`**: must declare a `repository` field pointing at the
