@@ -1,0 +1,157 @@
+name: "Installer test"
+
+# Exercises bin/installer.sh and bin/installer.ps1 end-to-end so the
+# one-line install paths in the README stay working.
+
+on:
+  push:
+    paths:
+      - "bin/installer.sh"
+      - "bin/installer.ps1"
+      - ".github/workflows/installer-test.yml"
+  pull_request:
+    paths:
+      - "bin/installer.sh"
+      - "bin/installer.ps1"
+      - ".github/workflows/installer-test.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  shellcheck:
+    name: shellcheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Run shellcheck on installer.sh
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck
+          shellcheck bin/installer.sh
+
+  installer-posix:
+    name: end-to-end install (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Pre-install pnpm (avoid sudo prompt in the installer)
+        run: npm install -g pnpm
+
+      - name: Run bin/installer.sh against this commit
+        env:
+          ETHERPAD_DIR: ${{ runner.temp }}/etherpad-installer-test
+          ETHERPAD_REPO: ${{ github.server_url }}/${{ github.repository }}.git
+          ETHERPAD_BRANCH: ${{ github.head_ref || github.ref_name }}
+          NO_COLOR: "1"
+        run: sh ./bin/installer.sh
+
+      - name: Verify clone + dependencies + build artifacts
+        shell: bash
+        env:
+          ETHERPAD_DIR: ${{ runner.temp }}/etherpad-installer-test
+        run: |
+          set -eux
+          test -d "$ETHERPAD_DIR/.git"
+          test -f "$ETHERPAD_DIR/package.json"
+          test -d "$ETHERPAD_DIR/node_modules"
+          test -d "$ETHERPAD_DIR/src/node_modules"
+          # build:etherpad copies the admin SPA into src/templates/admin
+          test -f "$ETHERPAD_DIR/src/templates/admin/index.html"
+
+      - name: Smoke test - start Etherpad and curl /api
+        shell: bash
+        env:
+          ETHERPAD_DIR: ${{ runner.temp }}/etherpad-installer-test
+        run: |
+          set -eu
+          cd "$ETHERPAD_DIR"
+          pnpm run prod >/tmp/etherpad.log 2>&1 &
+          PID=$!
+          # Wait up to 60s for the API to come up.
+          ok=0
+          for i in $(seq 1 60); do
+            if curl -fsS http://localhost:9001/api >/dev/null 2>&1; then
+              echo "Etherpad answered on /api after ${i}s"
+              ok=1
+              break
+            fi
+            sleep 1
+          done
+          if [ "$ok" != "1" ]; then
+            echo "Etherpad did not start within 60s. Last 200 lines of log:" >&2
+            tail -200 /tmp/etherpad.log >&2 || true
+            kill "$PID" 2>/dev/null || true
+            exit 1
+          fi
+          kill "$PID" 2>/dev/null || true
+          wait "$PID" 2>/dev/null || true
+
+  installer-windows:
+    name: end-to-end install (windows-latest)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Pre-install pnpm
+        run: npm install -g pnpm
+
+      - name: Run bin/installer.ps1 against this commit
+        shell: pwsh
+        env:
+          ETHERPAD_DIR: ${{ runner.temp }}\etherpad-installer-test
+          ETHERPAD_REPO: ${{ github.server_url }}/${{ github.repository }}.git
+          ETHERPAD_BRANCH: ${{ github.head_ref || github.ref_name }}
+          NO_COLOR: "1"
+        run: ./bin/installer.ps1
+
+      - name: Verify clone + dependencies + build artifacts
+        shell: pwsh
+        env:
+          ETHERPAD_DIR: ${{ runner.temp }}\etherpad-installer-test
+        run: |
+          if (-not (Test-Path "$env:ETHERPAD_DIR\.git"))                      { throw '.git missing' }
+          if (-not (Test-Path "$env:ETHERPAD_DIR\package.json"))              { throw 'package.json missing' }
+          if (-not (Test-Path "$env:ETHERPAD_DIR\node_modules"))              { throw 'node_modules missing' }
+          if (-not (Test-Path "$env:ETHERPAD_DIR\src\node_modules"))          { throw 'src/node_modules missing' }
+          if (-not (Test-Path "$env:ETHERPAD_DIR\src\templates\admin\index.html")) { throw 'admin SPA missing' }
+
+      - name: Smoke test - start Etherpad and curl /api
+        shell: pwsh
+        env:
+          ETHERPAD_DIR: ${{ runner.temp }}\etherpad-installer-test
+        run: |
+          Push-Location $env:ETHERPAD_DIR
+          $logPath = Join-Path $env:RUNNER_TEMP 'etherpad.log'
+          $proc = Start-Process -FilePath pnpm -ArgumentList 'run','prod' -RedirectStandardOutput $logPath -RedirectStandardError "$logPath.err" -PassThru -NoNewWindow
+          $ok = $false
+          for ($i = 1; $i -le 60; $i++) {
+            try {
+              Invoke-WebRequest -UseBasicParsing -Uri http://localhost:9001/api -TimeoutSec 2 | Out-Null
+              Write-Host "Etherpad answered on /api after ${i}s"
+              $ok = $true
+              break
+            } catch { Start-Sleep -Seconds 1 }
+          }
+          if (-not $ok) {
+            Write-Host 'Etherpad did not start within 60s. Last 200 lines of log:'
+            if (Test-Path $logPath) { Get-Content $logPath -Tail 200 }
+            Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
+            Pop-Location
+            exit 1
+          }
+          Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
+          Pop-Location
