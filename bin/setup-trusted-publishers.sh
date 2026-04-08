@@ -14,6 +14,12 @@
 #   bin/setup-trusted-publishers.sh --dry-run          # print what would happen
 #   bin/setup-trusted-publishers.sh --packages ep_align,ep_webrtc
 #   bin/setup-trusted-publishers.sh --skip-existing    # don't fail if already configured
+#   bin/setup-trusted-publishers.sh --otp 123456       # supply 2FA OTP up front
+#
+# Note: `npm trust github` requires 2FA. If your account has 2FA enabled
+# (it should), pass --otp once and the same code will be reused for every
+# package call inside the same minute. The TOTP code typically expires
+# every 30s, so you may need to run the script in chunks via --packages.
 #
 # Each package gets a GitHub Actions trusted publisher pointing at the
 # canonical workflow file used by that package family:
@@ -25,8 +31,10 @@
 
 set -eu
 
-PLUGIN_WORKFLOW=".github/workflows/test-and-release.yml"
-CORE_WORKFLOW=".github/workflows/releaseEtherpad.yml"
+# `npm trust github --file` wants ONLY the workflow filename (basename),
+# not the full .github/workflows/<name> path.
+PLUGIN_WORKFLOW="test-and-release.yml"
+CORE_WORKFLOW="releaseEtherpad.yml"
 CORE_PACKAGE="ep_etherpad"
 CORE_REPO="etherpad-lite"
 ORG="ether"
@@ -34,6 +42,7 @@ ORG="ether"
 DRY_RUN=0
 SKIP_EXISTING=0
 PACKAGES=""
+OTP=""
 
 usage() {
   sed -n '2,/^$/p' "$0" | sed 's/^# \?//'
@@ -46,6 +55,7 @@ while [ $# -gt 0 ]; do
     --dry-run)        DRY_RUN=1;        shift ;;
     --skip-existing)  SKIP_EXISTING=1;  shift ;;
     --packages)       PACKAGES="$2";    shift 2 ;;
+    --otp)            OTP="$2";         shift 2 ;;
     -h|--help)        usage 0 ;;
     *)                printf 'Unknown flag: %s\n' "$1" >&2; usage 1 ;;
   esac
@@ -98,24 +108,43 @@ configure_one() {
     WORKFLOW="$PLUGIN_WORKFLOW"
   fi
 
-  CMD="npm trust github $PKG --repository $ORG/$REPO --file $WORKFLOW --yes"
   printf '%-40s -> %s/%s @ %s\n' "$PKG" "$ORG" "$REPO" "$WORKFLOW"
 
   if [ "$DRY_RUN" = "1" ]; then
-    printf '  (dry-run) would run: %s\n' "$CMD"
+    printf '  (dry-run) would run: npm trust github %s --repository %s/%s --file %s --yes\n' \
+      "$PKG" "$ORG" "$REPO" "$WORKFLOW"
     return 0
   fi
 
-  if OUTPUT=$($CMD 2>&1); then
+  # Disable -e around the npm call so a non-zero exit can never short-circuit
+  # the STATUS / --skip-existing handling below. In practice the wrapping
+  # `if configure_one` already suppresses errexit inside this function (POSIX
+  # errexit-in-conditional behaviour), but relying on that is fragile — anyone
+  # later refactoring the call site out of an `if` would silently reintroduce
+  # the bug. The explicit shim makes the intent obvious and survives such
+  # refactors.
+  set +e
+  if [ -n "$OTP" ]; then
+    OUTPUT=$(npm trust github "$PKG" --repository "$ORG/$REPO" --file "$WORKFLOW" --otp "$OTP" --yes 2>&1)
+  else
+    OUTPUT=$(npm trust github "$PKG" --repository "$ORG/$REPO" --file "$WORKFLOW" --yes 2>&1)
+  fi
+  STATUS=$?
+  set -e
+  if [ "$STATUS" -eq 0 ]; then
     printf '  ok\n'
   else
+    # The npm registry returns 409 Conflict when a trust relationship
+    # already exists (you can only have one per package today). Treat
+    # that as success when --skip-existing is set, alongside the older
+    # "already exists/configured" string match.
     if [ "$SKIP_EXISTING" = "1" ] && \
-       echo "$OUTPUT" | grep -qiE "already (exists|configured)"; then
+       echo "$OUTPUT" | grep -qiE "409 Conflict|already (exists|configured)"; then
       printf '  already configured (skipped)\n'
-    else
-      printf '  FAILED:\n%s\n' "$OUTPUT" | sed 's/^/    /'
-      return 1
+      return 0
     fi
+    printf '  FAILED:\n%s\n' "$OUTPUT" | sed 's/^/    /'
+    return 1
   fi
 }
 
