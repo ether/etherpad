@@ -77,3 +77,34 @@ jobs:
           echo "Succeeded:$(echo $succeeded | wc -w) -$succeeded"
           echo "Failed:$(echo $failed | wc -w) -$failed"
           echo "Skipped:$(echo $skipped | wc -w) -$skipped"
+
+      - name: Merge clean Dependabot PRs on plugin repos
+        env:
+          GH_TOKEN: ${{ secrets.PLUGINS_PAT }}
+        run: |
+          # For every ep_* repo under ether, merge any Dependabot PR whose
+          # mergeStateStatus is CLEAN (no conflicts, branch up to date, all
+          # required checks green). Anything else is left alone for a human.
+          plugins=$(gh repo list ether --limit 200 --json name --jq '.[] | select(.name | startswith("ep_")) | .name')
+
+          merged=""
+          for plugin in $plugins; do
+            repo="ether/${plugin}"
+            prs=$(gh pr list --repo "$repo" \
+              --author "app/dependabot" \
+              --state open \
+              --json number,mergeStateStatus,title \
+              --jq '.[] | select(.mergeStateStatus=="CLEAN") | .number') || continue
+
+            for pr in $prs; do
+              echo "Merging ${repo}#${pr}"
+              if gh pr merge --repo "$repo" --squash --delete-branch "$pr"; then
+                merged="$merged ${repo}#${pr}"
+              else
+                echo "WARN: failed to merge ${repo}#${pr}"
+              fi
+            done
+          done
+
+          echo ""
+          echo "Merged Dependabot PRs:$merged"
