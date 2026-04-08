@@ -45,7 +45,19 @@ bin/setup-trusted-publishers.sh --packages ep_align,ep_webrtc
 # Or ignore packages that are already configured (the registry only allows
 # one trust relationship per package today)
 bin/setup-trusted-publishers.sh --skip-existing
+
+# Supply a 2FA OTP up front (required if your npm account has 2FA enabled —
+# it should). The same OTP is reused for every package call inside the same
+# minute, so for large batches you may need to chunk via --packages.
+bin/setup-trusted-publishers.sh --otp 123456
 ```
+
+> **2FA / OTP note.** `npm trust github` requires an OTP whenever the
+> account has 2FA enabled. Without `--otp`, npm will prompt interactively
+> per package, which is unworkable in bulk. Pass `--otp <code>` once and the
+> script will forward it to every `npm trust github` call. TOTP codes
+> typically expire every 30 seconds, so for >30s runs split the work with
+> `--packages ep_a,ep_b,...` and re-run with a fresh code.
 
 The script discovers all non-archived `ether/ep_*` repos via `gh repo list`
 and runs `npm trust github <pkg> --repository <org>/<repo> --file <workflow>

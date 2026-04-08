@@ -116,12 +116,21 @@ configure_one() {
     return 0
   fi
 
+  # Disable -e around the npm call so a non-zero exit can never short-circuit
+  # the STATUS / --skip-existing handling below. In practice the wrapping
+  # `if configure_one` already suppresses errexit inside this function (POSIX
+  # errexit-in-conditional behaviour), but relying on that is fragile — anyone
+  # later refactoring the call site out of an `if` would silently reintroduce
+  # the bug. The explicit shim makes the intent obvious and survives such
+  # refactors.
+  set +e
   if [ -n "$OTP" ]; then
     OUTPUT=$(npm trust github "$PKG" --repository "$ORG/$REPO" --file "$WORKFLOW" --otp "$OTP" --yes 2>&1)
   else
     OUTPUT=$(npm trust github "$PKG" --repository "$ORG/$REPO" --file "$WORKFLOW" --yes 2>&1)
   fi
   STATUS=$?
+  set -e
   if [ "$STATUS" -eq 0 ]; then
     printf '  ok\n'
   else
