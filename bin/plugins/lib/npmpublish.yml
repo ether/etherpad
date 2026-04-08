@@ -15,7 +15,7 @@ jobs:
   publish-npm:
     runs-on: ubuntu-latest
     permissions:
-      contents: write   # for `git push --follow-tags` of the version bump
+      contents: write   # for the atomic version-bump push (branch + tag)
       id-token: write   # for npm OIDC trusted publishing
     steps:
       - uses: actions/setup-node@v6
@@ -60,8 +60,22 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           pnpm i
+          # `pnpm version patch` bumps package.json, makes a commit, and creates
+          # a `v<new-version>` tag. Capture the new tag name from package.json
+          # rather than parsing pnpm's output, which has historically varied.
           pnpm version patch
-          git push --follow-tags
+          NEW_TAG="v$(node -p "require('./package.json').version")"
+          # CRITICAL: use --atomic so the branch update and the tag update
+          # succeed (or fail) as a single transaction on the server. The old
+          # `git push --follow-tags` was non-atomic per ref: if a concurrent
+          # publish run won the race, the branch fast-forward would be rejected
+          # but the tag push would still land — leaving a dangling tag with no
+          # matching commit on the branch. Subsequent runs would then forever
+          # try to bump to the same already-existing tag and fail with
+          # `tag 'vN+1' already exists`. With --atomic, a rejected branch push
+          # rejects the tag push too, and the next workflow tick can retry
+          # cleanly against the up-to-date refs.
+          git push --atomic origin "${GITHUB_REF_NAME}" "${NEW_TAG}"
       # This is required if the package has a prepare script that uses something
       # in dependencies or devDependencies.
       -
