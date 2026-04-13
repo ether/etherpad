@@ -35,7 +35,7 @@
     "cookie-parser": "^1.4.7",
     "cross-env": "^10.1.0",
     "cross-spawn": "^7.0.6",
-    "ejs": "^5.0.1",
+    "ejs": "^5.0.2",
     "esbuild": "^0.28.0",
     "express": "^5.2.1",
     "express-rate-limit": "^8.3.2",
