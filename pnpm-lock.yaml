@@ -122,8 +122,8 @@ importers:
         specifier: ^4.21.0
         version: 4.21.0
       ueberdb2:
-        specifier: ^5.0.33
-        version: 5.0.33
+        specifier: ^5.0.34
+        version: 5.0.34
     devDependencies:
       '@types/node':
         specifier: ^25.6.0
@@ -277,8 +277,8 @@ importers:
         specifier: 4.21.0
         version: 4.21.0
       ueberdb2:
-        specifier: ^5.0.33
-        version: 5.0.33
+        specifier: ^5.0.34
+        version: 5.0.34
       underscore:
         specifier: 1.13.8
         version: 1.13.8
@@ -2435,8 +2435,8 @@ packages:
     resolution: {integrity: sha512-lGe34o6EHj9y3Kts9R4ZYs/Gr+6N7MCaMlIFA3F1R2O5/m7K06AxfSeO5530PEERE6/WyEg3lsuyw4GHlPZHog==}
     engines: {node: ^4.5.0 || >= 5.9}
 
-  baseline-browser-mapping@2.10.17:
-    resolution: {integrity: sha512-HdrkN8eVG2CXxeifv/VdJ4A4RSra1DTW8dc/hdxzhGHN8QePs6gKaWM9pHPcpCoxYZJuOZ8drHmbdpLHjCYjLA==}
+  baseline-browser-mapping@2.10.18:
+    resolution: {integrity: sha512-VSnGQAOLtP5mib/DPyg2/t+Tlv65NTBz83BJBJvmLVHHuKJVaDOBvJJykiT5TR++em5nfAySPccDZDa4oSrn8A==}
     engines: {node: '>=6.0.0'}
     hasBin: true
 
@@ -2823,8 +2823,8 @@ packages:
   electron-to-chromium@1.5.286:
     resolution: {integrity: sha512-9tfDXhJ4RKFNerfjdCcZfufu49vg620741MNs26a9+bhLThdB+plgMeou98CAaHu/WATj2iHOOHTp1hWtABj2A==}
 
-  electron-to-chromium@1.5.334:
-    resolution: {integrity: sha512-mgjZAz7Jyx1SRCwEpy9wefDS7GvNPazLthHg8eQMJ76wBdGQQDW33TCrUTvQ4wzpmOrv2zrFoD3oNufMdyMpog==}
+  electron-to-chromium@1.5.335:
+    resolution: {integrity: sha512-q9n5T4BR4Xwa2cwbrwcsDJtHD/enpQ5S1xF1IAtdqf5AAgqDFmR/aakqH3ChFdqd/QXJhS3rnnXFtexU7rax6Q==}
 
   emoji-regex@8.0.0:
     resolution: {integrity: sha512-MSjYzcWNOA0ewAHpz0MxpYFvwg6yjy1NG3xteoqz644VCo/RPgnr1/GGt+ic3iJTzQ8Eu3TdM14SawnVUmGE6A==}
@@ -4971,8 +4971,8 @@ packages:
     engines: {node: '>=14.17'}
     hasBin: true
 
-  ueberdb2@5.0.33:
-    resolution: {integrity: sha512-vZMrEBXFh5EZ0OIgttvVI4GgXBzQbCBPXtDxzQPsChdqftoTspQibQJ+BqLCjffvAjc5N1Gc4vI5iuvfFCM0Xg==}
+  ueberdb2@5.0.34:
+    resolution: {integrity: sha512-5lwD62pD97OcxUnGpHustvB7SmbJkL/991YoBGfh8VgLFAUNINnDBoXgxIdak3wJGBBfNLCHEPv18uXXKCjczQ==}
     engines: {node: '>=16.20.1'}
 
   uid-safe@2.1.5:
@@ -7171,7 +7171,7 @@ snapshots:
 
   base64id@2.0.0: {}
 
-  baseline-browser-mapping@2.10.17: {}
+  baseline-browser-mapping@2.10.18: {}
 
   baseline-browser-mapping@2.9.19: {}
 
@@ -7238,9 +7238,9 @@ snapshots:
 
   browserslist@4.28.2:
     dependencies:
-      baseline-browser-mapping: 2.10.17
+      baseline-browser-mapping: 2.10.18
       caniuse-lite: 1.0.30001787
-      electron-to-chromium: 1.5.334
+      electron-to-chromium: 1.5.335
       node-releases: 2.0.37
       update-browserslist-db: 1.2.3(browserslist@4.28.2)
 
@@ -7519,7 +7519,7 @@ snapshots:
 
   electron-to-chromium@1.5.286: {}
 
-  electron-to-chromium@1.5.334: {}
+  electron-to-chromium@1.5.335: {}
 
   emoji-regex@8.0.0: {}
 
@@ -10065,7 +10065,7 @@ snapshots:
 
   typescript@6.0.2: {}
 
-  ueberdb2@5.0.33: {}
+  ueberdb2@5.0.34: {}
 
   uid-safe@2.1.5:
     dependencies:
