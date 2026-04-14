@@ -172,15 +172,14 @@ const padeditor = (() => {
       padutils.setCheckbox($('#options-linenoscheck'), v);
 
       v = getOption('showAuthorColors', true);
+      // noColors overrides showAuthorColors completely
+      if (settings.noColors) {
+        v = false;
+      }
       self.ace.setProperty('showsauthorcolors', v);
       $('#chattext').toggleClass('authorColors', v);
       $('iframe[name="ace_outer"]').contents().find('#sidedivinner').toggleClass('authorColors', v);
       padutils.setCheckbox($('#options-colorscheck'), v);
-
-      // Override from parameters if true
-      if (settings.noColors !== false) {
-        self.ace.setProperty('showsauthorcolors', !settings.noColors);
-      }
 
       self.ace.setProperty('textface', newOptions.padFontFamily || '');
     },

@@ -1,0 +1,2 @@
+- [PR test coverage requirement](feedback_test_coverage.md) — every PR must include tests, no exceptions
+- [Fix failing tests, don't remove](feedback_fix_tests.md) — never delete a test to make CI green, fix the root cause
