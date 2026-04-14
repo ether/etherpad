@@ -59,7 +59,7 @@ jobs:
         env:
           COMMIT_REF: ${{ github.sha }}
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v4
+        uses: actions/upload-pages-artifact@v5
         with:
           # Upload entire repository
           path: './doc/.vitepress/dist'
