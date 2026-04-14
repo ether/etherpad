@@ -70,6 +70,13 @@ const getParameters = [
     },
   },
   {
+    name: 'showAuthorColors',
+    checkVal: 'false',
+    callback: (val) => {
+      settings.showAuthorColorsDisabled = true;
+    },
+  },
+  {
     name: 'showControls',
     checkVal: 'true',
     callback: (val) => {
@@ -461,7 +468,10 @@ const pad = {
         chat.chatAndUsers(true); // stick it to the screen
         $('#options-chatandusers').prop('checked', true); // set the checkbox to on
       }
-      if (padcookie.getPref('showAuthorshipColors') === false) {
+      const authorColorsPref = padcookie.getPref('showAuthorshipColors');
+      if (authorColorsPref === true) {
+        pad.changeViewOption('showAuthorColors', true);
+      } else if (authorColorsPref === false) {
         pad.changeViewOption('showAuthorColors', false);
       }
       if (padcookie.getPref('showLineNumbers') === false) {
@@ -553,6 +563,13 @@ const pad = {
     // hide the background colors on the ace spans
     if (settings.noColors === true) {
       this.changeViewOption('noColors', true);
+    }
+
+    // If showAuthorColors is set to false in padOptions, default colors off.
+    // The user can still toggle them on via the checkbox; the cookie will
+    // override this default on subsequent visits.
+    if (settings.showAuthorColorsDisabled === true) {
+      this.changeViewOption('showAuthorColors', false);
     }
 
     // RTL override is applied in postAceInit (after padeditor.init resolves)
@@ -783,6 +800,7 @@ const init = () => pad.init();
 const settings = {
   LineNumbersDisabled: false,
   noColors: false,
+  showAuthorColorsDisabled: false,
   useMonospaceFontGlobal: false,
   globalUserName: false,
   globalUserColor: false,

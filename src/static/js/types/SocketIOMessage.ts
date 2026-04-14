@@ -239,6 +239,7 @@ export type PadOptionsMessage = {
 
 export type PadOption = {
   "noColors"?:         boolean,
+  "showAuthorColors"?: boolean,
   "showControls"?:     boolean,
   "showChat"?:         boolean,
   "showLineNumbers"?:  boolean,

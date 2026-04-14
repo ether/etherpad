@@ -252,6 +252,7 @@
    */
   "padOptions": {
     "noColors":         false,
+    "showAuthorColors": true,
     "showControls":     true,
     "showChat":         true,
     "showLineNumbers":  true,

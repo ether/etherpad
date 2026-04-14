@@ -192,6 +192,7 @@ export type SettingsType = {
   defaultPadText: string,
   padOptions: {
     noColors: boolean,
+    showAuthorColors: boolean,
     showControls: boolean,
     showChat: boolean,
     showLineNumbers: boolean,
@@ -398,6 +399,7 @@ const settings: SettingsType = {
    */
   padOptions: {
     noColors: false,
+    showAuthorColors: true,
     showControls: true,
     showChat: true,
     showLineNumbers: true,

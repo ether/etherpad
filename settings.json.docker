@@ -273,6 +273,7 @@
    */
   "padOptions": {
     "noColors":         "${PAD_OPTIONS_NO_COLORS:false}",
+    "showAuthorColors": "${PAD_OPTIONS_SHOW_AUTHOR_COLORS:true}",
     "showControls":     "${PAD_OPTIONS_SHOW_CONTROLS:true}",
     "showChat":         "${PAD_OPTIONS_SHOW_CHAT:true}",
     "showLineNumbers":  "${PAD_OPTIONS_SHOW_LINE_NUMBERS:true}",
