@@ -2399,8 +2399,32 @@ function Ace2Inner(editorInfo, cssManagers) {
         setLineListType(lineNum + 1, type + level);
       }
     } else {
+      const caretColumn = rep.selStart[1];
       performDocumentReplaceSelection('\n');
       handleReturnIndentation();
+
+      // Preserve line attributes (heading, align, etc.) across line splits.
+      // When Enter is pressed in the middle or end of a line, copy attributes
+      // to the new line (same as list behavior). When Enter is pressed at the
+      // start of a line (column 0), keep attributes on the line with text
+      // (the new line below) and clear the now-empty line above.
+      const lineAttrs = hooks.callAll('aceRegisterLineAttributes');
+      if (lineAttrs.length > 0) {
+        for (const attrName of lineAttrs) {
+          const value = documentAttributeManager.getAttributeOnLine(lineNum, attrName);
+          if (!value) continue;
+
+          if (caretColumn === 0) {
+            // Enter at start of line: attribute moves down with text.
+            // lineNum is now the empty line above, lineNum+1 has the text.
+            documentAttributeManager.removeAttributeOnLine(lineNum, attrName);
+            documentAttributeManager.setAttributeOnLine(lineNum + 1, attrName, value);
+          } else {
+            // Enter in middle or end: new line below inherits the attribute.
+            documentAttributeManager.setAttributeOnLine(lineNum + 1, attrName, value);
+          }
+        }
+      }
     }
   };
   editorInfo.ace_doReturnKey = doReturnKey;
