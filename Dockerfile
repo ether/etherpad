@@ -172,9 +172,10 @@ ENV NODE_ENV=production
 ENV ETHERPAD_PRODUCTION=true
 
 # The full pnpm-workspace.yaml references admin, doc, ui which are not
-# needed at runtime. Overwrite it with a production-only version so
-# pnpm install doesn't warn about missing workspace directories.
-RUN printf 'packages:\n  - src\n  - bin\n' > pnpm-workspace.yaml
+# needed at runtime. Overwrite it with a production-only version and
+# remove the lockfile so pnpm generates a fresh one matching this workspace.
+RUN printf 'packages:\n  - src\n  - bin\n' > pnpm-workspace.yaml && \
+    rm -f pnpm-lock.yaml
 
 COPY --chown=etherpad:etherpad ./src ./src
 COPY --chown=etherpad:etherpad --from=adminbuild /opt/etherpad-lite/src/templates/admin ./src/templates/admin
