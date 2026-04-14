@@ -28,3 +28,4 @@ plugin_packages
 playwright-report
 state.json
 /src/static/oidc
+.claude/
