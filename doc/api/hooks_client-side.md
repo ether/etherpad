@@ -209,7 +209,7 @@ call for those elements.
 
 ## aceRegisterLineAttributes
 
-Called from: `src/static/js/ace2_inner.js`
+Called from: `src/static/js/ace2_inner.ts`
 
 Things in context: None
 
