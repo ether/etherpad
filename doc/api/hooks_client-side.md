@@ -207,6 +207,33 @@ The return value of this hook will add elements into the "lineMarkerAttribute"
 category, making the aceDomLineProcessLineAttributes hook (documented below)
 call for those elements.
 
+## aceRegisterLineAttributes
+
+Called from: `src/static/js/ace2_inner.js`
+
+Things in context: None
+
+Tells Etherpad which line attributes should be preserved when a user presses
+Enter to split a line. Without this hook, custom line attributes (such as
+headings or alignment) are lost when a line is split.
+
+The return value should be an array of attribute names:
+
+```
+exports.aceRegisterLineAttributes = function(){
+  return [ 'heading' ];
+}
+```
+
+When Enter is pressed on a line that has a registered attribute:
+
+* **Middle or end of line:** the attribute is copied to the new line below.
+* **Start of line (column 0):** the attribute moves down with the text content,
+  and the now-empty line above is cleared.
+
+This is backwards compatible — on Etherpad versions that do not have this hook,
+the registration is silently ignored.
+
 ## aceInitialized
 
 Called from: `src/static/js/ace2_inner.js`
