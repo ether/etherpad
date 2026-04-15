@@ -5,6 +5,4 @@ packages:
   - doc
   - ui
 onlyBuiltDependencies:
-  - '@scarf/scarf'
-  - '@swc/core'
   - esbuild
