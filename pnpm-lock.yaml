@@ -122,8 +122,8 @@ importers:
         specifier: ^4.21.0
         version: 4.21.0
       ueberdb2:
-        specifier: ^5.0.34
-        version: 5.0.34
+        specifier: ^5.0.45
+        version: 5.0.45
     devDependencies:
       '@types/node':
         specifier: ^25.6.0
@@ -277,8 +277,8 @@ importers:
         specifier: 4.21.0
         version: 4.21.0
       ueberdb2:
-        specifier: ^5.0.43
-        version: 5.0.43
+        specifier: ^5.0.45
+        version: 5.0.45
       underscore:
         specifier: 1.13.8
         version: 1.13.8
@@ -2455,8 +2455,8 @@ packages:
     resolution: {integrity: sha512-lGe34o6EHj9y3Kts9R4ZYs/Gr+6N7MCaMlIFA3F1R2O5/m7K06AxfSeO5530PEERE6/WyEg3lsuyw4GHlPZHog==}
     engines: {node: ^4.5.0 || >= 5.9}
 
-  baseline-browser-mapping@2.10.18:
-    resolution: {integrity: sha512-VSnGQAOLtP5mib/DPyg2/t+Tlv65NTBz83BJBJvmLVHHuKJVaDOBvJJykiT5TR++em5nfAySPccDZDa4oSrn8A==}
+  baseline-browser-mapping@2.10.19:
+    resolution: {integrity: sha512-qCkNLi2sfBOn8XhZQ0FXsT1Ki/Yo5P90hrkRamVFRS7/KV9hpfA4HkoWNU152+8w0zPjnxo5psx5NL3PSGgv5g==}
     engines: {node: '>=6.0.0'}
     hasBin: true
 
@@ -5000,12 +5000,8 @@ packages:
     engines: {node: '>=14.17'}
     hasBin: true
 
-  ueberdb2@5.0.34:
-    resolution: {integrity: sha512-5lwD62pD97OcxUnGpHustvB7SmbJkL/991YoBGfh8VgLFAUNINnDBoXgxIdak3wJGBBfNLCHEPv18uXXKCjczQ==}
-    engines: {node: '>=16.20.1'}
-
-  ueberdb2@5.0.43:
-    resolution: {integrity: sha512-rMJKW9Nft0V4O3a1QVqOEiKwVqJWpU0KZOvesQ6nrHk2IgPipDu7FiuV4KcbYzlEdc01b1VthJAqQ2xyao+JzQ==}
+  ueberdb2@5.0.45:
+    resolution: {integrity: sha512-w4jie3q9yDIgBfmvS1DZiXKe5+o8Wqp3/3y6qgcigyPy7ELVueNSUmvhtz7m0vXl6E/Y9bb1UIMf1Prm8ev7NA==}
     engines: {node: '>=18.0.0'}
     peerDependencies:
       '@elastic/elasticsearch': ^9.3.4
@@ -7258,7 +7254,7 @@ snapshots:
 
   base64id@2.0.0: {}
 
-  baseline-browser-mapping@2.10.18: {}
+  baseline-browser-mapping@2.10.19: {}
 
   baseline-browser-mapping@2.9.19: {}
 
@@ -7325,7 +7321,7 @@ snapshots:
 
   browserslist@4.28.2:
     dependencies:
-      baseline-browser-mapping: 2.10.18
+      baseline-browser-mapping: 2.10.19
       caniuse-lite: 1.0.30001788
       electron-to-chromium: 1.5.336
       node-releases: 2.0.37
@@ -10170,9 +10166,7 @@ snapshots:
 
   typescript@6.0.2: {}
 
-  ueberdb2@5.0.34: {}
-
-  ueberdb2@5.0.43:
+  ueberdb2@5.0.45:
     dependencies:
       async: 3.2.6
       dirty-ts: 1.1.8
