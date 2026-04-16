@@ -1,6 +1,10 @@
 import {expect, test} from "@playwright/test";
 import {loginToAdmin, restartEtherpad, saveSettings} from "../helper/adminhelper";
 
+// Settings tests mutate and restart the server. Run serially so restarts
+// don't collide with parallel tests reading/writing the same settings.
+test.describe.configure({ mode: 'serial' });
+
 test.beforeEach(async ({ page })=>{
   await loginToAdmin(page, 'admin', 'changeme1');
 })

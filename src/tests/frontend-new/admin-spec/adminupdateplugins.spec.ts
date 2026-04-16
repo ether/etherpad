@@ -1,6 +1,11 @@
 import {expect, test} from "@playwright/test";
 import {loginToAdmin} from "../helper/adminhelper";
 
+// Install/uninstall mutates global server state (installed plugin set) that
+// all admin tests observe. Run these serially so one test's install can't
+// leak into another test's assertions.
+test.describe.configure({ mode: 'serial' });
+
 test.beforeEach(async ({ page })=>{
     await loginToAdmin(page, 'admin', 'changeme1');
     await page.goto('http://localhost:9001/admin/plugins')
