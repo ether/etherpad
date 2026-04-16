@@ -11,3 +11,7 @@ onlyBuiltDependencies:
 # encountered as transitive deps (e.g. scarf pulled in via swagger-ui-dist).
 ignoredBuiltDependencies:
   - '@scarf/scarf'
+# Belt-and-suspenders: even if a fresh transitive dep slips through with a
+# postinstall script, downgrade to a warning so CI doesn't break for
+# downstream plugin repos that pull etherpad-lite as their core install.
+strictDepBuilds: false
