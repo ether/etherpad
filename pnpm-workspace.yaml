@@ -6,3 +6,8 @@ packages:
   - ui
 onlyBuiltDependencies:
   - esbuild
+# Explicitly ignore build scripts we don't want to run. Listing them here
+# stops pnpm from failing with ERR_PNPM_IGNORED_BUILDS when they're
+# encountered as transitive deps (e.g. scarf pulled in via swagger-ui-dist).
+ignoredBuiltDependencies:
+  - '@scarf/scarf'
