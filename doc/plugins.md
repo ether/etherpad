@@ -38,7 +38,7 @@ ep_<plugin>/
  ├ locales/
  │  ├ en.json            ◄─ English (US) strings
  │  └ qqq.json           ◄─ optional hints for translators
- ├ .travis.yml           ◄─ Travis CI config
+ ├ .github/workflows/   ◄─ CI workflows (backend / frontend tests, npm publish)
  ├ LICENSE
  ├ README.md
  ├ ep.json               ◄─ Etherpad plugin definition
