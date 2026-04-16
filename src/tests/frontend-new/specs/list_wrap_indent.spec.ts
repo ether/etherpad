@@ -1,5 +1,5 @@
 import {expect, test} from "@playwright/test";
-import {clearPadContent, getPadBody, goToNewPad, writeToPad} from "../helper/padHelper";
+import {clearPadContent, getPadBody, goToNewPad, selectAllText, writeToPad} from "../helper/padHelper";
 
 test.beforeEach(async ({page}) => {
   await goToNewPad(page);
@@ -17,19 +17,20 @@ test.describe('numbered list wrapped line indentation', function () {
       'indented to match the first line of the list item instead of snapping back to the left edge.';
     await writeToPad(page, longText);
 
-    // Make it an ordered list
-    const $insertorderedlistButton = page.locator('.buttonicon-insertorderedlist');
-    await padBody.locator('div').first().selectText();
-    await $insertorderedlistButton.first().click();
+    // Select all content and make it an ordered list. Use Ctrl+A via the
+    // shared keyboard helper so we don't race against Etherpad re-rendering
+    // the line divs (which can detach locators and make `selectText()` flaky
+    // in CI when many lines of text have just been typed).
+    await selectAllText(page);
+    await page.locator('.buttonicon-insertorderedlist').first().click();
 
     // Verify the list item has padding-left applied (not text-indent)
     const ol = padBody.locator('ol').first();
     await expect(ol).toBeVisible();
-    const paddingLeft = await ol.evaluate((el) => window.getComputedStyle(el).paddingLeft);
-    const textIndent = await ol.evaluate((el) => window.getComputedStyle(el).textIndent);
 
-    // padding-left should be used instead of text-indent for proper wrapping
-    // text-indent should be 0px (not used for indentation)
+    // padding-left should be used instead of text-indent for proper wrapping.
+    // text-indent should be 0px (not used for indentation).
+    const textIndent = await ol.evaluate((el) => window.getComputedStyle(el).textIndent);
     expect(textIndent).toBe('0px');
   });
 });
