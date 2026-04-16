@@ -1,6 +1,11 @@
 import {expect, test} from "@playwright/test";
 import {loginToAdmin} from "../helper/adminhelper";
 
+// Install/uninstall mutates global server state (installed plugin set) that
+// all admin tests observe. Run these serially so one test's install can't
+// leak into another test's assertions.
+test.describe.configure({ mode: 'serial' });
+
 test.beforeEach(async ({ page })=>{
     await loginToAdmin(page, 'admin', 'changeme1');
     await page.goto('http://localhost:9001/admin/plugins')
@@ -18,9 +23,9 @@ test.describe('Plugins page',  ()=> {
     test('Searches for a plugin', async ({page}) => {
         await page.waitForSelector('.search-field');
         await page.click('.search-field')
-        await page.keyboard.type('ep_font_color')
+        await page.keyboard.type('ep_set_title_on_pad')
         const pluginTable =  page.locator('table tbody').nth(1);
-        await expect(pluginTable.locator('tr').first()).toContainText('ep_font_color', {timeout: 60000})
+        await expect(pluginTable.locator('tr').first()).toContainText('ep_set_title_on_pad', {timeout: 60000})
     })
 
 
@@ -34,12 +39,12 @@ test.describe('Plugins page',  ()=> {
         // Now everything is loaded, lets install a plugin
 
         await page.click('.search-field')
-        await page.keyboard.type('ep_font_color')
+        await page.keyboard.type('ep_set_title_on_pad')
         await page.keyboard.press('Enter')
 
         await expect(pluginTable.locator('tr')).toHaveCount(1, {timeout: 60000})
         const pluginRow = pluginTable.locator('tr').first()
-        await expect(pluginRow).toContainText('ep_font_color', {timeout: 60000})
+        await expect(pluginRow).toContainText('ep_set_title_on_pad', {timeout: 60000})
 
         // Select Installation button
         await pluginRow.locator('td').nth(4).locator('button').first().click()
@@ -53,7 +58,7 @@ test.describe('Plugins page',  ()=> {
 
         const installedPluginRow = installedPluginsRows.nth(1)
 
-        await expect(installedPluginRow).toContainText('ep_font_color')
+        await expect(installedPluginRow).toContainText('ep_set_title_on_pad')
         await installedPluginRow.locator('td').nth(2).locator('button').first().click()
 
         // Wait for the uninstallation to complete

@@ -1,6 +1,10 @@
 import {expect, test} from "@playwright/test";
 import {loginToAdmin} from "../helper/adminhelper";
 
+// Admin tests observe global server state (installed plugins, hooks,
+// settings). Run serially so a parallel test's mutation can't leak in.
+test.describe.configure({ mode: 'serial' });
+
 test.beforeEach(async ({ page })=>{
   await loginToAdmin(page, 'admin', 'changeme1');
   await page.goto('http://localhost:9001/admin/help')

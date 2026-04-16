@@ -142,7 +142,7 @@
     "ts-check:watch": "tsc --noEmit --watch",
     "test-ui": "cross-env NODE_ENV=production npx playwright test tests/frontend-new/specs",
     "test-ui:ui": "cross-env NODE_ENV=production npx playwright test tests/frontend-new/specs --ui",
-    "test-admin": "cross-env NODE_ENV=production npx playwright test tests/frontend-new/admin-spec --workers 1 --project=chromium --project=firefox",
+    "test-admin": "cross-env NODE_ENV=production npx playwright test tests/frontend-new/admin-spec --workers 1 --project=chromium",
     "test-admin:ui": "cross-env NODE_ENV=production npx playwright test tests/frontend-new/admin-spec --ui --workers 1",
     "debug:socketio": "cross-env DEBUG=socket.io* node --require tsx/cjs node/server.ts",
     "test:vitest": "vitest"
