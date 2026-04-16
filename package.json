@@ -50,5 +50,13 @@
   },
   "engineStrict": true,
   "version": "2.6.1",
-  "license": "Apache-2.0"
+  "license": "Apache-2.0",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ],
+    "ignoredBuiltDependencies": [
+      "@scarf/scarf"
+    ]
+  }
 }
