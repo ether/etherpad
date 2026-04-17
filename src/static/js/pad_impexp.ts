@@ -145,6 +145,7 @@ const padimpexp = (() => {
       $('#exportplaina').attr('href', `${padRootPath}/export/txt`);
 
       // hide stuff thats not avaible if soffice is disabled
+      const wordFormat = clientVars.docxExport ? 'docx' : 'doc';
       if (clientVars.exportAvailable === 'no') {
         $('#exportworda').remove();
         $('#exportpdfa').remove();
@@ -152,14 +153,12 @@ const padimpexp = (() => {
       } else if (clientVars.exportAvailable === 'withoutPDF') {
         $('#exportpdfa').remove();
 
-        const wordFormat = clientVars.docxExport ? 'docx' : 'doc';
         $('#exportworda').attr('href', `${padRootPath}/export/${wordFormat}`);
         $('#exportopena').attr('href', `${padRootPath}/export/odt`);
 
         $('#importexport').css({height: '142px'});
         $('#importexportline').css({height: '142px'});
       } else {
-        const wordFormat = clientVars.docxExport ? 'docx' : 'doc';
         $('#exportworda').attr('href', `${padRootPath}/export/${wordFormat}`);
         $('#exportpdfa').attr('href', `${padRootPath}/export/pdf`);
         $('#exportopena').attr('href', `${padRootPath}/export/odt`);

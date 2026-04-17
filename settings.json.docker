@@ -359,7 +359,8 @@
 
   /*
    * When true (the default), the "Microsoft Word" export button downloads a .docx file via
-   * LibreOffice (requires "soffice" to be set). Set to false to revert to legacy .doc output.
+   * LibreOffice (requires "soffice" to be set). Set to false to revert to legacy .doc output
+   * (which also requires "soffice").
    */
   "docxExport": "${DOCX_EXPORT:true}",
 
