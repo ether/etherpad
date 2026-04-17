@@ -192,6 +192,16 @@ const prepareDefinition = (mapping: Map<string, Record<string, RestAPIMapping>>,
           "in": string
 
         },
+        "apiKeyAlias": {
+          "type": string,
+          "name": string,
+          "in": string
+        },
+        "apiKeyHeader": {
+          "type": string,
+          "name": string,
+          "in": string
+        },
         "sso"?: {
           "type": string,
           "flows": {
@@ -243,6 +253,16 @@ const prepareDefinition = (mapping: Map<string, Record<string, RestAPIMapping>>,
           "in": "query"
 
         },
+        "apiKeyAlias": {
+          "type": "apiKey",
+          "name": "api_key",
+          "in": "query"
+        },
+        "apiKeyHeader": {
+          "type": "apiKey",
+          "name": "apikey",
+          "in": "header"
+        },
       },
     },
     "servers": [
@@ -256,9 +276,9 @@ const prepareDefinition = (mapping: Map<string, Record<string, RestAPIMapping>>,
 
   if (authenticationMethod === "apikey") {
     definitions.security = [
-      {
-        "apiKey": []
-      }
+      {"apiKey": []},
+      {"apiKeyAlias": []},
+      {"apiKeyHeader": []},
     ]
   } else if (authenticationMethod === "sso") {
     definitions.components.securitySchemes.sso = {
