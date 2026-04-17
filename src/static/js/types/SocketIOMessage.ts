@@ -80,6 +80,7 @@ export type ClientVarPayload = {
   skinName: string
   skinVariants: string,
   exportAvailable: string
+  docxExport: boolean
   savedRevisions: PadRevision[],
   initialRevisionList: number[],
   padShortcutEnabled: MapArrayType<boolean>,

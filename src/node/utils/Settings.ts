@@ -238,6 +238,7 @@ export type SettingsType = {
   maxAge: number,
   minify: boolean,
   soffice: string | null,
+  docxExport: boolean,
   allowUnknownFileEnds: boolean,
   loglevel: string,
   logLayoutType: string,
@@ -478,6 +479,11 @@ const settings: SettingsType = {
    * The path of the libreoffice executable
    */
   soffice: null,
+  /**
+   * When true, the "Microsoft Word" export button downloads a .docx file (requires soffice).
+   * Set to false to revert to legacy .doc output.
+   */
+  docxExport: true,
   /**
    * Should we support none natively supported file types on import?
    */
@@ -935,6 +941,15 @@ export const reloadSettings = () => {
     const credentials = parseSettings(settings.credentialsFilename, false);
     storeSettings(settingsParsed);
     storeSettings(credentials);
+
+    // Emit a clear migration warning when the deprecated abiword setting is detected.
+    if (settingsParsed && (settingsParsed as any).abiword != null) {
+        logger.warn(
+            'The "abiword" setting is no longer supported and has been ignored. ' +
+            'Abiword import/export support has been removed. ' +
+            'Please install LibreOffice and set "soffice" to its executable path instead.'
+        );
+    }
 
     // Init logging config
     settings.logconfig = defaultLogConfig(

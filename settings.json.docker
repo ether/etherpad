@@ -358,7 +358,12 @@
   "soffice": "${SOFFICE:null}",
 
   /*
-   * Allow import of file types other than the supported ones:
+   * When true (the default), the "Microsoft Word" export button downloads a .docx file via
+   * LibreOffice (requires "soffice" to be set). Set to false to revert to legacy .doc output.
+   */
+  "docxExport": "${DOCX_EXPORT:true}",
+
+  /*
    * txt, doc, docx, rtf, odt, html & htm
    */
   "allowUnknownFileEnds": "${ALLOW_UNKNOWN_FILE_ENDS:true}",

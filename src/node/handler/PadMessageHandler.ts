@@ -1044,6 +1044,7 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
       userId: sessionInfo.author,
       sofficeAvailable: sofficeAvailable(),
       exportAvailable: exportAvailable(),
+      docxExport: settings.docxExport,
       plugins: {
         plugins: plugins.plugins,
         parts: plugins.parts,
