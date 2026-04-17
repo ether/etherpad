@@ -91,7 +91,7 @@
  *    "password": "${PASSW:}" // if PASSW is not defined would result in password === ''
  *
  *    If you want to use an empty value (null) as default value for a variable,
- *    simply do not set it, without putting any colons: "${ABIWORD}".
+ *    simply do not set it, without putting any colons: "${SOFFICE}".
  *
  * 3) if you want to use newlines in the default value of a string parameter,
  *    use "\n" as usual.
@@ -349,19 +349,11 @@
   "maxAge": "${MAX_AGE:21600}", // 60 * 60 * 6 = 6 hours
 
   /*
-   * Absolute path to the Abiword executable.
-   *
-   * Abiword is needed to get advanced import/export features of pads. Setting
-   * it to null disables Abiword and will only allow plain text and HTML
-   * import/exports.
-   */
-  "abiword": "${ABIWORD:null}",
-
-  /*
    * This is the absolute path to the soffice executable.
    *
-   * LibreOffice can be used in lieu of Abiword to export pads.
-   * Setting it to null disables LibreOffice exporting.
+   * LibreOffice is used for advanced import/export of pads (docx, pdf, odt).
+   * Setting it to null disables LibreOffice and will only allow plain text
+   * and HTML import/exports.
    */
   "soffice": "${SOFFICE:null}",
 

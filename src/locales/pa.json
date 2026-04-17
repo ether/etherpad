@@ -68,7 +68,6 @@
 	"pad.importExport.exportword": "ਮਾਈਕਰੋਸਾਫਟ ਵਰਡ",
 	"pad.importExport.exportpdf": "PDF",
 	"pad.importExport.exportopen": "ODF (ਓਪਨ ਡੌਕੂਮੈਂਟ ਫਾਰਮੈਟ)",
-	"pad.importExport.abiword.innerHTML": "ਤੁਸੀਂ ਸਿਰਫ਼ ਸਾਦੀਆਂ ਲਿਖਤੀ ਜਾਂ ਐੱਚ.ਟੀ.ਐੱਮ.ਐੱਲ. ਰੂਪ-ਰੇਖਾਵਾਂ ਤੋਂ ਦਰਾਮਦ ਕਰ ਸਕਦੇ ਹੋ। ਹੋਰ ਉੱਨਤ ਦਰਾਮਦੀ ਗੁਣਾਂ ਵਾਸਤੇ ਮਿਹਰਬਾਨੀ ਕਰਕੇ <a href=\"https://github.com/ether/etherpad-lite/wiki/How-to-enable-importing-and-exporting-different-file-formats-in-Ubuntu-or-OpenSuse-or-SLES-with-AbiWord\">ਐਬੀਵਰਡ ਥਾਪੋ</a>।",
 	"pad.modals.connected": "ਜੁੜਿਆ ਹੋਇਆ।",
 	"pad.modals.reconnecting": "..ਤੁਹਾਡੇ ਪੈਡ ਨਾਲ ਮੁੜ-ਕੁਨੈਕਟ ਕੀਤਾ ਜਾ ਰਿਹਾ ਹੈ",
 	"pad.modals.forcereconnect": "ਧੱਕੇ ਨਾਲ ਮੁੜ-ਜੁੜੋ",

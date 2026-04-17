@@ -11,14 +11,8 @@
 
 /* hidden element */
 #importstatusball,
-#importmessagesuccess,
-#importmessageabiword {
+#importmessagesuccess {
   display: none;
-}
-
-#importmessageabiword {
-  color: #900;
-  font-size: small;
 }
 
 #importsubmitinput {

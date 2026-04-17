@@ -82,7 +82,6 @@
 	"pad.importExport.exportword": "Microsoft Word",
 	"pad.importExport.exportpdf": "PDF",
 	"pad.importExport.exportopen": "ODF (Open Document Format)",
-	"pad.importExport.abiword.innerHTML": "Þú getur aðeins flutt inn úr hreinum texta eða HTML sniðum. Til að geta nýtt \nfleiri þróaðri innflutningssnið <a href=\"https://github.com/ether/etherpad-lite/wiki/How-to-enable-importing-and-exporting-different-file-formats-with-AbiWord\">settu þá upp AbiWord forritið eða LibreOffice</a>.",
 	"pad.modals.connected": "Tengt.",
 	"pad.modals.reconnecting": "Endurtengist skrifblokkinni þinni…",
 	"pad.modals.forcereconnect": "Þvinga endurtengingu",

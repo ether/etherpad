@@ -105,7 +105,6 @@
 	"pad.importExport.exportword": "Microsoft Word",
 	"pad.importExport.exportpdf": "PDF",
 	"pad.importExport.exportopen": "ODF (Formáid Doiciméad Oscailte)",
-	"pad.importExport.abiword.innerHTML": "Ní féidir leat iompórtáil ach ó théacs simplí nó ó fhormáidí HTML. Chun gnéithe iompórtála níos forbartha a fháil, <a href=\"https://github.com/ether/etherpad-lite/wiki/How-to-enable-importing-and-exporting-different-file-formats-with-AbiWord\">suiteáil AbiWord nó LibreOffice</a> le do thoil.",
 	"pad.modals.connected": "Ceangailte.",
 	"pad.modals.reconnecting": "Ag athcheangal le do phainéal…",
 	"pad.modals.forcereconnect": "Athcheangal fórsaithe",

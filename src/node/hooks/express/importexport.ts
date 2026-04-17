@@ -28,22 +28,22 @@ exports.expressCreateServer = (hookName:string, args:ArgsExpressType, cb:Functio
   args.app.use('/p/:pad{/:rev}/export/:type', limiter);
   args.app.get('/p/:pad{/:rev}/export/:type', (req:any, res:any, next:Function) => {
     (async () => {
-      const types = ['pdf', 'doc', 'txt', 'html', 'odt', 'etherpad'];
+      const types = ['pdf', 'doc', 'docx', 'txt', 'html', 'odt', 'etherpad'];
       // send a 404 if we don't support this filetype
       if (types.indexOf(req.params.type) === -1) {
         return next();
       }
 
-      // if abiword is disabled, and this is a format we only support with abiword, output a message
+      // if soffice is disabled, and this is a format we only support with soffice, output a message
       if (exportAvailable() === 'no' &&
-          ['odt', 'pdf', 'doc'].indexOf(req.params.type) !== -1) {
+          ['odt', 'pdf', 'doc', 'docx'].indexOf(req.params.type) !== -1) {
         console.error(`Impossible to export pad "${req.params.pad}" in ${req.params.type} format.` +
                       ' There is no converter configured');
 
         // ACHTUNG: do not include req.params.type in res.send() because there is
         // no HTML escaping and it would lead to an XSS
-        res.send('This export is not enabled at this Etherpad instance. Set the path to Abiword' +
-                 ' or soffice (LibreOffice) in settings.json to enable this feature');
+        res.send('This export is not enabled at this Etherpad instance. Set the path to soffice ' +
+                 '(LibreOffice) in settings.json to enable this feature');
         return;
       }
 

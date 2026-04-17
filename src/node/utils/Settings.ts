@@ -237,7 +237,6 @@ export type SettingsType = {
   editOnly: boolean,
   maxAge: number,
   minify: boolean,
-  abiword: string | null,
   soffice: string | null,
   allowUnknownFileEnds: boolean,
   loglevel: string,
@@ -476,10 +475,6 @@ const settings: SettingsType = {
    */
   minify: true,
   /**
-   * The path of the abiword executable
-   */
-  abiword: null,
-  /**
    * The path of the libreoffice executable
    */
   soffice: null,
@@ -684,15 +679,6 @@ if (typeof module !== 'undefined' && module.exports) {
 settings.dbSettings =  {filename: path.join(settings.root, 'var/rusty.db')};
 // END OF SETTINGS
 
-// checks if abiword is avaiable
-export const abiwordAvailable = () => {
-    if (settings.abiword != null) {
-        return os.type().indexOf('Windows') !== -1 ? 'withoutPDF' : 'yes';
-    } else {
-        return 'no';
-    }
-};
-
 export const sofficeAvailable = () => {
     if (settings.soffice != null) {
         return os.type().indexOf('Windows') !== -1 ? 'withoutPDF' : 'yes';
@@ -701,19 +687,7 @@ export const sofficeAvailable = () => {
     }
 };
 
-export const exportAvailable = () => {
-    const abiword = abiwordAvailable();
-    const soffice = sofficeAvailable();
-
-    if (abiword === 'no' && soffice === 'no') {
-        return 'no';
-    } else if ((abiword === 'withoutPDF' && soffice === 'no') ||
-        (abiword === 'no' && soffice === 'withoutPDF')) {
-        return 'withoutPDF';
-    } else {
-        return 'yes';
-    }
-};
+export const exportAvailable = () => sofficeAvailable();
 
 
 // Return etherpad version from package.json
@@ -767,7 +741,7 @@ const storeSettings = (settingsObj: any) => {
  * no coercition for "null" values.
  *
  * If the user wants a variable to be null by default, he'll have to use the
- * short syntax "${ABIWORD}", and not "${ABIWORD:null}": the latter would result
+ * short syntax "${SOFFICE}", and not "${SOFFICE:null}": the latter would result
  * in the literal string "null", instead.
  */
 const coerceValue = (stringValue: string) => {
@@ -1013,20 +987,6 @@ export const reloadSettings = () => {
         }
 
         logger.info(`Using skin "${settings.skinName}" in dir: ${skinPath}`);
-    }
-
-    if (settings.abiword) {
-        // Check abiword actually exists
-      fs.exists(settings.abiword, (exists: boolean) => {
-        if (!exists) {
-          const abiwordError = 'Abiword does not exist at this path, check your settings file.';
-          if (!settings.suppressErrorsInPadText) {
-            settings.defaultPadText += `\nError: ${abiwordError}${suppressDisableMsg}`;
-          }
-          logger.error(`${abiwordError} File location: ${settings.abiword}`);
-          settings.abiword = null;
-        }
-      });
     }
 
     if (settings.soffice) {

@@ -29,24 +29,11 @@ The variable value has to be a space separated, double quoted list of plugin nam
 
 Some plugins will need personalized settings. Just refer to the previous section, and include them in your custom `settings.json.docker`.
 
-### Rebuilding including export functionality for DOC/PDF/ODT
+### Rebuilding including export functionality for DOC/DOCX/PDF/ODT
 
-If you want to be able to export your pads to DOC/PDF/ODT files, you can install
-either Abiword or Libreoffice via setting a build variable.
-
-#### Via Abiword
-
-For installing Abiword, set the `INSTALL_ABIWORD` build variable to any value.
-
-Also, you will need to configure the path to the abiword executable
-via setting the `abiword` property in `<BASEDIR>/settings.json.docker` to
-`/usr/bin/abiword` or via setting the environment variable  `ABIWORD` to
-`/usr/bin/abiword`.
-
-#### Via Libreoffice
-
-For installing Libreoffice instead, set the `INSTALL_SOFFICE` build variable
-to any value.
+If you want to be able to export your pads to DOC/DOCX/PDF/ODT files, you can
+install Libreoffice via setting the `INSTALL_SOFFICE` build variable to any
+value.
 
 Also, you will need to configure the path to the libreoffice executable
 via setting the `soffice` property in `<BASEDIR>/settings.json.docker` to
@@ -202,8 +189,7 @@ For the editor container, you can also make it full width by adding `full-width-
 | `EDIT_ONLY`                       | Users may edit pads but not create new ones. Pad creation is only via the API. This applies both to group pads and regular pads.                                                                       | `false`               |
 | `MINIFY`                          | If true, all css & js will be minified before sending to the client. This will improve the loading performance massively, but makes it difficult to debug the javascript/css                           | `true`                |
 | `MAX_AGE`                         | How long may clients use served javascript code (in seconds)? Not setting this may cause problems during deployment. Set to 0 to disable caching.                                                      | `21600` (6 hours)     |
-| `ABIWORD`                         | Absolute path to the Abiword executable. Abiword is needed to get advanced import/export features of pads. Setting it to null disables Abiword and will only allow plain text and HTML import/exports. | `null`                |
-| `SOFFICE`                         | This is the absolute path to the soffice executable. LibreOffice can be used in lieu of Abiword to export pads. Setting it to null disables LibreOffice exporting.                                     | `null`                |
+| `SOFFICE`                         | Absolute path to the soffice (LibreOffice) executable. Needed for advanced import/export of pads (docx, pdf, odt). Setting it to null disables LibreOffice and will only allow plain text and HTML import/exports. | `null`                |
 | `ALLOW_UNKNOWN_FILE_ENDS`         | Allow import of file types other than the supported ones: txt, doc, docx, rtf, odt, html & htm                                                                                                         | `true`                |
 | `REQUIRE_AUTHENTICATION`          | This setting is used if you require authentication of all users. Note: "/admin" always requires authentication.                                                                                        | `false`               |
 | `REQUIRE_AUTHORIZATION`           | Require authorization by a module, or a user with is_admin set, see below.                                                                                                                             | `false`               |

@@ -86,7 +86,6 @@ export type ClientVarPayload = {
   initialTitle: string,
   opts: {}
   numConnectedUsers: number
-  abiwordAvailable: string
   sofficeAvailable: string
   plugins: {
     plugins:  MapArrayType<any>

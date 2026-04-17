@@ -199,17 +199,16 @@ describe(__filename, function () {
       }
     });
 
-    describe('Import/Export tests requiring AbiWord/LibreOffice', function () {
+    describe('Import/Export tests requiring LibreOffice', function () {
       before(async function () {
-        if ((!settings.abiword || settings.abiword.indexOf('/') === -1) &&
-            (!settings.soffice || settings.soffice.indexOf('/') === -1)) {
+        if (!settings.soffice || settings.soffice.indexOf('/') === -1) {
           this.skip();
         }
       });
 
       // For some reason word import does not work in testing..
       // TODO: fix support for .doc files..
-      it('Tries to import .doc that uses soffice or abiword', async function () {
+      it('Tries to import .doc that uses soffice', async function () {
         await agent.post(`/p/${testPadId}/import`)
             .set("authorization", await common.generateJWTToken())
             .attach('file', wordDoc, {filename: '/test.doc', contentType: 'application/msword'})
@@ -230,7 +229,15 @@ describe(__filename, function () {
             .expect((res:any) => assert(res.body.length >= 9000));
       });
 
-      it('Tries to import .docx that uses soffice or abiword', async function () {
+      it('exports DOCX', async function () {
+        await agent.get(`/p/${testPadId}/export/docx`)
+            .set("authorization", await common.generateJWTToken())
+            .buffer(true).parse(superagent.parse['application/octet-stream'])
+            .expect(200)
+            .expect((res:any) => assert(res.body.length >= 4000));
+      });
+
+      it('Tries to import .docx that uses soffice', async function () {
         await agent.post(`/p/${testPadId}/import`)
             .set("authorization", await common.generateJWTToken())
             .attach('file', wordXDoc, {
@@ -255,7 +262,15 @@ describe(__filename, function () {
             .expect((res:any) => assert(res.body.length >= 9100));
       });
 
-      it('Tries to import .pdf that uses soffice or abiword', async function () {
+      it('exports DOCX from imported DOCX', async function () {
+        await agent.get(`/p/${testPadId}/export/docx`)
+            .set("authorization", await common.generateJWTToken())
+            .buffer(true).parse(superagent.parse['application/octet-stream'])
+            .expect(200)
+            .expect((res:any) => assert(res.body.length >= 4000));
+      });
+
+      it('Tries to import .pdf that uses soffice', async function () {
         await agent.post(`/p/${testPadId}/import`)
             .set("authorization", await common.generateJWTToken())
             .attach('file', pdfDoc, {filename: '/test.pdf', contentType: 'application/pdf'})
@@ -276,7 +291,7 @@ describe(__filename, function () {
             .expect((res:any) => assert(res.body.length >= 1000));
       });
 
-      it('Tries to import .odt that uses soffice or abiword', async function () {
+      it('Tries to import .odt that uses soffice', async function () {
         await agent.post(`/p/${testPadId}/import`)
             .set("authorization", await common.generateJWTToken())
             .attach('file', odtDoc, {filename: '/test.odt', contentType: 'application/odt'})
@@ -296,7 +311,7 @@ describe(__filename, function () {
             .expect(200)
             .expect((res:any) => assert(res.body.length >= 7000));
       });
-    }); // End of AbiWord/LibreOffice tests.
+    }); // End of LibreOffice tests.
 
     it('Tries to import .etherpad', async function () {
       this.timeout(3000);

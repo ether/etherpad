@@ -62,15 +62,7 @@ ARG ETHERPAD_LOCAL_PLUGINS=
 #   ETHERPAD_GITHUB_PLUGINS="ether/ep_plugin"
 ARG ETHERPAD_GITHUB_PLUGINS=
 
-# Control whether abiword will be installed, enabling exports to DOC/PDF/ODT formats.
-# By default, it is not installed.
-# If given any value, abiword will be installed.
-#
-# EXAMPLE:
-#   INSTALL_ABIWORD=true
-ARG INSTALL_ABIWORD=
-
-# Control whether libreoffice will be installed, enabling exports to DOC/PDF/ODT formats.
+# Control whether libreoffice will be installed, enabling exports to DOC/DOCX/PDF/ODT formats.
 # By default, it is not installed.
 # If given any value, libreoffice will be installed.
 #
@@ -110,7 +102,6 @@ RUN  \
         ca-certificates \
         curl \
         git \
-        ${INSTALL_ABIWORD:+abiword abiword-plugin-command} \
         ${INSTALL_SOFFICE:+libreoffice openjdk8-jre libreoffice-common} && \
     rm -rf /var/cache/apk/*
 
