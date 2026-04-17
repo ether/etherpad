@@ -1,14 +1,20 @@
-# Etherpad: A real-time collaborative editor for the web
+# Etherpad — the editor for documents that matter
+
+> Real-time collaborative editing where authorship is the default, your server is the only server, and you decide what AI (if any) ever touches your text.
 
 ![Demo Etherpad Animated Jif](doc/public/etherpad_demo.gif "Etherpad in action")
 
 ## About
 
-Etherpad is a real-time collaborative editor [scalable to thousands of
-simultaneous real time users](http://scale.etherpad.org/). It provides [full
-data
-export](https://github.com/ether/etherpad-lite/wiki/Understanding-Etherpad's-Full-Data-Export-capabilities)
-capabilities, and runs on _your_ server, under _your_ control.
+**Etherpad is a real-time collaborative editor for documents that matter.**
+
+Every keystroke is attributed to its author. Every revision is preserved. The timeslider lets you scrub through a document's entire history, character by character. Author colours make collaboration visible at a glance — not buried in a menu.
+
+Etherpad runs on your server, under your governance. No telemetry. No upsells. AI is a plugin you install, pointed at the model you choose, running on infrastructure you control — not a feature decided for you in a boardroom you weren't in.
+
+The code is Apache 2.0. The data format is open. It [scales to thousands of simultaneous editors per pad](http://scale.etherpad.org/). Translated into 105 languages. Extended through hundreds of plugins. Used by Wikimedia, governments, public-sector institutions, and self-hosters worldwide since 2009.
+
+[Full data export](https://github.com/ether/etherpad-lite/wiki/Understanding-Etherpad's-Full-Data-Export-capabilities) is built in. The history is yours.
 
 ## Try it out
 
@@ -16,7 +22,9 @@ capabilities, and runs on _your_ server, under _your_ control.
 
 ## Project Status
 
-We're looking for maintainers and have some funding available.  Please contact John McLear if you can help.
+Etherpad has been doing the same thing — well — since 2009. No pivots, no acquisitions, no enshittification. Maintained by a small volunteer team.
+
+**We are actively looking for maintainers.** If you have experience with Node.js, real-time systems, or institutional collaboration tooling and you want to work on infrastructure that thousands of organisations quietly depend on, please [open an issue](https://github.com/ether/etherpad-lite/issues) or contact [John McLear](https://github.com/JohnMcLear).
 
 ### Code Quality
 
@@ -40,6 +48,19 @@ We're looking for maintainers and have some funding available.  Please contact J
 [![Etherpad plugins](https://img.shields.io/endpoint?url=https%3A%2F%2Fstatic.etherpad.org%2Fshields.json&color=%2344b492 "Etherpad plugins")](https://static.etherpad.org/index.html)
 ![Languages](https://img.shields.io/static/v1?label=Languages&message=105&color=%2344b492)
 ![Translation Coverage](https://img.shields.io/static/v1?label=Languages&message=98%&color=%2344b492)
+
+## Who uses Etherpad
+
+For more than a decade, Etherpad has quietly underpinned the documents that matter to:
+
+- **Wikimedia Foundation** — collaborative drafting across editor communities.
+- **Public-sector institutions across the EU** — including organisations that legally cannot use US-cloud SaaS for sovereignty and GDPR reasons.
+- **Universities and schools worldwide** — including jurisdictions where Google Workspace is no longer permitted in education.
+- **Civic-tech and democratic-deliberation projects** — citizen assemblies, participatory budgeting, public consultations.
+- **Newsrooms and investigative journalism teams** — where authorship and editing history matter for legal and editorial integrity.
+- **Tens of thousands of self-hosted instances** worldwide, run by IT teams who chose Etherpad because it is theirs.
+
+If your organisation runs Etherpad and would be willing to be listed publicly, please [add it to the wiki](https://github.com/ether/etherpad-lite/wiki/Sites-That-Run-Etherpad).
 
 ## Installation
 
