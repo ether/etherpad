@@ -226,8 +226,8 @@ importers:
         specifier: ^3.0.2
         version: 3.0.2
       oidc-provider:
-        specifier: 9.8.1
-        version: 9.8.1
+        specifier: 9.8.2
+        version: 9.8.2
       openapi-backend:
         specifier: ^5.16.1
         version: 5.16.1
@@ -4084,8 +4084,8 @@ packages:
   obug@2.1.1:
     resolution: {integrity: sha512-uTqF9MuPraAQ+IsnPf366RG4cP9RtUi7MLO1N3KEc+wb0a6yKpeL0lmk2IB1jY5KHPAlTc6T/JRdC/YqxHNwkQ==}
 
-  oidc-provider@9.8.1:
-    resolution: {integrity: sha512-FXENOKmRXE3BEqeVgFlYjVRGUqEjap9+3U448IAE9R7ZTx83sfh5Q2R7xxViVyRXZx4VWZR0u8cUumv9rIVvnQ==}
+  oidc-provider@9.8.2:
+    resolution: {integrity: sha512-Iu/VahRoAhgmzKdvqSX/4ZzrG11Zf6NHuhu1wLkoblBnMUIwud++D2lftK8jV/gLhRl3Fppa3RINYCf/675cjw==}
 
   on-finished@2.4.1:
     resolution: {integrity: sha512-oVlzkg3ENAhCk2zdv7IJwd/QUD4z2RxRwpkcGY8psCVcCYZNq4wYnVWALHM+brtuJjePWiYF/ClmuDr8Ch5+kg==}
@@ -7734,7 +7734,7 @@ snapshots:
       eslint-import-resolver-typescript: 3.9.1(eslint-plugin-import@2.32.0(@typescript-eslint/parser@7.18.0(eslint@10.2.0)(typescript@6.0.3))(eslint@10.2.0))(eslint@10.2.0)
       eslint-plugin-cypress: 2.15.2(eslint@10.2.0)
       eslint-plugin-eslint-comments: 3.2.0(eslint@10.2.0)
-      eslint-plugin-import: 2.32.0(@typescript-eslint/parser@7.18.0(eslint@10.2.0)(typescript@6.0.3))(eslint-import-resolver-typescript@3.9.1)(eslint@10.2.0)
+      eslint-plugin-import: 2.32.0(@typescript-eslint/parser@7.18.0(eslint@10.2.0)(typescript@6.0.3))(eslint-import-resolver-typescript@3.9.1(eslint-plugin-import@2.32.0(@typescript-eslint/parser@7.18.0(eslint@10.2.0)(typescript@6.0.3))(eslint@10.2.0))(eslint@10.2.0))(eslint@10.2.0)
       eslint-plugin-mocha: 10.5.0(eslint@10.2.0)
       eslint-plugin-n: 17.24.0(eslint@10.2.0)(typescript@6.0.3)
       eslint-plugin-prefer-arrow: 1.2.3(eslint@10.2.0)
@@ -7766,7 +7766,7 @@ snapshots:
       stable-hash: 0.0.5
       tinyglobby: 0.2.16
     optionalDependencies:
-      eslint-plugin-import: 2.32.0(@typescript-eslint/parser@7.18.0(eslint@10.2.0)(typescript@6.0.3))(eslint-import-resolver-typescript@3.9.1)(eslint@10.2.0)
+      eslint-plugin-import: 2.32.0(@typescript-eslint/parser@7.18.0(eslint@10.2.0)(typescript@6.0.3))(eslint-import-resolver-typescript@3.9.1(eslint-plugin-import@2.32.0(@typescript-eslint/parser@7.18.0(eslint@10.2.0)(typescript@6.0.3))(eslint@10.2.0))(eslint@10.2.0))(eslint@10.2.0)
     transitivePeerDependencies:
       - supports-color
 
@@ -7799,7 +7799,7 @@ snapshots:
       eslint: 10.2.0
       ignore: 5.3.2
 
-  eslint-plugin-import@2.32.0(@typescript-eslint/parser@7.18.0(eslint@10.2.0)(typescript@6.0.3))(eslint-import-resolver-typescript@3.9.1)(eslint@10.2.0):
+  eslint-plugin-import@2.32.0(@typescript-eslint/parser@7.18.0(eslint@10.2.0)(typescript@6.0.3))(eslint-import-resolver-typescript@3.9.1(eslint-plugin-import@2.32.0(@typescript-eslint/parser@7.18.0(eslint@10.2.0)(typescript@6.0.3))(eslint@10.2.0))(eslint@10.2.0))(eslint@10.2.0):
     dependencies:
       '@rtsao/scc': 1.1.0
       array-includes: 3.1.9
@@ -9086,7 +9086,7 @@ snapshots:
 
   obug@2.1.1: {}
 
-  oidc-provider@9.8.1:
+  oidc-provider@9.8.2:
     dependencies:
       '@koa/cors': 5.0.0
       '@koa/router': 15.4.0(koa@3.2.0)
