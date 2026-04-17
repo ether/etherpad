@@ -374,6 +374,45 @@ log4js.configure({
                  'Translation files help with Etherpad accessibility.');
   }
 
+  // Check template files for absolute `/static/plugins/...` asset paths.
+  // Those break any Etherpad instance hosted behind a reverse proxy at a
+  // sub-path (e.g. https://example.com/etherpad/pad) because the browser
+  // resolves them against the domain root instead of the proxy prefix.
+  // Rewrite to the relative `../static/plugins/...` form (see #5203, and
+  // ep_embedmedia#4 for the original fix this check is modelled on).
+  const templateDirs = ['templates', 'static']; // scan both — static/*.html exists too
+  const STATIC_ABS = /(?<![./:\w])\/static\/plugins\//g;
+  for (const dir of templateDirs) {
+    const abs = `${pluginPath}/${dir}`;
+    if (!files.includes(dir)) continue;
+    const scanFiles: string[] = [];
+    const walk = async (d: string) => {
+      for (const entry of await fsp.readdir(d, {withFileTypes: true})) {
+        const full = `${d}/${entry.name}`;
+        if (entry.isDirectory()) {
+          if (entry.name === 'node_modules' || entry.name === '.git') continue;
+          await walk(full);
+        } else if (/\.(ejs|html)$/.test(entry.name)) {
+          scanFiles.push(full);
+        }
+      }
+    };
+    await walk(abs);
+    for (const fp of scanFiles) {
+      const src = await fsp.readFile(fp, 'utf8');
+      if (!STATIC_ABS.test(src)) continue;
+      STATIC_ABS.lastIndex = 0;
+      const rel = path.relative(pluginPath, fp);
+      logger.warn(`${rel} contains absolute '/static/plugins/...' asset paths; ` +
+                  'these break reverse-proxied Etherpad deployments. Use ' +
+                  "'../static/plugins/...' instead.");
+      if (autoFix) {
+        logger.info(`Autofixing absolute /static/plugins/ paths in ${rel}`);
+        await fsp.writeFile(fp, src.replace(STATIC_ABS, '../static/plugins/'));
+      }
+    }
+  }
+
 
   if (files.includes('.ep_initialized')) {
     logger.warn(
