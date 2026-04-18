@@ -174,6 +174,7 @@ export type SettingsType = {
   updateServer: string,
   enableDarkMode: boolean,
   enablePadWideSettings: boolean,
+  allowPadDeletionByAllUsers: boolean,
   skinName: string | null,
   skinVariants: string,
   ip: string,
@@ -333,6 +334,7 @@ const settings: SettingsType = {
   updateServer: "https://static.etherpad.org",
   enableDarkMode: true,
   enablePadWideSettings: false,
+  allowPadDeletionByAllUsers: false,
   /*
  * Skin name.
  *

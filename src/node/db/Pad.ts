@@ -16,6 +16,7 @@ const assert = require('assert').strict;
 const db = require('./DB');
 import settings from '../utils/Settings';
 const authorManager = require('./AuthorManager');
+const padDeletionManager = require('./PadDeletionManager');
 const padManager = require('./PadManager');
 const padMessageHandler = require('../handler/PadMessageHandler');
 const groupManager = require('./GroupManager');
@@ -664,6 +665,7 @@ class Pad {
 
     // delete the pad entry and delete pad from padManager
     p.push(padManager.removePad(padID));
+    p.push(padDeletionManager.removeDeletionToken(padID));
     p.push(hooks.aCallAll('padRemove', {
       get padID() {
         pad_utils.warnDeprecated('padRemove padID context property is deprecated; use pad.id instead');

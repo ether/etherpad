@@ -89,6 +89,8 @@ export type ClientVarPayload = {
   initialTitle: string,
   opts: {}
   numConnectedUsers: number
+  canDeletePad?: boolean,
+  padDeletionToken?: string | null,
   sofficeAvailable: string
   plugins: {
     plugins:  MapArrayType<any>
