@@ -78,6 +78,8 @@ test.describe('creator-owned pad settings', () => {
     await expect(viewerInner).not.toHaveClass(/authorColors/);
     await expect(page2.locator('#options-linenoscheck')).not.toBeChecked();
     await expect(page2.locator('#options-colorscheck')).not.toBeChecked();
+    await expect(page2.locator('#enforce-settings-notice')).toBeVisible();
+    await expect(page.locator('#enforce-settings-notice')).toBeHidden();
     await context2.close();
   });
 

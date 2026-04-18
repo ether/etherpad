@@ -51,6 +51,14 @@
   min-width: 180px;
 }
 
+.settings-notice {
+  color: var(--text-color);
+  font-size: 0.95rem;
+  line-height: 1.4;
+  border-left: 3px solid var(--primary-color);
+  padding-left: 10px;
+}
+
 @media (min-width: 1100px) {
   .settings-sections.has-pad-settings {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);

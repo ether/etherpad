@@ -95,6 +95,7 @@
   "pad.settings.linenocheck": "Line numbers",
   "pad.settings.rtlcheck": "Read content from right to left?",
   "pad.settings.enforceSettings": "Enforce Settings",
+  "pad.settings.enforcedNotice": "These settings are locked by this pad's creator. Ask the pad creator if you need them changed.",
   "pad.settings.fontType": "Font type:",
   "pad.settings.fontType.normal": "Normal",
   "pad.settings.language": "Language:",

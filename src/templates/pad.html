@@ -115,7 +115,7 @@
       <!------------------------------------------------------------->
 
       <div id="settings" class="popup"><div class="popup-content">
-          <h1 data-l10n-id="pad.settings.title"></h1>
+          <h1 data-l10n-id="pad.settings.title">Settings</h1>
           <div class="settings-sections">
             <div id="user-settings-section" class="settings-section">
             <% e.begin_block("mySettings"); %>
@@ -147,6 +147,10 @@
             <p id="theme-toggle-row" hidden>
                 <input type="checkbox" id="options-darkmode">
                 <label for="options-darkmode" data-l10n-id="pad.settings.darkMode">Dark mode</label>
+            </p>
+            <p id="enforce-settings-notice" class="settings-notice" hidden
+               data-l10n-id="pad.settings.enforcedNotice">
+              These settings are locked by this pad's creator. Ask the pad creator if you need them changed.
             </p>
             <% e.end_block(); %>
 

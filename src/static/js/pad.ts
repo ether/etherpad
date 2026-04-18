@@ -501,6 +501,7 @@ const pad = {
   refreshMyViewControls: () => {
     const effectiveOptions = pad.getEffectivePadOptions();
     const disabled = !!pad.padOptions.enforceSettings;
+    const showEnforcedNotice = disabled && !pad.canEditPadSettings();
     $('#options-disablechat').prop('checked', effectiveOptions.showChat === false);
     $('#options-stickychat').prop('checked', !!effectiveOptions.alwaysShowChat);
     $('#options-chatandusers').prop('checked', !!effectiveOptions.chatAndUsers);
@@ -513,6 +514,7 @@ const pad = {
     $('#viewfontmenu, #languagemenu').prop('disabled', disabled);
     $('#options-stickychat, #options-chatandusers')
         .prop('disabled', disabled || effectiveOptions.showChat === false);
+    $('#enforce-settings-notice').prop('hidden', !showEnforcedNotice);
     if ($('select').niceSelect) $('select').niceSelect('update');
   },
   setMyViewOption: (key, value) => {
