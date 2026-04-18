@@ -137,6 +137,14 @@ export const goToNewPad = async (page: Page) => {
   const padId = "FRONTEND_TESTS"+randomUUID();
   await page.goto('http://localhost:9001/p/'+padId);
   await waitForEditorReady(page);
+  // Creator sessions see the one-time pad-deletion-token modal on first visit.
+  // Dismiss it so subsequent clicks in generic tests are not blocked. Tests
+  // that need to interact with the modal should navigate to a new pad inline
+  // instead of using this helper.
+  const tokenModal = page.locator('#deletiontoken-modal');
+  if (await tokenModal.isVisible().catch(() => false)) {
+    await page.locator('#deletiontoken-ack').click();
+  }
   return padId;
 }
 
