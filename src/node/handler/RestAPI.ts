@@ -192,12 +192,12 @@ const prepareDefinition = (mapping: Map<string, Record<string, RestAPIMapping>>,
           "in": string
 
         },
-        "apiKeyAlias": {
+        "apiKeyAlias"?: {
           "type": string,
           "name": string,
           "in": string
         },
-        "apiKeyHeader": {
+        "apiKeyHeader"?: {
           "type": string,
           "name": string,
           "in": string
@@ -253,16 +253,6 @@ const prepareDefinition = (mapping: Map<string, Record<string, RestAPIMapping>>,
           "in": "query"
 
         },
-        "apiKeyAlias": {
-          "type": "apiKey",
-          "name": "api_key",
-          "in": "query"
-        },
-        "apiKeyHeader": {
-          "type": "apiKey",
-          "name": "apikey",
-          "in": "header"
-        },
       },
     },
     "servers": [
@@ -275,6 +265,16 @@ const prepareDefinition = (mapping: Map<string, Record<string, RestAPIMapping>>,
   }
 
   if (authenticationMethod === "apikey") {
+    definitions.components.securitySchemes.apiKeyAlias = {
+      type: "apiKey",
+      name: "api_key",
+      in: "query",
+    };
+    definitions.components.securitySchemes.apiKeyHeader = {
+      type: "apiKey",
+      name: "apikey",
+      in: "header",
+    };
     definitions.security = [
       {"apiKey": []},
       {"apiKeyAlias": []},
