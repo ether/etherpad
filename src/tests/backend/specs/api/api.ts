@@ -10,6 +10,7 @@
 
 const common = require('../../common');
 const validateOpenAPI = require('openapi-schema-validation').validate;
+import settings from '../../../../node/utils/Settings';
 
 let agent: any;
 let apiVersion = 1;
@@ -53,5 +54,62 @@ describe(__filename, function () {
                             `validation errors:\n${prettyErrors}`);
           }
         });
+  });
+
+  describe('security schemes with authenticationMethod=apikey', function () {
+    let originalAuthMethod: string;
+
+    before(function () {
+      originalAuthMethod = settings.authenticationMethod;
+      settings.authenticationMethod = 'apikey';
+    });
+
+    after(function () {
+      settings.authenticationMethod = originalAuthMethod;
+    });
+
+    it('/api-docs.json documents apikey query param (primary name)', async function () {
+      const res = await agent.get('/api-docs.json').expect(200);
+      const schemes = res.body.components.securitySchemes;
+      const apiKeyQuery = Object.values(schemes).find(
+          (s: any) => s.type === 'apiKey' && s.in === 'query' && s.name === 'apikey');
+      if (!apiKeyQuery) {
+        throw new Error(`Expected apiKey query param 'apikey' in securitySchemes: ` +
+                        `${JSON.stringify(schemes)}`);
+      }
+    });
+
+    it('/api-docs.json documents api_key query param alias', async function () {
+      const res = await agent.get('/api-docs.json').expect(200);
+      const schemes = res.body.components.securitySchemes;
+      const apiKeyQueryAlias = Object.values(schemes).find(
+          (s: any) => s.type === 'apiKey' && s.in === 'query' && s.name === 'api_key');
+      if (!apiKeyQueryAlias) {
+        throw new Error(`Expected apiKey query param 'api_key' in securitySchemes: ` +
+                        `${JSON.stringify(schemes)}`);
+      }
+    });
+
+    it('/api-docs.json documents apikey header', async function () {
+      const res = await agent.get('/api-docs.json').expect(200);
+      const schemes = res.body.components.securitySchemes;
+      const apiKeyHeader = Object.values(schemes).find(
+          (s: any) => s.type === 'apiKey' && s.in === 'header' && s.name === 'apikey');
+      if (!apiKeyHeader) {
+        throw new Error(`Expected apiKey header 'apikey' in securitySchemes: ` +
+                        `${JSON.stringify(schemes)}`);
+      }
+    });
+
+    it('/api/openapi.json exposes apiKey security in apikey mode', async function () {
+      this.timeout(15000);
+      const res = await agent.get('/api/openapi.json').expect(200);
+      const schemes = res.body.components.securitySchemes;
+      const hasApiKey = Object.values(schemes).some((s: any) => s.type === 'apiKey');
+      if (!hasApiKey) {
+        throw new Error(`Expected at least one apiKey securityScheme in ` +
+                        `/api/openapi.json, got: ${JSON.stringify(schemes)}`);
+      }
+    });
   });
 });
