@@ -476,6 +476,13 @@
   "disableIPlogging": false,
 
   /*
+   * Allow any user who can edit a pad to delete it without the one-time pad
+   * deletion token. If false, only the original creator's author cookie or the
+   * deletion token can delete the pad.
+   */
+  "allowPadDeletionByAllUsers": false,
+
+  /*
    * Time (in seconds) to automatically reconnect pad when a "Force reconnect"
    * message is shown to user.
    *

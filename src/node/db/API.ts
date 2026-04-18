@@ -30,6 +30,7 @@ import readOnlyManager from './ReadOnlyManager';
 const groupManager = require('./GroupManager');
 const authorManager = require('./AuthorManager');
 const sessionManager = require('./SessionManager');
+const padDeletionManager = require('./PadDeletionManager');
 const exportHtml = require('../utils/ExportHtml');
 const exportTxt = require('../utils/ExportTxt');
 const importHtml = require('../utils/ImportHtml');
@@ -518,6 +519,7 @@ exports.createPad = async (padID: string, text: string, authorId = '') => {
 
   // create pad
   await getPadSafe(padID, false, text, authorId);
+  return {deletionToken: await padDeletionManager.createDeletionTokenIfAbsent(padID)};
 };
 
 /**
