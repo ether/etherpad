@@ -23,6 +23,7 @@ import {MapArrayType} from "../types/MapType";
 
 import AttributeMap from '../../static/js/AttributeMap';
 const padManager = require('../db/PadManager');
+const padDeletionManager = require('../db/PadDeletionManager');
 import {checkRep, cloneAText, compose, deserializeOps, follow, identity, inverse, makeAText, makeSplice, moveOpsToNewPool, mutateAttributionLines, mutateTextLines, oldLen, prepareForWire, splitAttributionLines, splitTextLines, unpack} from '../../static/js/Changeset';
 import ChatMessage from '../../static/js/ChatMessage';
 import AttributePool from '../../static/js/AttributePool';
@@ -257,39 +258,36 @@ exports.handleDisconnect = async (socket:any) => {
 const handlePadDelete = async (socket: any, padDeleteMessage: PadDeleteMessage) => {
   const session = sessioninfos[socket.id];
   if (!session || !session.author || !session.padId) throw new Error('session not ready');
-  if (await padManager.doesPadExist(padDeleteMessage.data.padId)) {
-    const retrievedPad = await padManager.getPad(padDeleteMessage.data.padId)
-    // Only the one doing the first revision can delete the pad, otherwise people could troll a lot
-    const firstContributor = await retrievedPad.getRevisionAuthor(0)
-    if (session.author === firstContributor) {
-      await retrievedPad.remove()
-    } else {
+  const padId = padDeleteMessage.data.padId;
+  if (session.padId !== padId) throw new Error('refusing cross-pad delete');
+  if (!await padManager.doesPadExist(padId)) return;
 
-      type ShoutMessage = {
-        message: string,
-        sticky: boolean,
-      }
+  const retrievedPad = await padManager.getPad(padId);
+  const firstContributor = await retrievedPad.getRevisionAuthor(0);
+  const isCreator = session.author === firstContributor;
+  const tokenOk = !isCreator && await padDeletionManager.isValidDeletionToken(
+      padId, padDeleteMessage.data.deletionToken);
+  const flagOk = !isCreator && !tokenOk && settings.allowPadDeletionByAllUsers;
 
-      const messageToShout: ShoutMessage = {
-        message: 'You are not the creator of this pad, so you cannot delete it',
-        sticky: false
-      }
-      const messageToSend = {
-        type: "COLLABROOM",
-        data: {
-          type: "shoutMessage",
-          payload: {
-            message: messageToShout,
-            timestamp: Date.now()
-          }
-        }
-      }
-      socket.emit('shout',
-        messageToSend
-      )
-    }
+  if (isCreator || tokenOk || flagOk) {
+    await retrievedPad.remove();
+    return;
   }
-}
+
+  socket.emit('shout', {
+    type: 'COLLABROOM',
+    data: {
+      type: 'shoutMessage',
+      payload: {
+        message: {
+          message: 'You are not the creator of this pad, so you cannot delete it',
+          sticky: false,
+        },
+        timestamp: Date.now(),
+      },
+    },
+  });
+};
 
 const isPadCreator = async (pad: any, authorId: string) => authorId === await pad.getRevisionAuthor(0);
 

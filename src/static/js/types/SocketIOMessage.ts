@@ -202,6 +202,7 @@ export type PadDeleteMessage = {
   type: 'PAD_DELETE'
   data: {
     padId: string
+    deletionToken?: string
   }
 }
 
