@@ -150,6 +150,7 @@ const padimpexp = (() => {
         $('#exportworda').remove();
         $('#exportpdfa').remove();
         $('#exportopena').remove();
+        $('#importmessagenoconverter').prop('hidden', false);
       } else if (clientVars.exportAvailable === 'withoutPDF') {
         $('#exportpdfa').remove();
 
