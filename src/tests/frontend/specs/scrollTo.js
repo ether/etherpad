@@ -15,6 +15,20 @@ describe('scrollTo.js', function () {
         return (topOffset >= 100);
       });
     });
+
+    it('reapplies the scroll when earlier content changes height after load', async function () {
+      const chrome$ = helper.padChrome$;
+      const inner$ = helper.padInner$;
+      const getTopOffset = () => parseInt(chrome$('iframe').first('iframe')
+          .contents().find('#outerdocbody').css('top')) || 0;
+
+      await helper.waitForPromise(() => getTopOffset() >= 100);
+      const initialTopOffset = getTopOffset();
+
+      inner$('#innerdocbody > div').first().css('height', '400px');
+
+      await helper.waitForPromise(() => getTopOffset() > initialTopOffset + 200);
+    });
   });
 
   describe('doesnt break on weird hash input', function () {
