@@ -83,6 +83,37 @@ test.describe('creator-owned pad settings', () => {
     await context2.close();
   });
 
+  test('creator can keep authorship colors while pad-wide default keeps them off for other users',
+      async ({page, browser}) => {
+        const padId = await goToNewPad(page);
+
+        const context2 = await browser.newContext();
+        const page2 = await context2.newPage();
+        await goToPad(page2, padId);
+
+        const creatorInner = page.frameLocator('iframe[name="ace_outer"]')
+          .frameLocator('iframe[name="ace_inner"]').locator('body');
+        const viewerInner = page2.frameLocator('iframe[name="ace_outer"]')
+          .frameLocator('iframe[name="ace_inner"]').locator('body');
+
+        await expect(creatorInner).toHaveClass(/authorColors/);
+        await expect(viewerInner).toHaveClass(/authorColors/);
+
+        await showSettings(page);
+        await page.locator('label[for="padsettings-options-colorscheck"]').click();
+        await expect(page.locator('#padsettings-options-colorscheck')).not.toBeChecked();
+        await expect(page.locator('#options-colorscheck')).not.toBeChecked();
+        await expect(creatorInner).not.toHaveClass(/authorColors/);
+        await expect(viewerInner).not.toHaveClass(/authorColors/);
+
+        await page.locator('label[for="options-colorscheck"]').click();
+        await expect(page.locator('#options-colorscheck')).toBeChecked();
+        await expect(creatorInner).toHaveClass(/authorColors/);
+        await expect(viewerInner).not.toHaveClass(/authorColors/);
+
+        await context2.close();
+      });
+
   test('uses My View defaults for newly created pads without changing an existing pad default',
       async ({page}) => {
         await goToNewPad(page);
