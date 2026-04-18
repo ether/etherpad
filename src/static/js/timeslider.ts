@@ -34,6 +34,7 @@ const socketio = require('./socketio');
 import html10n from '../js/vendors/html10n'
 let token, padId, exportLinks, socket, changesetLoader, BroadcastSlider;
 let cp = '';
+const playbackSpeedCookie = 'timesliderPlaybackSpeed';
 
 const init = () => {
   padutils.setupGlobalExceptionHandler();
@@ -112,6 +113,7 @@ const fireWhenAllScriptsAreLoaded = [];
 const handleClientVars = (message) => {
   // save the client Vars
   window.clientVars = message.data;
+  cp = window.clientVars.cookiePrefix || '';
 
   if (window.clientVars.sessionRefreshInterval) {
     const ping =
@@ -171,6 +173,15 @@ const handleClientVars = (message) => {
   // font family change
   $('#viewfontmenu').on('change', function () {
     $('#innerdocbody').css('font-family', $(this).val() || '');
+  });
+
+  const savedPlaybackSpeed = Cookies.get(`${cp}${playbackSpeedCookie}`) || '100';
+  $('#playbackspeed').val(savedPlaybackSpeed);
+  BroadcastSlider.setPlaybackSpeed(savedPlaybackSpeed);
+  $('#playbackspeed').on('change', function () {
+    const speed = String($(this).val() || '100');
+    Cookies.set(`${cp}${playbackSpeedCookie}`, speed);
+    BroadcastSlider.setPlaybackSpeed(speed);
   });
 };
 

@@ -43,6 +43,26 @@ const loadBroadcastSliderJS = (fireWhenAllScriptsAreLoaded) => {
     const slidercallbacks = [];
     const savedRevisions = [];
     let sliderPlaying = false;
+    let playbackSpeed = '100';
+
+    const getPlaybackDelay = () => {
+      if (playbackSpeed !== 'realtime') return Number(playbackSpeed);
+      const path = window.revisionInfo.getPath(getSliderPosition(), getSliderPosition() + 1);
+      if (path.status !== 'complete' || path.times.length === 0) return null;
+      const delay = Number(path.times[0]);
+      return Number.isFinite(delay) ? Math.max(0, delay) : null;
+    };
+
+    const scheduleNextPlaybackStep = () => {
+      const delay = getPlaybackDelay();
+      if (delay == null) {
+        setTimeout(() => {
+          if (sliderPlaying) scheduleNextPlaybackStep();
+        }, 100);
+        return;
+      }
+      setTimeout(playButtonUpdater, delay);
+    };
 
     const _callSliderCallbacks = (newval) => {
       sliderPos = newval;
@@ -180,7 +200,11 @@ const loadBroadcastSliderJS = (fireWhenAllScriptsAreLoaded) => {
         }
         setSliderPosition(getSliderPosition() + 1);
 
-        setTimeout(playButtonUpdater, 100);
+        if (playbackSpeed === 'realtime') {
+          scheduleNextPlaybackStep();
+        } else {
+          setTimeout(playButtonUpdater, getPlaybackDelay());
+        }
       }
     };
 
@@ -190,7 +214,11 @@ const loadBroadcastSliderJS = (fireWhenAllScriptsAreLoaded) => {
       if (!sliderPlaying) {
         if (getSliderPosition() === sliderLength) setSliderPosition(0);
         sliderPlaying = true;
-        playButtonUpdater();
+        if (playbackSpeed === 'realtime') {
+          scheduleNextPlaybackStep();
+        } else {
+          playButtonUpdater();
+        }
       } else {
         sliderPlaying = false;
       }
@@ -202,6 +230,10 @@ const loadBroadcastSliderJS = (fireWhenAllScriptsAreLoaded) => {
       setSliderPosition,
       getSliderLength,
       setSliderLength,
+      setPlaybackSpeed: (value) => {
+        playbackSpeed = value;
+      },
+      getPlaybackSpeed: () => playbackSpeed,
       isSliderActive: () => sliderActive,
       playpause,
       addSavedRevision,
