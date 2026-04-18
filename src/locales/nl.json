@@ -120,6 +120,7 @@
 	"pad.importExport.exportword": "Microsoft Word",
 	"pad.importExport.exportpdf": "PDF",
 	"pad.importExport.exportopen": "ODF (Open Document Format)",
+	"pad.importExport.abiword.innerHTML": "U kunt alleen importeren vanuit tekst zonder opmaak of met HTML-opmaak. <a href=\"https://github.com/ether/etherpad-lite/wiki/How-to-enable-importing-and-exporting-different-file-formats-with-AbiWord\">Installeer AbiWord of LibreOffice</a> om meer geavanceerde importmogelijkheden te krijgen.",
 	"pad.modals.connected": "Verbonden.",
 	"pad.modals.reconnecting": "De verbinding met uw notitie wordt hersteld…",
 	"pad.modals.forcereconnect": "Opnieuw verbinden",

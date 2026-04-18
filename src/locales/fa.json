@@ -98,6 +98,7 @@
 	"pad.importExport.exportword": "Microsoft Word",
 	"pad.importExport.exportpdf": "PDF",
 	"pad.importExport.exportopen": "ODF (قالب سند باز)",
+	"pad.importExport.abiword.innerHTML": "شما تنها می‌توانید از قالب متن ساده یا اچ‌تی‌ام‌ال درون‌ریزی کنید. برای بیشتر شدن ویژگی‌های درون‌ریزی پیشرفته <a href=\"https://github.com/ether/etherpad-lite/wiki/How-to-enable-importing-and-exporting-different-file-formats-with-AbiWord\">AbiWord یا LibreOffice را نصب کنید</a>.",
 	"pad.modals.connected": "متصل شد.",
 	"pad.modals.reconnecting": "در حال اتصال دوباره به پد شما...",
 	"pad.modals.forcereconnect": "واداشتن به اتصال دوباره",

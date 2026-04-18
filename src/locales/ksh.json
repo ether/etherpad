@@ -48,6 +48,7 @@
 	"pad.importExport.exportword": "Microsoft Word",
 	"pad.importExport.exportpdf": "PDF (Poteerbaa Dokemänte Fommaat)",
 	"pad.importExport.exportopen": "ODF (Offe Dokemänte-Fommaat)",
+	"pad.importExport.abiword.innerHTML": "Mer künne bloß eijfaache Täxte udder HTML_Fommaate empoteere. Opwändejere Müjjeleschkeite fö der Empoot jon och, doför bruch mer en <a href=\"https://github.com/ether/etherpad-lite/wiki/How-to-enable-importing-and-exporting-different-file-formats-in-Ubuntu-or-OpenSuse-or-SLES-with-AbiWord\">Enschtallazjuhn met <i lang=\"en\" xml:lang=\"en\">Abiword</i></a>.",
 	"pad.modals.connected": "Verbonge.",
 	"pad.modals.reconnecting": "Ben wider aam Verbenge&nbsp;…",
 	"pad.modals.forcereconnect": "Wider verbenge",

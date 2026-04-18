@@ -85,6 +85,7 @@
 	"pad.importExport.exportword": "Microsoft Word",
 	"pad.importExport.exportpdf": "ပီဒီအက်ဖ်",
 	"pad.importExport.exportopen": "ODF (စာရွက်စာတမ်းဖွင့်ပုံစံ)",
+	"pad.importExport.abiword.innerHTML": "သင်ရိုးရိုးစာသားများ (သို့) HTML ပုံစံများဖြင့်သာတင်သွင်းနိုင်သည်။ ပိုမိုအဆင့်မြင့်သောသွင်းကုန်အင်္ဂါရပ်များအတွက် ကျေးဇူးပြု၍ ကျေးဇူးပြု၍ <a href=\"https://github.com/ether/etherpad-lite/wiki/How-to-enable-importing-and-exporting-different-file-formats-with-AbiWord\"> AbiWord သို့မဟုတ် LibreOffice </a> ကို install လုပ်ပါ။",
 	"pad.modals.connected": "ချိတ်ဆက်ထားသည်။",
 	"pad.modals.reconnecting": "သင်၏ pad သို့ပြန်လည်ချိတ်ဆက်နေသည်…",
 	"pad.modals.forcereconnect": "ပြန်လည်ချိတ်ဆက်ခိုင်းပါ",

@@ -26,6 +26,7 @@
 	"pad.importExport.exportword": "માઇક્રોસોફ્ટ વર્ડ",
 	"pad.importExport.exportpdf": "PDF",
 	"pad.importExport.exportopen": "ODF (ઓપન ડોક્યુમેન્ટ ફોરમેટ)",
+	"pad.importExport.abiword.innerHTML": "આપ માત્ર સાદુ લખાણ અથવા HTML આયાત કરી શકો છો. વધુ અધ્યતન આયાત સુવિધા માટે  <a href=\"https://github.com/ether/etherpad-lite/wiki/How-to-enable-importing-and-exporting-different-file-formats-in-Ubuntu-or-OpenSuse-or-SLES-with-AbiWord\">abiword ઇન્સ્ટોલ કરો</a>.",
 	"pad.modals.connected": "જોડાયેલું",
 	"pad.chat": "વાતચીત",
 	"pad.chat.title": "આ પેડ માટે વાતચીત ખોલો.",

@@ -108,6 +108,7 @@
 	"pad.importExport.exportword": "Microsoft Word",
 	"pad.importExport.exportpdf": "PDF",
 	"pad.importExport.exportopen": "ODF (Open Document Format)",
+	"pad.importExport.abiword.innerHTML": "Можете да увезувате само од прост текст и HTML-формат. Понапредни можности за увоз ќе добиете ако <a href=\"https://github.com/ether/etherpad-lite/wiki/How-to-enable-importing-and-exporting-different-file-formats-with-AbiWord\">воспоставите AbiWord или LibreOffice</a>.",
 	"pad.modals.connected": "Поврзано.",
 	"pad.modals.reconnecting": "Ве преповрзувам со тетратката...",
 	"pad.modals.forcereconnect": "Наметни преповрзување",

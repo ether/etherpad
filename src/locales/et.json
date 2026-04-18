@@ -46,6 +46,7 @@
 	"pad.importExport.exportword": "Microsoft Word",
 	"pad.importExport.exportpdf": "PDF",
 	"pad.importExport.exportopen": "ODF (Open Document Format)",
+	"pad.importExport.abiword.innerHTML": "Paraku on ainult lihttekstis voi HTML-vormingus dokumentide importimine võimaldatud. Rohkem võimaluste jaoks peab <a href=\"https://github.com/ether/etherpad-lite/wiki/How-to-enable-importing-and-exporting-different-file-formats-in-Ubuntu-or-OpenSuse-or-SLES-with-AbiWord\">paigaldama abiword</a>.",
 	"pad.modals.connected": "Ühendatud.",
 	"pad.modals.reconnecting": "Proovitakse luua ühendus klade juurde...",
 	"pad.modals.forcereconnect": "Sunni ühenduse taasloomist",

@@ -55,6 +55,7 @@
 	"pad.importExport.exportword": "Microsoft Word",
 	"pad.importExport.exportpdf": "PDF",
 	"pad.importExport.exportopen": "ODF (Open Document Format)",
+	"pad.importExport.abiword.innerHTML": "Tzemreḍ kan ad ketreḍ aḍris aččuran neɣ imasalen HTML. Ugar n tmahilin n ukter leqqayen, rzu ar <a href=\"https://github.com/ether/etherpad-lite/wiki/How-to-enable-importing-and-exporting-different-file-formats-with-AbiWord\">Sebded AbiWord</a>.",
 	"pad.modals.connected": "Iqqen.",
 	"pad.modals.reconnecting": "Tulsa n tuqqna ar upad-ik.",
 	"pad.modals.forcereconnect": "Ḥettem tulsa n tuqqna",

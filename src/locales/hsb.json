@@ -106,6 +106,7 @@
 	"pad.importExport.exportword": "Microsoft Word",
 	"pad.importExport.exportpdf": "PDF",
 	"pad.importExport.exportopen": "ODF (Open Document Format)",
+	"pad.importExport.abiword.innerHTML": "Móžeš jenož z formatow luteho teksta abo z HTML-formata importować. Za bóle rozšěrjene importowe funkcije <a href=\"https://github.com/ether/etherpad-lite/wiki/How-to-enable-importing-and-exporting-different-file-formats-with-AbiWord\">instaluj prošu Abiword abo LibreOffice</a>.",
 	"pad.modals.connected": "Zwjazany.",
 	"pad.modals.reconnecting": "Zwjazuje so znowa z twojim zapisnikom...",
 	"pad.modals.forcereconnect": "Znowa zwjazać",

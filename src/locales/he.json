@@ -110,6 +110,7 @@
 	"pad.importExport.exportword": "מיקרוסופט וורד",
 	"pad.importExport.exportpdf": "PDF",
 	"pad.importExport.exportopen": "ODF (Open Document Format)",
+	"pad.importExport.abiword.innerHTML": "באפשרותך לייבא מטקסט פשוט או מ־HTML. לאפשרויות יבוא מתקדמות יותר יש <a href=\"https://github.com/ether/etherpad-lite/wiki/How-to-enable-importing-and-exporting-different-file-formats-with-AbiWord\">להתקין AbiWord או LibreOffice</a>.",
 	"pad.modals.connected": "מחובר.",
 	"pad.modals.reconnecting": "מתבצע חיבור מחדש למחברת שלך…",
 	"pad.modals.forcereconnect": "לכפות חיבור מחדש",

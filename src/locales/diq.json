@@ -93,6 +93,7 @@
 	"pad.importExport.exportword": "Microsoft Word",
 	"pad.importExport.exportpdf": "PDF",
 	"pad.importExport.exportopen": "ODF (Open Document Format)",
+	"pad.importExport.abiword.innerHTML": "Şıma şenê tenya metınanê zelalan ya zi formatanê HTML-i biyarê. Seba vêşi xısusiyetanê arezekerdışi ra gırey <a href=\"https://github.com/ether/etherpad-lite/wiki/How-to-enable-importing-and-exporting-different-file-formats-in-Ubuntu-or-OpenSuse-or-SLES-with-AbiWord\">AbiWordi ya zi LibreOfficeyi bar kerên</a>.",
 	"pad.modals.connected": "Gıre diya.",
 	"pad.modals.reconnecting": "Pada şıma rê fına irtibat kewê no",
 	"pad.modals.forcereconnect": "Mecbur anciya gırê de",

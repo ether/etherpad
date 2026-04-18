@@ -122,6 +122,7 @@
 	"pad.importExport.exportword": "Microsoft Word",
 	"pad.importExport.exportpdf": "PDF",
 	"pad.importExport.exportopen": "ODF (документ OpenOffice)",
+	"pad.importExport.abiword.innerHTML": "Вы можете импортировать только из обычного текста или HTML. Для более продвинутых функций импорта <a href=\"https://github.com/ether/etherpad-lite/wiki/How-to-enable-importing-and-exporting-different-file-formats-with-AbiWord\">установите AbiWord или LibreOffice</a>.",
 	"pad.modals.connected": "Подключен.",
 	"pad.modals.reconnecting": "Повторное подключение к вашему документу…",
 	"pad.modals.forcereconnect": "Принудительное переподключение",

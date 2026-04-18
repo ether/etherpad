@@ -52,6 +52,7 @@
 	"pad.importExport.exportword": "Microsoft Word",
 	"pad.importExport.exportpdf": "PDF",
 	"pad.importExport.exportopen": "ODF (Formato “OpenDocument”)",
+	"pad.importExport.abiword.innerHTML": "Nur kapablas enporti de plata teksto aŭ HTML. Por pli speciala importkapablo, bonvolu <a href=\"https://github.com/ether/etherpad-lite/wiki/How-to-enable-importing-and-exporting-different-file-formats-with-AbiWord\">instalu la programon, Abiword</a>.",
 	"pad.modals.connected": "Konektita.",
 	"pad.modals.reconnecting": "Rekonektanta al via redaktilo..",
 	"pad.modals.forcereconnect": "Perforte rekonekti",

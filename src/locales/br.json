@@ -52,6 +52,7 @@
 	"pad.importExport.exportword": "Microsoft Word",
 	"pad.importExport.exportpdf": "PDF",
 	"pad.importExport.exportopen": "ODF (Open Document Format)",
+	"pad.importExport.abiword.innerHTML": "Ne c'hallit enporzhiañ nemet furmadoù testennoù plaen pe HTML. Evit arc'hwelioù enporzhiañ emdroetoc'h, staliit <a href=\"https://github.com/ether/etherpad-lite/wiki/How-to-enable-importing-and-exporting-different-file-formats-with-AbiWord\">Abiword pe LibreOffice</a>.",
 	"pad.modals.connected": "Kevreet.",
 	"pad.modals.reconnecting": "Adkevreañ war-zu ho pad...",
 	"pad.modals.forcereconnect": "Adkevreañ dre heg",
