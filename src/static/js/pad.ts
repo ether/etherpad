@@ -232,6 +232,38 @@ const normalizeChatOptions = (options) => {
   return options;
 };
 
+// Surfaces the one-time pad deletion token when the server sends it in
+// clientVars (creator session, first CLIENT_READY). The token is cleared from
+// clientVars on acknowledgement so it is not re-exposed to later code paths.
+const showDeletionTokenModalIfPresent = () => {
+  const token: string | null = (window as any).clientVars?.padDeletionToken;
+  if (!token) return;
+  const $modal = $('#deletiontoken-modal');
+  const $input = $('#deletiontoken-value');
+  const $copy = $('#deletiontoken-copy');
+  const $ack = $('#deletiontoken-ack');
+  if ($modal.length === 0) return;
+
+  $input.val(token);
+  $modal.prop('hidden', false).addClass('popup-show');
+
+  $copy.off('click.gdpr').on('click.gdpr', async () => {
+    try {
+      await navigator.clipboard.writeText(token);
+    } catch (_e) {
+      ($input[0] as HTMLInputElement).select();
+      document.execCommand('copy');
+    }
+    $copy.text(html10n.get('pad.deletionToken.copied'));
+  });
+
+  $ack.off('click.gdpr').on('click.gdpr', () => {
+    $input.val('');
+    $modal.prop('hidden', true).removeClass('popup-show');
+    (window as any).clientVars.padDeletionToken = null;
+  });
+};
+
 const sendClientReady = (isReconnect) => {
   let padId = document.location.pathname.substring(document.location.pathname.lastIndexOf('/') + 1);
   // unescape necessary due to Safari and Opera interpretation of spaces
@@ -654,6 +686,8 @@ const pad = {
         $('#theme-toggle-row').prop('hidden', false);
         $('#options-darkmode').prop('checked', skinVariants.isDarkMode());
       }
+
+      showDeletionTokenModalIfPresent();
 
       hooks.aCallAll('postAceInit', {ace: padeditor.ace, clientVars, pad});
     };
