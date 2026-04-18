@@ -186,9 +186,15 @@ const loadBroadcastJS = (socket, sendSocketMsg, fireWhenAllScriptsAreLoaded, Bro
     $(sideDiv).addClass('sidedivdelayed');
   };
 
+  let lineNumberUpdatePending = false;
   const scheduleLineNumberUpdate = () => {
+    if (lineNumberUpdatePending) return;
+    lineNumberUpdatePending = true;
     window.requestAnimationFrame(() => {
-      window.requestAnimationFrame(updateLineNumbers);
+      window.requestAnimationFrame(() => {
+        lineNumberUpdatePending = false;
+        updateLineNumbers();
+      });
     });
   };
 
@@ -254,7 +260,7 @@ const loadBroadcastJS = (socket, sendSocketMsg, fireWhenAllScriptsAreLoaded, Bro
 
     padContents.currentRevision = revision;
     padContents.currentTime += timeDelta;
-    updateLineNumbers();
+    scheduleLineNumberUpdate();
 
     updateTimer();
 
