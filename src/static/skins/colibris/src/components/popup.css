@@ -52,7 +52,7 @@
 }
 
 @media (min-width: 1100px) {
-  .settings-sections {
+  .settings-sections.has-pad-settings {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     align-items: start;
   }

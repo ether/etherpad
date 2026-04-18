@@ -83,6 +83,7 @@
   "pad.noCookie": "Cookie could not be found. Please allow cookies in your browser!  Your session and settings will not be saved between visits.  This may be due to Etherpad being included in an iFrame in some Browsers.  Please ensure Etherpad is on the same subdomain/domain as the parent iFrame",
   "pad.permissionDenied": "You do not have permission to access this pad",
 
+  "pad.settings.title": "Settings",
   "pad.settings.padSettings": "Pad-wide Settings",
   "pad.settings.userSettings": "User Settings",
   "pad.settings.myView": "My View",

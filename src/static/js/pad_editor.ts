@@ -188,6 +188,7 @@ const padeditor = (() => {
       });
       if (pad.canEditPadSettings()) {
         $('#pad-settings-section').prop('hidden', false);
+        $('.settings-sections').addClass('has-pad-settings');
       }
     },
     setViewOptions: (newOptions) => {
