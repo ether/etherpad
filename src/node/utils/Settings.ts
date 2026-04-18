@@ -172,6 +172,7 @@ export type SettingsType = {
   },
   updateServer: string,
   enableDarkMode: boolean,
+  enablePadWideSettings: boolean,
   skinName: string | null,
   skinVariants: string,
   ip: string,
@@ -294,7 +295,7 @@ export type SettingsType = {
   lowerCasePadIds: boolean,
   randomVersionString: string,
   gitVersion: string
-  getPublicSettings: () => Pick<SettingsType, "title" | "skinVariants"|"randomVersionString"|"skinName"|"toolbar"| "exposeVersion"| "gitVersion">,
+  getPublicSettings: () => Pick<SettingsType, "title" | "skinVariants"|"randomVersionString"|"skinName"|"toolbar"| "exposeVersion"| "gitVersion" | "enablePadWideSettings">,
 }
 
 const settings: SettingsType = {
@@ -328,6 +329,7 @@ const settings: SettingsType = {
   },
   updateServer: "https://static.etherpad.org",
   enableDarkMode: true,
+  enablePadWideSettings: false,
   /*
  * Skin name.
  *
@@ -657,6 +659,7 @@ const settings: SettingsType = {
       title: settings.title,
       skinName: settings.skinName,
       skinVariants: settings.skinVariants,
+      enablePadWideSettings: settings.enablePadWideSettings,
     }
   },
   gitVersion: getGitCommit(),

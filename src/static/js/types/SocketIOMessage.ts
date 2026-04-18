@@ -76,6 +76,7 @@ export type ClientVarPayload = {
   initialOptions: PadOption,
   userId: string,
   canEditPadSettings?: boolean,
+  enablePadWideSettings?: boolean,
   mode: string,
   randomVersionString: string,
   skinName: string

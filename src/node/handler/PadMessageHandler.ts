@@ -269,7 +269,12 @@ const handlePadOptionsMessage = async (
     socket: any, message: PadOptionsMessage & {data: {payload: PadOptionsMessage}}) => {
   const session = sessioninfos[socket.id];
   if (!session || !session.author || !session.padId) throw new Error('session not ready');
-  const pad = await padManager.getPad(session.padId);
+  if (!settings.enablePadWideSettings) return;
+  if (!await padManager.doesPadExist(session.padId)) {
+    messageLogger.warn(`Ignoring padoptions for missing pad ${session.padId}`);
+    return;
+  }
+  const pad = await padManager.getPad(session.padId, null, session.author);
   if (!await isPadCreator(pad, session.author)) {
     socket.emit('shout', {
       type: 'COLLABROOM',
@@ -921,7 +926,7 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
   const padExisted = await padManager.doesPadExist(sessionInfo.padId);
   // load the pad-object from the database
   const pad = await padManager.getPad(sessionInfo.padId, null, sessionInfo.author);
-  if (!padExisted && message.padSettingsDefaults) {
+  if (settings.enablePadWideSettings && !padExisted && message.padSettingsDefaults) {
     pad.setPadSettings(message.padSettingsDefaults);
     await pad.saveToDatabase();
   }
@@ -1065,7 +1070,8 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
 
     // Warning: never ever send sessionInfo.padId to the client. If the client is read only you
     // would open a security hole 1 swedish mile wide...
-    const canEditPadSettings = !sessionInfo.readonly && await isPadCreator(pad, sessionInfo.author);
+    const canEditPadSettings = settings.enablePadWideSettings &&
+        !sessionInfo.readonly && await isPadCreator(pad, sessionInfo.author);
     const clientVars:MapArrayType<any> = {
       skinName: settings.skinName,
       skinVariants: settings.skinVariants,
@@ -1074,6 +1080,7 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
         maxRevisions: 100,
       },
       enableDarkMode: settings.enableDarkMode,
+      enablePadWideSettings: settings.enablePadWideSettings,
       automaticReconnectionTimeout: settings.automaticReconnectionTimeout,
       initialRevisionList: [],
       initialOptions: pad.getPadSettings(),

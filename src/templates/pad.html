@@ -115,11 +115,19 @@
       <!------------------------------------------------------------->
 
       <div id="settings" class="popup"><div class="popup-content">
+          <% if (settings.enablePadWideSettings) { %>
           <h1 data-l10n-id="pad.settings.title">Settings</h1>
+          <% } else { %>
+          <h1 data-l10n-id="pad.settings.padSettings">Pad Settings</h1>
+          <% } %>
           <div class="settings-sections">
             <div id="user-settings-section" class="settings-section">
             <% e.begin_block("mySettings"); %>
+            <% if (settings.enablePadWideSettings) { %>
             <h2 data-l10n-id="pad.settings.userSettings"></h2>
+            <% } else { %>
+            <h2 data-l10n-id="pad.settings.myView"></h2>
+            <% } %>
             <p class="hide-for-mobile">
                 <input type="checkbox" id="options-disablechat">
                 <label for="options-disablechat" data-l10n-id="pad.settings.disablechat">Disable Chat</label>
@@ -148,10 +156,10 @@
                 <input type="checkbox" id="options-darkmode">
                 <label for="options-darkmode" data-l10n-id="pad.settings.darkMode">Dark mode</label>
             </p>
-            <p id="enforce-settings-notice" class="settings-notice" hidden
+            <% if (settings.enablePadWideSettings) { %><p id="enforce-settings-notice" class="settings-notice" hidden
                data-l10n-id="pad.settings.enforcedNotice">
               These settings are locked for you by this pad's creator. Ask the pad creator if you need them changed.
-            </p>
+            </p><% } %>
             <% e.end_block(); %>
 
             <div class="dropdowns-container">
@@ -178,7 +186,8 @@
               <% e.end_block(); %>
             </div>
             </div>
-            <div id="pad-settings-section" class="settings-section" hidden>
+            <% if (settings.enablePadWideSettings) { %><div id="pad-settings-section" class="settings-section" hidden>
+              <% e.begin_block("padSettings"); %>
               <h2 data-l10n-id="pad.settings.padSettings"></h2>
               <p class="hide-for-mobile">
                   <input type="checkbox" id="padsettings-options-disablechat">
@@ -208,7 +217,9 @@
                   <input type="checkbox" id="padsettings-enforcecheck">
                   <label for="padsettings-enforcecheck" data-l10n-id="pad.settings.enforceSettings">Enforce settings for other users</label>
               </p>
+              <% e.end_block(); %>
               <div class="dropdowns-container">
+                <% e.begin_block("padSettings.dropdowns"); %>
                 <p class="dropdown-line">
                   <label for="padsettings-viewfontmenu" data-l10n-id="pad.settings.fontType">Font type:</label>
                   <select id="padsettings-viewfontmenu">
@@ -226,9 +237,10 @@
                       <% } %>
                   </select>
                 </p>
+                <% e.end_block(); %>
               </div>
               <button class="btn btn-danger" data-l10n-id="pad.settings.deletePad" id="delete-pad">Delete pad</button>
-            </div>
+            </div><% } %>
           </div>
         <h2 data-l10n-id="pad.settings.about">About</h2>
           <span data-l10n-id="pad.settings.poweredBy">Powered by</span>

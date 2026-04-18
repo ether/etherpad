@@ -202,22 +202,6 @@ const getMyViewOverrides = () => {
   return overrides;
 };
 
-const getMyViewDefaults = () => {
-  const overrides = getMyViewOverrides();
-  return {
-    showChat: overrides.showChat == null ? true : overrides.showChat,
-    alwaysShowChat: overrides.alwaysShowChat === true,
-    chatAndUsers: overrides.chatAndUsers === true,
-    lang: overrides.lang || 'en',
-    view: {
-      showAuthorColors: overrides.view.showAuthorColors == null ? true : overrides.view.showAuthorColors,
-      showLineNumbers: overrides.view.showLineNumbers == null ? true : overrides.view.showLineNumbers,
-      rtlIsTrue: overrides.view.rtlIsTrue === true,
-      padFontFamily: overrides.view.padFontFamily || '',
-    },
-  };
-};
-
 const normalizeChatOptions = (options) => {
   if (options.showChat === false) {
     options.alwaysShowChat = false;
@@ -260,15 +244,24 @@ const sendClientReady = (isReconnect) => {
     name: params.get('userName'),
   };
 
-  const msg = {
+  const msg: any = {
     component: 'pad',
     type: 'CLIENT_READY',
     padId,
     sessionID: Cookies.get(`${cp}sessionID`) || Cookies.get('sessionID'),
     token,
     userInfo,
-    padSettingsDefaults: getMyViewDefaults(),
   };
+  const overrides = getMyViewOverrides();
+  const viewOverrides = Object.fromEntries(
+      Object.entries(overrides.view || {}).filter(([, v]) => v != null));
+  const hasTopLevelOverrides = ['showChat', 'alwaysShowChat', 'chatAndUsers', 'lang']
+      .some((k) => overrides[k] != null);
+  if (Object.keys(viewOverrides).length > 0 || hasTopLevelOverrides) {
+    if (Object.keys(viewOverrides).length > 0) overrides.view = viewOverrides;
+    else delete overrides.view;
+    msg.padSettingsDefaults = overrides;
+  }
 
   // this is a reconnect, lets tell the server our revisionnumber
   if (isReconnect) {
