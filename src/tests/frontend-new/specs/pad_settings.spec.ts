@@ -78,12 +78,14 @@ test.describe('creator-owned pad settings', () => {
     await expect(viewerInner).not.toHaveClass(/authorColors/);
     await expect(page2.locator('#options-linenoscheck')).not.toBeChecked();
     await expect(page2.locator('#options-colorscheck')).not.toBeChecked();
+    await expect(page.locator('#options-linenoscheck')).toBeEnabled();
+    await expect(page.locator('#options-colorscheck')).toBeEnabled();
     await expect(page2.locator('#enforce-settings-notice')).toBeVisible();
     await expect(page.locator('#enforce-settings-notice')).toBeHidden();
     await context2.close();
   });
 
-  test('creator can keep authorship colors while pad-wide default keeps them off for other users',
+  test('creator can keep authorship colors while pad-wide enforced settings keep them off for other users',
       async ({page, browser}) => {
         const padId = await goToNewPad(page);
 
@@ -105,6 +107,12 @@ test.describe('creator-owned pad settings', () => {
         await expect(page.locator('#options-colorscheck')).not.toBeChecked();
         await expect(creatorInner).not.toHaveClass(/authorColors/);
         await expect(viewerInner).not.toHaveClass(/authorColors/);
+
+        await page.locator('label[for="padsettings-enforcecheck"]').click();
+        await expect(page.locator('#padsettings-enforcecheck')).toBeChecked();
+        await showSettings(page2);
+        await expect(page2.locator('#enforce-settings-notice')).toBeVisible();
+        await expect(page.locator('#enforce-settings-notice')).toBeHidden();
 
         await page.locator('label[for="options-colorscheck"]').click();
         await expect(page.locator('#options-colorscheck')).toBeChecked();

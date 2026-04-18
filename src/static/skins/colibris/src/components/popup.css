@@ -36,6 +36,10 @@
   min-width: 0;
 }
 
+#settings .settings-section > h2 {
+  margin-top: 0;
+}
+
 .popup:not(.comment-modal) p {
   margin: 10px 0;
 }

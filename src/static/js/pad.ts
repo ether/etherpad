@@ -466,12 +466,13 @@ const pad = {
   getUserId: () => pad.myUserInfo.userId,
   getUserName: () => pad.myUserInfo.name,
   userList: () => paduserlist.users(),
+  isPadSettingsEnforcedForMe: () => !!pad.padOptions.enforceSettings && !pad.canEditPadSettings(),
   sendClientMessage: (msg) => {
     pad.collabClient.sendClientMessage(msg);
   },
   getEffectivePadOptions: () => {
     const effectiveOptions = $.extend(true, {}, pad.padOptions);
-    if (pad.padOptions.enforceSettings) return normalizeChatOptions(effectiveOptions);
+    if (pad.isPadSettingsEnforcedForMe()) return normalizeChatOptions(effectiveOptions);
     const overrides = getMyViewOverrides();
     for (const key of ['showChat', 'alwaysShowChat', 'chatAndUsers', 'lang']) {
       if (overrides[key] != null) effectiveOptions[key] = overrides[key];
@@ -500,8 +501,7 @@ const pad = {
   },
   refreshMyViewControls: () => {
     const effectiveOptions = pad.getEffectivePadOptions();
-    const disabled = !!pad.padOptions.enforceSettings;
-    const showEnforcedNotice = disabled && !pad.canEditPadSettings();
+    const disabled = pad.isPadSettingsEnforcedForMe();
     $('#options-disablechat').prop('checked', effectiveOptions.showChat === false);
     $('#options-stickychat').prop('checked', !!effectiveOptions.alwaysShowChat);
     $('#options-chatandusers').prop('checked', !!effectiveOptions.chatAndUsers);
@@ -514,7 +514,7 @@ const pad = {
     $('#viewfontmenu, #languagemenu').prop('disabled', disabled);
     $('#options-stickychat, #options-chatandusers')
         .prop('disabled', disabled || effectiveOptions.showChat === false);
-    $('#enforce-settings-notice').prop('hidden', !showEnforcedNotice);
+    $('#enforce-settings-notice').prop('hidden', !disabled);
     if ($('select').niceSelect) $('select').niceSelect('update');
   },
   setMyViewOption: (key, value) => {
