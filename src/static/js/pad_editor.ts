@@ -137,6 +137,33 @@ const padeditor = (() => {
         }
       });
 
+      // delete pad using a recovery token (second device / no creator cookie)
+      $('#delete-pad-token-submit').on('click', () => {
+        const token = String($('#delete-pad-token-input').val() || '').trim();
+        if (!token) return;
+        if (!window.confirm(html10n.get('pad.delete.confirm'))) return;
+
+        let handled = false;
+        pad.socket.on('message', (data: any) => {
+          if (data && data.disconnect === 'deleted') {
+            handled = true;
+            window.location.href = '/';
+          }
+        });
+        pad.socket.on('shout', (data: any) => {
+          handled = true;
+          const msg = data?.data?.payload?.message?.message;
+          if (msg) window.alert(msg);
+        });
+        pad.collabClient.sendMessage({
+          type: 'PAD_DELETE',
+          data: {padId: pad.getPadId(), deletionToken: token},
+        });
+        setTimeout(() => {
+          if (!handled) window.location.href = '/';
+        }, 5000);
+      });
+
       // delete pad
       $('#delete-pad').on('click', () => {
         if (window.confirm(html10n.get('pad.delete.confirm'))) {
