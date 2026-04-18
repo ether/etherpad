@@ -71,8 +71,10 @@ test.describe('undo clear authorship colors with multiple authors (bug #2802)', 
     // User B clears authorship colors (without selecting - clears whole pad)
     await clearAuthorship(page2);
 
-    // Wait for clear to propagate and verify authorship is cleared
-    await expect(body2.locator('div span').first()).toHaveAttribute('class', /^(?!.*author-)/, {timeout: 5000});
+    // Wait for clear to propagate and verify authorship is cleared. linestylefilter
+    // drops attribs with empty values, so spans without authorship may have no class
+    // attribute at all; use a negated class matcher that handles both cases.
+    await expect(body2.locator('div span').first()).not.toHaveClass(/author-/, {timeout: 5000});
 
     // THIS IS THE BUG: User B undoes the clear authorship
     await undoChanges(page2);
@@ -117,8 +119,8 @@ test.describe('undo clear authorship colors with multiple authors (bug #2802)', 
     // Clear authorship (no selection - clears whole pad)
     await clearAuthorship(page);
 
-    // Verify cleared
-    await expect(body.locator('div span').first()).toHaveAttribute('class', /^(?!.*author-)/, {timeout: 5000});
+    // Verify cleared (spans without authorship may have no class attribute at all).
+    await expect(body.locator('div span').first()).not.toHaveClass(/author-/, {timeout: 5000});
 
     // Undo should restore authorship
     await undoChanges(page);

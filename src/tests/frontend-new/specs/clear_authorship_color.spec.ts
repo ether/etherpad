@@ -57,7 +57,7 @@ test("clear authorship colors can be undone to restore author colors", async fun
   await clearAuthorship(page);
 
   // verify authorship is cleared
-  await expect(padBody.locator('div span').first()).toHaveAttribute('class', /^(?!.*author-)/, {timeout: 5000});
+  await expect(padBody.locator('div span').first()).not.toHaveClass(/author-/, {timeout: 5000});
 
   // Undo should restore authorship colors
   await undoChanges(page);
