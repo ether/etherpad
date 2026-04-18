@@ -1066,6 +1066,16 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
       throw new Error('corrupt pad');
     }
 
+    // Only the original creator of the pad (revision 0 author) receives the
+    // deletion token, and only on their first arrival — subsequent visits get
+    // null because createDeletionTokenIfAbsent() only emits a plaintext token
+    // once. Readonly sessions never see it.
+    const isCreator =
+        !sessionInfo.readonly && sessionInfo.author === await pad.getRevisionAuthor(0);
+    const padDeletionToken = isCreator
+        ? await padDeletionManager.createDeletionTokenIfAbsent(sessionInfo.padId)
+        : null;
+
     // Warning: never ever send sessionInfo.padId to the client. If the client is read only you
     // would open a security hole 1 swedish mile wide...
     const canEditPadSettings = settings.enablePadWideSettings &&
@@ -1079,6 +1089,7 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
       },
       enableDarkMode: settings.enableDarkMode,
       enablePadWideSettings: settings.enablePadWideSettings,
+      padDeletionToken,
       automaticReconnectionTimeout: settings.automaticReconnectionTimeout,
       initialRevisionList: [],
       initialOptions: pad.getPadSettings(),
