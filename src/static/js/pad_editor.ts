@@ -255,8 +255,8 @@ const focusOnHashedLine = (ace, lineNumberInt) => {
 exports.focusOnLine = (ace) => {
   const lineNumberInt = getHashedLineNumber();
   if (lineNumberInt == null) return;
+  const $aceOuter = $('iframe[name="ace_outer"]');
   const getCurrentTargetOffset = () => {
-    const $aceOuter = $('iframe[name="ace_outer"]');
     const $inner = $aceOuter.contents().find('iframe').contents().find('#innerdocbody');
     const line = $inner.find(`div:nth-child(${lineNumberInt})`);
     if (line.length === 0) return null;
@@ -266,20 +266,44 @@ exports.focusOnLine = (ace) => {
   const maxSettleDuration = 10000;
   const settleInterval = 250;
   const startTime = Date.now();
-  let intervalId = null;
+  let intervalId: number | null = null;
+
+  const userEventNames = ['wheel', 'touchmove', 'keydown', 'mousedown'];
+  const docs: Document[] = [];
+  const stop = () => {
+    if (intervalId != null) {
+      window.clearInterval(intervalId);
+      intervalId = null;
+    }
+    for (const doc of docs) {
+      for (const name of userEventNames) doc.removeEventListener(name, stop, true);
+    }
+    docs.length = 0;
+  };
 
   const focusUntilStable = () => {
     if (Date.now() - startTime >= maxSettleDuration) {
-      window.clearInterval(intervalId);
+      stop();
       return;
     }
     const currentOffsetTop = getCurrentTargetOffset();
     if (currentOffsetTop == null) return;
-
     focusOnHashedLine(ace, lineNumberInt);
   };
 
   focusUntilStable();
   intervalId = window.setInterval(focusUntilStable, settleInterval);
+  // Stop fighting the user: any deliberate scroll, tap, click, or keystroke cancels the
+  // reapply loop so late layout corrections do not steal focus once the user takes over.
+  // Listen on both the ace_outer and ace_inner documents in capture phase so we see the
+  // user's intent even if inner handlers stopPropagation().
+  const outerDoc = ($aceOuter.contents()[0] as any) as Document | undefined;
+  const innerIframe = $aceOuter.contents().find('iframe')[0] as HTMLIFrameElement | undefined;
+  const innerDoc = innerIframe?.contentDocument;
+  for (const doc of [outerDoc, innerDoc]) {
+    if (!doc) continue;
+    docs.push(doc);
+    for (const name of userEventNames) doc.addEventListener(name, stop, true);
+  }
   // End of setSelection / set Y position of editor
 };

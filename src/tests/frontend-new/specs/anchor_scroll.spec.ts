@@ -47,4 +47,38 @@ test.describe('anchor scrolling', () => {
       return Math.abs(currentViewportTop - initialViewportTop);
     }).toBeLessThanOrEqual(80);
   });
+
+  test('user scroll cancels the reapply loop so navigation is not locked', async ({page}) => {
+    await goToNewPad(page);
+    const padUrl = page.url();
+    await clearPadContent(page);
+    await writeToPad(page, Array.from({length: 30}, (_v, i) => `Line ${i + 1}`).join('\n'));
+    await page.waitForTimeout(1000);
+
+    await page.goto('about:blank');
+    await page.goto(`${padUrl}#L20`);
+    await page.waitForSelector('iframe[name="ace_outer"]');
+    await page.waitForSelector('#editorcontainer.initialized');
+
+    const outerDoc = page.frameLocator('iframe[name="ace_outer"]').locator('#outerdocbody');
+    const getScrollTop = async () => await outerDoc.evaluate(
+        (el) => el.parentElement?.scrollTop || 0);
+
+    await expect.poll(getScrollTop).toBeGreaterThan(10);
+
+    // User interacts with the pad. The anchor-scroll handler listens for
+    // wheel/mousedown/keydown/touchmove on the outer iframe document and must cancel
+    // its reapply loop. We dispatch a mousedown on the outer document, then reset
+    // scrollTop to 0 and verify it stays there.
+    await outerDoc.evaluate((el) => {
+      const doc = el.ownerDocument;
+      doc.dispatchEvent(new MouseEvent('mousedown', {bubbles: true}));
+      if (el.parentElement) el.parentElement.scrollTop = 0;
+    });
+
+    // Give the reapply loop several ticks to attempt a re-scroll. If cancellation worked,
+    // scrollTop stays near 0 instead of snapping back to the anchor.
+    await page.waitForTimeout(1500);
+    expect(await getScrollTop()).toBeLessThanOrEqual(20);
+  });
 });
