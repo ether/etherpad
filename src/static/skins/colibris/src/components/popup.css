@@ -114,3 +114,40 @@
 #delete-pad {
   margin-top: 20px;
 }
+
+
+/* Pad deletion-token modal + delete-with-token disclosure (GDPR PR1) */
+#deletiontoken-modal .popup-content {
+  max-width: 32rem;
+}
+
+#deletiontoken-modal .deletiontoken-row {
+  display: flex;
+  gap: 0.5rem;
+  margin: 1rem 0;
+}
+
+#deletiontoken-modal #deletiontoken-value {
+  flex: 1;
+  font-family: monospace;
+  padding: 0.4rem;
+  user-select: all;
+}
+
+#delete-pad-with-token {
+  margin-top: 0.5rem;
+}
+
+#delete-pad-with-token summary {
+  cursor: pointer;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+#delete-pad-with-token input {
+  margin: 0.5rem 0;
+  width: 100%;
+  font-family: monospace;
+  padding: 0.4rem;
+}
+
