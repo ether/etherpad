@@ -36,6 +36,37 @@ let token, padId, exportLinks, socket, changesetLoader, BroadcastSlider;
 let cp = '';
 const playbackSpeedCookie = 'timesliderPlaybackSpeed';
 
+const getPrefsCookieName = () => `${cp}${window.location.protocol === 'https:' ? 'prefs' : 'prefsHttp'}`;
+
+const readPadPrefs = () => {
+  try {
+    let json = Cookies.get(getPrefsCookieName());
+    if (json == null) {
+      const unprefixed = window.location.protocol === 'https:' ? 'prefs' : 'prefsHttp';
+      if (unprefixed !== getPrefsCookieName()) json = Cookies.get(unprefixed);
+    }
+    return json == null ? {} : JSON.parse(json);
+  } catch (err) {
+    return {};
+  }
+};
+
+const writePadPrefs = (prefs) => {
+  Cookies.set(getPrefsCookieName(), JSON.stringify(prefs), {expires: 365 * 100});
+};
+
+const setPadPref = (prefName, value) => {
+  const prefs = readPadPrefs();
+  prefs[prefName] = value;
+  writePadPrefs(prefs);
+};
+
+const applyShowLineNumbers = (showLineNumbers) => {
+  padutils.setCheckbox($('#options-linenoscheck'), showLineNumbers);
+  $('body').toggleClass('line-numbers-hidden', !showLineNumbers);
+  window.requestAnimationFrame(() => $(window).trigger('resize'));
+};
+
 const init = () => {
   padutils.setupGlobalExceptionHandler();
   $(document).ready(() => {
@@ -113,7 +144,7 @@ const fireWhenAllScriptsAreLoaded = [];
 const handleClientVars = (message) => {
   // save the client Vars
   window.clientVars = message.data;
-  cp = window.clientVars.cookiePrefix || '';
+  cp = (window as any).clientVars?.cookiePrefix || '';
 
   if (window.clientVars.sessionRefreshInterval) {
     const ping =
@@ -169,6 +200,12 @@ const handleClientVars = (message) => {
   $('#playpause_button_icon').attr('title', html10n.get('timeslider.playPause'));
   $('#leftstep').attr('title', html10n.get('timeslider.backRevision'));
   $('#rightstep').attr('title', html10n.get('timeslider.forwardRevision'));
+  padutils.bindCheckboxChange($('#options-linenoscheck'), () => {
+    const showLineNumbers = padutils.getCheckbox('#options-linenoscheck');
+    setPadPref('showLineNumbers', showLineNumbers);
+    applyShowLineNumbers(showLineNumbers);
+  });
+  applyShowLineNumbers(readPadPrefs().showLineNumbers !== false);
 
   // font family change
   $('#viewfontmenu').on('change', function () {
