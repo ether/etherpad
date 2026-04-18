@@ -378,13 +378,16 @@ log4js.configure({
   // Those break any Etherpad instance hosted behind a reverse proxy at a
   // sub-path (e.g. https://example.com/etherpad/pad) because the browser
   // resolves them against the domain root instead of the proxy prefix.
-  // Rewrite to the relative `../static/plugins/...` form (see #5203, and
-  // ep_embedmedia#4 for the original fix this check is modelled on).
-  const templateDirs = ['templates', 'static']; // scan both — static/*.html exists too
+  // See #5203, and ep_embedmedia#4 for the original fix this check is modelled on.
+  //
+  // Autofix only rewrites paths in `templates/` (rendered under `/p/<pad>/...`
+  // where `../static/plugins/...` is correct). Files under `static/` are
+  // served from `/static/plugins/<plugin>/static/...` and need a different
+  // relative prefix that depends on the file's depth, so we only warn.
   const STATIC_ABS = /(?<![./:\w])\/static\/plugins\//g;
-  for (const dir of templateDirs) {
+  const scanDir = async (dir: 'templates' | 'static') => {
     const abs = `${pluginPath}/${dir}`;
-    if (!files.includes(dir)) continue;
+    if (!files.includes(dir)) return;
     const scanFiles: string[] = [];
     const walk = async (d: string) => {
       for (const entry of await fsp.readdir(d, {withFileTypes: true})) {
@@ -403,15 +406,23 @@ log4js.configure({
       if (!STATIC_ABS.test(src)) continue;
       STATIC_ABS.lastIndex = 0;
       const rel = path.relative(pluginPath, fp);
-      logger.warn(`${rel} contains absolute '/static/plugins/...' asset paths; ` +
-                  'these break reverse-proxied Etherpad deployments. Use ' +
-                  "'../static/plugins/...' instead.");
-      if (autoFix) {
-        logger.info(`Autofixing absolute /static/plugins/ paths in ${rel}`);
-        await fsp.writeFile(fp, src.replace(STATIC_ABS, '../static/plugins/'));
+      if (dir === 'templates') {
+        logger.warn(`${rel} contains absolute '/static/plugins/...' asset paths; ` +
+                    'these break reverse-proxied Etherpad deployments. Use ' +
+                    "'../static/plugins/...' instead.");
+        if (autoFix) {
+          logger.info(`Autofixing absolute /static/plugins/ paths in ${rel}`);
+          await fsp.writeFile(fp, src.replace(STATIC_ABS, '../static/plugins/'));
+        }
+      } else {
+        logger.warn(`${rel} contains absolute '/static/plugins/...' asset paths; ` +
+                    'these break reverse-proxied Etherpad deployments. Use a path ' +
+                    "relative to this file's location under 'static/' (no leading '/').");
       }
     }
-  }
+  };
+  await scanDir('templates');
+  await scanDir('static');
 
 
   if (files.includes('.ep_initialized')) {
