@@ -240,6 +240,13 @@
                 <% e.end_block(); %>
               </div>
               <button class="btn btn-danger" data-l10n-id="pad.settings.deletePad" id="delete-pad">Delete pad</button>
+              <details id="delete-pad-with-token">
+                <summary data-l10n-id="pad.deletionToken.deleteWithToken">Delete with token</summary>
+                <label for="delete-pad-token-input" data-l10n-id="pad.deletionToken.tokenFieldLabel">Pad deletion token</label>
+                <input type="password" id="delete-pad-token-input" autocomplete="off" spellcheck="false">
+                <button id="delete-pad-token-submit" type="button" class="btn btn-danger"
+                        data-l10n-id="pad.settings.deletePad">Delete pad</button>
+              </details>
             </div><% } %>
           </div>
         <h2 data-l10n-id="pad.settings.about">About</h2>
@@ -247,6 +254,22 @@
           <a href="https://etherpad.org" target="_blank" referrerpolicy="no-referrer" rel="noopener">Etherpad</a>
         <% if (settings.exposeVersion) { %>(commit <%= settings.gitVersion %>)<% } %>      </div></div>
 
+      <!--------------------------------------------------->
+      <!-- PAD DELETION TOKEN MODAL (shown once on create) -->
+      <!--------------------------------------------------->
+
+      <div id="deletiontoken-modal" class="popup" hidden><div class="popup-content">
+          <h1 data-l10n-id="pad.deletionToken.modalTitle">Save your pad deletion token</h1>
+          <p data-l10n-id="pad.deletionToken.modalBody">
+            This token is the only way to delete this pad if you lose your browser session or switch device. Save it somewhere safe — it is shown here exactly once.
+          </p>
+          <div class="deletiontoken-row">
+            <input type="text" id="deletiontoken-value" readonly>
+            <button id="deletiontoken-copy" type="button" data-l10n-id="pad.deletionToken.copy">Copy</button>
+          </div>
+          <button id="deletiontoken-ack" type="button" class="btn btn-primary"
+                  data-l10n-id="pad.deletionToken.acknowledge">I've saved it</button>
+      </div></div>
 
       <!------------------------->
       <!-- IMPORT EXPORT POPUP -->
