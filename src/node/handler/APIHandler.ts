@@ -53,7 +53,7 @@ version['1'] = {
   setHTML: ['padID', 'html'],
   getRevisionsCount: ['padID'],
   getLastEdited: ['padID'],
-  deletePad: ['padID'],
+  deletePad: ['padID', 'deletionToken'],
   getReadOnlyID: ['padID'],
   setPublicStatus: ['padID', 'publicStatus'],
   getPublicStatus: ['padID'],
