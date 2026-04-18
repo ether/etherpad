@@ -13,12 +13,15 @@ test.describe('creator-owned pad settings', () => {
     await showSettings(page);
     await showSettings(page2);
 
-    await expect(page.locator('#settings h1')).toHaveText('User Settings');
+    await expect(page.locator('#user-settings-section > h2')).toHaveText('User Settings');
+    await expect(page.locator('#pad-settings-section > h2')).toHaveText('Pad-wide Settings');
+    await expect(page.locator('#theme-toggle-row')).toBeVisible();
     await expect(page.locator('#pad-settings-section')).toBeVisible();
     await expect(page.locator('#delete-pad')).toBeVisible();
     await expect(page.locator('#padsettings-enforcecheck')).toBeVisible();
 
-    await expect(page2.locator('#settings h1')).toHaveText('User Settings');
+    await expect(page2.locator('#user-settings-section > h2')).toHaveText('User Settings');
+    await expect(page2.locator('#theme-toggle-row')).toBeVisible();
     await expect(page2.locator('#pad-settings-section')).toBeHidden();
     await expect(page2.locator('#delete-pad')).toBeHidden();
 

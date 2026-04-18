@@ -636,12 +636,12 @@ const pad = {
 
       $('#editorcontainer').addClass('initialized');
 
-      if (window.clientVars.enableDarkMode) {
-        $('#theme-switcher').attr('style', 'display: flex;');
-      }
-
       if (window.location.hash.toLowerCase() !== '#skinvariantsbuilder' && window.clientVars.enableDarkMode && (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) && !skinVariants.isWhiteModeEnabledInLocalStorage()) {
         skinVariants.updateSkinVariantsClasses(['super-dark-editor', 'dark-background', 'super-dark-toolbar']);
+      }
+      if (window.clientVars.enableDarkMode) {
+        $('#theme-toggle-row').prop('hidden', false);
+        $('#options-darkmode').prop('checked', skinVariants.isDarkMode());
       }
 
       hooks.aCallAll('postAceInit', {ace: padeditor.ace, clientVars, pad});

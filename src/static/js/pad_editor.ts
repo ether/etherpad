@@ -125,6 +125,18 @@ const padeditor = (() => {
         pad.changePadViewOption('padFontFamily', $('#padsettings-viewfontmenu').val());
       });
 
+      padutils.bindCheckboxChange($('#options-darkmode'), () => {
+        const isDark = padutils.getCheckbox($('#options-darkmode'));
+        skinVariants.setDarkModeInLocalStorage(isDark);
+        if (isDark) {
+          skinVariants.updateSkinVariantsClasses(
+              ['super-dark-editor', 'dark-background', 'super-dark-toolbar']);
+        } else {
+          skinVariants.updateSkinVariantsClasses(
+              ['super-light-toolbar super-light-editor light-background']);
+        }
+      });
+
       // delete pad
       $('#delete-pad').on('click', () => {
         if (window.confirm(html10n.get('pad.delete.confirm'))) {
@@ -153,17 +165,6 @@ const padeditor = (() => {
             if (!handled) window.location.href = '/';
           }, 5000);
         }
-      })
-
-      // theme switch
-      $('#theme-switcher').on('click',()=>{
-          if (skinVariants.isDarkMode()) {
-            skinVariants.setDarkModeInLocalStorage(false);
-            skinVariants.updateSkinVariantsClasses(['super-light-toolbar super-light-editor light-background']);
-          } else {
-            skinVariants.setDarkModeInLocalStorage(true);
-            skinVariants.updateSkinVariantsClasses(['super-dark-editor', 'dark-background', 'super-dark-toolbar']);
-          }
       })
 
       // Language
