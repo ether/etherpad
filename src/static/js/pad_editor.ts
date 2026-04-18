@@ -22,8 +22,7 @@
  * limitations under the License.
  */
 
-import padutils,{Cookies} from "./pad_utils";
-const padcookie = require('./pad_cookie').padcookie;
+import padutils from "./pad_utils";
 const Ace2Editor = require('./ace').Ace2Editor;
 import html10n from '../js/vendors/html10n'
 const skinVariants = require('./skin_variants');
@@ -56,34 +55,74 @@ const padeditor = (() => {
       $('#viewbarcontents').show();
     },
     initViewOptions: () => {
-      // Line numbers
+      // My View
+      padutils.bindCheckboxChange($('#options-disablechat'), () => {
+        pad.setMyViewOption('showChat', !padutils.getCheckbox($('#options-disablechat')));
+      });
+      padutils.bindCheckboxChange($('#options-stickychat'), () => {
+        pad.setMyViewOption('alwaysShowChat', padutils.getCheckbox($('#options-stickychat')));
+      });
+      padutils.bindCheckboxChange($('#options-chatandusers'), () => {
+        pad.setMyViewOption('chatAndUsers', padutils.getCheckbox($('#options-chatandusers')));
+      });
+      padutils.bindCheckboxChange($('#options-colorscheck'), () => {
+        pad.setMyViewOption('showAuthorColors', padutils.getCheckbox($('#options-colorscheck')));
+      });
       padutils.bindCheckboxChange($('#options-linenoscheck'), () => {
-        pad.changeViewOption('showLineNumbers', padutils.getCheckbox($('#options-linenoscheck')));
+        pad.setMyViewOption('showLineNumbers', padutils.getCheckbox($('#options-linenoscheck')));
+      });
+      padutils.bindCheckboxChange($('#options-rtlcheck'), () => {
+        pad.setMyViewOption('rtlIsTrue', padutils.getCheckbox($('#options-rtlcheck')));
+      });
+      $('#viewfontmenu').on('change', () => {
+        pad.setMyViewOption('padFontFamily', $('#viewfontmenu').val());
+      });
+      $('#languagemenu').on('change', () => {
+        pad.setMyViewLanguage($('#languagemenu').val());
+      });
+
+      // Pad settings
+      padutils.bindCheckboxChange($('#padsettings-enforcecheck'), () => {
+        pad.changePadOption('enforceSettings', padutils.getCheckbox($('#padsettings-enforcecheck')));
+      });
+      padutils.bindCheckboxChange($('#padsettings-options-disablechat'), () => {
+        pad.changePadOption('showChat', !padutils.getCheckbox($('#padsettings-options-disablechat')));
+      });
+      padutils.bindCheckboxChange($('#padsettings-options-stickychat'), () => {
+        pad.changePadOption(
+            'alwaysShowChat', padutils.getCheckbox($('#padsettings-options-stickychat')));
+      });
+      padutils.bindCheckboxChange($('#padsettings-options-chatandusers'), () => {
+        pad.changePadOption(
+            'chatAndUsers', padutils.getCheckbox($('#padsettings-options-chatandusers')));
+      });
+      // Line numbers
+      padutils.bindCheckboxChange($('#padsettings-options-linenoscheck'), () => {
+        pad.changePadViewOption(
+            'showLineNumbers', padutils.getCheckbox($('#padsettings-options-linenoscheck')));
       });
 
       // Author colors
-      padutils.bindCheckboxChange($('#options-colorscheck'), () => {
-        padcookie.setPref('showAuthorshipColors', padutils.getCheckbox('#options-colorscheck'));
-        pad.changeViewOption('showAuthorColors', padutils.getCheckbox('#options-colorscheck'));
+      padutils.bindCheckboxChange($('#padsettings-options-colorscheck'), () => {
+        pad.changePadViewOption(
+            'showAuthorColors', padutils.getCheckbox('#padsettings-options-colorscheck'));
       });
 
       // Right to left
-      padutils.bindCheckboxChange($('#options-rtlcheck'), () => {
-        pad.changeViewOption('rtlIsTrue', padutils.getCheckbox($('#options-rtlcheck')));
+      padutils.bindCheckboxChange($('#padsettings-options-rtlcheck'), () => {
+        pad.changePadViewOption(
+            'rtlIsTrue', padutils.getCheckbox($('#padsettings-options-rtlcheck')));
       });
       html10n.bind('localized', () => {
-        // Don't override RTL when explicitly set via URL/server or user cookie
-        if (settings && settings.rtlIsExplicit) return;
-        if (padcookie.getPref('rtlIsTrue') === true) return;
-        pad.changeViewOption('rtlIsTrue', ('rtl' === html10n.getDirection()));
-        padutils.setCheckbox($('#options-rtlcheck'), ('rtl' === html10n.getDirection()));
+        $('#languagemenu').val(html10n.getLanguage());
+        $('#padsettings-languagemenu').val(html10n.getLanguage());
       });
 
 
 
       // font family change
-      $('#viewfontmenu').on('change', () => {
-        pad.changeViewOption('padFontFamily', $('#viewfontmenu').val());
+      $('#padsettings-viewfontmenu').on('change', () => {
+        pad.changePadViewOption('padFontFamily', $('#padsettings-viewfontmenu').val());
       });
 
       // delete pad
@@ -129,7 +168,6 @@ const padeditor = (() => {
 
       // Language
       html10n.bind('localized', () => {
-        $('#languagemenu').val(html10n.getLanguage());
         // translate the value of 'unnamed' and 'Enter your name' textboxes in the userlist
 
         // this does not interfere with html10n's normal value-setting because
@@ -143,15 +181,13 @@ const padeditor = (() => {
           }
         });
       });
-      $('#languagemenu').val(html10n.getLanguage());
-      $('#languagemenu').on('change', () => {
-        const cp = (window as any).clientVars?.cookiePrefix || '';
-        Cookies.set(`${cp}language`, $('#languagemenu').val());
-        html10n.localize([$('#languagemenu').val(), 'en']);
-        if ($('select').niceSelect) {
-          $('select').niceSelect('update');
-        }
+      $('#padsettings-languagemenu').val(html10n.getLanguage());
+      $('#padsettings-languagemenu').on('change', () => {
+        pad.changePadOption('lang', $('#padsettings-languagemenu').val());
       });
+      if (pad.canEditPadSettings()) {
+        $('#pad-settings-section').prop('hidden', false);
+      }
     },
     setViewOptions: (newOptions) => {
       const getOption = (key, defaultValue) => {
@@ -183,6 +219,8 @@ const padeditor = (() => {
       }
 
       self.ace.setProperty('textface', newOptions.padFontFamily || '');
+      $('#viewfontmenu').val(newOptions.padFontFamily || '');
+      if ($('select').niceSelect) $('select').niceSelect('update');
     },
     dispose: () => {
       if (self.ace) {

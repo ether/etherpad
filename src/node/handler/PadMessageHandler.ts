@@ -46,7 +46,7 @@ import {RateLimiterMemory} from 'rate-limiter-flexible';
 import {ChangesetRequest, PadUserInfo, SocketClientRequest} from "../types/SocketClientRequest";
 import {APool, AText, PadAuthor, PadType} from "../types/PadType";
 import {ChangeSet} from "../types/ChangeSet";
-import {ChatMessageMessage, ClientReadyMessage, ClientSaveRevisionMessage, ClientSuggestUserName, ClientUserChangesMessage, ClientVarMessage, CustomMessage, PadDeleteMessage, UserNewInfoMessage} from "../../static/js/types/SocketIOMessage";
+import {ChatMessageMessage, ClientReadyMessage, ClientSaveRevisionMessage, ClientSuggestUserName, ClientUserChangesMessage, ClientVarMessage, CustomMessage, PadDeleteMessage, PadOptionsMessage, UserNewInfoMessage} from "../../static/js/types/SocketIOMessage";
 import {Builder} from "../../static/js/Builder";
 const webaccess = require('../hooks/express/webaccess');
 const { checkValidRev } = require('../utils/checkValidRev');
@@ -263,6 +263,36 @@ const handlePadDelete = async (socket: any, padDeleteMessage: PadDeleteMessage) 
   }
 }
 
+const isPadCreator = async (pad: any, authorId: string) => authorId === await pad.getRevisionAuthor(0);
+
+const handlePadOptionsMessage = async (
+    socket: any, message: PadOptionsMessage & {data: {payload: PadOptionsMessage}}) => {
+  const session = sessioninfos[socket.id];
+  if (!session || !session.author || !session.padId) throw new Error('session not ready');
+  const pad = await padManager.getPad(session.padId);
+  if (!await isPadCreator(pad, session.author)) {
+    socket.emit('shout', {
+      type: 'COLLABROOM',
+      data: {
+        type: 'shoutMessage',
+        payload: {
+          message: {
+            message: 'Only the pad creator can change pad settings',
+            sticky: false,
+          },
+          timestamp: Date.now(),
+        },
+      },
+    });
+    return;
+  }
+  pad.setPadSettings(message.data.payload.options);
+  await pad.saveToDatabase();
+  _getRoomSockets(session.padId).forEach((socket) => {
+    socket.emit('message', message);
+  });
+};
+
 
 /**
  * Handles a message from a user
@@ -413,6 +443,11 @@ exports.handleMessage = async (socket:any, message: ClientVarMessage) => {
               try {
                 switch (type) {
                   case 'suggestUserName': handleSuggestUserName(socket, message as unknown as ClientSuggestUserName); break;
+                  case 'padoptions':
+                    await handlePadOptionsMessage(
+                        socket,
+                        message as unknown as PadOptionsMessage & {data: {payload: PadOptionsMessage}});
+                    break;
                   default: throw new Error('unknown message type');
                 }
               } catch (err) {
@@ -883,8 +918,13 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
   ]);
   ({colorId: authorColorId, name: authorName} = await authorManager.getAuthor(sessionInfo.author));
 
+  const padExisted = await padManager.doesPadExist(sessionInfo.padId);
   // load the pad-object from the database
   const pad = await padManager.getPad(sessionInfo.padId, null, sessionInfo.author);
+  if (!padExisted && message.padSettingsDefaults) {
+    pad.setPadSettings(message.padSettingsDefaults);
+    await pad.saveToDatabase();
+  }
 
   // these db requests all need the pad object (timestamp of latest revision, author data)
   const authors = pad.getAllAuthors();
@@ -1025,6 +1065,7 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
 
     // Warning: never ever send sessionInfo.padId to the client. If the client is read only you
     // would open a security hole 1 swedish mile wide...
+    const canEditPadSettings = !sessionInfo.readonly && await isPadCreator(pad, sessionInfo.author);
     const clientVars:MapArrayType<any> = {
       skinName: settings.skinName,
       skinVariants: settings.skinVariants,
@@ -1035,7 +1076,7 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
       enableDarkMode: settings.enableDarkMode,
       automaticReconnectionTimeout: settings.automaticReconnectionTimeout,
       initialRevisionList: [],
-      initialOptions: {},
+      initialOptions: pad.getPadSettings(),
       savedRevisions: pad.getSavedRevisions(),
       collab_client_vars: {
         initialAttributedText: atext,
@@ -1060,6 +1101,7 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
       numConnectedUsers: roomSockets.length + 1, // +1 for this user (not yet in room)
       readOnlyId: sessionInfo.readOnlyPadId,
       readonly: sessionInfo.readonly,
+      canEditPadSettings,
       serverTimestamp: Date.now(),
       sessionRefreshInterval: settings.cookie.sessionRefreshInterval,
       userId: sessionInfo.author,
