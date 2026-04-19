@@ -186,7 +186,7 @@ function publish_release {
 
 function todo_notification {
   echo "Release procedure was successful, but you have to do some steps manually:"
-  echo "- Update the wiki at https://github.com/ether/etherpad-lite/wiki"
+  echo "- Update the wiki at https://github.com/ether/etherpad/wiki"
   echo "- Create a pull request on github to merge the master branch back to develop"
   echo "- Announce the new release on the mailing list, blog.etherpad.org and Twitter"
 }

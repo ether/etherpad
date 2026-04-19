@@ -35,7 +35,7 @@ Etherpad has been doing the same thing — well — since 2009. No pivots, no ac
 [![Backend tests](https://github.com/ether/etherpad/actions/workflows/backend-tests.yml/badge.svg?color=%2344b492)](https://github.com/ether/etherpad/actions/workflows/backend-tests.yml)
 [![Simulated Load](https://github.com/ether/etherpad/actions/workflows/load-test.yml/badge.svg?color=%2344b492)](https://github.com/ether/etherpad/actions/workflows/load-test.yml)
 [![Rate Limit](https://github.com/ether/etherpad/actions/workflows/rate-limit.yml/badge.svg?color=%2344b492)](https://github.com/ether/etherpad/actions/workflows/rate-limit.yml)
-[![Docker file](https://github.com/ether/etherpad/actions/workflows/dockerfile.yml/badge.svg?color=%2344b492)](https://github.com/ether/etherpad/actions/workflows/dockerfile.yml)
+[![Docker file](https://github.com/ether/etherpad/actions/workflows/docker.yml/badge.svg?color=%2344b492)](https://github.com/ether/etherpad/actions/workflows/docker.yml)
 [![Frontend admin tests powered by Sauce Labs](https://github.com/ether/etherpad/actions/workflows/frontend-admin-tests.yml/badge.svg?color=%2344b492)](https://github.com/ether/etherpad/actions/workflows/frontend-admin-tests.yml)
 [![Frontend tests powered by Sauce Labs](https://github.com/ether/etherpad/actions/workflows/frontend-tests.yml/badge.svg?color=%2344b492)](https://github.com/ether/etherpad/actions/workflows/frontend-tests.yml)
 [![Sauce Test Status](https://saucelabs.com/buildstatus/etherpad.svg)](https://saucelabs.com/u/etherpad)
