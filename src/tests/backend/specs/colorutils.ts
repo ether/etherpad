@@ -60,18 +60,28 @@ describe(__filename, function () {
       assert.strictEqual(onNavy, 'var(--super-light-color)');
     });
 
-    it('every primary picks a text colour clearing WCAG AA', function () {
-      // The dead-zone regression: for every pure-ish primary, the returned
-      // text colour must produce ≥4.5:1 contrast.
+    it('always picks whichever of black/white gives the higher contrast', function () {
+      // Regression invariant: the returned text colour must never produce
+      // LOWER contrast than the alternative. Pre-fix, the `luminosity < 0.5`
+      // cutoff violated this on e.g. #ff0000 — luminosity 0.30 picked white
+      // (4.00:1) when black (5.25:1) was available. Note: this invariant is
+      // about *relative* contrast between the two options, not about hitting
+      // WCAG AA; pure primaries like #ff0000 can't clear 4.5:1 with either
+      // black or white, and no text-colour choice alone can fix that — bg
+      // tweaks would be a separate concern.
       const samples = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff',
-                       '#800000', '#008000', '#000080', '#808000', '#800080', '#008080'];
+                       '#800000', '#008000', '#000080', '#808000', '#800080', '#008080',
+                       '#888888', '#bbbbbb', '#333333'];
       for (const bg of samples) {
         const textHex = colorutils.textColorFromBackgroundColor(bg, 'something-else');
-        const textTriple = textHex === '#222'
-            ? colorutils.css2triple('#222222')
-            : colorutils.css2triple('#ffffff');
-        const ratio = colorutils.contrastRatio(colorutils.css2triple(bg), textTriple);
-        assert.ok(ratio >= 4.5, `${bg} → ${textHex} gave only ${ratio.toFixed(2)}:1`);
+        const bgTriple = colorutils.css2triple(bg);
+        const ratioBlack = colorutils.contrastRatio(bgTriple, colorutils.css2triple('#222222'));
+        const ratioWhite = colorutils.contrastRatio(bgTriple, colorutils.css2triple('#ffffff'));
+        const picked = textHex === '#222' ? ratioBlack : ratioWhite;
+        const other = textHex === '#222' ? ratioWhite : ratioBlack;
+        assert.ok(picked >= other,
+            `${bg} picked ${textHex} (${picked.toFixed(2)}:1) when the other ` +
+            `option would have been ${other.toFixed(2)}:1`);
       }
     });
   });
