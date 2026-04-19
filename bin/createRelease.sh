@@ -31,7 +31,7 @@ while true; do
     esac
 done
 
-ETHER_REPO="https://github.com/ether/etherpad-lite.git"
+ETHER_REPO="https://github.com/ether/etherpad.git"
 ETHER_WEB_REPO="https://github.com/ether/ether.github.com.git"
 TMP_DIR="/tmp/"
 
