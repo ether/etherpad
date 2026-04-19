@@ -2499,15 +2499,34 @@ function Ace2Inner(editorInfo, cssManagers) {
   const doDuplicateSelectedLines = () => {
     if (!rep.selStart || !rep.selEnd) return;
     const [start, end] = selectedLineRange();
-    const lineTexts: string[] = [];
-    for (let i = start; i <= end; i++) {
-      lineTexts.push(rep.lines.atIndex(i).text);
-    }
-    // Insert the block at the start of the next line so the duplicate lands
-    // *below* the selection and the caret visually stays with the original
-    // content — same as the IDE convention.
-    const inserted = `${lineTexts.join('\n')}\n`;
-    performDocumentReplaceRange([end + 1, 0], [end + 1, 0], inserted);
+
+    // Build a changeset that keeps everything up to the start of line (end+1)
+    // and then inserts an attributed clone of lines [start..end]. We cannot
+    // reuse performDocumentReplaceRange here because its insert() call carries
+    // only [['author', thisAuthor]] — which would strip bold / italic / list
+    // / heading attributes from the duplicated content and surface internal
+    // line-marker characters as literal `*`s.
+    //
+    // rep.alines[i] is the attribution string for line i (matching the `+`
+    // ops format). Each op's `attribs` can be passed directly to
+    // builder.insert(); doing so per-op per-line preserves every attribute
+    // exactly as stored on the source line.
+    inCallStackIfNecessary('doDuplicateSelectedLines', () => {
+      fastIncorp(21);
+      const builder = new Builder(rep.lines.totalWidth());
+      buildKeepToStartOfRange(rep, builder, [end + 1, 0]);
+      for (let lineIdx = start; lineIdx <= end; lineIdx++) {
+        const lineText = `${rep.lines.atIndex(lineIdx).text}\n`;
+        const aline = rep.alines[lineIdx] || '';
+        let cursor = 0;
+        for (const op of deserializeOps(aline)) {
+          const segment = lineText.substr(cursor, op.chars);
+          if (segment.length > 0) builder.insert(segment, op.attribs);
+          cursor += op.chars;
+        }
+      }
+      performDocumentApplyChangeset(builder.toString());
+    });
   };
 
   const doDeleteSelectedLines = () => {
@@ -2524,10 +2543,14 @@ function Ace2Inner(editorInfo, cssManagers) {
       const lastLen = rep.lines.atIndex(end).text.length;
       performDocumentReplaceRange([start - 1, prevLen], [end, lastLen], '');
     } else {
-      // Whole pad selected (or only line). Blank it out but keep an empty
-      // line present — Etherpad always expects at least one line.
+      // Whole pad selected (or only line). Blank the selected range but keep
+      // an empty line behind — Etherpad always expects at least one line to
+      // exist. The range end must be [end, lastLen] so multi-line whole-pad
+      // selections are cleared completely; using [0, lastLen] here (with
+      // lastLen computed from `end`) would only partially blank line 0 and
+      // could produce an invalid range when lastLen exceeds line 0's width.
       const lastLen = rep.lines.atIndex(end).text.length;
-      performDocumentReplaceRange([0, 0], [0, lastLen], '');
+      performDocumentReplaceRange([0, 0], [end, lastLen], '');
     }
   };
 

@@ -5,6 +5,22 @@ Location: `src/static/js/ace2_inner.js`
 ## editorInfo.ace_replaceRange(start, end, text)
 This function replaces a range (from `start` to `end`) with `text`.
 
+## editorInfo.ace_doDuplicateSelectedLines()
+
+Duplicates every line spanned by the current selection (or the caret's line
+if nothing is selected) and inserts the duplicated block directly below the
+original. Character attributes (bold, italic, list, heading, etc.) are
+preserved on the duplicates. Wired to `Ctrl`/`Cmd`+`Shift`+`D` via the
+`padShortcutEnabled.cmdShiftD` setting.
+
+## editorInfo.ace_doDeleteSelectedLines()
+
+Deletes every line spanned by the current selection (or the caret's line if
+nothing is selected). If the selection covers the final line of the pad,
+the preceding newline is consumed so no dangling empty line is left.
+Wired to `Ctrl`/`Cmd`+`Shift`+`K` via the `padShortcutEnabled.cmdShiftK`
+setting.
+
 ## editorInfo.ace_getRep()
 
 Returns the `rep` object. The rep object consists of the following properties:

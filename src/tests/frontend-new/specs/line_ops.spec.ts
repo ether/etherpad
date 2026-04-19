@@ -62,6 +62,35 @@ test.describe('Line ops (#6433)', function () {
     expect(lines.slice(0, 2)).toEqual(['alpha', 'gamma']);
   });
 
+  test('Ctrl+Shift+D preserves bold formatting on the duplicated line', async function ({page}) {
+    const body = await getPadBody(page);
+    await body.click();
+    await clearPadContent(page);
+
+    await page.keyboard.type('plain');
+    await page.keyboard.press('Enter');
+    // Type a bold line.
+    await page.keyboard.down('Control');
+    await page.keyboard.press('b');
+    await page.keyboard.up('Control');
+    await page.keyboard.type('bold');
+    await page.keyboard.down('Control');
+    await page.keyboard.press('b');
+    await page.keyboard.up('Control');
+    await page.waitForTimeout(200);
+
+    // Duplicate current line ("bold").
+    await page.keyboard.press('Control+Shift+D');
+    await page.waitForTimeout(400);
+
+    // Count <b> tags in innerdocbody — pre-fix the duplicate re-inserted
+    // plain text so only one existed; post-fix the attribute transfers.
+    const inner = page.frame('ace_inner')!;
+    const boldCount = await inner.evaluate(
+        () => document.getElementById('innerdocbody')!.querySelectorAll('b').length);
+    expect(boldCount).toBeGreaterThanOrEqual(2);
+  });
+
   test('Ctrl+Shift+D duplicates every line in a multi-line selection', async function ({page}) {
     const body = await getPadBody(page);
     await body.click();
