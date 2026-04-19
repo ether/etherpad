@@ -237,8 +237,8 @@ export type SettingsType = {
   editOnly: boolean,
   maxAge: number,
   minify: boolean,
-  abiword: string | null,
   soffice: string | null,
+  docxExport: boolean,
   allowUnknownFileEnds: boolean,
   loglevel: string,
   logLayoutType: string,
@@ -476,13 +476,14 @@ const settings: SettingsType = {
    */
   minify: true,
   /**
-   * The path of the abiword executable
-   */
-  abiword: null,
-  /**
    * The path of the libreoffice executable
    */
   soffice: null,
+  /**
+   * When true, the "Microsoft Word" export button downloads a .docx file (requires soffice).
+   * Set to false to revert to legacy .doc output.
+   */
+  docxExport: true,
   /**
    * Should we support none natively supported file types on import?
    */
@@ -684,15 +685,6 @@ if (typeof module !== 'undefined' && module.exports) {
 settings.dbSettings =  {filename: path.join(settings.root, 'var/rusty.db')};
 // END OF SETTINGS
 
-// checks if abiword is avaiable
-export const abiwordAvailable = () => {
-    if (settings.abiword != null) {
-        return os.type().indexOf('Windows') !== -1 ? 'withoutPDF' : 'yes';
-    } else {
-        return 'no';
-    }
-};
-
 export const sofficeAvailable = () => {
     if (settings.soffice != null) {
         return os.type().indexOf('Windows') !== -1 ? 'withoutPDF' : 'yes';
@@ -701,19 +693,7 @@ export const sofficeAvailable = () => {
     }
 };
 
-export const exportAvailable = () => {
-    const abiword = abiwordAvailable();
-    const soffice = sofficeAvailable();
-
-    if (abiword === 'no' && soffice === 'no') {
-        return 'no';
-    } else if ((abiword === 'withoutPDF' && soffice === 'no') ||
-        (abiword === 'no' && soffice === 'withoutPDF')) {
-        return 'withoutPDF';
-    } else {
-        return 'yes';
-    }
-};
+export const exportAvailable = () => sofficeAvailable();
 
 
 // Return etherpad version from package.json
@@ -767,7 +747,7 @@ const storeSettings = (settingsObj: any) => {
  * no coercition for "null" values.
  *
  * If the user wants a variable to be null by default, he'll have to use the
- * short syntax "${ABIWORD}", and not "${ABIWORD:null}": the latter would result
+ * short syntax "${SOFFICE}", and not "${SOFFICE:null}": the latter would result
  * in the literal string "null", instead.
  */
 const coerceValue = (stringValue: string) => {
@@ -962,6 +942,15 @@ export const reloadSettings = () => {
     storeSettings(settingsParsed);
     storeSettings(credentials);
 
+    // Emit a clear migration warning when the deprecated abiword setting is detected.
+    if (settingsParsed && (settingsParsed as any).abiword != null) {
+        logger.warn(
+            'The "abiword" setting is no longer supported and has been ignored. ' +
+            'Abiword import/export support has been removed. ' +
+            'Please install LibreOffice and set "soffice" to its executable path instead.'
+        );
+    }
+
     // Init logging config
     settings.logconfig = defaultLogConfig(
       settings.loglevel ? settings.loglevel : defaultLogLevel,
@@ -1013,20 +1002,6 @@ export const reloadSettings = () => {
         }
 
         logger.info(`Using skin "${settings.skinName}" in dir: ${skinPath}`);
-    }
-
-    if (settings.abiword) {
-        // Check abiword actually exists
-      fs.exists(settings.abiword, (exists: boolean) => {
-        if (!exists) {
-          const abiwordError = 'Abiword does not exist at this path, check your settings file.';
-          if (!settings.suppressErrorsInPadText) {
-            settings.defaultPadText += `\nError: ${abiwordError}${suppressDisableMsg}`;
-          }
-          logger.error(`${abiwordError} File location: ${settings.abiword}`);
-          settings.abiword = null;
-        }
-      });
     }
 
     if (settings.soffice) {

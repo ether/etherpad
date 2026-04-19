@@ -254,8 +254,7 @@ const getHTMLFromAtext = async (pad:PadType, atext: AText, authorColors?: string
 
         let s = taker.take(chars);
 
-        // removes the characters with the code 12. Don't know where they come
-        // from but they break the abiword parser and are completly useless
+        // form feed (0x0C) is a legacy control char with no meaning in HTML
         s = s.replace(String.fromCharCode(12), '');
 
         assem.append(_encodeWhitespace(Security.escapeHTML(s)));

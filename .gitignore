@@ -18,7 +18,6 @@ out/
 .nyc_output
 .idea
 /package-lock.json
-/src/bin/abiword.exe
 /src/bin/convertSettings.json
 /src/bin/etherpad-1.deb
 /src/bin/node.exe

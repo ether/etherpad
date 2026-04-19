@@ -32,7 +32,6 @@ import padutils from '../../static/js/pad_utils';
 import readOnlyManager from '../db/ReadOnlyManager';
 import settings, {
   exportAvailable,
-  abiwordAvailable,
   sofficeAvailable
 } from '../utils/Settings';
 const securityManager = require('../db/SecurityManager');
@@ -1043,9 +1042,9 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
       serverTimestamp: Date.now(),
       sessionRefreshInterval: settings.cookie.sessionRefreshInterval,
       userId: sessionInfo.author,
-      abiwordAvailable: abiwordAvailable(),
       sofficeAvailable: sofficeAvailable(),
       exportAvailable: exportAvailable(),
+      docxExport: settings.docxExport,
       plugins: {
         plugins: plugins.plugins,
         parts: plugins.parts,

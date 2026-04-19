@@ -59,11 +59,6 @@ const rm = async (path: string) => {
 let converter:any = null;
 let exportExtension = 'htm';
 
-// load abiword only if it is enabled and if soffice is disabled
-if (settings.abiword != null && settings.soffice == null) {
-  converter = require('../utils/Abiword');
-}
-
 // load soffice only if it is enabled
 if (settings.soffice != null) {
   converter = require('../utils/LibreOffice');
@@ -81,7 +76,7 @@ const tmpDirectory = os.tmpdir();
  */
 const doImport = async (req:any, res:any, padId:string, authorId:string) => {
   // pipe to a file
-  // convert file to html via abiword or soffice
+  // convert file to html via soffice
   // set html in the pad
   const randNum = Math.floor(Math.random() * 0xFFFFFFFF);
 

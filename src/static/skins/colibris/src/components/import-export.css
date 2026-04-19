@@ -1,15 +1,3 @@
-#importmessageabiword {
-  font-style: italic;
-  color: #64d29b;
-  color: var(--primary-color);
-}
-#importmessageabiword > a {
-  font-weight: bold;
-  text-decoration: underline;
-  color: #64d29b;
-  color: var(--primary-color);
-}
-
 #importmessagefail {
   margin-top: 10px;
 }

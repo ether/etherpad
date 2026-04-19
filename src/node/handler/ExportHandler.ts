@@ -95,7 +95,7 @@ exports.doExport = async (req: any, res: any, padId: string, readOnlyId: string,
     // ensure html can be collected by the garbage collector
     html = null;
 
-    // send the convert job to the converter (abiword, libreoffice, ..)
+    // send the convert job to the converter (libreoffice)
     const destFile = `${tempDirectory}/etherpad_export_${randNum}.${type}`;
 
     // Allow plugins to overwrite the convert in export process
@@ -103,10 +103,7 @@ exports.doExport = async (req: any, res: any, padId: string, readOnlyId: string,
     if (result.length > 0) {
       // console.log("export handled by plugin", destFile);
     } else {
-      const converter =
-          settings.soffice != null ? require('../utils/LibreOffice')
-          : settings.abiword != null ? require('../utils/Abiword')
-          : null;
+      const converter = require('../utils/LibreOffice');
       await converter.convertFile(srcFile, destFile, type);
     }
 

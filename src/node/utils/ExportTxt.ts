@@ -159,8 +159,7 @@ const getTXTFromAtext = (pad: PadType, atext: AText, authorColors?:string) => {
 
         const s = taker.take(chars);
 
-        // removes the characters with the code 12. Don't know where they come
-        // from but they break the abiword parser and are completly useless
+        // form feed (0x0C) stripping — left commented historically
         // s = s.replace(String.fromCharCode(12), "");
 
         // remove * from s, it's just not needed on a blank line..  This stops

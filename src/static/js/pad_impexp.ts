@@ -144,23 +144,23 @@ const padimpexp = (() => {
       $('#exportetherpada').attr('href', `${padRootPath}/export/etherpad`);
       $('#exportplaina').attr('href', `${padRootPath}/export/txt`);
 
-      // hide stuff thats not avaible if abiword/soffice is disabled
+      // hide stuff thats not avaible if soffice is disabled
+      const wordFormat = clientVars.docxExport ? 'docx' : 'doc';
       if (clientVars.exportAvailable === 'no') {
         $('#exportworda').remove();
         $('#exportpdfa').remove();
         $('#exportopena').remove();
-
-        $('#importmessageabiword').show();
+        $('#importmessagenoconverter').prop('hidden', false);
       } else if (clientVars.exportAvailable === 'withoutPDF') {
         $('#exportpdfa').remove();
 
-        $('#exportworda').attr('href', `${padRootPath}/export/doc`);
+        $('#exportworda').attr('href', `${padRootPath}/export/${wordFormat}`);
         $('#exportopena').attr('href', `${padRootPath}/export/odt`);
 
         $('#importexport').css({height: '142px'});
         $('#importexportline').css({height: '142px'});
       } else {
-        $('#exportworda').attr('href', `${padRootPath}/export/doc`);
+        $('#exportworda').attr('href', `${padRootPath}/export/${wordFormat}`);
         $('#exportpdfa').attr('href', `${padRootPath}/export/pdf`);
         $('#exportopena').attr('href', `${padRootPath}/export/odt`);
       }
