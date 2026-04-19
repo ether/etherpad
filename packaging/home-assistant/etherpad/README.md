@@ -5,11 +5,20 @@ Assistant add-on.
 
 ## Installation
 
+> [!NOTE]
+> This add-on currently lives in-tree at `packaging/home-assistant/` of
+> the main Etherpad repository. Home Assistant's Add-on Store expects
+> `repository.yaml` at the **root** of a repo, so the main Etherpad repo
+> URL is not directly installable until the add-on is split out into its
+> own repo (e.g. `ether/home-assistant-addon-etherpad`) or submitted to
+> the community umbrella [`hassio-addons/repository`](https://github.com/hassio-addons/repository).
+> Track the publication plan in the PR that introduced this scaffold.
+
+Once published, installation will be:
+
 1. In Home Assistant, go to **Settings → Add-ons → Add-on Store**.
 2. Click the three-dot menu (top right) → **Repositories**.
-3. Add: `https://github.com/ether/etherpad-lite` (or the dedicated
-   `ether/home-assistant-addon-etherpad` repo once published — see the
-   PR description that introduced this add-on).
+3. Add the dedicated add-on repository URL.
 4. Find **Etherpad** in the store, click **Install**, then **Start**.
 5. Use **Open Web UI** to launch Etherpad through HA ingress, or browse
    directly to `http://<ha-host>:9001`.

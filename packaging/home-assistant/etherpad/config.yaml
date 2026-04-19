@@ -9,7 +9,6 @@ url: https://etherpad.org
 arch:
   - aarch64
   - amd64
-init: false
 ingress: true
 ingress_port: 9001
 ingress_stream: true

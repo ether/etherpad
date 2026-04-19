@@ -6,7 +6,7 @@
 # the supervisor can restart it cleanly.
 # ==============================================================================
 if [[ "${1}" -ne 0 ]] && [[ "${1}" -ne 256 ]]; then
-    bashio::log.warning "Etherpad crashed (exit=${1}), halting add-on."
-    exec /run/s6/basedir/bin/halt
+  bashio::log.warning "Etherpad crashed (exit=${1}), halting add-on."
+  exec /run/s6/basedir/bin/halt
 fi
 bashio::log.info "Etherpad service stopped cleanly."
