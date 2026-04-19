@@ -77,10 +77,19 @@ const getParameters = [
     },
   },
   {
+    // showMenuRight accepts 'true' or 'false'. Explicit 'false' hides the
+    // right-side toolbar (import/export/timeslider/settings/share/users);
+    // explicit 'true' forces it visible, overriding the readonly
+    // auto-hide applied further down (issue #5182). Any other value is
+    // a no-op — the menu stays in its default state.
     name: 'showMenuRight',
-    checkVal: 'false',
+    checkVal: null,
     callback: (val) => {
-      $('#editbar .menu_right').hide();
+      if (val === 'false') {
+        $('#editbar .menu_right').hide();
+      } else if (val === 'true') {
+        $('#editbar .menu_right').show();
+      }
     },
   },
   {
@@ -685,6 +694,14 @@ const pad = {
       $('#chaticon').hide();
       $('#options-chatandusers').parent().hide();
       $('#options-stickychat').parent().hide();
+      // Hide the right-side toolbar on readonly pads — import/export,
+      // timeslider, settings, share, users are all noise for viewers
+      // who can't interact with the pad. Callers who need those
+      // controls visible on a readonly pad can force them back via
+      // `?showMenuRight=true`, which runs in getParameters() above.
+      if (getUrlVars().get('showMenuRight') !== 'true') {
+        $('#editbar .menu_right').hide();
+      }
     } else if (!settings.hideChat) { $('#chaticon').show(); }
 
     $('body').addClass(window.clientVars.readonly ? 'readonly' : 'readwrite');
