@@ -1,4 +1,4 @@
-import {expect, test} from "@playwright/test";
+import {expect, Page, test} from "@playwright/test";
 import {appendQueryParams, goToNewPad} from "../helper/padHelper";
 
 test.beforeEach(async ({page}) => {
@@ -26,19 +26,26 @@ test.describe('showMenuRight URL parameter', function () {
     await expect(page.locator('#editbar .menu_right')).toBeVisible();
   });
 
-  test('readonly pad hides .menu_right by default', async function ({page}) {
-    // Find the share link which exposes the readonly r.* id, then navigate.
+  // Helper: open the Share popup, flip it to read-only, read the r.* URL
+  // back out of #linkinput. The readonly toggle is a checkbox
+  // (`#readonlyinput`) that rewrites #linkinput's value live.
+  const getReadonlyUrl = async (page: Page) => {
     await page.locator('.buttonicon-embed').click();
-    const readonlyUrl = await page.locator('#readonlyInput').inputValue();
-    expect(readonlyUrl).toMatch(/\/p\/r\./);
+    await page.locator('#readonlyinput').check();
+    const url = await page.locator('#linkinput').inputValue();
+    expect(url).toMatch(/\/p\/r\./);
+    return url;
+  };
+
+  test('readonly pad hides .menu_right by default', async function ({page}) {
+    const readonlyUrl = await getReadonlyUrl(page);
     await page.goto(readonlyUrl);
     await page.waitForSelector('#editorcontainer.initialized');
     await expect(page.locator('#editbar .menu_right')).toBeHidden();
   });
 
   test('readonly pad with showMenuRight=true keeps the menu visible', async function ({page}) {
-    await page.locator('.buttonicon-embed').click();
-    const readonlyUrl = await page.locator('#readonlyInput').inputValue();
+    const readonlyUrl = await getReadonlyUrl(page);
     await page.goto(`${readonlyUrl}?showMenuRight=true`);
     await page.waitForSelector('#editorcontainer.initialized');
     await expect(page.locator('#editbar .menu_right')).toBeVisible();
