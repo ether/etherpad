@@ -1,6 +1,6 @@
-# Etherpad Lite Dockerfile
+# Etherpad Dockerfile
 #
-# https://github.com/ether/etherpad-lite
+# https://github.com/ether/etherpad
 #
 # Author: muxator
 # Set to "copy" for builds without git metadata (source tarballs, some CI):
@@ -18,7 +18,7 @@ RUN pnpm run build:ui
 
 
 FROM node:lts-alpine AS build
-LABEL maintainer="Etherpad team, https://github.com/ether/etherpad-lite"
+LABEL maintainer="Etherpad team, https://github.com/ether/etherpad"
 
 # Set these arguments when building the image from behind a proxy
 ARG http_proxy=

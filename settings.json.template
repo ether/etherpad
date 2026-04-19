@@ -225,7 +225,7 @@
   /*
    * An Example of MySQL Configuration (commented out).
    *
-   * See: https://github.com/ether/etherpad-lite/wiki/How-to-use-Etherpad-Lite-with-MySQL
+   * See: https://github.com/ether/etherpad/wiki/How-to-use-Etherpad-Lite-with-MySQL
    */
 
   /*

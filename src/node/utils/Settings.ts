@@ -393,7 +393,7 @@ const settings: SettingsType = {
     'This pad text is synchronized as you type, so that everyone viewing this page sees the same ' +
     'text. This allows you to collaborate seamlessly on documents!',
     '',
-    'Etherpad on Github: https://github.com/ether/etherpad-lite',
+    'Etherpad on Github: https://github.com/ether/etherpad',
   ].join('\n'),
   /**
    * The default Pad Settings for a user (Can be overridden by changing the setting
