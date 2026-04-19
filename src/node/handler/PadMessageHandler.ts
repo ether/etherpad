@@ -294,9 +294,15 @@ exports.handleMessage = async (socket:any, message: ClientVarMessage) => {
     // Prefer the HttpOnly author-token cookie over the in-message token (GDPR
     // PR3). Legacy clients (pre-PR3 browsers or API consumers) still send
     // `token` in the CLIENT_READY payload — honour it one more release, warn
-    // once so the migration is visible in logs.
+    // once so the migration is visible in logs. The socket.io handshake does
+    // not run cookie-parser, so pull the cookie directly from the Cookie
+    // header.
     const cookiePrefix = settings.cookie?.prefix || '';
-    const cookieToken = socket.request?.cookies?.[`${cookiePrefix}token`];
+    const cookieHeader: string = socket.request?.headers?.cookie || '';
+    const cookieName = `${cookiePrefix}token`;
+    const cookieMatch = cookieHeader.split(/;\s*/).find(
+        (c) => c.split('=')[0] === cookieName);
+    const cookieToken = cookieMatch ? decodeURIComponent(cookieMatch.split('=').slice(1).join('=')) : null;
     const legacyToken = typeof message.token === 'string' ? message.token : null;
     const resolvedToken = cookieToken || legacyToken;
     if (!cookieToken && legacyToken && !thisSession.legacyTokenWarned) {
