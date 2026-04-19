@@ -109,7 +109,6 @@ If your database needs additional settings, you will have to use a personalized 
 | `PAD_OPTIONS_ALWAYS_SHOW_CHAT`   |             | `false` |
 | `PAD_OPTIONS_CHAT_AND_USERS`     |             | `false` |
 | `PAD_OPTIONS_LANG`               |             | `null`  |
-| `PAD_OPTIONS_ENFORCE_READABLE_AUTHOR_COLORS` | Clamp author background colors on render so they always meet WCAG AA 4.5:1 contrast. Set to `false` to let authors' raw color picks through unchanged. | `true` |
 
 
 ### Shortcuts
