@@ -964,6 +964,16 @@ export const reloadSettings = () => {
       settings.ipLogging = (settingsParsed as any).disableIPlogging ? 'anonymous' : 'full';
     }
 
+    // Validate `ipLogging`. anonymizeIp() would otherwise silently treat an
+    // unknown value as "truncated" and ship partially-redacted IPs.
+    const validIpLogging = ['full', 'truncated', 'anonymous'];
+    if (!validIpLogging.includes(settings.ipLogging as any)) {
+      logger.warn(
+          `ipLogging="${settings.ipLogging}" is not one of ` +
+          `${validIpLogging.join(', ')}; falling back to "anonymous".`);
+      settings.ipLogging = 'anonymous';
+    }
+
     // Init logging config
     settings.logconfig = defaultLogConfig(
       settings.loglevel ? settings.loglevel : defaultLogLevel,

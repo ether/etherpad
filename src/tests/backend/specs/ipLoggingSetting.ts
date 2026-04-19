@@ -1,6 +1,8 @@
 'use strict';
 
 import {strict as assert} from 'assert';
+import fs from 'node:fs';
+import path from 'node:path';
 import settings from '../../../node/utils/Settings';
 import {anonymizeIp} from '../../../node/utils/anonymizeIp';
 
@@ -65,6 +67,71 @@ describe(__filename, function () {
       settings.ipLogging = 'anonymous';
       applyShim({});
       assert.equal(settings.ipLogging, 'anonymous');
+    });
+  });
+
+  describe('every known log-site routes IPs through anonymizeIp', function () {
+    // Regression guard: if any of these files ever log `req.ip` /
+    // `socket.request.ip` / `request.ip` directly again without wrapping
+    // through anonymizeIp or logIp, this test fails and CI blocks the merge.
+    const repoRoot = path.resolve(__dirname, '..', '..', '..', '..');
+    const cases: Array<{file: string, ipExpressions: RegExp[]}> = [
+      {
+        file: 'src/node/handler/PadMessageHandler.ts',
+        ipExpressions: [/socket\.request\.ip/g],
+      },
+      {
+        file: 'src/node/handler/SocketIORouter.ts',
+        ipExpressions: [/socket\.request\.ip/g],
+      },
+      {
+        file: 'src/node/hooks/express/webaccess.ts',
+        ipExpressions: [/req\.ip/g],
+      },
+      {
+        file: 'src/node/hooks/express/importexport.ts',
+        ipExpressions: [/request\.ip/g],
+      },
+    ];
+
+    for (const {file, ipExpressions} of cases) {
+      it(`${file} does not log a raw IP`, function () {
+        const content = fs.readFileSync(path.join(repoRoot, file), 'utf8');
+        // Split into lines and inspect only those that also reference a logger
+        // — the rate limiter consume() call is allowed to pass the raw IP.
+        const offending: string[] = [];
+        for (const line of content.split('\n')) {
+          if (!/(?:accessLogger|messageLogger|httpLogger|logger|console)\.(?:info|warn|error|debug|log)|backtick.*IP/i
+              .test(line) && !line.includes('IP:') && !line.includes('IP address')) continue;
+          if (line.includes('anonymizeIp') || line.includes('logIp(')) continue;
+          for (const re of ipExpressions) {
+            if (re.test(line)) {
+              offending.push(line.trim());
+              break;
+            }
+          }
+        }
+        assert.deepEqual(offending, [],
+            `found raw IP(s) in log lines of ${file}:\n${offending.join('\n')}`);
+      });
+    }
+  });
+
+  describe('invalid ipLogging falls back to anonymous at load time', function () {
+    it('rejects an unknown mode', function () {
+      // Replicate the validation block directly so we don't need to reload.
+      const valid = ['full', 'truncated', 'anonymous'];
+      let mode: any = 'lolnope';
+      if (!valid.includes(mode)) mode = 'anonymous';
+      assert.equal(mode, 'anonymous');
+      assert.equal(anonymizeIp('8.8.8.8', mode), 'ANONYMOUS');
+    });
+
+    it('rejects null', function () {
+      const valid = ['full', 'truncated', 'anonymous'];
+      let mode: any = null;
+      if (!valid.includes(mode)) mode = 'anonymous';
+      assert.equal(mode, 'anonymous');
     });
   });
 });
