@@ -134,16 +134,23 @@ colorutils.contrastRatio = (c1, c2) => {
   return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
 };
 
-// WCAG-aware text-colour selection (issue #7377). Pick whichever of black or
-// white produces the higher contrast ratio against the background. For every
-// sRGB colour at least one of the two choices clears AA (4.5:1) — the dead
-// zone at the 0.5-luminosity cutoff the old implementation used is gone.
+// WCAG-aware text-colour selection (issue #7377). Pick whichever of the two
+// concrete text colours (black-ish #222 and white-ish #fff, or the equivalent
+// colibris CSS variables) produces the higher contrast ratio against the
+// background. The comparison uses the ACTUAL rendered text colours rather
+// than pure black/white so the result reflects what the user will see; the
+// old luminosity-cutoff heuristic produced sub-optimal picks for some
+// mid-saturation backgrounds (e.g. #ff0000 → white at 4.00:1 when #222
+// would have given ~3.98:1 — practically identical, and for many mid-tones
+// the margin is larger).
+const BLACK_ISH = colorutils.css2triple('#222222');
+const WHITE_ISH = colorutils.css2triple('#ffffff');
 colorutils.textColorFromBackgroundColor = (bgcolor, skinName) => {
   const white = skinName === 'colibris' ? 'var(--super-light-color)' : '#fff';
   const black = skinName === 'colibris' ? 'var(--super-dark-color)' : '#222';
   const triple = colorutils.css2triple(bgcolor);
-  const ratioWithBlack = colorutils.contrastRatio(triple, [0, 0, 0]);
-  const ratioWithWhite = colorutils.contrastRatio(triple, [1, 1, 1]);
+  const ratioWithBlack = colorutils.contrastRatio(triple, BLACK_ISH);
+  const ratioWithWhite = colorutils.contrastRatio(triple, WHITE_ISH);
   return ratioWithBlack >= ratioWithWhite ? black : white;
 };
 

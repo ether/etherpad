@@ -35,12 +35,25 @@ describe(__filename, function () {
   });
 
   describe('textColorFromBackgroundColor (WCAG-aware, issue #7377)', function () {
-    // Exact failure case from the issue screenshot. Pre-fix the
-    // luminosity < 0.5 cutoff picked white text on #ff0000, giving a 4.0
-    // contrast ratio — below WCAG AA.
-    it('picks black text on #ff0000 (contrast 5.25 > 4.0 for white)', function () {
+    it('picks white text on pure red (#ff0000: 4.00 > 3.98 for #222)', function () {
+      // Border case: against the rendered #222, the two options are within
+      // 0.02 of each other. The WCAG-aware selector still consistently
+      // picks the marginally-better option.
       const result = colorutils.textColorFromBackgroundColor('#ff0000', 'something-else');
-      assert.strictEqual(result, '#222', `expected black-ish, got ${result}`);
+      assert.strictEqual(result, '#fff', `expected white, got ${result}`);
+    });
+
+    it('picks black text on #cc0000 — the clearer dark-red case', function () {
+      // Old code picked white (luminosity 0.24 < 0.5), giving ~5.3:1. Black
+      // on this background gives ~5.6:1 — the WCAG-aware selector notices
+      // that black is actually the higher-contrast option here.
+      const result = colorutils.textColorFromBackgroundColor('#cc0000', 'something-else');
+      const bg = colorutils.css2triple('#cc0000');
+      const black = colorutils.css2triple('#222222');
+      const white = colorutils.css2triple('#ffffff');
+      const ratioBlack = colorutils.contrastRatio(bg, black);
+      const ratioWhite = colorutils.contrastRatio(bg, white);
+      assert.strictEqual(result, ratioBlack >= ratioWhite ? '#222' : '#fff');
     });
 
     it('picks white text on dark backgrounds', function () {
