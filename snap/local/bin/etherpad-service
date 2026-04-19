@@ -1,0 +1,43 @@
+#!/bin/bash
+# Launch wrapper for the Etherpad snap daemon.
+#
+# 1. On first run, copy settings.json.template -> $SNAP_COMMON/etc/settings.json
+#    so the admin can edit it outside the read-only squashfs.
+# 2. Create writable data dirs under $SNAP_COMMON.
+# 3. Apply `snap set` overrides (port, ip) via env vars — settings.json
+#    uses ${PORT:9001}-style substitution natively.
+# 4. Exec Node with tsx loader to run server.ts.
+set -euo pipefail
+
+APP_DIR="${SNAP}/opt/etherpad-lite"
+NODE_BIN="${SNAP}/opt/node/bin/node"
+
+export PATH="${SNAP}/opt/node/bin:${SNAP}/usr/bin:${SNAP}/bin:${PATH}"
+
+ETC_DIR="${SNAP_COMMON}/etc"
+VAR_DIR="${SNAP_COMMON}/var"
+LOG_DIR="${SNAP_COMMON}/logs"
+mkdir -p "${ETC_DIR}" "${VAR_DIR}" "${LOG_DIR}"
+
+SETTINGS="${ETC_DIR}/settings.json"
+if [ ! -f "${SETTINGS}" ]; then
+    echo "[etherpad-snap] bootstrapping ${SETTINGS} from template"
+    cp "${APP_DIR}/settings.json.template" "${SETTINGS}"
+    # Rewrite the dirty DB filename to a writable absolute path.
+    sed -i \
+        -e 's|"filename": "var/dirty.db"|"filename": "'"${VAR_DIR}"'/dirty.db"|' \
+        "${SETTINGS}"
+fi
+
+PORT_OVERRIDE="$(snapctl get port || true)"
+IP_OVERRIDE="$(snapctl get ip || true)"
+: "${PORT_OVERRIDE:=9001}"
+: "${IP_OVERRIDE:=0.0.0.0}"
+export PORT="${PORT_OVERRIDE}"
+export IP="${IP_OVERRIDE}"
+
+cd "${APP_DIR}"
+export EP_SETTINGS="${SETTINGS}"
+export NODE_ENV=production
+
+exec "${NODE_BIN}" --import tsx/esm src/node/server.ts "$@"

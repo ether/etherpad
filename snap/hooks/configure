@@ -1,0 +1,24 @@
+#!/bin/bash
+# Validates values set via `snap set etherpad-lite key=value`.
+# Supported keys:
+#   port  : integer 1-65535 (default 9001). Ports <1024 require AppArmor override.
+#   ip    : bind address (default 0.0.0.0)
+set -euo pipefail
+
+PORT="$(snapctl get port || true)"
+if [ -n "${PORT}" ]; then
+    if ! [[ "${PORT}" =~ ^[0-9]+$ ]] || [ "${PORT}" -lt 1 ] || [ "${PORT}" -gt 65535 ]; then
+        echo "port must be an integer 1-65535" >&2
+        exit 1
+    fi
+fi
+
+IP="$(snapctl get ip || true)"
+if [ -n "${IP}" ] && ! [[ "${IP}" =~ ^[0-9a-fA-F.:]+$ ]]; then
+    echo "ip must be a valid IPv4/IPv6 address" >&2
+    exit 1
+fi
+
+if snapctl services etherpad-lite.etherpad-lite 2>/dev/null | grep -q active; then
+    snapctl restart etherpad-lite.etherpad-lite
+fi
