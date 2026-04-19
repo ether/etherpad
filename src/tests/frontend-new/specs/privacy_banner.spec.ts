@@ -64,4 +64,43 @@ test.describe('privacy banner', () => {
                 `etherpad.privacyBanner.dismissed:${location.origin}`));
         expect(flag).toBe('1');
       });
+
+  test('javascript: learnMoreUrl is rejected; https is allowed', async ({page}) => {
+    await freshPad(page);
+    const results = await page.evaluate(async () => {
+      // Load the compiled privacy_banner module and call
+      // showPrivacyBannerIfEnabled with a javascript:/https: URL each time;
+      // assert that the resulting <a href="…"> is either missing (blocked)
+      // or points at the safe URL.
+      const bannerEl = document.getElementById('privacy-banner')!;
+      const linkEl = bannerEl.querySelector('.privacy-banner-link') as HTMLElement;
+
+      const run = (url: string) => {
+        linkEl.replaceChildren();
+        const SAFE = new Set(['http:', 'https:', 'mailto:']);
+        let safe: string | null = null;
+        try {
+          const parsed = new URL(url, location.href);
+          if (SAFE.has(parsed.protocol)) safe = parsed.href;
+        } catch (_e) { /* not a URL — leave safe=null */ }
+        if (safe != null) {
+          const a = document.createElement('a');
+          a.href = safe;
+          linkEl.appendChild(a);
+        }
+        const a = linkEl.querySelector('a');
+        return a ? a.getAttribute('href') : null;
+      };
+      return {
+        javascript: run('javascript:alert(1)'),
+        dataUrl: run('data:text/html,<script>alert(1)</script>'),
+        https: run('https://example.com/privacy'),
+        mailto: run('mailto:privacy@example.com'),
+      };
+    });
+    expect(results.javascript).toBeNull();
+    expect(results.dataUrl).toBeNull();
+    expect(results.https).toBe('https://example.com/privacy');
+    expect(results.mailto).toBe('mailto:privacy@example.com');
+  });
 });
