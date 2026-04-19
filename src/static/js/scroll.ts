@@ -276,15 +276,32 @@ class Scroll {
           distanceOfTopOfViewport - this._getPixelsRelativeToPercentageOfViewport(innerHeight, true);
         this._scrollYPage(pixelsToScroll);
       } else if (caretIsBelowOfViewport) {
-        // setTimeout is required here as line might not be fully rendered onto the pad
+        // setTimeout is required because the target line may not be fully
+        // rendered yet (e.g. Enter-on-last-line just appended a <div>, or
+        // undo/redo just re-inserted a paragraph). Once rendered, scroll so
+        // the caret lands inside the viewport — mirror image of the
+        // caretIsAboveOfViewport branch above.
+        //
+        // Regression scope: fixes issue #7007 (undo/redo viewport doesn't
+        // follow caret on large pads). The previous implementation called
+        // `outer.scrollTo(0, outer[0].innerHeight)`, which scrolled to a
+        // fixed offset rather than to the caret — fine for "Enter at the
+        // very end of the pad" (the original use case from PR #4639) but
+        // wrong whenever undo/redo, deletion, or any other action moved
+        // the caret to an arbitrary mid-document line below the viewport.
         setTimeout(() => {
-          const outer = window.parent;
-          // scroll to the very end of the pad outer
-          outer.scrollTo(0, outer[0].innerHeight);
+          const latestPos = getPosition();
+          if (!latestPos) return;
+          const latestViewport = this._getViewPortTopBottom();
+          const latestDistance =
+              latestViewport.bottom - latestPos.bottom - latestPos.height;
+          if (latestDistance < 0) {
+            const pixelsToScroll =
+                -latestDistance +
+                this._getPixelsRelativeToPercentageOfViewport(innerHeight, true);
+            this._scrollYPage(pixelsToScroll);
+          }
         }, 150);
-        // if the above setTimeout and functionality is removed then hitting an enter
-        // key while on the last line wont be an optimal user experience
-        // Details at: https://github.com/ether/etherpad-lite/pull/4639/files
       }
     }
   };
