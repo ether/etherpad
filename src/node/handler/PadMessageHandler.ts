@@ -34,6 +34,8 @@ import settings, {
   exportAvailable,
   sofficeAvailable
 } from '../utils/Settings';
+import {anonymizeIp} from '../utils/anonymizeIp';
+const logIp = (ip: string | null | undefined) => anonymizeIp(ip, settings.ipLogging);
 const securityManager = require('../db/SecurityManager');
 const plugins = require('../../static/js/pluginfw/plugin_defs');
 import log4js from 'log4js';
@@ -203,7 +205,7 @@ exports.handleDisconnect = async (socket:any) => {
   accessLogger.info('[LEAVE]' +
                     ` pad:${session.padId}` +
                     ` socket:${socket.id}` +
-                    ` IP:${settings.disableIPlogging ? 'ANONYMOUS' : socket.request.ip}` +
+                    ` IP:${logIp(socket.request.ip)}` +
                     ` authorID:${session.author}` +
                     (user && user.username ? ` username:${user.username}` : ''));
   /* eslint-enable prefer-template */
@@ -276,7 +278,7 @@ exports.handleMessage = async (socket:any, message: ClientVarMessage) => {
     try {
       await rateLimiter.consume(socket.request.ip); // consume 1 point per event from IP
     } catch (err) {
-      messageLogger.warn(`Rate limited IP ${socket.request.ip}. To reduce the amount of rate ` +
+      messageLogger.warn(`Rate limited IP ${logIp(socket.request.ip)}. To reduce the amount of rate ` +
                          'limiting that happens edit the rateLimit values in settings.json');
       stats.meter('rateLimited').mark();
       socket.emit('message', {disconnect: 'rateLimited'});
@@ -321,7 +323,7 @@ exports.handleMessage = async (socket:any, message: ClientVarMessage) => {
 
   const auth = thisSession.auth;
   if (!auth) {
-    const ip = settings.disableIPlogging ? 'ANONYMOUS' : (socket.request.ip || '<unknown>');
+    const ip = logIp(socket.request.ip);
     const msg = JSON.stringify(message, null, 2);
     throw new Error(`pre-CLIENT_READY message from IP ${ip}: ${msg}`);
   }
@@ -338,7 +340,7 @@ exports.handleMessage = async (socket:any, message: ClientVarMessage) => {
     throw new Error([
       'Author ID changed mid-session. Bad or missing token or sessionID?',
       `socket:${socket.id}`,
-      `IP:${settings.disableIPlogging ? 'ANONYMOUS' : socket.request.ip}`,
+      `IP:${logIp(socket.request.ip)}`,
       `originalAuthorID:${thisSession.author}`,
       `newAuthorID:${authorID}`,
       ...(user && user.username) ? [`username:${user.username}`] : [],
@@ -933,7 +935,7 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
   accessLogger.info(`[${pad.head > 0 ? 'ENTER' : 'CREATE'}]` +
                     ` pad:${sessionInfo.padId}` +
                     ` socket:${socket.id}` +
-                    ` IP:${settings.disableIPlogging ? 'ANONYMOUS' : socket.request.ip}` +
+                    ` IP:${logIp(socket.request.ip)}` +
                     ` authorID:${sessionInfo.author}` +
                     (user && user.username ? ` username:${user.username}` : ''));
   /* eslint-enable prefer-template */

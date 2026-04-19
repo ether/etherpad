@@ -7,6 +7,7 @@ import {WebAccessTypes} from "../../types/WebAccessTypes";
 import {SettingsUser} from "../../types/SettingsUser";
 const httpLogger = log4js.getLogger('http');
 import settings from '../../utils/Settings';
+import {anonymizeIp} from '../../utils/anonymizeIp';
 const hooks = require('../../../static/js/pluginfw/hooks');
 import readOnlyManager from '../../db/ReadOnlyManager';
 
@@ -178,7 +179,8 @@ const checkAccess = async (req:any, res:any, next: Function) => {
     if (!httpBasicAuth ||
         !ctx.username ||
         password == null || password.toString() !== ctx.password) {
-      httpLogger.info(`Failed authentication from IP ${req.ip}`);
+      httpLogger.info(
+          `Failed authentication from IP ${anonymizeIp(req.ip, settings.ipLogging)}`);
       if (await aCallFirst0('authnFailure', {req, res})) return;
       if (await aCallFirst0('authFailure', {req, res, next})) return;
       // No plugin handled the authentication failure. Fall back to basic authentication.
@@ -205,7 +207,9 @@ const checkAccess = async (req:any, res:any, next: Function) => {
     return res.status(500).send('Internal Server Error');
   }
   const {username = '<no username>'} = req.session.user;
-  httpLogger.info(`Successful authentication from IP ${req.ip} for user ${username}`);
+  httpLogger.info(
+      `Successful authentication from IP ${anonymizeIp(req.ip, settings.ipLogging)} ` +
+      `for user ${username}`);
 
   // ///////////////////////////////////////////////////////////////////////////////////////////////
   // Step 4: Try to access the thing again. If this fails, give the user a 403 error. Plugins can
