@@ -1,0 +1,151 @@
+name: Debian package
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+      - 'v[0-9]+.[0-9]+.[0-9]+-*'
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Git ref to package (defaults to current)'
+        required: false
+
+permissions:
+  contents: write    # attach release assets
+
+env:
+  NFPM_VERSION: v2.43.0
+
+jobs:
+  build:
+    name: Build .deb (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-latest
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Resolve version
+        id: v
+        run: |
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          else
+            VERSION="$(node -p "require('./package.json').version")"
+          fi
+          echo "version=${VERSION}" >>"$GITHUB_OUTPUT"
+          echo "Packaging version: ${VERSION}"
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build UI + admin
+        run: pnpm run build:etherpad
+
+      - name: Install nfpm
+        run: |
+          set -e
+          NFPM_ARCH=amd64
+          [ "${{ matrix.arch }}" = "arm64" ] && NFPM_ARCH=arm64
+          curl -fsSL -o /tmp/nfpm.deb \
+            "https://github.com/goreleaser/nfpm/releases/download/${NFPM_VERSION}/nfpm_${NFPM_VERSION#v}_${NFPM_ARCH}.deb"
+          sudo dpkg -i /tmp/nfpm.deb
+
+      - name: Stage tree for packaging
+        run: |
+          set -eux
+          STAGE=staging/opt/etherpad-lite
+          mkdir -p "${STAGE}"
+
+          # Production footprint = src/ + bin/ + node_modules/ + metadata.
+          cp -a src bin package.json pnpm-workspace.yaml README.md LICENSE \
+                node_modules "${STAGE}/"
+
+          # Make pnpm-workspace.yaml production-only (same trick Dockerfile uses).
+          printf 'packages:\n  - src\n  - bin\n' > "${STAGE}/pnpm-workspace.yaml"
+
+          mkdir -p packaging/etc
+          cp settings.json.template packaging/etc/settings.json.dist
+
+          # Purge test fixtures and dev caches from node_modules to shrink size.
+          find "${STAGE}/node_modules" -type d \
+               \( -name test -o -name tests -o -name '__tests__' \
+                  -o -name example -o -name examples -o -name docs \) \
+               -prune -exec rm -rf {} + 2>/dev/null || true
+          find "${STAGE}/node_modules" -type f \
+               \( -name '*.md' -o -name '*.ts.map' -o -name '*.map' \
+                  -o -name 'CHANGELOG*' -o -name 'HISTORY*' \) \
+               -delete 2>/dev/null || true
+
+      - name: Build .deb
+        env:
+          VERSION: ${{ steps.v.outputs.version }}
+          ARCH: ${{ matrix.arch }}
+        run: |
+          mkdir -p dist
+          nfpm package --packager deb -f packaging/nfpm.yaml --target dist/
+
+      - name: Smoke-test the package (amd64 only)
+        if: matrix.arch == 'amd64'
+        run: |
+          set -eux
+          sudo apt-get update
+          sudo apt-get install -y nodejs
+          sudo dpkg -i dist/*.deb || sudo apt-get install -f -y
+          test -x /usr/bin/etherpad-lite
+          test -f /etc/etherpad-lite/settings.json
+          test -L /opt/etherpad-lite/settings.json
+          id etherpad
+          systemctl cat etherpad-lite.service
+          sudo systemctl start etherpad-lite
+          for i in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:9001/health && break || sleep 2
+          done
+          sudo systemctl stop etherpad-lite
+          sudo dpkg --purge etherpad-lite
+          ! id etherpad 2>/dev/null
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: etherpad-lite-${{ steps.v.outputs.version }}-${{ matrix.arch }}-deb
+          path: dist/*.deb
+          if-no-files-found: error
+
+  release:
+    name: Attach to GitHub Release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          pattern: etherpad-lite-*-deb
+          merge-multiple: true
+      - name: Attach .deb files to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.deb
+          fail_on_unmatched_files: true

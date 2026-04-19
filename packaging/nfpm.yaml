@@ -1,0 +1,112 @@
+# nfpm configuration for etherpad-lite Debian/RPM/APK packages.
+# Build with:   nfpm package --packager deb --target dist/
+# See:          https://nfpm.goreleaser.com/configuration/
+
+name: etherpad-lite
+arch: ${ARCH}            # amd64 | arm64  (exported by CI)
+platform: linux
+version: ${VERSION}      # e.g. 2.6.1, stripped of leading "v"
+version_schema: semver
+release: "1"
+section: web
+priority: optional
+maintainer: "Etherpad Foundation <contact@etherpad.org>"
+description: |
+  Etherpad is a real-time collaborative editor for the web.
+  This package installs Etherpad as a systemd service running
+  from /opt/etherpad-lite with configuration in /etc/etherpad-lite.
+vendor: "Etherpad Foundation"
+homepage: https://etherpad.org
+license: Apache-2.0
+
+depends:
+  - nodejs (>= 20)
+  - adduser
+  - ca-certificates
+
+recommends:
+  - libreoffice        # enables DOC/DOCX/PDF/ODT export
+  - curl
+
+suggests:
+  - postgresql-client
+  - mariadb-client
+
+conflicts:
+  - etherpad           # legacy bin/buildDebian.sh package name
+
+replaces:
+  - etherpad
+
+provides:
+  - etherpad
+
+# ---------------------------------------------------------------------------
+# Contents. staging/ is populated by CI before invoking nfpm:
+#   staging/opt/etherpad-lite/   -- source + node_modules + built assets
+# ---------------------------------------------------------------------------
+contents:
+  - src: ./staging/opt/etherpad-lite
+    dst: /opt/etherpad-lite
+    type: tree
+    file_info:
+      mode: 0755
+      owner: root
+      group: root
+
+  - src: ./packaging/systemd/etherpad-lite.service
+    dst: /lib/systemd/system/etherpad-lite.service
+    file_info:
+      mode: 0644
+
+  # Default environment file (conffile: preserved on upgrade)
+  - src: ./packaging/systemd/etherpad-lite.default
+    dst: /etc/default/etherpad-lite
+    type: config|noreplace
+    file_info:
+      mode: 0644
+
+  - src: ./packaging/bin/etherpad-lite
+    dst: /usr/bin/etherpad-lite
+    file_info:
+      mode: 0755
+
+  # Template used by postinstall to seed /etc/etherpad-lite/settings.json.
+  # Intentionally NOT a conffile: postinstall creates the real settings.json
+  # once on first install and never touches it again, so upgrades don't
+  # prompt with dpkg merge dialogs.
+  - src: ./packaging/etc/settings.json.dist
+    dst: /usr/share/etherpad-lite/settings.json.dist
+    file_info:
+      mode: 0644
+
+  - dst: /etc/etherpad-lite
+    type: dir
+    file_info:
+      mode: 0755
+  - dst: /var/lib/etherpad-lite
+    type: dir
+    file_info:
+      mode: 0750
+  - dst: /var/log/etherpad-lite
+    type: dir
+    file_info:
+      mode: 0750
+
+scripts:
+  preinstall:  ./packaging/scripts/preinstall.sh
+  postinstall: ./packaging/scripts/postinstall.sh
+  preremove:   ./packaging/scripts/preremove.sh
+  postremove:  ./packaging/scripts/postremove.sh
+
+overrides:
+  deb:
+    depends:
+      - nodejs (>= 20)
+      - adduser
+      - ca-certificates
+  rpm:
+    depends:
+      - nodejs >= 20
+      - shadow-utils
+      - ca-certificates
