@@ -471,7 +471,22 @@
   },
 
   /*
-   * Privacy: disable IP logging
+   * Controls what Etherpad writes to its logs about client IP addresses.
+   *
+   *   "anonymous" — replace every IP with the literal "ANONYMOUS" (default)
+   *   "truncated" — zero the last octet of IPv4 (1.2.3.0); truncate IPv6 to
+   *                 the first /48 (2001:db8:1::). Keeps aggregate visibility.
+   *   "full"      — log the full IP (document a legal basis + retention
+   *                 policy before choosing this).
+   *
+   * In-memory rate-limiting always keys on the raw IP and is never persisted.
+   */
+  "ipLogging": "anonymous",
+
+  /*
+   * Deprecated — use `ipLogging` above instead. Still honoured for one release
+   * cycle: `true` maps to `ipLogging: "anonymous"`, `false` maps to `"full"`.
+   * A deprecation warning is emitted when only this legacy setting is present.
    */
   "disableIPlogging": false,
 
