@@ -16,6 +16,24 @@ const storageKey = (url: string): string => {
   }
 };
 
+// Only http(s) and mailto: are allowed for the "Learn more" link, so a
+// misconfigured privacyBanner.learnMoreUrl cannot smuggle a javascript:,
+// data:, or vbscript: URL into the anchor and execute script on click.
+const SAFE_URL_SCHEMES = new Set(['http:', 'https:', 'mailto:']);
+const safeUrl = (href: string | null | undefined): string | null => {
+  if (typeof href !== 'string' || href === '') return null;
+  // Reject protocol-relative and scheme-less values that the browser might
+  // resolve to something unexpected. Require an explicit scheme.
+  let parsed: URL;
+  try {
+    parsed = new URL(href, location.href);
+  } catch (_e) {
+    return null;
+  }
+  if (!SAFE_URL_SCHEMES.has(parsed.protocol)) return null;
+  return parsed.href;
+};
+
 export const showPrivacyBannerIfEnabled = (config: BannerConfig | undefined) => {
   if (!config || !config.enabled) return;
   const banner = document.getElementById('privacy-banner');
@@ -43,9 +61,10 @@ export const showPrivacyBannerIfEnabled = (config: BannerConfig | undefined) => 
   const linkEl = banner.querySelector('.privacy-banner-link') as HTMLElement | null;
   if (linkEl) {
     linkEl.replaceChildren();
-    if (config.learnMoreUrl) {
+    const safeHref = safeUrl(config.learnMoreUrl);
+    if (safeHref != null) {
       const a = document.createElement('a');
-      a.href = config.learnMoreUrl;
+      a.href = safeHref;
       a.target = '_blank';
       a.rel = 'noopener';
       a.textContent = 'Learn more';
