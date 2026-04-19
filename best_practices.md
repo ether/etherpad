@@ -1,5 +1,5 @@
 # Contributor Guidelines
-(Please talk to people on the mailing list before you change this page, see our section on [how to get in touch](https://github.com/ether/etherpad-lite#get-in-touch))
+(Please talk to people on the mailing list before you change this page, see our section on [how to get in touch](https://github.com/ether/etherpad#get-in-touch))
 
 **We have decided that LLM/Agent/AI contributions are fine as long as they are within the instructions set out by this document.**
 
