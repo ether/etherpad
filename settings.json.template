@@ -726,6 +726,24 @@
     "enablePadWideSettings": "${ENABLE_PAD_WIDE_SETTINGS:false}",
 
   /*
+   * Optional privacy banner shown once the pad loads. Disabled by default.
+   *
+   *   enabled      — toggle the feature
+   *   title        — plain-text heading (HTML is escaped)
+   *   body         — plain-text body; newlines become paragraph breaks
+   *   learnMoreUrl — optional URL rendered as a "Learn more" link
+   *   dismissal    — "dismissible" (close button, stored in localStorage)
+   *                  or "sticky"  (always shown, no close button)
+   */
+  "privacyBanner": {
+    "enabled": false,
+    "title": "Privacy notice",
+    "body": "This instance processes pad content on our servers. See the linked policy for retention and how to request erasure.",
+    "learnMoreUrl": null,
+    "dismissal": "dismissible"
+  },
+
+  /*
    * From Etherpad 1.8.5 onwards, when Etherpad is in production mode commits from individual users are rate limited
    *
    * The default is to allow at most 10 changes per IP in a 1 second window.

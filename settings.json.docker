@@ -242,6 +242,17 @@
   "enablePadWideSettings": "${ENABLE_PAD_WIDE_SETTINGS:false}",
 
   /*
+   * Optional privacy banner. See settings.json.template for full field docs.
+   */
+  "privacyBanner": {
+    "enabled": "${PRIVACY_BANNER_ENABLED:false}",
+    "title": "${PRIVACY_BANNER_TITLE:Privacy notice}",
+    "body": "${PRIVACY_BANNER_BODY:This instance processes pad content on our servers. See the linked policy for retention and how to request erasure.}",
+    "learnMoreUrl": "${PRIVACY_BANNER_LEARN_MORE_URL:null}",
+    "dismissal": "${PRIVACY_BANNER_DISMISSAL:dismissible}"
+  },
+
+  /*
    * Node native SSL support
    *
    * This is disabled by default.
