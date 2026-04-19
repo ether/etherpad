@@ -1,4 +1,4 @@
-import {expect, test} from "@playwright/test";
+import {expect, Page, test} from "@playwright/test";
 import {clearPadContent, getPadBody, goToNewPad} from "../helper/padHelper";
 
 test.beforeEach(async ({page}) => {
@@ -10,7 +10,7 @@ test.beforeEach(async ({page}) => {
 test.describe('Line ops (#6433)', function () {
   test.describe.configure({retries: 2});
 
-  const bodyLines = async (page) => {
+  const bodyLines = async (page: Page) => {
     const inner = page.frame('ace_inner')!;
     return await inner.evaluate(
         () => Array.from(document.getElementById('innerdocbody')!.children)
