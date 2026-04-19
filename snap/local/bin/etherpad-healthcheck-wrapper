@@ -6,15 +6,15 @@ PORT="$(snapctl get port 2>/dev/null || true)"
 : "${PORT:=9001}"
 
 if command -v curl >/dev/null 2>&1; then
-    exec curl --fail --silent --show-error --max-time 5 \
-        "http://127.0.0.1:${PORT}/health"
+  exec curl --fail --silent --show-error --max-time 5 \
+    "http://127.0.0.1:${PORT}/health"
 fi
 
 NODE_BIN="${SNAP}/opt/node/bin/node"
 exec "${NODE_BIN}" -e '
   const http = require("http");
   http.get("http://127.0.0.1:'"${PORT}"'/health", r => {
-      if (r.statusCode === 200) process.exit(0);
-      console.error("HTTP " + r.statusCode); process.exit(1);
+    if (r.statusCode === 200) process.exit(0);
+    console.error("HTTP " + r.statusCode); process.exit(1);
   }).on("error", e => { console.error(e.message); process.exit(1); });
 '

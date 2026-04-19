@@ -2,11 +2,15 @@
 # Launch wrapper for the Etherpad snap daemon.
 #
 # 1. On first run, copy settings.json.template -> $SNAP_COMMON/etc/settings.json
-#    so the admin can edit it outside the read-only squashfs.
+#    so the admin can edit it outside the read-only squashfs. Patch the
+#    seeded file so dirty-DB / ip / port point at writable paths and pick
+#    up env-var overrides.
 # 2. Create writable data dirs under $SNAP_COMMON.
-# 3. Apply `snap set` overrides (port, ip) via env vars — settings.json
-#    uses ${PORT:9001}-style substitution natively.
-# 4. Exec Node with tsx loader to run server.ts.
+# 3. Apply `snap set` overrides (port, ip) via env vars — Etherpad's
+#    settings.json supports ${PORT:9001}-style substitution natively.
+# 4. Exec Node with tsx loader to run server.ts, passing the seeded
+#    settings file via --settings (Etherpad reads `argv.settings`, not
+#    an env var, so EP_SETTINGS alone would be ignored).
 set -euo pipefail
 
 APP_DIR="${SNAP}/opt/etherpad-lite"
@@ -21,12 +25,20 @@ mkdir -p "${ETC_DIR}" "${VAR_DIR}" "${LOG_DIR}"
 
 SETTINGS="${ETC_DIR}/settings.json"
 if [ ! -f "${SETTINGS}" ]; then
-    echo "[etherpad-snap] bootstrapping ${SETTINGS} from template"
-    cp "${APP_DIR}/settings.json.template" "${SETTINGS}"
-    # Rewrite the dirty DB filename to a writable absolute path.
-    sed -i \
-        -e 's|"filename": "var/dirty.db"|"filename": "'"${VAR_DIR}"'/dirty.db"|' \
-        "${SETTINGS}"
+  echo "[etherpad-snap] bootstrapping ${SETTINGS} from template"
+  cp "${APP_DIR}/settings.json.template" "${SETTINGS}"
+  # Point the default dirty-DB at $SNAP_COMMON (absolute path, writable).
+  sed -i \
+    -e 's|"filename": "var/dirty.db"|"filename": "'"${VAR_DIR}"'/dirty.db"|' \
+    "${SETTINGS}"
+  # Rewrite ip/port literals to Etherpad's env-substitution syntax so
+  # `snap set etherpad-lite port=<n>` / `ip=<addr>` actually take effect.
+  # Only substitute the first (top-level) occurrence — `dbSettings.port`
+  # has the same key name lower down and must not be touched.
+  sed -i \
+    -e '0,/"ip": "0.0.0.0"/{s|"ip": "0.0.0.0"|"ip": "${IP:0.0.0.0}"|}' \
+    -e '0,/"port": 9001/{s|"port": 9001|"port": "${PORT:9001}"|}' \
+    "${SETTINGS}"
 fi
 
 PORT_OVERRIDE="$(snapctl get port || true)"
@@ -37,7 +49,10 @@ export PORT="${PORT_OVERRIDE}"
 export IP="${IP_OVERRIDE}"
 
 cd "${APP_DIR}"
-export EP_SETTINGS="${SETTINGS}"
 export NODE_ENV=production
 
-exec "${NODE_BIN}" --import tsx/esm src/node/server.ts "$@"
+# Pass --settings explicitly; Etherpad's Settings loader reads argv only,
+# so exporting EP_SETTINGS is not enough to redirect the config file.
+exec "${NODE_BIN}" --import tsx/esm src/node/server.ts \
+  --settings "${SETTINGS}" \
+  "$@"
