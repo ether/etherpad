@@ -61,6 +61,20 @@ exports.listAllPads = padManager.listAllPads;
 exports.createAuthor = authorManager.createAuthor;
 exports.createAuthorIfNotExistsFor = authorManager.createAuthorIfNotExistsFor;
 exports.getAuthorName = authorManager.getAuthorName;
+
+/**
+ * anonymizeAuthor(authorID) — GDPR Art. 17 erasure. See doc/privacy.md.
+ *
+ * Returns counters describing what was touched:
+ * {affectedPads, removedTokenMappings, removedExternalMappings,
+ *  clearedChatMessages}.
+ */
+exports.anonymizeAuthor = async (authorID: string) => {
+  if (!authorID || typeof authorID !== 'string') {
+    throw new CustomError('authorID is required', 'apierror');
+  }
+  return await authorManager.anonymizeAuthor(authorID);
+};
 exports.listPadsOfAuthor = authorManager.listPadsOfAuthor;
 exports.padUsers = padMessageHandler.padUsers;
 exports.padUsersCount = padMessageHandler.padUsersCount;
