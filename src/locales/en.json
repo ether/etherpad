@@ -171,6 +171,12 @@
   "timeslider.exportCurrent": "Export current version as:",
   "timeslider.version": "Version {{version}}",
   "timeslider.saved": "Saved {{month}} {{day}}, {{year}}",
+  "timeslider.settings.playbackSpeed": "Playback speed:",
+  "timeslider.settings.playbackSpeed.original": "Original speed",
+  "timeslider.settings.playbackSpeed.realtime": "Realtime",
+  "timeslider.settings.playbackSpeed.200ms": "200 ms",
+  "timeslider.settings.playbackSpeed.500ms": "500 ms",
+  "timeslider.settings.playbackSpeed.1000ms": "1000 ms",
 
   "timeslider.playPause": "Playback / Pause Pad Contents",
   "timeslider.backRevision":"Go back a revision in this Pad",
