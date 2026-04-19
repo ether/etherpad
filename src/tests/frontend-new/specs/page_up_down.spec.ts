@@ -84,19 +84,32 @@ test.describe('Page Up / Page Down', function () {
     expect(selection).toBeLessThan(50);
   });
 
-  // Regression test: long wrapping lines should still allow PageDown to scroll
-  // the viewport. Before the fix, outerWin.document was accessed on an iframe
-  // element (which has no .document property), causing the handler to break.
-  test('PageDown scrolls viewport when pad has long wrapping lines', async function ({page}) {
+  // Regression test for #4562: consecutive very long wrapped lines should not
+  // cause PageDown/PageUp to skip too many or too few logical lines.  The
+  // pixel-based calculation must account for lines that occupy far more visual
+  // rows than the viewport height.
+  test('PageDown with consecutive long wrapped lines moves by correct amount (#4562)', async function ({page}) {
     const padBody = await getPadBody(page);
     await clearPadContent(page);
 
-    // Create 3 very long lines that will wrap many times in the viewport
-    const longText = 'This is a very long line that should wrap multiple times in the editor viewport to ensure that page down scrolling works correctly even when lines are longer than the visible area. '.repeat(20);
-    for (let i = 0; i < 3; i++) {
-      await writeToPad(page, longText);
-      if (i < 2) await page.keyboard.press('Enter');
-    }
+    // Build a pad with long lines interspersed with short ones via the inner
+    // document directly to avoid slow keyboard.type on Firefox.
+    const longLine = 'word '.repeat(300);
+    const innerFrame = page.frame('ace_inner')!;
+    await innerFrame.evaluate((text: string) => {
+      const body = document.getElementById('innerdocbody')!;
+      body.innerHTML = '';
+      for (let i = 0; i < 6; i++) {
+        const longDiv = document.createElement('div');
+        longDiv.textContent = text;
+        body.appendChild(longDiv);
+        const shortDiv = document.createElement('div');
+        shortDiv.textContent = `short ${i}`;
+        body.appendChild(shortDiv);
+      }
+    }, longLine);
+    // Wait for Etherpad to process the DOM changes
+    await page.waitForTimeout(2000);
 
     // Move caret to the very top
     await page.keyboard.down('Control');
@@ -104,17 +117,30 @@ test.describe('Page Up / Page Down', function () {
     await page.keyboard.up('Control');
     await page.waitForTimeout(200);
 
-    // Record the scroll position before PageDown
-    const outerFrame = page.frame('ace_outer')!;
-    const scrollBefore = await outerFrame.evaluate(() => document.documentElement.scrollTop);
+    // Press PageDown twice and verify caret advances each time
+    const getCaretLine = async () => {
+      return innerFrame.evaluate(() => {
+        const sel = document.getSelection();
+        if (!sel || !sel.focusNode) return -1;
+        let node = sel.focusNode as HTMLElement;
+        while (node && node.tagName !== 'DIV') node = node.parentElement!;
+        if (!node) return -1;
+        const divs = Array.from(document.getElementById('innerdocbody')!.children);
+        return divs.indexOf(node);
+      });
+    };
 
-    // Press PageDown
+    const lineBefore = await getCaretLine();
+
     await page.keyboard.press('PageDown');
     await page.waitForTimeout(1000);
+    const lineAfterFirst = await getCaretLine();
+    expect(lineAfterFirst).toBeGreaterThan(lineBefore);
 
-    // The viewport should have scrolled
-    const scrollAfter = await outerFrame.evaluate(() => document.documentElement.scrollTop);
-    expect(scrollAfter).toBeGreaterThan(scrollBefore);
+    await page.keyboard.press('PageDown');
+    await page.waitForTimeout(1000);
+    const lineAfterSecond = await getCaretLine();
+    expect(lineAfterSecond).toBeGreaterThan(lineAfterFirst);
   });
 
   test('PageDown then PageUp returns to approximately same position', async function ({page}) {

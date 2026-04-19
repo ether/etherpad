@@ -2894,7 +2894,7 @@ function Ace2Inner(editorInfo, cssManagers) {
             // Calculate lines to skip based on viewport pixel height divided by
             // the average rendered line height. This correctly handles long wrapped
             // lines that consume multiple visual rows (fixes #4562).
-            const viewportHeight = outerDoc.documentElement.clientHeight;
+            const viewportHeight = getInnerHeight();
             const visibleStart = newVisibleLineRange[0];
             const visibleEnd = newVisibleLineRange[1];
             let totalPixelHeight = 0;
@@ -2904,7 +2904,7 @@ function Ace2Inner(editorInfo, cssManagers) {
                 totalPixelHeight += entry.lineNode.offsetHeight;
               }
             }
-            const visibleLogicalLines = visibleEnd - visibleStart;
+            const visibleLogicalLines = visibleEnd - visibleStart + 1;
             // Use pixel-based count: how many logical lines fit in one viewport
             const numberOfLinesInViewport = visibleLogicalLines > 0 && totalPixelHeight > 0
                 ? Math.max(1, Math.round(visibleLogicalLines * viewportHeight / totalPixelHeight))
