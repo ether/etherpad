@@ -9,12 +9,7 @@ url: https://etherpad.org
 arch:
   - aarch64
   - amd64
-startup: application
-boot: auto
 init: false
-hassio_api: false
-homeassistant_api: false
-host_network: false
 ingress: true
 ingress_port: 9001
 ingress_stream: true
