@@ -651,7 +651,12 @@ const handleUserChanges = async (socket:any, message: {
     // Verify that the changeset has valid syntax and is in canonical form
     checkRep(changeset);
 
-    // Validate all added 'author' attribs to be the same value as the current user
+    // Validate all added 'author' attribs to be the same value as the current user.
+    // Exception: '=' ops (attribute changes on existing text) are allowed to restore other authors'
+    // IDs, but only if that author already exists in the pad's pool (i.e., they genuinely
+    // contributed to this pad). This is necessary for undoing "clear authorship colors", which
+    // re-applies the original author attributes for all authors.
+    // See https://github.com/ether/etherpad-lite/issues/2802
     for (const op of deserializeOps(unpack(changeset).ops)) {
       // + can add text with attribs
       // = can change or add attribs
@@ -663,8 +668,24 @@ const handleUserChanges = async (socket:any, message: {
       // an attribute number isn't in the pool).
       const opAuthorId = AttributeMap.fromString(op.attribs, wireApool).get('author');
       if (opAuthorId && opAuthorId !== thisSession.author) {
-        throw new Error(`Author ${thisSession.author} tried to submit changes as author ` +
-                        `${opAuthorId} in changeset ${changeset}`);
+        if (op.opcode === '=') {
+          // Allow restoring author attributes on existing text (undo of clear authorship),
+          // but only if the author ID is already known to this pad. This prevents a user
+          // from attributing text to a fabricated author who never contributed to the pad.
+          const knownAuthor = pad.pool.putAttrib(['author', opAuthorId], true) !== -1;
+          if (!knownAuthor) {
+            throw new Error(`Author ${thisSession.author} tried to set unknown author ` +
+                            `${opAuthorId} on existing text in changeset ${changeset}`);
+          }
+        } else {
+          // Reject '+' ops (inserting new text as another author) and '-' ops (deleting
+          // with another author's attribs). While '-' attribs are discarded from the
+          // document, they are added to the pad's attribute pool by moveOpsToNewPool,
+          // which could be exploited to inject fabricated author IDs into the pool and
+          // bypass the '=' op pool check above.
+          throw new Error(`Author ${thisSession.author} tried to submit changes as author ` +
+                          `${opAuthorId} in changeset ${changeset}`);
+        }
       }
     }
 

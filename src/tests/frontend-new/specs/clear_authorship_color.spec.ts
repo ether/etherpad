@@ -35,32 +35,37 @@ test('clear authorship color', async ({page}) => {
 })
 
 
-test("makes text clear authorship colors and checks it can't be undone", async function ({page}) {
-  const innnerPad = await getPadBody(page);
+test("clear authorship colors can be undone to restore author colors", async function ({page}) {
+  // Fix for https://github.com/ether/etherpad-lite/issues/2802
+  // Previously, undo of clear authorship was blocked as a workaround.
+  // Now the server properly allows it, so undo should restore author colors.
+  const padBody = await getPadBody(page);
   const padText = "Hello"
 
   // type some text
   await clearPadContent(page);
   await writeToPad(page, padText);
 
-  // get the first text element out of the inner iframe
-  const firstDivClass = innnerPad.locator('div').nth(0)
-  const retrievedClasses = await innnerPad.locator('div span').nth(0).getAttribute('class')
-  expect(retrievedClasses).toContain('author');
+  // verify authorship exists on the span
+  await expect(padBody.locator('div span').first()).toHaveAttribute('class', /author-/);
 
+  // Accept the confirm dialog triggered by clearAuthorship when no text is selected
+  page.on('dialog', dialog => dialog.accept());
 
-  await firstDivClass.focus()
+  // Click somewhere in the pad to deselect, then clear (triggers whole-pad clear via confirm)
+  await padBody.click();
   await clearAuthorship(page);
-  expect(await firstDivClass.getAttribute('class')).not.toContain('author');
 
+  // verify authorship is cleared
+  await expect(padBody.locator('div span').first()).not.toHaveClass(/author-/, {timeout: 5000});
+
+  // Undo should restore authorship colors
   await undoChanges(page);
-  const changedFirstDiv = innnerPad.locator('div').nth(0)
-  expect(await changedFirstDiv.getAttribute('class')).not.toContain('author');
 
-
-  await pressUndoButton(page);
-  const secondChangedFirstDiv = innnerPad.locator('div').nth(0)
-  expect(await secondChangedFirstDiv.getAttribute('class')).not.toContain('author');
+  // verify authorship is restored and user is not disconnected
+  await expect(padBody.locator('div span').first()).toHaveAttribute('class', /author-/, {timeout: 5000});
+  const disconnected = page.locator('.disconnected, .unreachable');
+  await expect(disconnected).not.toBeVisible();
 });
 
 
