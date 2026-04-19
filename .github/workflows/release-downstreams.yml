@@ -1,0 +1,71 @@
+name: Release — downstream bump tracker
+
+# Opens a single tracking issue on every release that lists every
+# downstream distribution of Etherpad (see docs/downstreams.yml) with
+# hints on whether they update automatically or need a manual PR.
+#
+# Rationale: external catalogs (CasaOS, TrueCharts, BBB, Unraid, …) go
+# stale because nobody remembers to poke them at release time. This
+# workflow turns "remember to update every downstream" into a checklist
+# we can close methodically.
+#
+# To test before a real release: run `Actions → Release — downstream
+# bump tracker → Run workflow`, supply a version (e.g. `2.6.1-test`).
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version string to use (e.g. 2.6.1). Defaults to the release tag.
+        required: true
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  open-tracking-issue:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v6
+
+      - name: Resolve version
+        id: v
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+          INPUT: ${{ inputs.version }}
+        run: |
+          VERSION="${TAG:-$INPUT}"
+          VERSION="${VERSION#v}"
+          if [ -z "${VERSION}" ]; then
+            echo "Could not determine version." >&2
+            exit 1
+          fi
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Render issue body
+        id: render
+        env:
+          VERSION: ${{ steps.v.outputs.version }}
+        run: |
+          python3 -m pip install --quiet pyyaml
+          BODY=$(mktemp)
+          python3 .github/scripts/render-downstream-tracker.py \
+              docs/downstreams.yml \
+              "$VERSION" \
+              "$GITHUB_REPOSITORY" \
+              > "$BODY"
+          echo "body-path=$BODY" >> "$GITHUB_OUTPUT"
+
+      - name: Open tracking issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue create \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "Downstream bumps for ${{ steps.v.outputs.version }}" \
+            --label "release,downstream" \
+            --body-file '${{ steps.render.outputs.body-path }}'

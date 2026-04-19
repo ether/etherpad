@@ -1,0 +1,172 @@
+# Downstream distribution catalog for Etherpad.
+#
+# This file is the single source of truth for every place Etherpad is
+# packaged or listed outside this repository. It is consumed by
+# .github/workflows/release-downstreams.yml, which opens a tracking issue
+# on every release so maintainers can work through the list and keep
+# downstream catalogs from going stale.
+#
+# When you add a new downstream, put it here first — the release
+# workflow will then remind us to update it on the next tag.
+#
+# update_type values:
+#   automatic           — handled by a workflow in this repo on tag push
+#                         (Docker Hub, Snap, Debian .deb, Home Assistant
+#                         add-on image). No manual step required; the
+#                         checklist item is a smoke-test verification.
+#   manual_ci           — controlled by a file in this repo that a human
+#                         needs to bump (e.g. the HA add-on config.yaml
+#                         `version:` field). The workflow hints which
+#                         file to edit.
+#   external_auto       — a downstream repo's own automation (Renovate,
+#                         a similar bot, or a runtime `check_for_gh_release`
+#                         call) detects new Docker/GitHub tags. No action
+#                         required unless the bot falls behind.
+#   external_pr         — a downstream repo requires a manual PR to bump
+#                         a pinned version. A maintainer opens that PR.
+#   external_issue      — a downstream repo accepts issues rather than PRs
+#                         for version bumps (maintainer-driven).
+#   external_maintainer — entirely out of our hands; the downstream has an
+#                         owner we can ping but not patch. Keep the entry
+#                         as a reminder to poke them.
+#   stale               — the downstream hasn't tracked upstream in a long
+#                         time. Kept in the list so nobody re-discovers it
+#                         and assumes it's current.
+
+downstreams:
+  # ---- In-repo, fully automated -----------------------------------------
+  - name: Official Docker image
+    repo: ether/etherpad-lite
+    update_type: automatic
+    workflow: .github/workflows/docker.yml
+    notes: |
+      Smoke test: `docker pull etherpad/etherpad:<version>` works and the
+      container exposes `/health` on 9001 after boot.
+
+  - name: Snap (snapcraft.io)
+    repo: ether/etherpad-lite
+    update_type: automatic
+    workflow: .github/workflows/snap-publish.yml
+    notes: |
+      Tag triggers edge publish; stable promotion requires a manual
+      approval in the `snap-store-stable` GitHub Environment. Smoke test:
+      `snap info etherpad-lite` shows the new version on the `stable`
+      channel within 24h.
+
+  - name: Debian .deb (GitHub Releases)
+    repo: ether/etherpad-lite
+    update_type: automatic
+    workflow: .github/workflows/deb-package.yml
+    notes: |
+      Tag triggers build; artefacts are attached to the GitHub Release.
+      Smoke test: `dpkg -i etherpad-lite_<version>_amd64.deb` on a clean
+      Ubuntu 24.04 VM, `curl /health` returns 200.
+
+  - name: Home Assistant add-on (GHCR images)
+    repo: ether/etherpad-lite
+    update_type: manual_ci
+    file: packaging/home-assistant/etherpad/config.yaml
+    workflow: .github/workflows/hassio-addon.yml
+    notes: |
+      Bump the `version:` field in `packaging/home-assistant/etherpad/config.yaml`
+      and merge to develop. The workflow multi-arch builds and pushes to
+      GHCR. If the upstream Docker image changes base OS, verify the
+      add-on Dockerfile's `COPY --from=upstream` still works.
+
+  # ---- External, auto-tracking ------------------------------------------
+  - name: Umbrel App Store
+    repo: getumbrel/umbrel-apps
+    path: etherpad
+    update_type: external_auto
+    notes: |
+      Renovate tracks the Docker image tag. No action needed if the app
+      bumps within a week of release; otherwise file an issue.
+
+  - name: TrueCharts
+    repo: trueforge-org/truecharts
+    path: charts/stable/etherpad
+    update_type: external_auto
+    notes: |
+      Renovate tracks the official `docker.io/etherpad/etherpad` image
+      (after PR 47234 merged). Verify the chart catalog shows the new
+      `appVersion:` within a week.
+
+  - name: Proxmox VE Helper-Script
+    repo: community-scripts/ProxmoxVED
+    path: ct/etherpad.sh
+    update_type: external_auto
+    notes: |
+      The script uses `check_for_gh_release` against `ether/etherpad-lite`
+      at user runtime, so there's no per-release bump — users re-running
+      the helper script pick up the latest GitHub release automatically.
+
+  # ---- External, maintainer-driven --------------------------------------
+  - name: Cloudron
+    repo: cloudron-io/etherpad.cloudronapp
+    update_type: external_maintainer
+    notes: |
+      Cloudron's automation typically publishes within a week. If the
+      store page lags by more than 2 weeks, post on
+      <https://forum.cloudron.io/category/17/app-packaging>.
+
+  - name: YunoHost
+    repo: YunoHost-Apps/etherpad_ynh
+    update_type: external_maintainer
+    notes: |
+      Actively maintained; usually bumps automatically. If no release
+      appears within 2 weeks, file an issue on the repo tagging the
+      current maintainer.
+
+  - name: Nextcloud Ownpad
+    repo: otetard/ownpad
+    update_type: external_maintainer
+    notes: |
+      External integration plugin; generally forward-compatible with new
+      Etherpad versions. Only relevant if a breaking API change lands.
+
+  # ---- External, per-release PR needed ----------------------------------
+  - name: CasaOS App Store
+    repo: IceWhaleTech/CasaOS-AppStore
+    path: Apps/Etherpad/docker-compose.yml
+    update_type: external_pr
+    notes: |
+      Docker image tag is pinned in the compose file. File a PR bumping
+      `image: etherpad/etherpad:<version>` and the `version` string in
+      the `x-casaos` metadata.
+
+  - name: BigBlueButton
+    repo: bigbluebutton/bigbluebutton
+    path: bbb-etherpad.placeholder.sh
+    update_type: external_pr
+    notes: |
+      Pinned to a specific tag in the placeholder clone script. Major
+      version bumps may require additional changes in
+      `build/packages-template/bbb-etherpad/build.sh` (npm → pnpm,
+      Node engine bump). File a PR or issue against `develop`.
+
+  - name: Unraid Community Apps
+    repo: selfhosters/unRAID-CA-templates
+    update_type: external_maintainer
+    notes: |
+      Community-maintained XML templates. If the template falls behind,
+      file an issue or PR on the template repo, or contact the
+      maintainer in the Unraid forum thread for Etherpad.
+
+  # ---- Known stale / low-signal -----------------------------------------
+  - name: Sandstorm
+    repo: sandstorm-io/sandstorm
+    update_type: stale
+    notes: |
+      Market listing hasn't moved since 2015. A full repack requires
+      vagga-based Sandstorm packaging. Noted here so nobody tries the
+      app expecting it to be current; removing the listing is a separate
+      conversation with the Sandstorm team.
+
+  - name: TrueNAS SCALE (legacy)
+    repo: trueforge-org/truecharts
+    update_type: stale
+    notes: |
+      The TrueNAS SCALE app catalog (iXsystems) was historically sourced
+      from TrueCharts; both have since diverged. TrueCharts' own
+      catalog is the authoritative source now; iXsystems ships their
+      own apps independently.
