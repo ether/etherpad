@@ -67,10 +67,13 @@ describe(__filename, function () {
     });
 
     it('returns colibris CSS vars when the skin matches', function () {
-      const onRed = colorutils.textColorFromBackgroundColor('#ff0000', 'colibris');
-      assert.strictEqual(onRed, 'var(--super-dark-color)');
-      const onNavy = colorutils.textColorFromBackgroundColor('#111111', 'colibris');
-      assert.strictEqual(onNavy, 'var(--super-light-color)');
+      // Pick bg extremes where the higher-contrast text colour is
+      // unambiguous (big margin either way), so the test exercises the
+      // skin-variable mapping without being entangled in border cases.
+      const onLight = colorutils.textColorFromBackgroundColor('#ffeedd', 'colibris');
+      assert.strictEqual(onLight, 'var(--super-dark-color)');
+      const onDark = colorutils.textColorFromBackgroundColor('#111111', 'colibris');
+      assert.strictEqual(onDark, 'var(--super-light-color)');
     });
 
     it('always picks whichever of black/white gives the higher contrast', function () {
