@@ -1081,6 +1081,7 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
       },
       enableDarkMode: settings.enableDarkMode,
       enablePadWideSettings: settings.enablePadWideSettings,
+      privacyBanner: settings.privacyBanner,
       automaticReconnectionTimeout: settings.automaticReconnectionTimeout,
       initialRevisionList: [],
       initialOptions: pad.getPadSettings(),
