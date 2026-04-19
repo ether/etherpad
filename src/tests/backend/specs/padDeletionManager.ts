@@ -37,6 +37,22 @@ describe(__filename, function () {
       await padDeletionManager.removeDeletionToken(a);
       await padDeletionManager.removeDeletionToken(b);
     });
+
+    it('concurrent calls for the same pad produce a single validating token',
+        async function () {
+          const padId = uniqueId();
+          const results = await Promise.all(
+              Array.from({length: 8},
+                  () => padDeletionManager.createDeletionTokenIfAbsent(padId)));
+          // Exactly one caller should get the plaintext token; the rest see null.
+          const nonNull = results.filter((r) => r != null);
+          assert.equal(nonNull.length, 1, `results: ${JSON.stringify(results)}`);
+          const [token] = nonNull;
+          assert.equal(
+              await padDeletionManager.isValidDeletionToken(padId, token), true,
+              'the one token returned must validate against the stored hash');
+          await padDeletionManager.removeDeletionToken(padId);
+        });
   });
 
   describe('isValidDeletionToken', function () {

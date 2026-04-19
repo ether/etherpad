@@ -519,12 +519,20 @@ Group pads are normal pads, but with the name schema GROUPID$PADNAME. A security
 #### createPad(padID, [text], [authorId])
 * API >= 1
 * `authorId` in API >= 1.3.0
+* returns `deletionToken` once, since the same release that added `allowPadDeletionByAllUsers`
 
 creates a new (non-group) pad.  Note that if you need to create a group Pad, you should call **createGroupPad**.
 You get an error message if you use one of the following characters in the padID: "/", "?", "&" or "#".
 
+`data.deletionToken` is a one-shot recovery token tied to this pad. It is
+returned in plaintext on the first call for a given padID and is `null` on
+subsequent calls (the token itself is stored on the server as a sha256 hash).
+Pass it to **deletePad** (or the socket `PAD_DELETE` message) to delete the
+pad without the creator's author cookie.
+
 *Example returns:*
-* `{code: 0, message:"ok", data: null}`
+* `{code: 0, message:"ok", data: {deletionToken: "…32-char random string…"}}`
+* `{code: 0, message:"ok", data: {deletionToken: null}}` — pad already existed
 * `{code: 1, message:"padID does already exist", data: null}`
 * `{code: 1, message:"malformed padID: Remove special characters", data: null}`
 
@@ -581,14 +589,24 @@ returns the list of users that are currently editing this pad
 * `{code: 0, message:"ok", data: {padUsers: [{colorId:"#c1a9d9","name":"username1","timestamp":1345228793126,"id":"a.n4gEeMLsvg12452n"},{"colorId":"#d9a9cd","name":"Hmmm","timestamp":1345228796042,"id":"a.n4gEeMLsvg12452n"}]}}`
 * `{code: 0, message:"ok", data: {padUsers: []}}`
 
-#### deletePad(padID)
+#### deletePad(padID, [deletionToken])
 * API >= 1
+* `deletionToken` in the same release as `allowPadDeletionByAllUsers`
 
-deletes a pad
+deletes a pad.
+
+`deletionToken` is the one-shot recovery token returned by `createPad` /
+`createGroupPad`. An apikey-authenticated caller can pass any (or no) token
+and the call still succeeds — trusted admins bypass the check. An
+unauthenticated caller (or a caller that explicitly passes a wrong token)
+is rejected with `invalid deletionToken` unless the operator has set
+`allowPadDeletionByAllUsers: true` in `settings.json`, in which case the
+token is ignored.
 
 *Example returns:*
 * `{code: 0, message:"ok", data: null}`
 * `{code: 1, message:"padID does not exist", data: null}`
+* `{code: 1, message:"invalid deletionToken", data: null}`
 
 #### copyPad(sourceID, destinationID[, force=false])
 * API >= 1.2.8
