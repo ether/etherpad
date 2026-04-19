@@ -59,3 +59,25 @@ See
 [`docs/superpowers/specs/2026-04-18-gdpr-pr1-deletion-controls-design.md`](https://github.com/ether/etherpad/blob/develop/docs/superpowers/specs/2026-04-18-gdpr-pr1-deletion-controls-design.md)
 for the deletion-token mechanism. Full author erasure is tracked as a
 follow-up in [ether/etherpad#6701](https://github.com/ether/etherpad/issues/6701).
+
+## Privacy banner (optional)
+
+The `privacyBanner` block in `settings.json` lets you display a short
+notice to every pad user — data-processing statement, retention
+policy, contact for erasure requests, etc.
+
+```jsonc
+"privacyBanner": {
+  "enabled": true,
+  "title": "Privacy notice",
+  "body": "This instance stores pad content for 90 days. Contact privacy@example.com to request erasure.",
+  "learnMoreUrl": "https://example.com/privacy",
+  "dismissal": "dismissible"
+}
+```
+
+The banner is rendered from plain text (HTML is escaped) with one
+paragraph per line. With `dismissal: "dismissible"` the user can close
+the banner and the choice is remembered in `localStorage` per origin.
+`dismissal: "sticky"` removes the close button so the notice is shown
+on every pad load.
