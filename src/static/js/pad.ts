@@ -77,6 +77,13 @@ const getParameters = [
     },
   },
   {
+    name: 'showMenuRight',
+    checkVal: 'false',
+    callback: (val) => {
+      $('#editbar .menu_right').hide();
+    },
+  },
+  {
     name: 'showChat',
     checkVal: null,
     callback: (val) => {
