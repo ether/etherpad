@@ -5,6 +5,12 @@ on:
     - cron: '0 6 * * *'  # Daily at 06:00 UTC
   workflow_dispatch:  # Allow manual trigger
 
+# The cross-repo work (cloning ether/ep_* repos, pushing updates, merging
+# Dependabot PRs) is authenticated via secrets.PLUGINS_PAT. The default
+# GITHUB_TOKEN only needs read access to this repo for actions/checkout.
+permissions:
+  contents: read
+
 jobs:
   update-plugins:
     runs-on: ubuntu-latest
