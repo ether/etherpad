@@ -163,22 +163,26 @@ describe(__filename, function () {
     });
 
     it('honours ETHERPAD_VERSION_STRING as an explicit override', function () {
-      const {exportedForTestingOnly} = require('../../../node/utils/Settings');
+      const settingsMod = require('../../../node/utils/Settings');
       const original = process.env.ETHERPAD_VERSION_STRING;
+      const savedSettingsFile = settingsMod.settingsFilename;
+      const savedCredsFile = settingsMod.credentialsFilename;
+      const savedToken = settingsMod.randomVersionString;
       process.env.ETHERPAD_VERSION_STRING = 'integrator-1';
+      settingsMod.settingsFilename = path.join(__dirname, 'settings.json');
+      settingsMod.credentialsFilename = path.join(__dirname, 'credentials.json');
       try {
-        const parsed =
-            exportedForTestingOnly.parseSettings(path.join(__dirname, 'settings.json'), true);
-        // parseSettings returns the parsed JSON, not the mutated module-scope
-        // settings object. The override lives on the singleton, which
-        // parseSettings updates as a side effect — require the module again
-        // via cjs so we pick up the current state.
-        const cjs = require('../../../node/utils/Settings');
-        assert.strictEqual(cjs.randomVersionString, 'integrator-1',
+        // The token is set by reloadSettings, not by parseSettings alone.
+        // Re-run the full reload path so the env var is consulted.
+        settingsMod.reloadSettings();
+        assert.strictEqual(settingsMod.randomVersionString, 'integrator-1',
             'ETHERPAD_VERSION_STRING should be used verbatim');
       } finally {
         if (original == null) delete process.env.ETHERPAD_VERSION_STRING;
         else process.env.ETHERPAD_VERSION_STRING = original;
+        settingsMod.settingsFilename = savedSettingsFile;
+        settingsMod.credentialsFilename = savedCredsFile;
+        settingsMod.randomVersionString = savedToken;
       }
     });
   });
