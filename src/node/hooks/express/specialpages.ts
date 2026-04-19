@@ -7,6 +7,7 @@ const fsp = fs.promises;
 const toolbar = require('../../utils/toolbar');
 const hooks = require('../../../static/js/pluginfw/hooks');
 import settings, {getEpVersion} from '../../utils/Settings';
+import {ensureAuthorTokenCookie} from '../../utils/ensureAuthorTokenCookie';
 import util from 'node:util';
 const webaccess = require('./webaccess');
 const plugins = require('../../../static/js/pluginfw/plugin_defs');
@@ -187,6 +188,7 @@ const handleLiveReload = async (args: ArgsExpressType, padString: string, timeSl
 
 
       setRouteHandler("/p/:pad", (req: any, res: any, next: Function) => {
+        ensureAuthorTokenCookie(req, res, settings);
         // The below might break for pads being rewritten
         const isReadOnly = !webaccess.userCanModify(req.params.pad, req);
 
@@ -217,6 +219,7 @@ const handleLiveReload = async (args: ArgsExpressType, padString: string, timeSl
       })
 
       setRouteHandler("/p/:pad/timeslider", (req: any, res: any, next: Function) => {
+        ensureAuthorTokenCookie(req, res, settings);
         console.log("Reloading pad")
         // The below might break for pads being rewritten
         const isReadOnly = !webaccess.userCanModify(req.params.pad, req);
@@ -348,6 +351,7 @@ exports.expressCreateServer = async (_hookName: string, args: ArgsExpressType, c
 
     // serve pad.html under /p
     args.app.get('/p/:pad', (req: any, res: any, next: Function) => {
+      ensureAuthorTokenCookie(req, res, settings);
       // The below might break for pads being rewritten
       const isReadOnly = !webaccess.userCanModify(req.params.pad, req);
 
@@ -368,6 +372,7 @@ exports.expressCreateServer = async (_hookName: string, args: ArgsExpressType, c
 
     // serve timeslider.html under /p/$padname/timeslider
     args.app.get('/p/:pad/timeslider', (req: any, res: any, next: Function) => {
+      ensureAuthorTokenCookie(req, res, settings);
       hooks.callAll('padInitToolbar', {
         toolbar,
       });
