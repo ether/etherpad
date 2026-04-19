@@ -116,6 +116,10 @@
 }
 
 /* GDPR privacy banner (PR4) */
+.privacy-banner[hidden] {
+  display: none !important;
+}
+
 .privacy-banner {
   display: flex;
   align-items: flex-start;
