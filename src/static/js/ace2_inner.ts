@@ -247,6 +247,18 @@ function Ace2Inner(editorInfo, cssManagers) {
       if (fadeInactiveAuthorColors && (typeof info.fade) === 'number') {
         bgcolor = fadeColor(bgcolor, info.fade);
       }
+      // Clamp the author's background to a WCAG-AA-compliant shade before
+      // rendering so a poorly-chosen dark color doesn't make the surrounding
+      // text unreadable (issue #7377). Opt-out via padOptions.
+      // `enforceReadableAuthorColors: false` for environments where authors
+      // need exact color fidelity (e.g. video captioning). Author's stored
+      // color is untouched — this is a viewer-side presentation clamp.
+      const enforceReadable =
+          window.clientVars.padOptions == null ||
+          window.clientVars.padOptions.enforceReadableAuthorColors !== false;
+      if (enforceReadable && colorutils.isCssHex(bgcolor)) {
+        bgcolor = colorutils.ensureReadableBackground(bgcolor);
+      }
       const textColor =
           colorutils.textColorFromBackgroundColor(bgcolor, window.clientVars.skinName);
       const styles = [

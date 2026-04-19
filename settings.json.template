@@ -308,7 +308,15 @@
      * as the author goes inactive. Set to false if users pick light colors and the
      * faded variants become visually indistinguishable.
      */
-    "fadeInactiveAuthorColors": true
+    "fadeInactiveAuthorColors": true,
+    /*
+     * When true (default), author background colors are automatically lightened
+     * on the rendering side if they would fail WCAG AA contrast (4.5:1) against
+     * the default text color. Protects readability when an author picks a dark
+     * custom color. Set to false for environments that need exact color
+     * fidelity (e.g. video captioning or accessibility-audit fixtures).
+     */
+    "enforceReadableAuthorColors": true
   },
 
   /*
