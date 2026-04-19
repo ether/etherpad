@@ -236,7 +236,13 @@ function Ace2Inner(editorInfo, cssManagers) {
       cssManagers.parent.removeSelectorStyle(authorSelector);
     } else if (info.bgcolor) {
       let bgcolor = info.bgcolor;
-      if ((typeof info.fade) === 'number') {
+      // padOptions.fadeInactiveAuthorColors (default true) controls whether the author
+      // background fades toward white as the author goes inactive. Integrators can set
+      // it to false server-side when users pick light colors that become indistinguishable
+      // from the faded variants.
+      const fadeEnabled = window.clientVars.padOptions == null ||
+          window.clientVars.padOptions.fadeInactiveAuthorColors !== false;
+      if (fadeEnabled && (typeof info.fade) === 'number') {
         bgcolor = fadeColor(bgcolor, info.fade);
       }
       const textColor =
