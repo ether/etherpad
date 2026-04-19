@@ -28,10 +28,17 @@ test.describe('showMenuRight URL parameter', function () {
 
   // Helper: open the Share popup, flip it to read-only, read the r.* URL
   // back out of #linkinput. The readonly toggle is a checkbox
-  // (`#readonlyinput`) that rewrites #linkinput's value live.
+  // (`#readonlyinput`) that rewrites #linkinput's value live. The popup
+  // animates open, so the checkbox is briefly "not stable" — wait for
+  // the popup's show class before interacting, and use force:true so a
+  // trailing transform doesn't trip Playwright's stability check.
   const getReadonlyUrl = async (page: Page) => {
     await page.locator('.buttonicon-embed').click();
-    await page.locator('#readonlyinput').check();
+    await page.locator('#embed.popup-show').waitFor({state: 'visible'});
+    await page.locator('#readonlyinput').check({force: true});
+    await page.waitForFunction(
+        () => (document.querySelector('#linkinput') as HTMLInputElement | null)
+            ?.value.includes('/p/r.'));
     const url = await page.locator('#linkinput').inputValue();
     expect(url).toMatch(/\/p\/r\./);
     return url;
