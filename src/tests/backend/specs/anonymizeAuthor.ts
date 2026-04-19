@@ -71,4 +71,23 @@ describe(__filename, function () {
       clearedChatMessages: 0,
     });
   });
+
+  it('re-runs the sweep when a prior call errored before setting erased=true',
+      async function () {
+        const mapper = `mapper-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        const {authorID} = await authorManager.createAuthorIfNotExistsFor(mapper, 'Dan');
+
+        // Simulate a partial run: zero the display identity but leave
+        // erased=false, matching a crash between the two writes.
+        const partial = await DB.db.get(`globalAuthor:${authorID}`);
+        partial.name = null;
+        partial.colorId = 0;
+        await DB.db.set(`globalAuthor:${authorID}`, partial);
+
+        const res = await authorManager.anonymizeAuthor(authorID);
+        assert.equal(res.removedExternalMappings >= 1, true,
+            `retry must still clean mapper2author; got ${res.removedExternalMappings}`);
+        const record = await DB.db.get(`globalAuthor:${authorID}`);
+        assert.equal(record.erased, true);
+      });
 });
