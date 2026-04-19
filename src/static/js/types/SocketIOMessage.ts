@@ -73,8 +73,10 @@ export type ClientVarPayload = {
   chatHead: number,
   readonly: boolean,
   serverTimestamp: number,
-  initialOptions: MapArrayType<string>,
+  initialOptions: PadOption,
   userId: string,
+  canEditPadSettings?: boolean,
+  enablePadWideSettings?: boolean,
   mode: string,
   randomVersionString: string,
   skinName: string
@@ -184,6 +186,7 @@ export type ClientReadyMessage = {
   sessionID: string,
   token: string,
   userInfo: UserInfo,
+  padSettingsDefaults?: PadOption,
   reconnect?: boolean
   client_rev?: number
 }
@@ -249,7 +252,7 @@ export type PadOption = {
   "alwaysShowChat"?:   boolean,
   "chatAndUsers"?:     boolean,
   "lang"?:             null|string,
-  view? : MapArrayType<boolean>
+  view? : MapArrayType<boolean|string>
 }
 
 
@@ -322,4 +325,3 @@ export type SocketClientReadyMessage = {
   reconnect?: boolean
   client_rev?: number
 }
-

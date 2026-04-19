@@ -34,6 +34,7 @@ exports.chat = (() => {
   let chatMentions = 0;
   return {
     show() {
+      if (pad.settings.hideChat) return;
       $('#chaticon').removeClass('visible');
       $('#chatbox').addClass('visible');
       this.scrollDown(true);
@@ -49,7 +50,7 @@ exports.chat = (() => {
       }, 100);
     },
     // Make chat stick to right hand side of screen
-    stickToScreen(fromInitialCall) {
+    stickToScreen(fromInitialCall, persistPreference = true) {
       if ($('#options-stickychat').prop('checked')) {
         $('#options-stickychat').prop('checked', false);
       }
@@ -65,13 +66,13 @@ exports.chat = (() => {
         $('#chatbox').css('display', 'flex');
       }, 0);
 
-      padcookie.setPref('chatAlwaysVisible', isStuck);
+      if (persistPreference) padcookie.setPref('chatAlwaysVisible', isStuck);
       $('#options-stickychat').prop('checked', isStuck);
     },
-    chatAndUsers(fromInitialCall) {
+    chatAndUsers(fromInitialCall, persistPreference = true) {
       const toEnable = $('#options-chatandusers').is(':checked');
       if (toEnable || !userAndChat || fromInitialCall) {
-        this.stickToScreen(true);
+        this.stickToScreen(true, persistPreference);
         $('#options-stickychat').prop('checked', true);
         $('#options-chatandusers').prop('checked', true);
         $('#options-stickychat').prop('disabled', true);
@@ -80,7 +81,7 @@ exports.chat = (() => {
         $('#options-stickychat').prop('disabled', false);
         userAndChat = false;
       }
-      padcookie.setPref('chatAndUsers', userAndChat);
+      if (persistPreference) padcookie.setPref('chatAndUsers', userAndChat);
       $('#users, .sticky-container')
           .toggleClass('chatAndUsers popup-show stickyUsers', userAndChat);
       $('#chatbox').toggleClass('chatAndUsersChat', userAndChat);
@@ -204,7 +205,7 @@ exports.chat = (() => {
         count++;
         $('#chatcounter').text(count);
 
-        if (!chatOpen && ctx.duration > 0) {
+        if (!pad.settings.hideChat && !chatOpen && ctx.duration > 0) {
           const text = $('<p>')
               .append($('<span>').addClass('author-name').text(ctx.authorName))
               // ctx.text was HTML-escaped before calling the hook. Hook functions are trusted

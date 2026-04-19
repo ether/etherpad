@@ -643,6 +643,12 @@
     **/
     "enableDarkMode": "${ENABLE_DARK_MODE:true}",
 
+    /**
+    * Enable creator-owned Pad-wide Settings and new-pad default seeding from My View.
+    * Disabled by default to preserve the legacy single-settings behavior.
+    **/
+    "enablePadWideSettings": "${ENABLE_PAD_WIDE_SETTINGS:false}",
+
   /*
    * From Etherpad 1.8.5 onwards, when Etherpad is in production mode commits from individual users are rate limited
    *

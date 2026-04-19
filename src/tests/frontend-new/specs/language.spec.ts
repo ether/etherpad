@@ -21,7 +21,7 @@ test.describe('Language select and change', function () {
     const languageDropDown  = page.locator('.nice-select').nth(1)
 
     await languageDropDown.click()
-    await page.locator('.nice-select').locator('[data-value=de]').click()
+    await page.locator('.nice-select.open').locator('[data-value=de]').click()
     await expect(languageDropDown.locator('.current')).toHaveText('Deutsch')
 
     // select german
@@ -34,7 +34,7 @@ test.describe('Language select and change', function () {
 
     // click the language button
     await page.locator('.nice-select').nth(1).locator('.current').click()
-    await page.locator('.nice-select').locator('[data-value=de]').click()
+    await page.locator('.nice-select.open').locator('[data-value=de]').click()
 
     // select german
     await page.locator('.buttonicon-bold').evaluate((el) => el.parentElement!.title === 'Fett (Strg-B)');
@@ -42,7 +42,7 @@ test.describe('Language select and change', function () {
 
     // change to english
     await page.locator('.nice-select').nth(1).locator('.current').click()
-    await page.locator('.nice-select').locator('[data-value=en]').click()
+    await page.locator('.nice-select.open').locator('[data-value=en]').click()
 
     // check if the language is now English
     await page.locator('.buttonicon-bold').evaluate((el) => el.parentElement!.title !== 'Fett (Strg-B)');
@@ -54,7 +54,7 @@ test.describe('Language select and change', function () {
 
     // click the language button
     await page.locator('.nice-select').nth(1).locator('.current').click()
-    await page.locator('.nice-select').locator('[data-value=de]').click()
+    await page.locator('.nice-select.open').locator('[data-value=de]').click()
 
     // select german
     await page.locator('.buttonicon-bold').evaluate((el) => el.parentElement!.title === 'Fett (Strg-B)');
@@ -63,7 +63,7 @@ test.describe('Language select and change', function () {
     await page.locator('.nice-select').nth(1).locator('.current').click()
     // select arabic
     // $languageoption.attr('selected','selected'); // Breaks the test..
-    await page.locator('.nice-select').locator('[data-value=ar]').click()
+    await page.locator('.nice-select.open').locator('[data-value=ar]').click()
 
     await page.waitForSelector('html[dir="rtl"]')
   });
