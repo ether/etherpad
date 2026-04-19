@@ -117,9 +117,19 @@ jobs:
           id etherpad
           systemctl cat etherpad-lite.service
           sudo systemctl start etherpad-lite
+          ok=
           for i in $(seq 1 30); do
-            curl -fsS http://127.0.0.1:9001/health && break || sleep 2
+            if curl -fsS http://127.0.0.1:9001/health; then
+              ok=1
+              break
+            fi
+            sleep 2
           done
+          if [ -z "${ok}" ]; then
+            # Attach logs so the failing run is diagnosable.
+            sudo journalctl -u etherpad-lite --no-pager -n 200 || true
+            exit 1
+          fi
           sudo systemctl stop etherpad-lite
           sudo dpkg --purge etherpad-lite
           ! id etherpad 2>/dev/null

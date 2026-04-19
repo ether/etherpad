@@ -59,12 +59,17 @@ contents:
     file_info:
       mode: 0644
 
-  # Default environment file (conffile: preserved on upgrade)
+  # Default environment file (conffile: preserved on upgrade).
+  # Mode 0640 + group=etherpad so passwords/secrets admins drop in here
+  # are only readable by root and the etherpad service user — /etc/default
+  # is world-readable by default (0644), which would leak DB creds etc.
   - src: ./packaging/systemd/etherpad-lite.default
     dst: /etc/default/etherpad-lite
     type: config|noreplace
     file_info:
-      mode: 0644
+      mode: 0640
+      owner: root
+      group: etherpad
 
   - src: ./packaging/bin/etherpad-lite
     dst: /usr/bin/etherpad-lite
