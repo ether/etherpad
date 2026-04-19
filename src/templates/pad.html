@@ -76,6 +76,16 @@
 
   <% e.begin_block("afterEditbar"); %><% e.end_block(); %>
 
+  <div id="privacy-banner" class="privacy-banner" hidden>
+    <div class="privacy-banner-content">
+      <strong class="privacy-banner-title"></strong>
+      <div class="privacy-banner-body"></div>
+      <div class="privacy-banner-link"></div>
+    </div>
+    <button id="privacy-banner-close" type="button"
+            class="privacy-banner-close" aria-label="Dismiss" hidden>×</button>
+  </div>
+
   <div id="editorcontainerbox" class="flex-layout">
 
       <% e.begin_block("editorContainerBox"); %>
