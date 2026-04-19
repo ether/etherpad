@@ -147,4 +147,39 @@ describe(__filename, function () {
       }
     });
   });
+
+  // Regression test for https://github.com/ether/etherpad/issues/7213.
+  // Pre-fix: randomVersionString was `randomString(4)`, regenerated on every
+  // boot — the padbootstrap-<hash>.min.js filename therefore differed across
+  // pods of the same build, producing 404s on any cross-pod request in a
+  // horizontally-scaled deployment. Post-fix: the token is a deterministic
+  // hash of version + gitVersion (or an explicit
+  // ETHERPAD_VERSION_STRING env var).
+  describe('randomVersionString determinism (issue #7213)', function () {
+    it('is a stable 8-hex-char sha256 prefix by default', function () {
+      const settings = require('../../../node/utils/Settings');
+      assert.match(settings.randomVersionString, /^[0-9a-f]{8}$/,
+          `expected 8-char hex, got ${settings.randomVersionString}`);
+    });
+
+    it('honours ETHERPAD_VERSION_STRING as an explicit override', function () {
+      const {exportedForTestingOnly} = require('../../../node/utils/Settings');
+      const original = process.env.ETHERPAD_VERSION_STRING;
+      process.env.ETHERPAD_VERSION_STRING = 'integrator-1';
+      try {
+        const parsed =
+            exportedForTestingOnly.parseSettings(path.join(__dirname, 'settings.json'), true);
+        // parseSettings returns the parsed JSON, not the mutated module-scope
+        // settings object. The override lives on the singleton, which
+        // parseSettings updates as a side effect — require the module again
+        // via cjs so we pick up the current state.
+        const cjs = require('../../../node/utils/Settings');
+        assert.strictEqual(cjs.randomVersionString, 'integrator-1',
+            'ETHERPAD_VERSION_STRING should be used verbatim');
+      } finally {
+        if (original == null) delete process.env.ETHERPAD_VERSION_STRING;
+        else process.env.ETHERPAD_VERSION_STRING = original;
+      }
+    });
+  });
 });
