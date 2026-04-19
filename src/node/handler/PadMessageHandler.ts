@@ -1041,7 +1041,6 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
       savedRevisions: pad.getSavedRevisions(),
       collab_client_vars: {
         initialAttributedText: atext,
-        clientIp: '127.0.0.1',
         padId: sessionInfo.auth.padID,
         historicalAuthorData,
         apool,
@@ -1049,7 +1048,6 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
         time: currentTime,
       },
       colorPalette: authorManager.getColorPalette(),
-      clientIp: '127.0.0.1',
       userColor: authorColorId,
       padId: sessionInfo.auth.padID,
       padOptions: settings.padOptions,

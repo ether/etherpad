@@ -33,7 +33,6 @@ export type HistoricalAuthorData = MapArrayType<{
 
 export type ServerVar = {
   rev: number
-  clientIp: string
   padId: string
   historicalAuthorData?: HistoricalAuthorData,
   initialAttributedText: {
@@ -64,7 +63,6 @@ export type ClientVarPayload = {
   hideChat?: boolean,
   padOptions: PadOption,
   padId: string,
-  clientIp: string,
   colorPalette: string[],
   accountPrivs: {
     maxRevisions: number,
