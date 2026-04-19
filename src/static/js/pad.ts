@@ -655,6 +655,14 @@ const pad = {
       pad.handleOptionsChange(opts);
     }
   },
+  showUnacceptedCommitWarning: () => {
+    $.gritter.add({
+      title: html10n.get('pad.gritter.unacceptedCommit.title'),
+      text: html10n.get('pad.gritter.unacceptedCommit.text'),
+      sticky: true,
+      class_name: 'disconnected unsaved-warning',
+    });
+  },
   handleChannelStateChange: (newState, message) => {
     const oldFullyConnected = !!padconnectionstatus.isFullyConnected();
     const wasConnecting = (padconnectionstatus.getStatus().what === 'connecting');
@@ -692,6 +700,7 @@ const pad = {
       padimpexp.disable();
 
       padconnectionstatus.disconnected(message);
+      if (pad.collabClient.hasUnacceptedCommit()) pad.showUnacceptedCommitWarning();
     }
     const newFullyConnected = !!padconnectionstatus.isFullyConnected();
     if (newFullyConnected !== oldFullyConnected) {

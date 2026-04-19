@@ -151,6 +151,8 @@
   "pad.modals.disconnected": "You have been disconnected.",
   "pad.modals.disconnected.explanation": "The connection to the server was lost",
   "pad.modals.disconnected.cause": "The server may be unavailable. Please notify the service administrator if this continues to happen.",
+  "pad.gritter.unacceptedCommit.title": "Unsaved edit",
+  "pad.gritter.unacceptedCommit.text": "Your recent edit is still not saved. Reconnect and try again.",
 
   "pad.share": "Share this pad",
   "pad.share.readonly": "Read only",
