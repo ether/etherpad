@@ -36,12 +36,18 @@ jobs:
         id: v
         env:
           TAG: ${{ github.event.release.tag_name }}
-          INPUT: ${{ inputs.version }}
+          # `inputs.version` only exists on workflow_dispatch; reading it on
+          # release events can yield an empty string or a context-evaluation
+          # error depending on GitHub Actions behavior. Pull the dispatch
+          # payload directly via github.event.inputs so release runs stay
+          # clean.
+          INPUT: ${{ github.event.inputs.version }}
+          EVENT: ${{ github.event_name }}
         run: |
           VERSION="${TAG:-$INPUT}"
           VERSION="${VERSION#v}"
           if [ -z "${VERSION}" ]; then
-            echo "Could not determine version." >&2
+            echo "Could not determine version (event=${EVENT})." >&2
             exit 1
           fi
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
