@@ -1,9 +1,11 @@
 import {expect, test} from "@playwright/test";
 import {appendQueryParams, goToNewPad} from "../helper/padHelper";
 
-test.beforeEach(async ({page, browser}) => {
-  const context = await browser.newContext();
-  await context.clearCookies();
+test.beforeEach(async ({page}) => {
+  // clearCookies on the page's own context — `browser.newContext()`
+  // creates a separate context that the `page` fixture doesn't use,
+  // so clearing cookies on it is a no-op (Qodo review feedback).
+  await page.context().clearCookies();
   await goToNewPad(page);
 });
 
