@@ -27,12 +27,12 @@
 // assigns to the global `$` and augments it with plugins.
 require('./vendors/jquery');
 
-import {randomString, Cookies} from "./pad_utils";
+import {Cookies} from "./pad_utils";
 const hooks = require('./pluginfw/hooks');
 import padutils from './pad_utils'
 const socketio = require('./socketio');
 import html10n from '../js/vendors/html10n'
-let token, padId, exportLinks, socket, changesetLoader, BroadcastSlider;
+let padId, exportLinks, socket, changesetLoader, BroadcastSlider;
 let cp = '';
 const playbackSpeedCookie = 'timesliderPlaybackSpeed';
 
@@ -49,13 +49,10 @@ const init = () => {
     // set the title
     document.title = `${padId.replace(/_+/g, ' ')} | ${document.title}`;
 
-    // ensure we have a token
+    // The author token is an HttpOnly cookie set by the server on
+    // /p/:pad/timeslider (ether/etherpad#6701 PR3). The browser never reads
+    // or writes it; the server picks it up from the socket.io handshake.
     cp = (window as any).clientVars?.cookiePrefix || '';
-    token = Cookies.get(`${cp}token`) || Cookies.get('token');
-    if (token == null) {
-      token = `t.${randomString()}`;
-      Cookies.set(`${cp}token`, token, {expires: 60});
-    }
 
     socket = socketio.connect(exports.baseURL, '/', {query: {padId}});
 
@@ -103,7 +100,6 @@ const sendSocketMsg = (type, data) => {
     type,
     data,
     padId,
-    token,
     sessionID: Cookies.get(`${cp}sessionID`) || Cookies.get('sessionID'),
   });
 };
