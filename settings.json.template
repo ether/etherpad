@@ -302,7 +302,13 @@
     "rtl":              false,
     "alwaysShowChat":   false,
     "chatAndUsers":     false,
-    "lang":             null
+    "lang":             null,
+    /*
+     * When true (default), each author's caret/background color fades toward white
+     * as the author goes inactive. Set to false if users pick light colors and the
+     * faded variants become visually indistinguishable.
+     */
+    "fadeInactiveAuthorColors": true
   },
 
   /*

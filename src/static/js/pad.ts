@@ -72,6 +72,13 @@ const getParameters = [
     },
   },
   {
+    name: 'fadeInactiveAuthorColors',
+    checkVal: 'false',
+    callback: (val) => {
+      if (clientVars.padOptions) clientVars.padOptions.fadeInactiveAuthorColors = false;
+    },
+  },
+  {
     name: 'showControls',
     checkVal: 'true',
     callback: (val) => {
