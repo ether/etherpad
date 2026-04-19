@@ -53,6 +53,7 @@ import {randomString} from "./pad_utils";
 const socketio = require('./socketio');
 
 const hooks = require('./pluginfw/hooks');
+import {showPrivacyBannerIfEnabled} from './privacy_banner';
 
 // This array represents all GET-parameters which can be used to change a setting.
 //   name:     the parameter-name, eg  `?noColors=true`  =>  `noColors`
@@ -638,6 +639,8 @@ const pad = {
         $('#theme-toggle-row').prop('hidden', false);
         $('#options-darkmode').prop('checked', skinVariants.isDarkMode());
       }
+
+      showPrivacyBannerIfEnabled((clientVars as any).privacyBanner);
 
       hooks.aCallAll('postAceInit', {ace: padeditor.ace, clientVars, pad});
     };
