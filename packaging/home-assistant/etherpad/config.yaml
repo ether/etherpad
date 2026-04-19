@@ -1,0 +1,63 @@
+name: Etherpad
+version: "2.6.1"
+slug: etherpad
+description: Realtime collaborative document editor
+url: https://etherpad.org
+# Arch list matches .github/workflows/docker.yml's upstream matrix
+# (linux/amd64, linux/arm64). armv7/armhf would require upstream Docker
+# CI to build those first.
+arch:
+  - aarch64
+  - amd64
+startup: application
+boot: auto
+init: false
+hassio_api: false
+homeassistant_api: false
+host_network: false
+ingress: true
+ingress_port: 9001
+ingress_stream: true
+panel_icon: mdi:file-document-edit-outline
+panel_title: Etherpad
+ports:
+  "9001/tcp": 9001
+ports_description:
+  "9001/tcp": Etherpad web UI (direct access, bypasses ingress)
+map:
+  - addon_config:rw
+  - share:rw
+options:
+  title: Etherpad
+  require_authentication: false
+  admin_password: ""
+  user_password: ""
+  default_pad_text: |
+    Welcome to Etherpad!
+
+    This pad text is synchronized as you type, so that everyone viewing this
+    page sees the same text. This allows you to collaborate seamlessly on
+    documents!
+  db_type: dirty
+  db_host: ""
+  db_port: 0
+  db_name: ""
+  db_user: ""
+  db_password: ""
+  trust_proxy: true
+  log_level: INFO
+schema:
+  title: str
+  require_authentication: bool
+  admin_password: password
+  user_password: password
+  default_pad_text: str
+  db_type: list(dirty|mysql|postgres|sqlite)
+  db_host: str?
+  db_port: port?
+  db_name: str?
+  db_user: str?
+  db_password: password?
+  trust_proxy: bool
+  log_level: list(DEBUG|INFO|WARN|ERROR)
+image: ghcr.io/ether/home-assistant-addon-etherpad-{arch}
