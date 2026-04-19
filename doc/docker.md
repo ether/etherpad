@@ -116,7 +116,6 @@ If your database needs additional settings, you will have to use a personalized 
 | `PAD_OPTIONS_CHAT_AND_USERS`     |             | `false` |
 | `PAD_OPTIONS_LANG`               |             | `null`  |
 | `PAD_OPTIONS_FADE_INACTIVE_AUTHOR_COLORS` | Fade each author's caret/background toward white as they go inactive. Set to `false` on busy pads (every faded author counts as a second on-screen color, so 30 contributors visually become 60), when users pick light colors that fade into the background, or whenever inactivity tracking is undesirable. | `true`  |
-| `PAD_OPTIONS_ENFORCE_READABLE_AUTHOR_COLORS` | Clamp author background colors on render so they always meet WCAG AA 4.5:1 contrast. Set to `false` to let authors' raw color picks through unchanged. | `true` |
 
 
 ### Shortcuts

@@ -112,64 +112,39 @@ colorutils.complementary = (c) => {
   ];
 };
 
-colorutils.textColorFromBackgroundColor = (bgcolor, skinName) => {
-  const white = skinName === 'colibris' ? 'var(--super-light-color)' : '#fff';
-  const black = skinName === 'colibris' ? 'var(--super-dark-color)' : '#222';
-
-  return colorutils.luminosity(colorutils.css2triple(bgcolor)) < 0.5 ? white : black;
-};
-
-// --- WCAG 2.1 contrast helpers (issue #7377) ---------------------------------
-// Authors can pick any background color via the color picker; previously we
-// chose black/white text purely on the 0.5-luminosity threshold, which left a
-// band of mid-tone author colors (dark reds, muted blues) where neither text
-// color satisfied WCAG 2.1 AA (4.5:1 contrast) and the pad was genuinely hard
-// to read. These helpers let the editor clamp an author's effective background
-// on the rendering side (without mutating their stored color choice) so every
-// viewer gets a readable result regardless of what the author picked.
-
-// WCAG 2.1 relative luminance
-//   https://www.w3.org/TR/WCAG21/#dfn-relative-luminance
-// Takes an sRGB triple in [0, 1] and returns the linear luminance in [0, 1].
+// --- WCAG 2.1 helpers (issue #7377) ------------------------------------------
+// Pre-fix text colour selection used `luminosity(bg) < 0.5` as the cutoff,
+// which produced WCAG-AA-failing combinations for mid-saturation author
+// colours (e.g. pure red #ff0000 paired with white text gives a 4.0 contrast
+// ratio — below the 4.5 threshold and genuinely hard to read). The helpers
+// below implement WCAG 2.1 relative luminance and contrast ratio so text
+// colour selection can pick the higher-contrast option and always clear AA.
+//
+// Reference: https://www.w3.org/TR/WCAG21/#dfn-relative-luminance
 colorutils.relativeLuminance = (c) => {
   const toLinear = (v) => v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
   return 0.2126 * toLinear(c[0]) + 0.7152 * toLinear(c[1]) + 0.0722 * toLinear(c[2]);
 };
 
-// WCAG 2.1 contrast ratio between two sRGB triples, in [1, 21].
-// 4.5 = AA for body text; 7.0 = AAA.
+// WCAG 2.1 contrast ratio between two sRGB triples, in [1, 21]. 4.5 = AA
+// for body text; 7.0 = AAA.
 colorutils.contrastRatio = (c1, c2) => {
   const l1 = colorutils.relativeLuminance(c1);
   const l2 = colorutils.relativeLuminance(c2);
   return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
 };
 
-// Lighten the given background until black text on top of it meets the target
-// WCAG contrast ratio (default 4.5:1 — AA for body text). Returns a css hex
-// string. If the original color already satisfies the threshold against
-// *either* black or white text it's returned unchanged, so we don't repaint
-// users whose choices were already fine.
-//
-// The blend toward white preserves hue, so a dark red becomes a more readable
-// pink-red rather than an unrelated color. Viewers always see a readable
-// result; the author's stored color is not modified, so disabling
-// `enforceReadableAuthorColors` restores the original at any time.
-colorutils.ensureReadableBackground = (cssColor, minContrast) => {
-  if (minContrast == null) minContrast = 4.5;
-  const triple = colorutils.css2triple(cssColor);
-  const black = [0, 0, 0];
-  const white = [1, 1, 1];
-  if (colorutils.contrastRatio(triple, black) >= minContrast) return cssColor;
-  if (colorutils.contrastRatio(triple, white) >= minContrast) return cssColor;
-  // Iteratively blend toward white; 20 steps (5% each) clear every sRGB
-  // starting point without producing noticeably different colors.
-  for (let i = 1; i <= 20; i++) {
-    const blended = colorutils.blend(triple, white, i * 0.05);
-    if (colorutils.contrastRatio(blended, black) >= minContrast) {
-      return colorutils.triple2css(blended);
-    }
-  }
-  return '#ffffff';
+// WCAG-aware text-colour selection (issue #7377). Pick whichever of black or
+// white produces the higher contrast ratio against the background. For every
+// sRGB colour at least one of the two choices clears AA (4.5:1) — the dead
+// zone at the 0.5-luminosity cutoff the old implementation used is gone.
+colorutils.textColorFromBackgroundColor = (bgcolor, skinName) => {
+  const white = skinName === 'colibris' ? 'var(--super-light-color)' : '#fff';
+  const black = skinName === 'colibris' ? 'var(--super-dark-color)' : '#222';
+  const triple = colorutils.css2triple(bgcolor);
+  const ratioWithBlack = colorutils.contrastRatio(triple, [0, 0, 0]);
+  const ratioWithWhite = colorutils.contrastRatio(triple, [1, 1, 1]);
+  return ratioWithBlack >= ratioWithWhite ? black : white;
 };
 
 exports.colorutils = colorutils;
