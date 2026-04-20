@@ -371,6 +371,12 @@
   "docxExport": "${DOCX_EXPORT:true}",
 
   /*
+   * Convert DOCX exports in-process via html-to-docx instead of shelling
+   * out to LibreOffice. Auto-falls back to the LibreOffice path on error.
+   */
+  "nativeDocxExport": "${NATIVE_DOCX_EXPORT:false}",
+
+  /*
    * txt, doc, docx, rtf, odt, html & htm
    */
   "allowUnknownFileEnds": "${ALLOW_UNKNOWN_FILE_ENDS:true}",

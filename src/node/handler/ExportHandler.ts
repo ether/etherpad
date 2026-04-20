@@ -87,6 +87,29 @@ exports.doExport = async (req: any, res: any, padId: string, readOnlyId: string,
       return;
     }
 
+    // Native DOCX path (issue #7538) — when `nativeDocxExport` is enabled,
+    // convert the HTML export into a Word document in-process with
+    // `html-to-docx` instead of shelling out to LibreOffice. Saves admins
+    // from having to install `soffice` and avoids per-export subprocess
+    // latency. On failure we fall through to the LibreOffice path below
+    // so the change is strictly additive (opt-in via setting, auto-fallback
+    // if the converter throws).
+    if (type === 'docx' && settings.nativeDocxExport) {
+      try {
+        const htmlToDocx = require('html-to-docx');
+        const docxBuffer = await htmlToDocx(html);
+        html = null;
+        res.contentType(
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+        res.send(docxBuffer);
+        return;
+      } catch (err) {
+        console.warn(
+            `native-docx export failed for pad "${padId}", falling back to ` +
+            `LibreOffice: ${(err as Error).message || err}`);
+      }
+    }
+
     // else write the html export to a file
     const randNum = Math.floor(Math.random() * 0xFFFFFFFF);
     const srcFile = `${tempDirectory}/etherpad_export_${randNum}.html`;
