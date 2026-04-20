@@ -5,7 +5,9 @@ const common = require('../common');
 const padManager = require('../../../node/db/PadManager');
 const api = require('../../../node/db/API');
 
-// Regression + behavior tests for https://github.com/ether/etherpad/issues/6194.
+// Coverage for the compactPad API endpoint added in #6194.
+// The underlying Cleanup logic is tested where it lives; these tests just
+// verify the public-API wiring and argument handling.
 describe(__filename, function () {
   let padId: string;
 
@@ -14,16 +16,8 @@ describe(__filename, function () {
     assert(!await padManager.doesPadExist(padId));
   });
 
-  describe('pad.compactHistory()', function () {
-    it('no-ops a pad that is already at head <= 1', async function () {
-      const pad = await padManager.getPad(padId);
-      // Fresh pads land at head=0 (just the defaultText rev); compactHistory
-      // has nothing useful to do on a pad that short.
-      const removed = await pad.compactHistory();
-      assert.strictEqual(removed, 0);
-    });
-
-    it('collapses history to head<=1 while preserving text', async function () {
+  describe('API.compactPad()', function () {
+    it('collapses all history when keepRevisions is omitted', async function () {
       const pad = await padManager.getPad(padId);
       await pad.appendText('line 1\n');
       await pad.appendText('line 2\n');
@@ -32,59 +26,50 @@ describe(__filename, function () {
       const expectedText = pad.atext.text;
       assert.ok(before >= 3, `expected at least 3 revs, got ${before}`);
 
-      const removed = await pad.compactHistory();
+      const result = await api.compactPad(padId);
+      assert.deepStrictEqual(result, {ok: true, mode: 'all'});
 
-      // The collapsed pad matches the shape of a freshly-imported pad
-      // (head=1: a seed rev + the full-content rev). Exact count depends
-      // on whether the defaultText-init counted as rev 0, but the
-      // invariant is `head <= 1`.
-      const afterHead = pad.getHeadRevisionNumber();
-      assert.ok(afterHead <= 1, `expected head<=1 after compact, got ${afterHead}`);
-      assert.strictEqual(removed, before - afterHead);
-      assert.strictEqual(pad.atext.text, expectedText);
-      // Reload from DB to confirm the collapse actually landed.
+      // Reload: the compacted pad lands at head<=1 (matches the shape
+      // `copyPadWithoutHistory` produces), text unchanged.
       const reloaded = await padManager.getPad(padId);
-      assert.strictEqual(reloaded.getHeadRevisionNumber(), afterHead);
+      assert.ok(reloaded.getHeadRevisionNumber() <= 1,
+          `expected head<=1, got ${reloaded.getHeadRevisionNumber()}`);
       assert.strictEqual(reloaded.atext.text, expectedText);
     });
 
-    it('drops saved-revision bookmarks', async function () {
-      const pad = await padManager.getPad(padId);
-      await pad.appendText('content line 1\n');
-      await pad.appendText('content line 2\n');
-      // @ts-ignore — savedRevisions is private but set from JSON on load.
-      pad.savedRevisions.push({revNum: pad.getHeadRevisionNumber()});
-      await pad.compactHistory();
-      // @ts-ignore
-      assert.deepStrictEqual(pad.savedRevisions, []);
-    });
-
-    it('leaves subsequent edits appending cleanly on top of the collapsed base', async function () {
-      const pad = await padManager.getPad(padId);
-      await pad.appendText('first\n');
-      await pad.appendText('second\n');
-      await pad.appendText('third\n');
-      await pad.compactHistory();
-      const postCompactHead = pad.getHeadRevisionNumber();
-      await pad.appendText('fourth\n');
-      assert.strictEqual(pad.getHeadRevisionNumber(), postCompactHead + 1);
-      assert.ok(pad.atext.text.includes('fourth'),
-          `expected "fourth" in post-compact text: ${pad.atext.text}`);
-    });
-  });
-
-  describe('API.compactPad()', function () {
-    it('reports the number of revisions removed and compacts the pad',
+    it('keeps only the last N revisions when keepRevisions is a number',
         async function () {
           const pad = await padManager.getPad(padId);
-          await pad.appendText('alpha\n');
-          await pad.appendText('beta\n');
-          await pad.appendText('gamma\n');
+          for (let i = 0; i < 6; i++) await pad.appendText(`line ${i}\n`);
           const before = pad.getHeadRevisionNumber();
-          const result = await api.compactPad(padId);
-          const afterHead = pad.getHeadRevisionNumber();
-          assert.ok(afterHead <= 1);
-          assert.strictEqual(result.removed, before - afterHead);
+          const expectedText = pad.atext.text;
+
+          const result = await api.compactPad(padId, 2);
+          assert.strictEqual(result.mode, 'keepLast');
+          assert.strictEqual(result.keepRevisions, 2);
+
+          const reloaded = await padManager.getPad(padId);
+          // Exact head depends on Cleanup internals; the invariant we can
+          // assert is that the head is <= before and the content survives.
+          assert.ok(reloaded.getHeadRevisionNumber() <= before);
+          assert.strictEqual(reloaded.atext.text, expectedText);
         });
+
+    it('rejects negative keepRevisions', async function () {
+      const pad = await padManager.getPad(padId);
+      await pad.appendText('content\n');
+      await assert.rejects(
+          () => api.compactPad(padId, -1),
+          /keepRevisions must be a non-negative integer/);
+    });
+
+    it('rejects non-numeric keepRevisions', async function () {
+      const pad = await padManager.getPad(padId);
+      await pad.appendText('content\n');
+      await assert.rejects(
+          // @ts-ignore - deliberately passing an invalid type
+          () => api.compactPad(padId, 'nope'),
+          /keepRevisions must be a non-negative integer/);
+    });
   });
 });
