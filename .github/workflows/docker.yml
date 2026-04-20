@@ -77,8 +77,130 @@ jobs:
           (cd src && gnpm run test-container)
           git clean -dxf .
 
+  build-test-db-drivers:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    services:
+      mysql:
+        image: mysql:8
+        env:
+          MYSQL_ROOT_PASSWORD: password
+          MYSQL_DATABASE: etherpad
+          MYSQL_USER: etherpad
+          MYSQL_PASSWORD: password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -ppassword"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: etherpad
+          POSTGRES_USER: etherpad
+          POSTGRES_PASSWORD: password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U etherpad -d etherpad"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    steps:
+      -
+        name: Check out
+        uses: actions/checkout@v6
+        with:
+          path: etherpad
+      -
+        name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+      -
+        name: Build production image
+        uses: docker/build-push-action@v7
+        with:
+          context: ./etherpad
+          target: production
+          load: true
+          tags: ${{ env.TEST_TAG }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      -
+        name: Driver presence test (all 10 ueberdb2 drivers must resolve)
+        run: |
+          docker run --rm "$TEST_TAG" node -e "
+            const mods = [
+              '@elastic/elasticsearch','cassandra-driver','mongodb','mssql',
+              'mysql2','nano','pg','redis','rethinkdb','surrealdb'
+            ];
+            let fail = false;
+            for (const m of mods) {
+              try { require(m); console.log('ok', m); }
+              catch (e) { console.error('MISSING', m, e.message); fail = true; }
+            }
+            if (fail) process.exit(1);
+          "
+      -
+        name: MySQL smoke — start Etherpad against mysql service
+        run: |
+          docker run --rm -d \
+            --network host \
+            -e NODE_ENV=production \
+            -e ADMIN_PASSWORD=admin \
+            -e DB_TYPE=mysql \
+            -e DB_HOST=127.0.0.1 \
+            -e DB_PORT=3306 \
+            -e DB_NAME=etherpad \
+            -e DB_USER=etherpad \
+            -e DB_PASS=password \
+            -e DB_CHARSET=utf8mb4 \
+            -e DEFAULT_PAD_TEXT="Test " \
+            --name et-mysql "$TEST_TAG"
+          for i in $(seq 1 60); do
+            if curl -sf http://127.0.0.1:9001/ >/dev/null; then
+              echo "mysql smoke: Etherpad is serving /"
+              docker rm -f et-mysql
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "mysql smoke: timed out waiting for Etherpad"
+          docker logs et-mysql || true
+          docker rm -f et-mysql || true
+          exit 1
+      -
+        name: Postgres smoke — start Etherpad against postgres service
+        run: |
+          docker run --rm -d \
+            --network host \
+            -e NODE_ENV=production \
+            -e ADMIN_PASSWORD=admin \
+            -e DB_TYPE=postgres \
+            -e DB_HOST=127.0.0.1 \
+            -e DB_PORT=5432 \
+            -e DB_NAME=etherpad \
+            -e DB_USER=etherpad \
+            -e DB_PASS=password \
+            -e DEFAULT_PAD_TEXT="Test " \
+            --name et-postgres "$TEST_TAG"
+          for i in $(seq 1 60); do
+            if curl -sf http://127.0.0.1:9001/ >/dev/null; then
+              echo "postgres smoke: Etherpad is serving /"
+              docker rm -f et-postgres
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "postgres smoke: timed out waiting for Etherpad"
+          docker logs et-postgres || true
+          docker rm -f et-postgres || true
+          exit 1
+
   publish:
-    needs: build-test
+    needs: [build-test, build-test-db-drivers]
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:
