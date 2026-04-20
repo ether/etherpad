@@ -34,6 +34,18 @@ describe(__filename, function () {
   // `nativeDocxExport: true` should still produce a working .docx.
   describe('native DOCX export (#7538)', function () {
     before(function () {
+      // The upgrade-from-latest-release CI job installs deps from the
+      // PREVIOUS release's package.json (before this PR adds html-to-docx)
+      // and then git-checkouts this branch's code without re-running
+      // `pnpm install`. Under that workflow the module isn't resolvable.
+      // Skip the block in that one case; regular backend tests (which
+      // install against this branch's lockfile) still exercise it.
+      try {
+        require.resolve('html-to-docx');
+      } catch {
+        this.skip();
+        return;
+      }
       settings.soffice = 'false';
       settings.nativeDocxExport = true;
     });
