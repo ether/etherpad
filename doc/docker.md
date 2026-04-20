@@ -1,15 +1,21 @@
 # Docker
 
-The official Docker image is available on https://hub.docker.com/r/etherpad/etherpad.
+The official Docker image is published to two registries with identical tags:
 
-## Downloading from Docker Hub
-If you are ok downloading a [prebuilt image from Docker Hub](https://hub.docker.com/r/etherpad/etherpad), these are the commands:
+- Docker Hub (canonical): https://hub.docker.com/r/etherpad/etherpad
+- GitHub Container Registry (mirror): https://github.com/ether/etherpad/pkgs/container/etherpad
+
+The GHCR mirror is useful if you are hitting Docker Hub anonymous pull rate limits (for example on Kubernetes clusters).
+
+## Downloading a prebuilt image
 ```bash
-# gets the latest published version
+# from Docker Hub
 docker pull etherpad/etherpad
-
-# gets a specific version
 docker pull etherpad/etherpad:2.6.1
+
+# from GHCR (same image, same tags)
+docker pull ghcr.io/ether/etherpad
+docker pull ghcr.io/ether/etherpad:2.6.1
 ```
 
 ## Build a personalized container
