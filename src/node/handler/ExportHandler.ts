@@ -67,7 +67,10 @@ exports.doExport = async (req: any, res: any, padId: string, readOnlyId: string,
   // if this is a plain text export, we can do this directly
   // We have to over engineer this because tabs are stored as attributes and not plain text
   if (type === 'etherpad') {
-    const pad = await exportEtherpad.getPadRaw(padId, readOnlyId);
+    // Honor the :rev URL segment on `.etherpad` exports the same way the
+    // other formats already do — revNum limits the serialized pad to revs
+    // 0..rev (issue #5071).
+    const pad = await exportEtherpad.getPadRaw(padId, readOnlyId, req.params.rev);
     res.send(pad);
   } else if (type === 'txt') {
     const txt = await exporttxt.getPadTXTDocument(padId, req.params.rev);

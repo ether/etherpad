@@ -64,4 +64,52 @@ describe(__filename, function () {
       assert(!(`custom:${padId}x:foo` in data));
     });
   });
+
+  // Regression test for https://github.com/ether/etherpad/issues/5071.
+  // `/p/:pad/:rev/export/etherpad` and getPadRaw() historically ignored the
+  // rev parameter and always exported the full history, surprising users
+  // who wanted to back up or inspect an earlier snapshot.
+  describe('revNum bounding (issue #5071)', function () {
+    const addRevs = async (pad: any, n: number) => {
+      // Each call to .appendRevision bumps head by one, producing a
+      // distinct revision we can count in the exported payload.
+      for (let i = 0; i < n; i++) {
+        await pad.appendText(`line ${i}\n`);
+      }
+    };
+
+    it('defaults to full history when revNum is omitted', async function () {
+      const pad = await padManager.getPad(padId);
+      await addRevs(pad, 3);
+      const data = await exportEtherpad.getPadRaw(padId, null);
+      // revs 0 (pad-create) through pad.head inclusive.
+      const revKeys =
+          Object.keys(data).filter((k) => k.startsWith(`pad:${padId}:revs:`));
+      assert.equal(revKeys.length, pad.head + 1);
+      assert.equal(data[`pad:${padId}`].head, pad.head);
+    });
+
+    it('limits exported revisions to 0..revNum when supplied', async function () {
+      const pad = await padManager.getPad(padId);
+      await addRevs(pad, 5);
+      const bound = 2;
+      const data = await exportEtherpad.getPadRaw(padId, null, bound);
+      const revKeys =
+          Object.keys(data).filter((k) => k.startsWith(`pad:${padId}:revs:`));
+      assert.equal(revKeys.length, bound + 1,
+          `expected ${bound + 1} revisions, got ${revKeys.length}`);
+      assert(!(`pad:${padId}:revs:${bound + 1}` in data),
+          'rev after bound must not be exported');
+      // The serialized pad must also reflect the bounded head so that
+      // re-importing reconstructs the pad at the requested rev.
+      assert.equal(data[`pad:${padId}`].head, bound);
+    });
+
+    it('treats a revNum above head as equivalent to full history', async function () {
+      const pad = await padManager.getPad(padId);
+      await addRevs(pad, 3);
+      const data = await exportEtherpad.getPadRaw(padId, null, pad.head + 100);
+      assert.equal(data[`pad:${padId}`].head, pad.head);
+    });
+  });
 });
