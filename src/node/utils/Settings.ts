@@ -205,6 +205,7 @@ export type SettingsType = {
     lang: string | null,
   },
   enableMetrics: boolean,
+  nativeDocxExport: boolean,
   padShortcutEnabled: {
     altF9: boolean,
     altC: boolean,
@@ -415,6 +416,14 @@ const settings: SettingsType = {
    * Wether to enable the /stats endpoint. The functionality in the admin menu is untouched for this.
    */
   enableMetrics: true,
+  /**
+   * Convert DOCX exports in-process with the `html-to-docx` library instead
+   * of shelling out to LibreOffice / soffice (issue #7538). Opt-in: default
+   * `false` preserves the historical soffice behavior. When `true`, failures
+   * transparently fall back to the soffice path, so flipping this on is safe
+   * even on a LibreOffice-enabled deployment.
+   */
+  nativeDocxExport: false,
   /**
    * Whether certain shortcut keys are enabled for a user in the pad
    */

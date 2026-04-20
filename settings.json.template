@@ -352,6 +352,16 @@
   "docxExport": true,
 
   /*
+   * Convert DOCX exports in-process with the bundled `html-to-docx` library
+   * rather than shelling out to LibreOffice. Skips the soffice dependency
+   * and removes per-export subprocess latency. If the in-process converter
+   * throws on a given pad, the export automatically falls back to the
+   * LibreOffice path — so turning this on is safe even on a deployment
+   * with soffice installed.
+   */
+  "nativeDocxExport": false,
+
+  /*
    * txt, doc, docx, rtf, odt, html & htm
    */
   "allowUnknownFileEnds": true,
