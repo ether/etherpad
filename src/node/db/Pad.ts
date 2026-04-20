@@ -554,6 +554,65 @@ class Pad {
         (authorID) => authorManager.addPad(authorID, destinationID)));
   }
 
+  /**
+   * Compact the pad's revision history in place (issue #6194).
+   *
+   * Etherpad keeps every revision forever, so long-lived pads eventually
+   * dominate the database — the issue describes a ~400 MB Postgres for a
+   * ~2-month-old instance with ~100 users. There is no safe way to prune
+   * arbitrary middle revisions (Etherpad reconstructs state by composing
+   * forward from key revisions), but we can collapse the entire history
+   * into a single base revision that reproduces the current atext. That is
+   * what `copyPadWithoutHistory` does for a new pad — this method is the
+   * in-place equivalent.
+   *
+   * After compaction: `head === 0`, the pad's text content and attributes
+   * are unchanged, all previous revision changesets and any saved
+   * revisions are gone, and chat history is untouched.
+   *
+   * Callers are expected to be admins running the compactPad CLI. This is
+   * a destructive operation — run an `etherpad` export first for backup.
+   *
+   * @param authorId The author to attribute the base revision to.
+   *     Defaults to empty (anonymous) which matches how the existing
+   *     defaultText import path stamps rev 0.
+   * @returns The number of revisions removed, so callers can log savings.
+   */
+  async compactHistory(authorId = '') {
+    const originalHead = this.head;
+    if (originalHead <= 0) return 0;
+
+    // Build a single changeset that produces the current atext on top of a
+    // freshly-initialized pad ("\n\n" per copyPadWithoutHistory comment).
+    // This mirrors the existing copyPadWithoutHistory path exactly so we
+    // inherit its tested correctness.
+    const oldAText = this.atext;
+    const assem = new SmartOpAssembler();
+    for (const op of opsFromAText(oldAText)) assem.append(op);
+    assem.endDocument();
+    const oldLength = 2;
+    const newLength = assem.getLengthChange();
+    const newText = oldAText.text;
+    const baseChangeset = pack(oldLength, newLength, assem.toString(), newText);
+
+    // Drop every existing revision + saved-revision pointer and reset the
+    // pad's in-memory state to pre-any-revisions.
+    const deletions: Promise<void>[] = [];
+    for (let r = 0; r <= originalHead; r++) {
+      // @ts-ignore
+      deletions.push(this.db.remove(`pad:${this.id}:revs:${r}`));
+    }
+    await Promise.all(deletions);
+    this.savedRevisions = [];
+    this.head = -1;
+    this.atext = makeAText('\n');
+    // pool is retained — attributes from the composed text will reuse it,
+    // and we do not know which other pads may hold references to pool ids.
+
+    await this.appendRevision(baseChangeset, authorId);
+    return originalHead;
+  }
+
   async copyPadWithoutHistory(destinationID: string, force: string|boolean, authorId = '') {
     // flush the source pad
     this.saveToDatabase();

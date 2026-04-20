@@ -636,6 +636,29 @@ exports.copyPadWithoutHistory = async (sourceID: string, destinationID: string, 
 };
 
 /**
+compactPad(padID, [authorId]) collapses the pad's revision history into a
+single base revision that reproduces the current atext, reclaiming database
+space (issue #6194). Pad text, attributes, and chat history are preserved;
+saved-revision bookmarks are cleared. Destructive — recommend exporting the
+`.etherpad` snapshot first.
+
+Example returns:
+
+{code: 0, message:"ok", data: {removed: 87}}
+{code: 1, message:"padID does not exist", data: null}
+
+ @param {String} padID the id of the pad to compact
+ @param {String} authorId the id of the author to attribute the new base
+     revision to, defaulting to empty string (anonymous)
+ @returns the number of revisions removed
+*/
+exports.compactPad = async (padID: string, authorId = '') => {
+  const pad = await getPadSafe(padID, true);
+  const removed = await pad.compactHistory(authorId);
+  return {removed};
+};
+
+/**
 movePad(sourceID, destinationID[, force=false]) moves a pad. If force is true,
   the destination will be overwritten if it exists.
 
