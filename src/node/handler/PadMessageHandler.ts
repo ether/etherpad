@@ -23,6 +23,7 @@ import {MapArrayType} from "../types/MapType";
 
 import AttributeMap from '../../static/js/AttributeMap';
 const padManager = require('../db/PadManager');
+const padDeletionManager = require('../db/PadDeletionManager');
 import {checkRep, cloneAText, compose, deserializeOps, follow, identity, inverse, makeAText, makeSplice, moveOpsToNewPool, mutateAttributionLines, mutateTextLines, oldLen, prepareForWire, splitAttributionLines, splitTextLines, unpack} from '../../static/js/Changeset';
 import ChatMessage from '../../static/js/ChatMessage';
 import AttributePool from '../../static/js/AttributePool';
@@ -229,39 +230,36 @@ exports.handleDisconnect = async (socket:any) => {
 const handlePadDelete = async (socket: any, padDeleteMessage: PadDeleteMessage) => {
   const session = sessioninfos[socket.id];
   if (!session || !session.author || !session.padId) throw new Error('session not ready');
-  if (await padManager.doesPadExist(padDeleteMessage.data.padId)) {
-    const retrievedPad = await padManager.getPad(padDeleteMessage.data.padId)
-    // Only the one doing the first revision can delete the pad, otherwise people could troll a lot
-    const firstContributor = await retrievedPad.getRevisionAuthor(0)
-    if (session.author === firstContributor) {
-      await retrievedPad.remove()
-    } else {
+  const padId = padDeleteMessage.data.padId;
+  if (session.padId !== padId) throw new Error('refusing cross-pad delete');
+  if (!await padManager.doesPadExist(padId)) return;
 
-      type ShoutMessage = {
-        message: string,
-        sticky: boolean,
-      }
+  const retrievedPad = await padManager.getPad(padId);
+  const firstContributor = await retrievedPad.getRevisionAuthor(0);
+  const isCreator = session.author === firstContributor;
+  const tokenOk = !isCreator && await padDeletionManager.isValidDeletionToken(
+      padId, padDeleteMessage.data.deletionToken);
+  const flagOk = !isCreator && !tokenOk && settings.allowPadDeletionByAllUsers;
 
-      const messageToShout: ShoutMessage = {
-        message: 'You are not the creator of this pad, so you cannot delete it',
-        sticky: false
-      }
-      const messageToSend = {
-        type: "COLLABROOM",
-        data: {
-          type: "shoutMessage",
-          payload: {
-            message: messageToShout,
-            timestamp: Date.now()
-          }
-        }
-      }
-      socket.emit('shout',
-        messageToSend
-      )
-    }
+  if (isCreator || tokenOk || flagOk) {
+    await retrievedPad.remove();
+    return;
   }
-}
+
+  socket.emit('shout', {
+    type: 'COLLABROOM',
+    data: {
+      type: 'shoutMessage',
+      payload: {
+        message: {
+          message: 'You are not the creator of this pad, so you cannot delete it',
+          sticky: false,
+        },
+        timestamp: Date.now(),
+      },
+    },
+  });
+};
 
 const isPadCreator = async (pad: any, authorId: string) => authorId === await pad.getRevisionAuthor(0);
 
@@ -1068,6 +1066,16 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
       throw new Error('corrupt pad');
     }
 
+    // Only the original creator of the pad (revision 0 author) receives the
+    // deletion token, and only on their first arrival — subsequent visits get
+    // null because createDeletionTokenIfAbsent() only emits a plaintext token
+    // once. Readonly sessions never see it.
+    const isCreator =
+        !sessionInfo.readonly && sessionInfo.author === await pad.getRevisionAuthor(0);
+    const padDeletionToken = isCreator
+        ? await padDeletionManager.createDeletionTokenIfAbsent(sessionInfo.padId)
+        : null;
+
     // Warning: never ever send sessionInfo.padId to the client. If the client is read only you
     // would open a security hole 1 swedish mile wide...
     const canEditPadSettings = settings.enablePadWideSettings &&
@@ -1081,6 +1089,7 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
       },
       enableDarkMode: settings.enableDarkMode,
       enablePadWideSettings: settings.enablePadWideSettings,
+      padDeletionToken,
       automaticReconnectionTimeout: settings.automaticReconnectionTimeout,
       initialRevisionList: [],
       initialOptions: pad.getPadSettings(),

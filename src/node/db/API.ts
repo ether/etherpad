@@ -23,6 +23,7 @@ import {deserializeOps} from '../../static/js/Changeset';
 import ChatMessage from '../../static/js/ChatMessage';
 import {Builder} from "../../static/js/Builder";
 import {Attribute} from "../../static/js/types/Attribute";
+import settings from '../utils/Settings';
 const CustomError = require('../utils/customError');
 const padManager = require('./PadManager');
 const padMessageHandler = require('../handler/PadMessageHandler');
@@ -30,6 +31,7 @@ import readOnlyManager from './ReadOnlyManager';
 const groupManager = require('./GroupManager');
 const authorManager = require('./AuthorManager');
 const sessionManager = require('./SessionManager');
+const padDeletionManager = require('./PadDeletionManager');
 const exportHtml = require('../utils/ExportHtml');
 const exportTxt = require('../utils/ExportTxt');
 const importHtml = require('../utils/ImportHtml');
@@ -518,19 +520,30 @@ exports.createPad = async (padID: string, text: string, authorId = '') => {
 
   // create pad
   await getPadSafe(padID, false, text, authorId);
+  return {deletionToken: await padDeletionManager.createDeletionTokenIfAbsent(padID)};
 };
 
 /**
-deletePad(padID) deletes a pad
+deletePad(padID, [deletionToken]) deletes a pad
 
 Example returns:
 
 {code: 0, message:"ok", data: null}
 {code: 1, message:"padID does not exist", data: null}
+{code: 1, message:"invalid deletionToken", data: null}
  @param {String} padID the id of the pad
+ @param {String} [deletionToken] recovery token issued by createPad
 */
-exports.deletePad = async (padID: string) => {
+exports.deletePad = async (padID: string, deletionToken?: string) => {
   const pad = await getPadSafe(padID, true);
+  // apikey-authenticated callers (no deletionToken supplied) are trusted.
+  // When a caller supplies a deletionToken, it must validate unless the
+  // instance has opted everyone in via allowPadDeletionByAllUsers.
+  if (deletionToken !== undefined && deletionToken !== '' &&
+      !settings.allowPadDeletionByAllUsers &&
+      !await padDeletionManager.isValidDeletionToken(padID, deletionToken)) {
+    throw new CustomError('invalid deletionToken', 'apierror');
+  }
   await pad.remove();
 };
 
