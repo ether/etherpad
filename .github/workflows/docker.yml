@@ -77,6 +77,75 @@ jobs:
           (cd src && gnpm run test-container)
           git clean -dxf .
 
+  build-test-mysql:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    services:
+      mysql:
+        image: mysql:8
+        env:
+          MYSQL_ROOT_PASSWORD: password
+          MYSQL_DATABASE: etherpad
+          MYSQL_USER: etherpad
+          MYSQL_PASSWORD: password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -ppassword"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      -
+        name: Check out
+        uses: actions/checkout@v6
+        with:
+          path: etherpad
+      -
+        name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+      -
+        name: Build and export to Docker
+        uses: docker/build-push-action@v7
+        with:
+          context: ./etherpad
+          target: production
+          load: true
+          tags: ${{ env.TEST_TAG }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      -
+        name: Test with MySQL database
+        run: |
+          docker run --rm -d \
+            --network host \
+            -e DB_TYPE=mysql \
+            -e DB_HOST=127.0.0.1 \
+            -e DB_PORT=3306 \
+            -e DB_NAME=etherpad \
+            -e DB_USER=etherpad \
+            -e DB_PASS=password \
+            -e DB_CHARSET=utf8mb4 \
+            --name test-mysql ${{ env.TEST_TAG }}
+          docker logs -f test-mysql &
+          attempt=0
+          while true; do
+            echo "Waiting for Docker container to start (attempt $attempt)..."
+            status=$(docker container inspect -f '{{.State.Health.Status}}' test-mysql 2>/dev/null) || { echo "Container exited"; docker logs test-mysql; exit 1; }
+            case ${status} in
+              healthy) echo "Container is healthy!"; break;;
+              starting) sleep 2;;
+              *) printf %s\\n "unexpected status: ${status}" >&2; docker logs test-mysql; exit 1;;
+            esac
+            attempt=$((attempt + 1))
+            if [ $attempt -gt 60 ]; then
+              echo "Timed out waiting for container"
+              docker logs test-mysql
+              exit 1
+            fi
+          done
+
   publish:
     needs: build-test
     if: github.event_name == 'push'
