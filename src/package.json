@@ -32,7 +32,7 @@
   "dependencies": {
     "@elastic/elasticsearch": "^9.3.4",
     "async": "^3.2.6",
-    "axios": "^1.15.0",
+    "axios": "^1.15.1",
     "cassandra-driver": "^4.8.0",
     "cookie-parser": "^1.4.7",
     "cross-env": "^10.1.0",
