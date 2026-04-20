@@ -14,6 +14,7 @@ env:
   TEST_TAG: etherpad/etherpad:test
 permissions:
   contents: read
+  packages: write
 
 jobs:
   docker:
@@ -84,7 +85,9 @@ jobs:
         id: meta
         uses: docker/metadata-action@v6
         with:
-          images: etherpad/etherpad
+          images: |
+            etherpad/etherpad
+            ghcr.io/ether/etherpad
           tags: |
             type=ref,event=branch
             type=semver,pattern={{version}}
@@ -97,6 +100,14 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+      -
+        name: Log in to GHCR
+        if: github.event_name == 'push'
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       -
         name: Build and push
         id: build-docker
