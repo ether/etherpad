@@ -131,7 +131,7 @@ jobs:
       -
         name: Driver presence test (all 10 ueberdb2 drivers must resolve)
         run: |
-          docker run --rm "$TEST_TAG" node -e "
+          docker run --rm -w /opt/etherpad-lite/src "$TEST_TAG" node -e "
             const mods = [
               '@elastic/elasticsearch','cassandra-driver','mongodb','mssql',
               'mysql2','nano','pg','redis','rethinkdb','surrealdb'
