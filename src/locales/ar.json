@@ -117,7 +117,6 @@
 	"pad.importExport.exportword": "مايكروسوفت وورد",
 	"pad.importExport.exportpdf": "صيغة المستندات المحمولة",
 	"pad.importExport.exportopen": "ODF (نسق المستند المفتوح)",
-	"pad.importExport.abiword.innerHTML": "لا يمكنك الاستيراد إلا من نص عادي أو من تنسيقات HTML. للحصول على المزيد من ميزات الاستيراد المتقدمة، يرجى <a href=\"https://github.com/ether/etherpad-lite/wiki/How-to-enable-importing-and-exporting-different-file-formats-with-AbiWord\">تثبيت AbiWord أو LibreOffice</a>.",
 	"pad.modals.connected": "متصل.",
 	"pad.modals.reconnecting": "إعادة الاتصال ببادك..",
 	"pad.modals.forcereconnect": "فرض إعادة الاتصال",

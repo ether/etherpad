@@ -46,7 +46,6 @@
 	"pad.importExport.exportword": "Microsoft Word",
 	"pad.importExport.exportpdf": "PDF",
 	"pad.importExport.exportopen": "ODF (Open Document Format)",
-	"pad.importExport.abiword.innerHTML": "Se köönt blots wat vun Kloortext oder HTML-Stücken röverhalen. Mit <a href=\"https://github.com/ether/etherpad-lite/wiki/How-to-enable-importing-and-exporting-different-file-formats-in-Ubuntu-or-OpenSuse-or-SLES-with-AbiWord\"> köönt Se ok anner Saken röverhalen. Dorför mööt Se bidde abiword inrichten</a>.",
 	"pad.modals.connected": "Verbindung steiht.",
 	"pad.modals.reconnecting": "En Verbindung wedder opboen ...",
 	"pad.modals.forcereconnect": "Noch mal verbinnen",

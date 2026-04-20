@@ -56,7 +56,6 @@
 	"pad.importExport.exportword": "മൈക്രോസോഫ്റ്റ് വേഡ്",
 	"pad.importExport.exportpdf": "പി.ഡി.എഫ്.",
 	"pad.importExport.exportopen": "ഒ.ഡി.എഫ്. (ഓപ്പൺ ഡോക്യുമെന്റ് ഫോർമാറ്റ്)",
-	"pad.importExport.abiword.innerHTML": "പ്ലെയിൻ ടെക്സ്റ്റോ എച്ച്.റ്റി.എം.എൽ. തരമോ മാത്രമേ താങ്കൾക്ക് ഇറക്കുമതി ചെയ്യാനാവൂ. കൂടുതൽ വിപുലീകൃത ഇറക്കുമതി സൗകര്യങ്ങൾക്കായി ദയവായി <a href=\"https://github.com/ether/etherpad-lite/wiki/How-to-enable-importing-and-exporting-different-file-formats-with-AbiWord\">അബിവേഡ് അല്ലെങ്കിൽ ലിബർഓഫീസ് ഇൻസ്റ്റോൾ ചെയ്യുക</a>.",
 	"pad.modals.connected": "ബന്ധിപ്പിച്ചിരിക്കുന്നു.",
 	"pad.modals.reconnecting": "താങ്കളുടെ പാഡിലേയ്ക്ക് വീണ്ടും ബന്ധിപ്പിക്കുന്നു...",
 	"pad.modals.forcereconnect": "എന്തായാലും ബന്ധിപ്പിക്കുക",

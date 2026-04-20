@@ -97,7 +97,6 @@
 	"pad.importExport.exportword": "Microsoft Word",
 	"pad.importExport.exportpdf": "PDF",
 	"pad.importExport.exportopen": "ODF (Açık Doküman Biçimi)",
-	"pad.importExport.abiword.innerHTML": "Yalnızca düz metin veya HTML biçimlerinden içe aktarabilirsiniz. Daha gelişmiş içe aktarma özellikleri için lütfen <a href=\"https://github.com/ether/etherpad-lite/wiki/How-to-enable-importing-and-exporting-different-file-formats-with-AbiWord\">AbiWord veya LibreOffice yükleyin</a> .",
 	"pad.modals.connected": "Bağlandı.",
 	"pad.modals.reconnecting": "Bloknotuza tekrar bağlanılıyor…",
 	"pad.modals.forcereconnect": "Yeniden bağlanmaya zorla",

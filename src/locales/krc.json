@@ -85,7 +85,6 @@
 	"pad.importExport.exportword": "Microsoft Word",
 	"pad.importExport.exportpdf": "PDF",
 	"pad.importExport.exportopen": "ODF (OpenOffice'ни документи)",
-	"pad.importExport.abiword.innerHTML": "Сиз къуру тюз текстни неда HTML импорт этерге боллукъсуз. Импортну андан кенг функциялары ючюн <a href=\"https://github.com/ether/etherpad-lite/wiki/How-to-enable-importing-and-exporting-different-file-formats-with-AbiWord\">AbiWord не LibreOffice къуругъуз</a>.",
 	"pad.modals.connected": "Байланды.",
 	"pad.modals.reconnecting": "Блокнотугъузгъа джангыдан байлана турады...",
 	"pad.modals.forcereconnect": "Джангыдан зор бла байланыу",

@@ -39,7 +39,6 @@
 	"pad.importExport.exportword": "Microsoft Word",
 	"pad.importExport.exportpdf": "PDF",
 	"pad.importExport.exportopen": "ODF (Opið Dokument Format)",
-	"pad.importExport.abiword.innerHTML": "Tú kanst bert innflyta frá einføldum teksti ella html formatum. Fyri funksjónir til innflytan fyri víðarikomin vinarliga <a href=\"https://github.com/ether/etherpad-lite/wiki/How-to-enable-importing-and-exporting-different-file-formats-in-Ubuntu-or-OpenSuse-or-SLES-with-AbiWord\">installera abiword</a>.",
 	"pad.modals.connected": "Tú hevur samband.",
 	"pad.modals.reconnecting": "Roynir aftur at fáa samband við tín pad..",
 	"pad.modals.forcereconnect": "Tvinga endurstovnan av sambandi.",

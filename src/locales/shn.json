@@ -49,7 +49,6 @@
 	"pad.importExport.exportword": "မၢႆႇၶရူဝ်ႇသွပ်ႉဝၢတ်ႉ",
 	"pad.importExport.exportpdf": "ၽီႇတီႇဢႅပ်ႉၾ်",
 	"pad.importExport.exportopen": "ဢူဝ်တီႇဢႅပ်ႉၾ် (Open Document Format)",
-	"pad.importExport.abiword.innerHTML": "ၸဝ်ႈၵဝ်ႇတေ ၸၢင်ႈလုၵ်ႉတီႈ တူဝ်လိၵ်ႈလွၼ်ႉလွၼ်ႉ ဢမ်ႇၼၼ် HTML သေ သူင်ႇၶဝ်ႈၵႂႃႇၵူၺ်း။ တွၼ်ႈတႃႇ လၢႆးၵၢၼ်သူင်ႇၶဝ်ႈၶိုၵ်ႉတွၼ်းတၢင်ႇၸိူဝ်းၼၼ်ႉ ၶႅၼ်းတေႃႈ <a href=\"https://github.com/ether/etherpad-lite/wiki/How-to-enable-importing-and-exporting-different-file-formats-with-AbiWord\">ဢူၼ်းသႂ်ႇ AbiWord</a>.",
 	"pad.modals.connected": "ၵွင်ႉသၢၼ်ယဝ်ႉ",
 	"pad.modals.reconnecting": "ၶိုၼ်းၵွင်ႉသၢၼ်ၸူး ၽႅတ်ႉၸဝ်ႈၵဝ်ႇယူႇ",
 	"pad.modals.forcereconnect": "တဵၵ်းၸႂ်ႉ ၶိုၼ်းၵွင်ႉသၢၼ်",

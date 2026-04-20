@@ -127,7 +127,6 @@
 	"pad.importExport.exportword": "Microsoft Word",
 	"pad.importExport.exportpdf": "PDF",
 	"pad.importExport.exportopen": "ODF（开放文档格式）",
-	"pad.importExport.abiword.innerHTML": "您只可以导入纯文本或HTML格式。要获取更高级的导入功能，请<a href=\"https://github.com/ether/etherpad-lite/wiki/How-to-enable-importing-and-exporting-different-file-formats-with-AbiWord\">安装 AbiWord 或是 LibreOffice</a>。",
 	"pad.modals.connected": "已连接。",
 	"pad.modals.reconnecting": "重新连接到您的记事本…",
 	"pad.modals.forcereconnect": "强制重新连接",

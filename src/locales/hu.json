@@ -94,7 +94,6 @@
 	"pad.importExport.exportword": "Microsoft Word",
 	"pad.importExport.exportpdf": "PDF",
 	"pad.importExport.exportopen": "ODF (Open Document formátum)",
-	"pad.importExport.abiword.innerHTML": "Csak szöveges, vagy HTML formátumokból importálhat. A haladó importálási szolgáltatásért kérjük <a href=\"https://github.com/ether/etherpad-lite/wiki/How-to-enable-importing-and-exporting-different-file-formats-with-AbiWord\">telepítse a AbiWord vagy a LibreOffice alkalmazást</a>.",
 	"pad.modals.connected": "Kapcsolódva.",
 	"pad.modals.reconnecting": "Újrakapcsolódás a jegyzetfüzethez…",
 	"pad.modals.forcereconnect": "Újrakapcsolódás kényszerítése",

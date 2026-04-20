@@ -38,7 +38,6 @@
 	"pad.importExport.exportword": "Microsoft Word",
 	"pad.importExport.exportpdf": "PDF",
 	"pad.importExport.exportopen": "ODF (پاچین سندئ قالب)",
-	"pad.importExport.abiword.innerHTML": "شما تا توانیت که شه ساده گین متنی ئین قالب یا اچ‌تی‌ام‌ال بی تئ کنیت . په گیشتیرین کارا ئییان پیشرفته ئین بی تئ کورتینا  <a href=\"https://github.com/ether/etherpad-lite/wiki/How-to-enable-importing-and-exporting-different-file-formats-in-Ubuntu-or-OpenSuse-or-SLES-with-AbiWord\">AbiWord</a> نصب کنیت.",
 	"pad.modals.connected": "وصل بوت.",
 	"pad.modals.userdup": "نوکین دروازه گئ پاچ کورتین",
 	"pad.modals.unauth": "مجاز نه اینت",
