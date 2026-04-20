@@ -103,11 +103,13 @@ $env:ETHERPAD_RUN=1; irm https://raw.githubusercontent.com/ether/etherpad/master
 
 ### Docker-Compose
 
+The official image is published to both Docker Hub (`etherpad/etherpad`) and GitHub Container Registry (`ghcr.io/ether/etherpad`) with identical tags. Use whichever suits your environment; GHCR avoids Docker Hub's anonymous pull rate limits.
+
 ```yaml
 services:
   app:
     user: "0:0"
-    image: etherpad/etherpad:latest
+    image: etherpad/etherpad:latest  # or: ghcr.io/ether/etherpad:latest
     tty: true
     stdin_open: true
     volumes:
