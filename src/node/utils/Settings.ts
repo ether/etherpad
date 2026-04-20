@@ -227,6 +227,7 @@ export type SettingsType = {
     enforceReadableAuthorColors: boolean,
   },
   enableMetrics: boolean,
+  nativeDocxExport: boolean,
   padShortcutEnabled: {
     altF9: boolean,
     altC: boolean,
@@ -521,6 +522,14 @@ const settings: SettingsType = {
    * Null disables outbound mail from the updater.
    */
   adminEmail: null,
+  /**
+   * Convert DOCX exports in-process with the `html-to-docx` library instead
+   * of shelling out to LibreOffice / soffice (issue #7538). Opt-in: default
+   * `false` preserves the historical soffice behavior. When `true`, failures
+   * transparently fall back to the soffice path, so flipping this on is safe
+   * even on a LibreOffice-enabled deployment.
+   */
+  nativeDocxExport: false,
   /**
    * Whether certain shortcut keys are enabled for a user in the pad
    */
