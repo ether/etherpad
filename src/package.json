@@ -118,7 +118,7 @@
     "@types/underscore": "^1.13.0",
     "@types/whatwg-mimetype": "^5.0.0",
     "chokidar": "^5.0.0",
-    "eslint": "^10.2.0",
+    "eslint": "^10.2.1",
     "eslint-config-etherpad": "^4.0.5",
     "etherpad-cli-client": "^3.0.5",
     "mocha": "^11.7.5",
