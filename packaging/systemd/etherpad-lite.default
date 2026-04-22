@@ -1,0 +1,7 @@
+# /etc/default/etherpad-lite
+# Environment overrides for the etherpad-lite systemd service.
+# Any variable referenced by ${VAR:default} in settings.json can be set here.
+
+NODE_ENV=production
+# PORT=9001
+# NODE_OPTIONS=--max-old-space-size=2048
