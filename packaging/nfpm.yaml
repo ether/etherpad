@@ -1,0 +1,120 @@
+# nfpm configuration for Etherpad Debian/RPM/APK packages.
+# Build with:   nfpm package --packager deb --target dist/
+# See:          https://nfpm.goreleaser.com/configuration/
+
+name: etherpad
+arch: ${ARCH}            # amd64 | arm64  (exported by CI)
+platform: linux
+version: ${VERSION}      # e.g. 2.6.1, stripped of leading "v"
+version_schema: semver
+release: "1"
+section: web
+priority: optional
+maintainer: "Etherpad Foundation <contact@etherpad.org>"
+description: |
+  Etherpad is a real-time collaborative editor for the web.
+  This package installs Etherpad as a systemd service running
+  from /opt/etherpad with configuration in /etc/etherpad.
+vendor: "Etherpad Foundation"
+homepage: https://etherpad.org
+license: Apache-2.0
+
+depends:
+  - nodejs (>= 20)
+  - adduser
+  - ca-certificates
+
+recommends:
+  - libreoffice        # enables DOC/DOCX/PDF/ODT export
+  - curl
+
+suggests:
+  - postgresql-client
+  - mariadb-client
+
+# The short-lived "etherpad-lite" package name from the reverted PR #7559
+# never shipped to a stable release, but declare replaces/conflicts so any
+# development builds upgrade cleanly to the renamed package.
+conflicts:
+  - etherpad-lite
+
+replaces:
+  - etherpad-lite
+
+provides:
+  - etherpad-lite
+
+# ---------------------------------------------------------------------------
+# Contents. staging/ is populated by CI before invoking nfpm:
+#   staging/opt/etherpad/   -- source + node_modules + built assets
+# ---------------------------------------------------------------------------
+contents:
+  - src: ./staging/opt/etherpad
+    dst: /opt/etherpad
+    type: tree
+    file_info:
+      mode: 0755
+      owner: root
+      group: root
+
+  - src: ./packaging/systemd/etherpad.service
+    dst: /lib/systemd/system/etherpad.service
+    file_info:
+      mode: 0644
+
+  # Default environment file (conffile: preserved on upgrade).
+  # Mode 0640 + group=etherpad so passwords/secrets admins drop in here
+  # are only readable by root and the etherpad service user — /etc/default
+  # is world-readable by default (0644), which would leak DB creds etc.
+  - src: ./packaging/systemd/etherpad.default
+    dst: /etc/default/etherpad
+    type: config|noreplace
+    file_info:
+      mode: 0640
+      owner: root
+      group: etherpad
+
+  - src: ./packaging/bin/etherpad
+    dst: /usr/bin/etherpad
+    file_info:
+      mode: 0755
+
+  # Template used by postinstall to seed /etc/etherpad/settings.json.
+  # Intentionally NOT a conffile: postinstall creates the real settings.json
+  # once on first install and never touches it again, so upgrades don't
+  # prompt with dpkg merge dialogs.
+  - src: ./packaging/etc/settings.json.dist
+    dst: /usr/share/etherpad/settings.json.dist
+    file_info:
+      mode: 0644
+
+  - dst: /etc/etherpad
+    type: dir
+    file_info:
+      mode: 0755
+  - dst: /var/lib/etherpad
+    type: dir
+    file_info:
+      mode: 0750
+  - dst: /var/log/etherpad
+    type: dir
+    file_info:
+      mode: 0750
+
+scripts:
+  preinstall:  ./packaging/scripts/preinstall.sh
+  postinstall: ./packaging/scripts/postinstall.sh
+  preremove:   ./packaging/scripts/preremove.sh
+  postremove:  ./packaging/scripts/postremove.sh
+
+overrides:
+  deb:
+    depends:
+      - nodejs (>= 20)
+      - adduser
+      - ca-certificates
+  rpm:
+    depends:
+      - nodejs >= 20
+      - shadow-utils
+      - ca-certificates

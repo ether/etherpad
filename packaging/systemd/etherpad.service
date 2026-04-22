@@ -1,0 +1,48 @@
+[Unit]
+Description=Etherpad - real-time collaborative editor
+Documentation=https://etherpad.org https://github.com/ether/etherpad
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=etherpad
+Group=etherpad
+WorkingDirectory=/opt/etherpad
+EnvironmentFile=-/etc/default/etherpad
+ExecStart=/usr/bin/etherpad
+Restart=on-failure
+RestartSec=5s
+TimeoutStopSec=20s
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=etherpad
+
+# --- Sandboxing ---------------------------------------------------------
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectHostname=true
+ProtectClock=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+RestrictNamespaces=true
+LockPersonality=true
+MemoryDenyWriteExecute=false     # Node's JIT needs W+X mappings
+SystemCallArchitectures=native
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
+UMask=0027
+
+ReadWritePaths=/var/lib/etherpad /var/log/etherpad /etc/etherpad
+
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

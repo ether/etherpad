@@ -1,0 +1,18 @@
+#!/bin/sh
+# /usr/bin/etherpad - thin wrapper that runs Etherpad in production mode.
+# Invoked by the etherpad.service systemd unit.
+set -e
+
+APP_DIR="${ETHERPAD_DIR:-/opt/etherpad}"
+cd "${APP_DIR}"
+
+: "${NODE_ENV:=production}"
+export NODE_ENV
+export ETHERPAD_PRODUCTION=true
+
+# Run the server through tsx's ESM loader (shipped in node_modules).
+# No pnpm needed at runtime.
+exec node \
+    --import "file://${APP_DIR}/src/node_modules/tsx/dist/esm/index.mjs" \
+    "${APP_DIR}/src/node/server.ts" \
+    "$@"
