@@ -172,6 +172,7 @@ export type SettingsType = {
   },
   updateServer: string,
   enableDarkMode: boolean,
+  enablePadWideSettings: boolean,
   skinName: string | null,
   skinVariants: string,
   ip: string,
@@ -237,8 +238,8 @@ export type SettingsType = {
   editOnly: boolean,
   maxAge: number,
   minify: boolean,
-  abiword: string | null,
   soffice: string | null,
+  docxExport: boolean,
   allowUnknownFileEnds: boolean,
   loglevel: string,
   logLayoutType: string,
@@ -252,8 +253,10 @@ export type SettingsType = {
   trustProxy: boolean,
   cookie: {
     keyRotationInterval: number,
+    prefix: string,
     sameSite: boolean | "lax" | "strict" | "none" | undefined,
     sessionLifetime: number,
+    sessionCleanup: boolean,
     sessionRefreshInterval: number,
   },
   requireAuthentication: boolean,
@@ -292,7 +295,7 @@ export type SettingsType = {
   lowerCasePadIds: boolean,
   randomVersionString: string,
   gitVersion: string
-  getPublicSettings: () => Pick<SettingsType, "title" | "skinVariants"|"randomVersionString"|"skinName"|"toolbar"| "exposeVersion"| "gitVersion">,
+  getPublicSettings: () => Pick<SettingsType, "title" | "skinVariants"|"randomVersionString"|"skinName"|"toolbar"| "exposeVersion"| "gitVersion" | "enablePadWideSettings">,
 }
 
 const settings: SettingsType = {
@@ -326,6 +329,7 @@ const settings: SettingsType = {
   },
   updateServer: "https://static.etherpad.org",
   enableDarkMode: true,
+  enablePadWideSettings: false,
   /*
  * Skin name.
  *
@@ -364,7 +368,7 @@ const settings: SettingsType = {
      * properly, but increasing the value increases susceptibility to denial of service attacks
      * (malicious clients can exhaust memory).
      */
-    maxHttpBufferSize: 50000,
+    maxHttpBufferSize: 1000000,
   },
   /*
   The authentication method used by the server.
@@ -389,7 +393,7 @@ const settings: SettingsType = {
     'This pad text is synchronized as you type, so that everyone viewing this page sees the same ' +
     'text. This allows you to collaborate seamlessly on documents!',
     '',
-    'Etherpad on Github: https://github.com/ether/etherpad-lite',
+    'Etherpad on Github: https://github.com/ether/etherpad',
   ].join('\n'),
   /**
    * The default Pad Settings for a user (Can be overridden by changing the setting
@@ -474,13 +478,14 @@ const settings: SettingsType = {
    */
   minify: true,
   /**
-   * The path of the abiword executable
-   */
-  abiword: null,
-  /**
    * The path of the libreoffice executable
    */
   soffice: null,
+  /**
+   * When true, the "Microsoft Word" export button downloads a .docx file (requires soffice).
+   * Set to false to revert to legacy .doc output.
+   */
+  docxExport: true,
   /**
    * Should we support none natively supported file types on import?
    */
@@ -530,8 +535,10 @@ const settings: SettingsType = {
  */
   cookie: {
     keyRotationInterval: 1 * 24 * 60 * 60 * 1000,
+    prefix: '',
     sameSite: 'lax',
     sessionLifetime: 10 * 24 * 60 * 60 * 1000,
+    sessionCleanup: true,
     sessionRefreshInterval: 1 * 24 * 60 * 60 * 1000,
   },
   /*
@@ -652,27 +659,34 @@ const settings: SettingsType = {
       title: settings.title,
       skinName: settings.skinName,
       skinVariants: settings.skinVariants,
+      enablePadWideSettings: settings.enablePadWideSettings,
     }
   },
   gitVersion: getGitCommit(),
 }
 
 export default settings;
+// CJS compatibility: plugins use require('ep_etherpad-lite/node/utils/Settings')
+// and expect settings properties directly on the module object, not under .default
+if (typeof module !== 'undefined' && module.exports) {
+  const currentExports = module.exports;
+  for (const key of Object.keys(settings)) {
+    if (!(key in currentExports)) {
+      Object.defineProperty(currentExports, key, {
+        get: () => (settings as any)[key],
+        set: (v: any) => { (settings as any)[key] = v; },
+        enumerable: true,
+        configurable: true,
+      });
+    }
+  }
+}
 
 /**
  * This setting is passed with dbType to ueberDB to set up the database
  */
 settings.dbSettings =  {filename: path.join(settings.root, 'var/rusty.db')};
 // END OF SETTINGS
-
-// checks if abiword is avaiable
-export const abiwordAvailable = () => {
-    if (settings.abiword != null) {
-        return os.type().indexOf('Windows') !== -1 ? 'withoutPDF' : 'yes';
-    } else {
-        return 'no';
-    }
-};
 
 export const sofficeAvailable = () => {
     if (settings.soffice != null) {
@@ -682,19 +696,7 @@ export const sofficeAvailable = () => {
     }
 };
 
-export const exportAvailable = () => {
-    const abiword = abiwordAvailable();
-    const soffice = sofficeAvailable();
-
-    if (abiword === 'no' && soffice === 'no') {
-        return 'no';
-    } else if ((abiword === 'withoutPDF' && soffice === 'no') ||
-        (abiword === 'no' && soffice === 'withoutPDF')) {
-        return 'withoutPDF';
-    } else {
-        return 'yes';
-    }
-};
+export const exportAvailable = () => sofficeAvailable();
 
 
 // Return etherpad version from package.json
@@ -748,7 +750,7 @@ const storeSettings = (settingsObj: any) => {
  * no coercition for "null" values.
  *
  * If the user wants a variable to be null by default, he'll have to use the
- * short syntax "${ABIWORD}", and not "${ABIWORD:null}": the latter would result
+ * short syntax "${SOFFICE}", and not "${SOFFICE:null}": the latter would result
  * in the literal string "null", instead.
  */
 const coerceValue = (stringValue: string) => {
@@ -943,6 +945,15 @@ export const reloadSettings = () => {
     storeSettings(settingsParsed);
     storeSettings(credentials);
 
+    // Emit a clear migration warning when the deprecated abiword setting is detected.
+    if (settingsParsed && (settingsParsed as any).abiword != null) {
+        logger.warn(
+            'The "abiword" setting is no longer supported and has been ignored. ' +
+            'Abiword import/export support has been removed. ' +
+            'Please install LibreOffice and set "soffice" to its executable path instead.'
+        );
+    }
+
     // Init logging config
     settings.logconfig = defaultLogConfig(
       settings.loglevel ? settings.loglevel : defaultLogLevel,
@@ -996,20 +1007,6 @@ export const reloadSettings = () => {
         logger.info(`Using skin "${settings.skinName}" in dir: ${skinPath}`);
     }
 
-    if (settings.abiword) {
-        // Check abiword actually exists
-      fs.exists(settings.abiword, (exists: boolean) => {
-        if (!exists) {
-          const abiwordError = 'Abiword does not exist at this path, check your settings file.';
-          if (!settings.suppressErrorsInPadText) {
-            settings.defaultPadText += `\nError: ${abiwordError}${suppressDisableMsg}`;
-          }
-          logger.error(`${abiwordError} File location: ${settings.abiword}`);
-          settings.abiword = null;
-        }
-      });
-    }
-
     if (settings.soffice) {
         fs.exists(settings.soffice, (exists: boolean) => {
             if (!exists) {
@@ -1048,6 +1045,13 @@ export const reloadSettings = () => {
     if (settings.sessionKey) {
         logger.warn(`The sessionKey setting and ${sessionkeyFilename} file are deprecated; ` +
             'use automatic key rotation instead (see the cookie.keyRotationInterval setting).');
+    }
+
+    // Validate cookie prefix to prevent header injection via cookie names
+    if (settings.cookie.prefix && !/^[a-zA-Z0-9_-]*$/.test(settings.cookie.prefix)) {
+      logger.error(`cookie.prefix "${settings.cookie.prefix}" contains invalid characters. ` +
+          'Only alphanumeric characters, hyphens, and underscores are allowed. Using empty prefix.');
+      settings.cookie.prefix = '';
     }
 
     if (settings.dbType === 'dirty') {

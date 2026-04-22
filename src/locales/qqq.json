@@ -61,7 +61,6 @@
 	"pad.importExport.exportword": "Used as link text, preceded by {{msg-etherpadlite|Pad.importExport.export}}.\n{{Related|Pad.importExport.export}}",
 	"pad.importExport.exportpdf": "Used as link text, preceded by {{msg-etherpadlite|Pad.importExport.export}}.\n{{Related|Pad.importExport.export}}",
 	"pad.importExport.exportopen": "Used as link text, preceded by {{msg-etherpadlite|Pad.importExport.export}}.\n{{Related|Pad.importExport.export}}",
-	"pad.importExport.abiword.innerHTML": "Used as intro text for the \"Import file\" form.\n\nPreceded by the heading {{msg-etherpadlite|pad.importExport.import}}.",
 	"pad.modals.connected": "Used as HTML <code><nowiki><h2></nowiki></code> heading to indicate the status.\n\nSee also:\n* {{msg-etherpadlite|Pad.modals.reconnecting}}\n{{Identical|Connected}}",
 	"pad.modals.reconnecting": "Used as HTML <code><nowiki><h2></nowiki></code> heading to indicate the status.\n\nSee also:\n* {{msg-etherpadlite|Pad.modals.connected}}",
 	"pad.modals.forcereconnect": "Label of a button that will make the browser reconnect to the synchronization server.",

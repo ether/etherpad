@@ -21,7 +21,8 @@ import {Cookies} from "./pad_utils";
 
 exports.padcookie = new class {
   constructor() {
-    this.cookieName_ = window.location.protocol === 'https:' ? 'prefs' : 'prefsHttp';
+    const prefix = (window as any).clientVars?.cookiePrefix || '';
+    this.cookieName_ = prefix + (window.location.protocol === 'https:' ? 'prefs' : 'prefsHttp');
   }
 
   init() {
@@ -43,7 +44,12 @@ exports.padcookie = new class {
 
   readPrefs_() {
     try {
-      const json = Cookies.get(this.cookieName_);
+      let json = Cookies.get(this.cookieName_);
+      // Fall back to unprefixed cookie for migration
+      if (json == null) {
+        const unprefixed = window.location.protocol === 'https:' ? 'prefs' : 'prefsHttp';
+        if (unprefixed !== this.cookieName_) json = Cookies.get(unprefixed);
+      }
       if (json == null) return null;
       return JSON.parse(json);
     } catch (e) {

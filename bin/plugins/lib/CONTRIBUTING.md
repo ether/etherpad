@@ -1,5 +1,5 @@
 # Contributor Guidelines
-(Please talk to people on the mailing list before you change this page, see our section on [how to get in touch](https://github.com/ether/etherpad-lite#get-in-touch))
+(Please talk to people on the mailing list before you change this page, see our section on [how to get in touch](https://github.com/ether/etherpad#get-in-touch))
 
 ## Pull requests
 
@@ -131,5 +131,5 @@ Etherpad is much more than software.  So if you aren't a developer then worry no
  * Write proposals for grants
  * Co-Author and Publish CVEs
  * Work with SFC to maintain legal side of project
- * Maintain TODO page - https://github.com/ether/etherpad-lite/wiki/TODO#IMPORTANT_TODOS
+ * Maintain TODO page - https://github.com/ether/etherpad/wiki/TODO#IMPORTANT_TODOS
 

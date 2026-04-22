@@ -504,9 +504,14 @@ const makeContentCollector = (collectStyles, abrowser, apool, className2Author) 
             // See https://github.com/ether/etherpad-lite/issues/2412 for reasoning
             if (!abrowser.chrome) oldListTypeOrNull = (_enterList(state, undefined) || 'none');
           } else if (tname === 'li') {
+            // If the <li> has no parent <ul>/<ol> (e.g., pasted bare HTML), default to bullet list.
+            // See https://github.com/ether/etherpad-lite/issues/6665
+            if (!state.lineAttributes.list) {
+              oldListTypeOrNull = (_enterList(state, 'bullet1') || 'none');
+            }
             state.lineAttributes.start = state.start || 0;
             _recalcAttribString(state);
-            if (state.lineAttributes.list.indexOf('number') !== -1) {
+            if (state.lineAttributes.list && state.lineAttributes.list.indexOf('number') !== -1) {
               /*
                Nested OLs are not --> <ol><li>1</li><ol>nested</ol></ol>
                They are           --> <ol><li>1</li><li><ol><li>nested</li></ol></li></ol>

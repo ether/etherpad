@@ -23,7 +23,6 @@
  * limitations under the License.
  */
 
-const browser = require('./vendors/browser');
 const hooks = require('./pluginfw/hooks');
 import padutils from "./pad_utils";
 const padeditor = require('./pad_editor').padeditor;
@@ -158,15 +157,7 @@ exports.padeditbar = new class {
       ace: padeditor.ace,
     });
 
-    /*
-     * On safari, the dropdown in the toolbar gets hidden because of toolbar
-     * overflow:hidden property. This is a bug from Safari: any children with
-     * position:fixed (like the dropdown) should be displayed no matter
-     * overflow:hidden on parent
-     */
-    if (!browser.safari) {
-      $('select').niceSelect();
-    }
+    $('select').niceSelect();
 
     // When editor is scrolled, we add a class to style the editbar differently
     $('iframe[name="ace_outer"]').contents().on('scroll', (ev) => {
@@ -365,7 +356,7 @@ exports.padeditbar = new class {
     this.registerDropdownCommand('import_export');
     this.registerDropdownCommand('embed');
     this.registerCommand('home', ()=>{
-      window.location.href = window.location.href + "/../.."
+      window.location.href = new URL('../..', window.location.href).href
     })
 
     this.registerCommand('settings', () => {

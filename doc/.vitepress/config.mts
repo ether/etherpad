@@ -73,7 +73,7 @@ export default defineConfig({
     },
 
     socialLinks: [
-      { icon: 'github', link: 'https://github.com/ether/etherpad-lite' }
+      { icon: 'github', link: 'https://github.com/ether/etherpad' }
     ]
   }
 })

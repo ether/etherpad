@@ -66,7 +66,7 @@ const testImports:MapArrayType<any> = {
   'indentedListsAreNotBullets': {
     description: 'Indented lists are represented with tabs and without bullets',
     input: '<html><body><ul class="indent"><li>indent</li><li>indent</ul></body></html>',
-    wantHTML: '<!DOCTYPE HTML><html><body><ul class="indent"><li>indent</li><li>indent</ul><br></body></html>',
+    wantHTML: '<!DOCTYPE HTML><html><body><ul class="indent" style="list-style-type: none;"><li>indent</li><li>indent</ul><br></body></html>',
     wantText: '\tindent\n\tindent\n\n',
   },
   'lineWithMultipleSpaces': {

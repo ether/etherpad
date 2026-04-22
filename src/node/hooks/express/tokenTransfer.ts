@@ -1,6 +1,7 @@
 import {ArgsExpressType} from "../../types/ArgsExpressType";
 const db = require('../../db/DB');
 import crypto from 'crypto'
+import settings from '../../utils/Settings';
 
 
 type TokenTransferRequest = {
@@ -38,8 +39,9 @@ export const expressCreateServer =  (hookName:string, {app}:ArgsExpressType) => 
 
     const token = await db.get(`${tokenTransferKey}:${id}`)
 
-    res.cookie('token', tokenData.token, {path: '/', maxAge: 1000*60*60*24*365});
-    res.cookie('prefsHttp', tokenData.prefsHttp, {path: '/', maxAge: 1000*60*60*24*365});
+    const p = settings.cookie.prefix;
+    res.cookie(`${p}token`, tokenData.token, {path: '/', maxAge: 1000*60*60*24*365});
+    res.cookie(`${p}prefsHttp`, tokenData.prefsHttp, {path: '/', maxAge: 1000*60*60*24*365});
     res.send(token);
   })
 }

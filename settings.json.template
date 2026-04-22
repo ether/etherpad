@@ -82,7 +82,7 @@
  *    "password": "${PASSW:}" // if PASSW is not defined would result in password === ''
  *
  *    If you want to use an empty value (null) as default value for a variable,
- *    simply do not set it, without putting any colons: "${ABIWORD}".
+ *    simply do not set it, without putting any colons: "${SOFFICE}".
  *
  * 3) if you want to use newlines in the default value of a string parameter,
  *    use "\n" as usual.
@@ -225,7 +225,7 @@
   /*
    * An Example of MySQL Configuration (commented out).
    *
-   * See: https://github.com/ether/etherpad-lite/wiki/How-to-use-Etherpad-Lite-with-MySQL
+   * See: https://github.com/ether/etherpad/wiki/How-to-use-Etherpad-Lite-with-MySQL
    */
 
   /*
@@ -336,24 +336,22 @@
   "maxAge": 21600, // 60 * 60 * 6 = 6 hours
 
   /*
-   * Absolute path to the Abiword executable.
-   *
-   * Abiword is needed to get advanced import/export features of pads. Setting
-   * it to null disables Abiword and will only allow plain text and HTML
-   * import/exports.
-   */
-  "abiword": null,
-
-  /*
    * This is the absolute path to the soffice executable.
    *
-   * LibreOffice can be used in lieu of Abiword to export pads.
-   * Setting it to null disables LibreOffice exporting.
+   * LibreOffice is used for advanced import/export of pads (docx, pdf, odt).
+   * Setting it to null disables LibreOffice and will only allow plain text
+   * and HTML import/exports.
    */
   "soffice": null,
 
   /*
-   * Allow import of file types other than the supported ones:
+   * When true (the default), the "Microsoft Word" export button downloads a .docx file via
+   * LibreOffice (requires "soffice" to be set). Set to false to revert to legacy .doc output
+   * (which also requires "soffice").
+   */
+  "docxExport": true,
+
+  /*
    * txt, doc, docx, rtf, odt, html & htm
    */
   "allowUnknownFileEnds": true,
@@ -385,6 +383,13 @@
    * Settings controlling the session cookie issued by Etherpad.
    */
   "cookie": {
+    /*
+     * Prefix for all cookie names set by Etherpad. Set this to "ep_" or similar
+     * if Etherpad's cookie names (token, sessionID, etc.) conflict with those
+     * of another application on the same domain. Default: "" (no prefix).
+     */
+    // "prefix": "ep_",
+
     /*
      * How often (in milliseconds) the key used to sign the express_sid cookie
      * should be rotated. Long rotation intervals reduce signature verification
@@ -456,7 +461,13 @@
      * Automatic session refreshes can be disabled (not recommended) by setting
      * this to null.
      */
-    "sessionRefreshInterval": 86400000 // = 1d * 24h/d * 60m/h * 60s/m * 1000ms/s
+    "sessionRefreshInterval": 86400000, // = 1d * 24h/d * 60m/h * 60s/m * 1000ms/s
+
+    /*
+     * Whether to periodically clean up expired and stale sessions from the
+     * database. Set to false to disable. Default: true.
+     */
+    "sessionCleanup": true
   },
 
   /*
@@ -560,13 +571,17 @@
 
   "socketIo": {
     /*
-     * Maximum permitted client message size (in bytes). All messages from
-     * clients that are larger than this will be rejected. Large values make it
-     * possible to paste large amounts of text, and plugins may require a larger
-     * value to work properly, but increasing the value increases susceptibility
-     * to denial of service attacks (malicious clients can exhaust memory).
+     * Maximum permitted client message size (in bytes). This controls the
+     * maximum single-message size for socket.io and directly affects large
+     * paste operations. All messages from clients that are larger than this
+     * will be rejected. Large values make it possible to paste large amounts
+     * of text, and plugins may require a larger value to work properly, but
+     * increasing the value increases susceptibility to denial of service
+     * attacks (malicious clients can exhaust memory).
+     *
+     * 1MB accommodates large pastes while still preventing abuse.
      */
-    "maxHttpBufferSize": 50000
+    "maxHttpBufferSize": 1000000
   },
 
   /*
@@ -627,6 +642,12 @@
     * Of course this overrides all the skin variants and the skinName set by the administrator.
     **/
     "enableDarkMode": "${ENABLE_DARK_MODE:true}",
+
+    /**
+    * Enable creator-owned Pad-wide Settings and new-pad default seeding from My View.
+    * Disabled by default to preserve the legacy single-settings behavior.
+    **/
+    "enablePadWideSettings": "${ENABLE_PAD_WIDE_SETTINGS:false}",
 
   /*
    * From Etherpad 1.8.5 onwards, when Etherpad is in production mode commits from individual users are rate limited

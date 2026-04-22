@@ -12,6 +12,9 @@ type Session = {
   destroy: (sid:string|null) => void;
   touch: (sid:string|null, sess:any, sess2:any) => void;
   shutdown: () => void;
+  startCleanup: () => void;
+  _cleanup: () => Promise<void>;
+  _cleanupTimer: any;
 }
 
 describe(__filename, function () {
@@ -221,10 +224,10 @@ describe(__filename, function () {
 
     it('touch after eligible for refresh updates db', async function () {
       const start = Date.now();
-      const sess:any  = {foo: 'bar', cookie: {expires: new Date(start + 200)}};
+      const sess:any  = {foo: 'bar', cookie: {expires: new Date(start + 2000)}};
       await set(sess);
       await new Promise((resolve) => setTimeout(resolve, 100));
-      const sess2:any  = {foo: 'bar', cookie: {expires: new Date(start + 400)}};
+      const sess2:any  = {foo: 'bar', cookie: {expires: new Date(start + 4000)}};
       await touch(sess2);
       await new Promise((resolve) => setTimeout(resolve, 110));
       assert.equal(JSON.stringify(await db.get(`sessionstorage:${sid}`)), JSON.stringify(sess2));
@@ -241,6 +244,57 @@ describe(__filename, function () {
       await db.remove(`sessionstorage:${sid}`);
       await touch(sess); // No change in expiration time.
       assert.equal(JSON.stringify(await db.get(`sessionstorage:${sid}`)), JSON.stringify(sess));
+    });
+  });
+
+  // Regression tests for https://github.com/ether/etherpad-lite/issues/5010
+  describe('cleanup', function () {
+    it('removes expired sessions', async function () {
+      const expiredSid = `cleanup_expired_${common.randomString()}`;
+      await db.set(`sessionstorage:${expiredSid}`, {
+        cookie: {path: '/', expires: new Date(1).toJSON(), httpOnly: true},
+      });
+      await ss!._cleanup();
+      assert(await db.get(`sessionstorage:${expiredSid}`) == null);
+    });
+
+    it('removes empty sessions with no expiry', async function () {
+      const emptySid = `cleanup_empty_${common.randomString()}`;
+      await db.set(`sessionstorage:${emptySid}`, {
+        cookie: {path: '/', _expires: null, originalMaxAge: null, httpOnly: true},
+      });
+      await ss!._cleanup();
+      assert(await db.get(`sessionstorage:${emptySid}`) == null);
+    });
+
+    it('preserves sessions with user data and no expiry', async function () {
+      const dataSid = `cleanup_data_${common.randomString()}`;
+      const sess = {
+        cookie: {path: '/', _expires: null, httpOnly: true},
+        user: {name: 'test'},
+      };
+      await db.set(`sessionstorage:${dataSid}`, sess);
+      await ss!._cleanup();
+      assert.equal(JSON.stringify(await db.get(`sessionstorage:${dataSid}`)), JSON.stringify(sess));
+      await db.remove(`sessionstorage:${dataSid}`);
+    });
+
+    it('preserves non-expired sessions', async function () {
+      const validSid = `cleanup_valid_${common.randomString()}`;
+      const sess = {
+        cookie: {path: '/', expires: new Date(Date.now() + 60000).toJSON(), httpOnly: true},
+      };
+      await db.set(`sessionstorage:${validSid}`, sess);
+      await ss!._cleanup();
+      assert.equal(JSON.stringify(await db.get(`sessionstorage:${validSid}`)), JSON.stringify(sess));
+      await db.remove(`sessionstorage:${validSid}`);
+    });
+
+    it('shutdown cancels pending cleanup timer', async function () {
+      ss!.startCleanup();
+      ss!.shutdown();
+      // After shutdown, the timer should be cleared.
+      assert(ss!._cleanupTimer == null);
     });
   });
 });

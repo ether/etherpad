@@ -482,26 +482,44 @@ const generateDefinitionForVersion = (version:string, style = APIPathStyle.FLAT)
       responses: {
         ...defaultResponses,
       },
-      securitySchemes: {
-        openid: {
-          type: "oauth2",
-          flows: {
-            authorizationCode: {
-              authorizationUrl: settings.sso.issuer+"/oidc/auth",
-              tokenUrl: settings.sso.issuer+"/oidc/token",
-              scopes: {
-                openid: "openid",
-                profile: "profile",
-                email: "email",
-                admin: "admin"
-              }
-            }
+      securitySchemes: {} as Record<string, any>,
+    },
+    security: [] as Array<Record<string, string[]>>,
+  };
+
+  if (settings.authenticationMethod === 'apikey') {
+    definition.components.securitySchemes.apiKey = {
+      type: 'apiKey', name: 'apikey', in: 'query',
+    };
+    definition.components.securitySchemes.apiKeyAlias = {
+      type: 'apiKey', name: 'api_key', in: 'query',
+    };
+    definition.components.securitySchemes.apiKeyHeader = {
+      type: 'apiKey', name: 'apikey', in: 'header',
+    };
+    definition.security = [
+      {apiKey: []},
+      {apiKeyAlias: []},
+      {apiKeyHeader: []},
+    ];
+  } else {
+    definition.components.securitySchemes.openid = {
+      type: 'oauth2',
+      flows: {
+        authorizationCode: {
+          authorizationUrl: settings.sso.issuer + '/oidc/auth',
+          tokenUrl: settings.sso.issuer + '/oidc/token',
+          scopes: {
+            openid: 'openid',
+            profile: 'profile',
+            email: 'email',
+            admin: 'admin',
           },
         },
       },
-    },
-    security: [{openid: []}],
-  };
+    };
+    definition.security = [{openid: []}];
+  }
 
   // build operations
   for (const funcName of Object.keys(apiHandler.version[version])) {
@@ -566,14 +584,16 @@ exports.expressPreSession = async (hookName:string, {app}:any) => {
     for (const style of [APIPathStyle.FLAT, APIPathStyle.REST]) {
       const apiRoot = getApiRootForVersion(version, style);
 
-      // generate openapi definition for this API version
+      // generate openapi definition for this API version (used for openapi-backend routing)
       const definition = generateDefinitionForVersion(version, style);
 
-      // serve version specific openapi definition
+      // serve version specific openapi definition; regenerate per request so runtime
+      // settings (e.g. authenticationMethod) are reflected
       app.get(`${apiRoot}/openapi.json`, (req:any, res:any) => {
         // For openapi definitions, wide CORS is probably fine
         res.header('Access-Control-Allow-Origin', '*');
-        res.json({...definition, servers: [generateServerForApiVersion(apiRoot, req)]});
+        const liveDefinition = generateDefinitionForVersion(version, style);
+        res.json({...liveDefinition, servers: [generateServerForApiVersion(apiRoot, req)]});
       });
 
       // serve latest openapi definition file under /api/openapi.json
@@ -581,7 +601,8 @@ exports.expressPreSession = async (hookName:string, {app}:any) => {
       if (isLatestAPIVersion) {
         app.get(`/${style}/openapi.json`, (req:any, res:any) => {
           res.header('Access-Control-Allow-Origin', '*');
-          res.json({...definition, servers: [generateServerForApiVersion(apiRoot, req)]});
+          const liveDefinition = generateDefinitionForVersion(version, style);
+          res.json({...liveDefinition, servers: [generateServerForApiVersion(apiRoot, req)]});
         });
       }
 
@@ -612,17 +633,30 @@ exports.expressPreSession = async (hookName:string, {app}:any) => {
 
           // read form data if method was POST
           let formData:MapArrayType<any> = {};
-          if (c.request.method === 'post') {
-            const form = new IncomingForm();
-            formData = (await form.parse(req))[0];
-            for (const k of Object.keys(formData)) {
-              if (formData[k] instanceof Array) {
-                formData[k] = formData[k][0];
+          if ((c.request.method || '').toLowerCase() === 'post') {
+            // If express.json() already parsed the body (application/json),
+            // use req.body directly. Formidable would hang waiting for an
+            // already-consumed stream, causing the request to time out.
+            if (req.body && typeof req.body === 'object') {
+              formData = req.body;
+            } else {
+              const form = new IncomingForm();
+              formData = (await form.parse(req))[0];
+              for (const k of Object.keys(formData)) {
+                if (formData[k] instanceof Array) {
+                  formData[k] = formData[k][0];
+                }
               }
             }
           }
 
-          const fields = Object.assign({}, headers, params, query, formData);
+          // Merge parameters with clear precedence: body > query > path params.
+          // Only pass the authorization header explicitly — don't merge all headers
+          // into fields to prevent parameter pollution.
+          const fields = Object.assign({}, params, query, formData);
+          if (headers.authorization) {
+            fields.authorization = fields.authorization || headers.authorization;
+          }
           if (logger.isDebugEnabled()) {
             logger.debug(`REQUEST, v${version}:${funcName}, ${JSON.stringify(fields)}`);
           }

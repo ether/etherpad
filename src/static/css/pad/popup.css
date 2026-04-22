@@ -28,8 +28,8 @@
   border: 1px solid #ccc;
   box-shadow: 0 2px 4px #ddd;
   background: #f7f7f7;
-  min-width: 300px;
-  max-width: 600px;
+  min-width: min(300px, 90vw);
+  max-width: min(600px, 95vw);
 }
 .popup input[type=text] {
   width: 100%;

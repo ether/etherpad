@@ -332,6 +332,33 @@ pre
     wantAlines: ['+f*1+2+2'],
     wantText: ['Need more space s !'],
   },
+  {
+    description: 'Bare <li> without parent <ul>/<ol> should not crash (bug #6665)',
+    html: '<html><body><li>this should not crash</li></body></html>',
+    wantAlines: [
+      '*0*2*6+1+l',
+    ],
+    wantText: ['*this should not crash'],
+  },
+  {
+    description: 'Multiple bare <li> elements without parent list',
+    html: '<html><body><li>first</li><li>second</li></body></html>',
+    wantAlines: [
+      '*0*2*6+1+5',
+      '*0*2*6+1+6',
+    ],
+    wantText: ['*first', '*second'],
+  },
+  {
+    description: 'Mixed bare <li> and normal content',
+    html: '<html><body><p>before</p><li>bare item</li><p>after</p></body></html>',
+    wantAlines: [
+      '+6',
+      '*0*2*6+1+9',
+      '+5',
+    ],
+    wantText: ['before', '*bare item', 'after'],
+  },
 ];
 
 describe(__filename, function () {

@@ -27,6 +27,22 @@ import pad_utils from "../../static/js/pad_utils";
 import {SmartOpAssembler} from "../../static/js/SmartOpAssembler";
 import {timesLimit} from "async";
 
+type PadViewSettings = {
+  showAuthorColors: boolean;
+  showLineNumbers: boolean;
+  rtlIsTrue: boolean;
+  padFontFamily: string;
+};
+
+type PadSettings = {
+  enforceSettings: boolean;
+  showChat: boolean;
+  alwaysShowChat: boolean;
+  chatAndUsers: boolean;
+  lang: string;
+  view: PadViewSettings;
+};
+
 /**
  * Copied from the Etherpad source code. It converts Windows line breaks to Unix
  * line breaks and convert Tabs to spaces
@@ -47,6 +63,7 @@ class Pad {
     private publicStatus: boolean;
     private id: string;
     private savedRevisions: any[];
+    private padSettings: PadSettings;
   /**
    * @param id
    * @param [database] - Database object to access this pad's records (and only this pad's records;
@@ -64,6 +81,26 @@ class Pad {
     this.publicStatus = false;
     this.id = id;
     this.savedRevisions = [];
+    this.padSettings = Pad.normalizePadSettings();
+  }
+
+  static normalizePadSettings(rawPadSettings: any = {}): PadSettings {
+    const rawView = rawPadSettings.view ?? {};
+    return {
+      enforceSettings: !!rawPadSettings.enforceSettings,
+      showChat: rawPadSettings.showChat == null ? settings.padOptions.showChat !== false :
+        !!rawPadSettings.showChat,
+      alwaysShowChat: !!rawPadSettings.alwaysShowChat,
+      chatAndUsers: !!rawPadSettings.chatAndUsers,
+      lang: typeof rawPadSettings.lang === 'string' ? rawPadSettings.lang : 'en',
+      view: {
+        showAuthorColors: rawView.showAuthorColors == null ? true : !!rawView.showAuthorColors,
+        showLineNumbers: rawView.showLineNumbers == null ?
+          settings.padOptions.showLineNumbers !== false : !!rawView.showLineNumbers,
+        rtlIsTrue: !!rawView.rtlIsTrue,
+        padFontFamily: typeof rawView.padFontFamily === 'string' ? rawView.padFontFamily : '',
+      },
+    };
   }
 
   apool() {
@@ -86,6 +123,22 @@ class Pad {
 
   getPublicStatus() {
     return this.publicStatus;
+  }
+
+  getPadSettings() {
+    return Pad.normalizePadSettings(this.padSettings);
+  }
+
+  setPadSettings(rawPadSettings: any) {
+    const nextPadSettings = {
+      ...this.getPadSettings(),
+      ...rawPadSettings,
+      view: {
+        ...this.getPadSettings().view,
+        ...(rawPadSettings?.view ?? {}),
+      },
+    };
+    this.padSettings = Pad.normalizePadSettings(nextPadSettings);
   }
 
   /**
@@ -125,6 +178,7 @@ class Pad {
       authorId && authorManager.addPad(authorId, this.id),
       hooks.aCallAll(hook, {
         pad: this,
+        padId: this.id,
         authorId,
         get author() {
           pad_utils.warnDeprecated(`${hook} hook author context is deprecated; use authorId instead`);
@@ -172,7 +226,7 @@ class Pad {
 
   async getRevisionAuthor(revNum: number) {
     // @ts-ignore
-    return await this.db.getSub(`pad:${this.id}:revs:${revNum}`, ['meta', 'author']);
+    return await this.db.getSub(`pad:${this.id}:revs:${revNum}`, ['meta', 'author']) ?? '';
   }
 
   async getRevisionDate(revNum: number) {
@@ -294,7 +348,8 @@ class Pad {
         (!ins && start > 0 && orig[start - 1] === '\n');
     if (!willEndWithNewline) ins += '\n';
     if (ndel === 0 && ins.length === 0) return;
-    const changeset = makeSplice(orig, start, ndel, ins);
+    const attribs = authorId ? [['author', authorId] as [string, string]] : undefined;
+    const changeset = makeSplice(orig, start, ndel, ins, attribs, this.pool);
     await this.appendRevision(changeset, authorId);
   }
 
@@ -394,9 +449,11 @@ class Pad {
         if (context.type !== 'text') throw new Error(`unsupported content type: ${context.type}`);
         text = exports.cleanText(context.content);
       }
-      const firstChangeset = makeSplice('\n', 0, 0, text);
+      const firstAttribs = authorId ? [['author', authorId] as [string, string]] : undefined;
+      const firstChangeset = makeSplice('\n', 0, 0, text, firstAttribs, this.pool);
       await this.appendRevision(firstChangeset, authorId);
     }
+    this.padSettings = Pad.normalizePadSettings(this.padSettings);
     await hooks.aCallAll('padLoad', {pad: this});
   }
 

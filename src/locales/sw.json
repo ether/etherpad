@@ -87,7 +87,6 @@
 	"pad.importExport.exportword": "Neno la Microsoft",
 	"pad.importExport.exportpdf": "PDF",
 	"pad.importExport.exportopen": "ODF (Fungua Fomati ya Hati)",
-	"pad.importExport.abiword.innerHTML": "Unaweza kuagiza tu kutoka kwa maandishi wazi au fomati za HTML. Kwa vipengee vya hali ya juu zaidi tafadhali <a href=\"https://github.com/ether/etherpad-lite/wiki/How-to-enable-importing-and-exporting-different-file-formats-with-AbiWord\"> weka AbiWord au LibreOffice </a>.",
 	"pad.modals.connected": "Imeunganishwa",
 	"pad.modals.reconnecting": "Inaunganisha tena pedi yako…",
 	"pad.modals.forcereconnect": "Lazimisha kuunganisha tena",

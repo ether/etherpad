@@ -12,7 +12,7 @@ jobs:
     steps:
       -
         name: Check out Etherpad core
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: ether/etherpad-lite
       - uses: pnpm/action-setup@v3
@@ -33,7 +33,7 @@ jobs:
             ${{ runner.os }}-pnpm-store-
       -
         name: Check out the plugin
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           path: ./node_modules/__tmp
       -
@@ -78,7 +78,7 @@ jobs:
       - name: Run the frontend tests
         shell: bash
         run: |
-          pnpm run prod &
+          pnpm run dev &
           connected=false
           can_connect() {
           curl -sSfo /dev/null http://localhost:9001/ || return 1

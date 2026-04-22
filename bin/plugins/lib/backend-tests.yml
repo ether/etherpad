@@ -16,13 +16,13 @@ jobs:
     steps:
       -
         name: Install libreoffice
-        uses: awalsh128/cache-apt-pkgs-action@v1.4.2
+        uses: awalsh128/cache-apt-pkgs-action@v1.6.0
         with:
           packages: libreoffice libreoffice-pdfimport
           version: 1.0
       -
         name: Install etherpad core
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: ether/etherpad-lite
           path: etherpad-lite
@@ -44,20 +44,9 @@ jobs:
             ${{ runner.os }}-pnpm-store-
       -
         name: Checkout plugin repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           path: plugin
-      -
-        name: Determine plugin name
-        id: plugin_name
-        working-directory: ./plugin
-        run: |
-          npx -c 'printf %s\\n "::set-output name=plugin_name::${npm_package_name}"'
-      -
-        name: Link plugin directory
-        working-directory: ./plugin
-        run: |
-          pnpm link --global
       - name: Remove tests
         working-directory: ./etherpad-lite
         run: rm -rf ./src/tests/backend/specs
@@ -65,28 +54,18 @@ jobs:
         name: Install Etherpad core dependencies
         working-directory: ./etherpad-lite
         run: bin/installDeps.sh
-      - name: Link plugin to etherpad-lite
+      - name: Install plugin
         working-directory: ./etherpad-lite
         run: |
-          pnpm link --global $PLUGIN_NAME
           pnpm run plugins i --path  ../../plugin
-        env:
-          PLUGIN_NAME: ${{ steps.plugin_name.outputs.plugin_name }}
-      - name: Link ep_etherpad-lite
-        working-directory: ./etherpad-lite/src
-        run: |
-          pnpm link --global
-      - name: Link etherpad to plugin
-        working-directory: ./plugin
-        run: |
-          pnpm link --global ep_etherpad-lite
       -
         name: Run the backend tests
-        working-directory: ./etherpad-lite
+        working-directory: ./etherpad-lite/src
         run: |
-          res=$(find .. -path "./node_modules/ep_*/static/tests/backend/specs/**" | wc -l)
+          shopt -s globstar
+          res=$(find ./plugin_packages -path "*/static/tests/backend/specs/*" 2>/dev/null | wc -l)
           if [ $res -eq 0 ]; then
           echo "No backend tests found"
           else
-          pnpm run test
+          npx cross-env NODE_ENV=production mocha --import=tsx --timeout 120000 --recursive node_modules/ep_*/static/tests/backend/specs/**
           fi

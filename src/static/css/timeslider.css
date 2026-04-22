@@ -120,15 +120,33 @@
   overflow-y: auto;
 }
 #outerdocbody {
-  display: block;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: flex-start;
   width: 100%;
+}
+
+#outerdocbody > #sidediv {
+  flex: 0 0 auto;
+  padding-top: 30px;
+  padding-bottom: 30px;
+}
+
+#outerdocbody > #innerdocbody {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding-right: calc(var(--editor-horizontal-padding, 0px) + 15px);
+  padding-top: 30px;
+  padding-left: calc(var(--editor-horizontal-padding, 0px) + 15px);
+  padding-bottom: 30px;
 }
 
 #innerdocbody {
   white-space: normal;
   word-break: break-word;
   width: 100%;
-  margin: 0 auto;
+  margin: 0;
   height: auto;
 }
 

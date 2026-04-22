@@ -65,7 +65,7 @@ const closeServer = async () => {
 };
 
 exports.createServer = async () => {
-  console.log('Report bugs at https://github.com/ether/etherpad-lite/issues');
+  console.log('Report bugs at https://github.com/ether/etherpad/issues');
 
   serverName = `Etherpad ${getGitCommit()} (https://etherpad.org)`;
 
@@ -200,7 +200,11 @@ exports.restartServer = async () => {
 
   app.use(cookieParser(secret, {}));
 
-  sessionStore = new SessionStore(settings.cookie.sessionRefreshInterval);
+  const store = new SessionStore(settings.cookie.sessionRefreshInterval);
+  if (settings.cookie.sessionCleanup !== false) {
+    store.startCleanup();
+  }
+  sessionStore = store;
   exports.sessionMiddleware = expressSession({
     rolling: true,
     secret,
@@ -209,7 +213,7 @@ exports.restartServer = async () => {
     saveUninitialized: false,
     // Set the cookie name to a javascript identifier compatible string. Makes code handling it
     // cleaner :)
-    name: 'express_sid',
+    name: `${settings.cookie.prefix}express_sid`,
     cookie: {
       maxAge: sessionLifetime || undefined, // Convert 0 to null.
       sameSite: settings.cookie.sameSite,

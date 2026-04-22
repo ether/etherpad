@@ -77,22 +77,22 @@ ol > li {
 }
 
 /* Set the indentation */
-ol.list-number1{ text-indent: 0px; }
-ol.list-number2{ text-indent: 10px; }
-ol.list-number3{ text-indent: 20px; }
-ol.list-number4{ text-indent: 30px; }
-ol.list-number5{ text-indent: 40px; }
-ol.list-number6{ text-indent: 50px; }
-ol.list-number7{ text-indent: 60px; }
-ol.list-number8{ text-indent: 70px; }
-ol.list-number9{ text-indent: 80px; }
-ol.list-number10{ text-indent: 90px; }
-ol.list-number11{ text-indent: 100px; }
-ol.list-number12{ text-indent: 110px; }
-ol.list-number13{ text-indent: 120px; }
-ol.list-number14{ text-indent: 130px; }
-ol.list-number15{ text-indent: 140px; }
-ol.list-number16{ text-indent: 150px; }
+ol.list-number1{ padding-left: 0px; }
+ol.list-number2{ padding-left: 10px; }
+ol.list-number3{ padding-left: 20px; }
+ol.list-number4{ padding-left: 30px; }
+ol.list-number5{ padding-left: 40px; }
+ol.list-number6{ padding-left: 50px; }
+ol.list-number7{ padding-left: 60px; }
+ol.list-number8{ padding-left: 70px; }
+ol.list-number9{ padding-left: 80px; }
+ol.list-number10{ padding-left: 90px; }
+ol.list-number11{ padding-left: 100px; }
+ol.list-number12{ padding-left: 110px; }
+ol.list-number13{ padding-left: 120px; }
+ol.list-number14{ padding-left: 130px; }
+ol.list-number15{ padding-left: 140px; }
+ol.list-number16{ padding-left: 150px; }
 
 /* Add styling to the first item in a list */
 

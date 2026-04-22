@@ -9,6 +9,8 @@ function getCookie(name: string) {
 }
 
 
+const cp = (window as any).clientVars?.cookiePrefix || '';
+
 function handleTransferOfSession() {
   const transferNowButton = document.querySelector('[data-l10n-id="index.transferSessionNow"]')! as HTMLButtonElement;
 
@@ -25,8 +27,8 @@ function handleTransferOfSession() {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        prefsHttp: getCookie('prefsHttp'),
-        token: getCookie('token'),
+        prefsHttp: getCookie(`${cp}prefsHttp`) || getCookie('prefsHttp'),
+        token: getCookie(`${cp}token`) || getCookie('token'),
       })
     })
 

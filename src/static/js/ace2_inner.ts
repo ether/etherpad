@@ -464,6 +464,7 @@ function Ace2Inner(editorInfo, cssManagers) {
   const setEditable = (newVal) => {
     isEditable = newVal;
     targetBody.contentEditable = isEditable ? 'true' : 'false';
+    targetBody.setAttribute('aria-readonly', isEditable ? 'false' : 'true');
     targetBody.classList.toggle('static', !isEditable);
   };
 
@@ -2307,14 +2308,23 @@ function Ace2Inner(editorInfo, cssManagers) {
       let position = 1;
       let curLevel = level;
       let listType;
+      let prevType = '';
       // loop over the lines
       while ((listType = getLineListType(line))) {
         // apply new num
         listType = /([a-z]+)([0-9]+)/.exec(listType);
         curLevel = Number(listType[2]);
-        if (isNaN(curLevel) || listType[0] === 'indent') {
+        const curType = listType[1];
+        if (isNaN(curLevel) || listType[1] === 'indent') {
           return line;
         } else if (curLevel === level) {
+          // Reset position when switching between list types at the same level
+          // (e.g., bullet -> number). See https://github.com/ether/etherpad-lite/issues/5160
+          if (prevType && prevType !== curType) {
+            position = 1;
+          }
+          prevType = curType;
+
           buildKeepRange(rep, builder, loc, (loc = [line, 0]));
           buildKeepRange(rep, builder, loc, (loc = [line, 1]), [
             ['start', position],
@@ -2341,6 +2351,7 @@ function Ace2Inner(editorInfo, cssManagers) {
   };
   editorInfo.ace_renumberList = renumberList;
 
+  let _skipRenumber = false;
   const setLineListType = (lineNum, listType) => {
     if (listType === '') {
       documentAttributeManager.removeAttributeOnLine(lineNum, listAttributeName);
@@ -2348,6 +2359,8 @@ function Ace2Inner(editorInfo, cssManagers) {
     } else {
       documentAttributeManager.setAttributeOnLine(lineNum, listAttributeName, listType);
     }
+
+    if (_skipRenumber) return;
 
     // if the list has been removed, it is necessary to renumber
     // starting from the *next* line because the list may have been
@@ -2386,8 +2399,32 @@ function Ace2Inner(editorInfo, cssManagers) {
         setLineListType(lineNum + 1, type + level);
       }
     } else {
+      const caretColumn = rep.selStart[1];
       performDocumentReplaceSelection('\n');
       handleReturnIndentation();
+
+      // Preserve line attributes (heading, align, etc.) across line splits.
+      // When Enter is pressed in the middle or end of a line, copy attributes
+      // to the new line (same as list behavior). When Enter is pressed at the
+      // start of a line (column 0), keep attributes on the line with text
+      // (the new line below) and clear the now-empty line above.
+      const lineAttrs = hooks.callAll('aceRegisterLineAttributes');
+      if (lineAttrs.length > 0) {
+        for (const attrName of lineAttrs) {
+          const value = documentAttributeManager.getAttributeOnLine(lineNum, attrName);
+          if (!value) continue;
+
+          if (caretColumn === 0) {
+            // Enter at start of line: attribute moves down with text.
+            // lineNum is now the empty line above, lineNum+1 has the text.
+            documentAttributeManager.removeAttributeOnLine(lineNum, attrName);
+            documentAttributeManager.setAttributeOnLine(lineNum + 1, attrName, value);
+          } else {
+            // Enter in middle or end: new line below inherits the attribute.
+            documentAttributeManager.setAttributeOnLine(lineNum + 1, attrName, value);
+          }
+        }
+      }
     }
   };
   editorInfo.ace_doReturnKey = doReturnKey;
@@ -2421,7 +2458,16 @@ function Ace2Inner(editorInfo, cssManagers) {
       }
     }
 
-    for (const mod of mods) setLineListType(mod[0], mod[1]);
+    _skipRenumber = true;
+    try {
+      for (const mod of mods) setLineListType(mod[0], mod[1]);
+    } finally {
+      _skipRenumber = false;
+    }
+    // Renumber once after all lines have been updated.
+    if (renumberList(firstLine + 1) == null) {
+      renumberList(firstLine);
+    }
     return true;
   };
   editorInfo.ace_doIndentOutdent = doIndentOutdent;
@@ -2680,15 +2726,26 @@ function Ace2Inner(editorInfo, cssManagers) {
         if (!specialHandled && isTypeForSpecialKey &&
             keyCode === 27 &&
             padShortcutEnabled.esc) {
-          // prevent esc key;
-          // in mozilla versions 14-19 avoid reconnecting pad.
-
+          // Escape key: if gritter popups are visible, close them and stay in editor.
+          // Otherwise, move focus to the toolbar (WCAG 2.1.2 keyboard trap escape).
           fastIncorp(4);
           evt.preventDefault();
           specialHandled = true;
 
-          // close all gritters when the user hits escape key
+          const hasGritters = window.$('.gritter-item').length > 0;
           window.$.gritter.removeAll();
+
+          if (!hasGritters) {
+            // No popups to dismiss — move focus to the toolbar so the user
+            // can navigate away from the editor with Tab.
+            try {
+              const toolbar = window.parent.document.querySelector('[role="toolbar"]');
+              const firstButton = toolbar?.querySelector('button');
+              if (firstButton) firstButton.focus();
+            } catch (e) {
+              // Cross-origin frame restrictions — ignore.
+            }
+          }
         }
         if (!specialHandled && isTypeForCmdKey &&
             /* Do a saved revision on ctrl S */
@@ -2840,35 +2897,18 @@ function Ace2Inner(editorInfo, cssManagers) {
             const numberOfLinesInViewport = newVisibleLineRange[1] - newVisibleLineRange[0];
 
             if (isPageUp && padShortcutEnabled.pageUp) {
-              // move to the bottom line +1 in the viewport (essentially skipping over a page)
-              rep.selEnd[0] -= numberOfLinesInViewport;
-              // move to the bottom line +1 in the viewport (essentially skipping over a page)
               rep.selStart[0] -= numberOfLinesInViewport;
+              rep.selEnd[0] -= numberOfLinesInViewport;
             }
 
-            // if we hit page down
             if (isPageDown && padShortcutEnabled.pageDown) {
-              // If the new viewpoint position is actually further than where we are right now
-              if (rep.selEnd[0] >= oldVisibleLineRange[0]) {
-                // dont go further in the page down than what's visible IE go from 0 to 50
-                //  if 50 is visible on screen but dont go below that else we miss content
-                rep.selStart[0] = oldVisibleLineRange[1] - 1;
-                // dont go further in the page down than what's visible IE go from 0 to 50
-                // if 50 is visible on screen but dont go below that else we miss content
-                rep.selEnd[0] = oldVisibleLineRange[1] - 1;
-              }
+              rep.selStart[0] += numberOfLinesInViewport;
+              rep.selEnd[0] += numberOfLinesInViewport;
             }
 
-            // ensure min and max
-            if (rep.selEnd[0] < 0) {
-              rep.selEnd[0] = 0;
-            }
-            if (rep.selStart[0] < 0) {
-              rep.selStart[0] = 0;
-            }
-            if (rep.selEnd[0] >= linesCount) {
-              rep.selEnd[0] = linesCount - 1;
-            }
+            // clamp to valid line range
+            rep.selStart[0] = Math.max(0, Math.min(rep.selStart[0], linesCount - 1));
+            rep.selEnd[0] = Math.max(0, Math.min(rep.selEnd[0], linesCount - 1));
             updateBrowserSelectionFromRep();
             // get the current caret selection, can't use rep. here because that only gives
             // us the start position not the current
@@ -2910,7 +2950,14 @@ function Ace2Inner(editorInfo, cssManagers) {
       const isSafariHalfCharacter =
           (browser.safari && evt.altKey && keyCode === 229);
 
-      if (thisKeyDoesntTriggerNormalize || isFirefoxHalfCharacter || isSafariHalfCharacter) {
+      // keyCode 229 indicates an IME/composition event (dead keys, compose key, etc.).
+      // On Firefox Linux, the keydown for a dead key fires before compositionstart,
+      // so inInternationalComposition may not be set yet.
+      // See https://github.com/ether/etherpad-lite/issues/5623
+      const isCompositionKeyCode = (keyCode === 229);
+
+      if (thisKeyDoesntTriggerNormalize || isFirefoxHalfCharacter ||
+          isSafariHalfCharacter || isCompositionKeyCode) {
         idleWorkTimer.atLeast(3000); // give user time to type
         // if this is a keydown, e.g., the keyup shouldn't trigger a normalize
         thisKeyDoesntTriggerNormalize = true;
@@ -3244,6 +3291,61 @@ function Ace2Inner(editorInfo, cssManagers) {
         documentAttributeManager,
         e,
       });
+
+      // Extract HTML from clipboard before the browser normalizes it.
+      // Browser contentEditable normalization strips inline formatting (bold, italic, etc.)
+      // from pasted Etherpad content because it flattens nested ace-line divs.
+      // See https://github.com/ether/etherpad-lite/issues/5037
+      const clipboardData = e.originalEvent?.clipboardData || (window as any).clipboardData;
+      const pastedHtml = clipboardData?.getData('text/html');
+      if (pastedHtml) {
+        // Parse the pasted HTML in a detached document to extract content
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(pastedHtml, 'text/html');
+        const hasFormatting = doc.querySelector('b, strong, i, em, u, s, del, ins');
+        if (hasFormatting) {
+          e.preventDefault();
+
+          // Sanitize: remove dangerous elements and event handler attributes
+          // to prevent XSS via clipboard content.
+          for (const el of doc.body.querySelectorAll(
+              'script, style, iframe, object, embed, form, link, meta')) {
+            el.remove();
+          }
+          for (const el of doc.body.querySelectorAll('*')) {
+            for (const attr of Array.from(el.attributes)) {
+              if (attr.name.startsWith('on') ||
+                  (attr.name === 'href' && /^\s*javascript:/i.test(attr.value))) {
+                el.removeAttribute(attr.name);
+              }
+            }
+          }
+
+          // Insert the sanitized HTML into the editor so the content collector
+          // can properly extract formatting from intact tags.
+          const sel = targetDoc.getSelection();
+          if (sel && sel.rangeCount > 0) {
+            const range = sel.getRangeAt(0);
+            range.deleteContents();
+            // Create a temporary container with the parsed body content
+            const frag = targetDoc.createDocumentFragment();
+            for (const child of Array.from(doc.body.childNodes)) {
+              frag.appendChild(targetDoc.importNode(child, true));
+            }
+            range.insertNode(frag);
+            // Move cursor to end of inserted content
+            range.collapse(false);
+            sel.removeAllRanges();
+            sel.addRange(range);
+          }
+          // Trigger incorporation of the inserted content
+          scheduler.setTimeout(() => {
+            inCallStackIfNecessary('paste', () => {
+              incorporateUserChanges();
+            });
+          }, 0);
+        }
+      }
     });
 
     // We reference document here, this is because if we don't this will expose a bug
@@ -3259,6 +3361,11 @@ function Ace2Inner(editorInfo, cssManagers) {
       // in order to make content be observed by incorporateUserChanges() (see
       // observeSuspiciousNodes() for more info)
       const selection = getSelection();
+      // Capture line attributes of neighboring lines before the browser processes
+      // the drop. Chrome/Safari can corrupt these attributes when merging lines
+      // after removing the dragged content.
+      // See https://github.com/ether/etherpad-lite/issues/3120
+      let savedLineAttrs: {lineNum: number, listType: string}[] | null = null;
       if (selection) {
         const firstLineSelected = topLevel(selection.startPoint.node);
         const lastLineSelected = topLevel(selection.endPoint.node);
@@ -3268,6 +3375,32 @@ function Ace2Inner(editorInfo, cssManagers) {
 
         const neighbor = lineBeforeSelection || lineAfterSelection;
         neighbor.appendChild(targetDoc.createElement('style'));
+
+        // Save attributes of lines adjacent to the dragged content
+        savedLineAttrs = [];
+        const startEntry = firstLineSelected.id && rep.lines.atKey(firstLineSelected.id);
+        const endEntry = lastLineSelected.id && rep.lines.atKey(lastLineSelected.id);
+        if (!startEntry || !endEntry) {
+          // Can't determine line numbers — skip attribute saving
+          savedLineAttrs = null;
+        }
+        const startLine = startEntry ? rep.lines.indexOfEntry(startEntry) : -1;
+        const endLine = endEntry ? rep.lines.indexOfEntry(endEntry) : -1;
+        // Save attributes of lines adjacent to the selection, including lines
+        // with NO list type (empty string). A line with no list type can get
+        // corrupted to inherit the dragged line's type during browser merging.
+        if (savedLineAttrs && endLine >= 0 && endLine + 1 < rep.lines.length()) {
+          savedLineAttrs.push({
+            lineNum: endLine + 1,
+            listType: getLineListType(endLine + 1) || '',
+          });
+        }
+        if (savedLineAttrs && startLine > 0) {
+          savedLineAttrs.push({
+            lineNum: startLine - 1,
+            listType: getLineListType(startLine - 1) || '',
+          });
+        }
       }
 
       // Call drop hook
@@ -3277,6 +3410,32 @@ function Ace2Inner(editorInfo, cssManagers) {
         documentAttributeManager,
         e,
       });
+
+      // After the browser processes the drop and incorporateUserChanges runs,
+      // restore any corrupted line attributes.
+      if (savedLineAttrs && savedLineAttrs.length > 0) {
+        scheduler.setTimeout(() => {
+          inCallStackIfNecessary('dropRestore', () => {
+            incorporateUserChanges();
+            // Check if any saved line attributes were corrupted
+            for (const {lineNum, listType} of savedLineAttrs!) {
+              if (lineNum < rep.lines.length()) {
+                const currentType = getLineListType(lineNum) || '';
+                if (currentType !== listType) {
+                  if (listType) {
+                    // Restore the original list attribute
+                    documentAttributeManager.setAttributeOnLine(lineNum, 'list', listType);
+                  } else {
+                    // Line should have no list type — remove the corrupted one
+                    documentAttributeManager.removeAttributeOnLine(lineNum, 'list');
+                    documentAttributeManager.removeAttributeOnLine(lineNum, 'start');
+                  }
+                }
+              }
+            }
+          });
+        }, 100);
+      }
     });
 
     $(targetDoc.documentElement).on('compositionstart', () => {
@@ -3410,18 +3569,26 @@ function Ace2Inner(editorInfo, cssManagers) {
         mods.push([n, allLinesAreList ? `indent${level}` : (t ? type + level : `${type}1`)]);
       } else {
         // scrap the entire indentation and list type
-        if (level === 1) { // if outdending but are the first item in the list then outdent
-          setLineListType(n, ''); // outdent
-        }
-        // else change to indented not bullet
-        if (level > 1) {
-          setLineListType(n, ''); // remove bullet
-          setLineListType(n, `indent${level}`); // in/outdent
+        if (level === 1) {
+          mods.push([n, '']);
+        } else if (level > 1) {
+          mods.push([n, '']);
+          mods.push([n, `indent${level}`]);
         }
       }
     }
 
-    for (const mod of mods) setLineListType(mod[0], mod[1]);
+    _skipRenumber = true;
+    try {
+      for (const mod of mods) setLineListType(mod[0], mod[1]);
+    } finally {
+      _skipRenumber = false;
+    }
+    // Renumber once after all lines have been updated.
+    // Try from firstLine since the first mod may be an indent/removal.
+    if (renumberList(firstLine + 1) == null) {
+      renumberList(firstLine);
+    }
   };
 
   const doInsertUnorderedList = () => {

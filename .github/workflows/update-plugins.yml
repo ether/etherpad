@@ -1,0 +1,116 @@
+name: Update Plugins
+
+on:
+  schedule:
+    - cron: '0 6 * * *'  # Daily at 06:00 UTC
+  workflow_dispatch:  # Allow manual trigger
+
+# The cross-repo work (cloning ether/ep_* repos, pushing updates, merging
+# Dependabot PRs) is authenticated via secrets.PLUGINS_PAT. The default
+# GITHUB_TOKEN only needs read access to this repo for actions/checkout.
+permissions:
+  contents: read
+
+jobs:
+  update-plugins:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out etherpad-lite
+        uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v6
+        name: Install pnpm
+        with:
+          version: 10
+          run_install: false
+
+      - name: Use Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Install bin dependencies
+        working-directory: ./bin
+        run: pnpm install
+
+      - name: Configure git
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email '41898282+github-actions[bot]@users.noreply.github.com'
+
+      - name: Clone and update all plugins
+        env:
+          GH_TOKEN: ${{ secrets.PLUGINS_PAT }}
+        run: |
+          # Configure git to use the PAT for all ether/ repos
+          git config --global url."https://x-access-token:${GH_TOKEN}@github.com/ether/".insteadOf "https://github.com/ether/"
+
+          cd ..
+          # List all ep_* repos from ether org
+          plugins=$(gh repo list ether --limit 200 --json name --jq '.[] | select(.name | startswith("ep_")) | .name')
+
+          failed=""
+          succeeded=""
+          skipped=""
+
+          for plugin in $plugins; do
+            echo "============================================================"
+            echo "Processing $plugin"
+            echo "============================================================"
+
+            # Clone if not present
+            if [ ! -d "$plugin" ]; then
+              git clone "https://github.com/ether/${plugin}.git" "$plugin" || { echo "SKIP: clone failed"; skipped="$skipped $plugin"; continue; }
+            fi
+
+            # Pull latest
+            (cd "$plugin" && git pull --ff-only) || { echo "SKIP: pull failed"; skipped="$skipped $plugin"; continue; }
+
+            # Run checkPlugin with autopush — continue on failure
+            if cd etherpad-lite/bin && pnpm run checkPlugin "$plugin" autopush 2>&1; then
+              succeeded="$succeeded $plugin"
+            else
+              echo "WARN: checkPlugin failed for $plugin"
+              failed="$failed $plugin"
+            fi
+            cd ../..
+          done
+
+          echo ""
+          echo "============================================================"
+          echo "SUMMARY"
+          echo "============================================================"
+          echo "Succeeded:$(echo $succeeded | wc -w) -$succeeded"
+          echo "Failed:$(echo $failed | wc -w) -$failed"
+          echo "Skipped:$(echo $skipped | wc -w) -$skipped"
+
+      - name: Merge clean Dependabot PRs on plugin repos
+        env:
+          GH_TOKEN: ${{ secrets.PLUGINS_PAT }}
+        run: |
+          # For every ep_* repo under ether, merge any Dependabot PR whose
+          # mergeStateStatus is CLEAN (no conflicts, branch up to date, all
+          # required checks green). Anything else is left alone for a human.
+          plugins=$(gh repo list ether --limit 200 --json name --jq '.[] | select(.name | startswith("ep_")) | .name')
+
+          merged=""
+          for plugin in $plugins; do
+            repo="ether/${plugin}"
+            prs=$(gh pr list --repo "$repo" \
+              --author "app/dependabot" \
+              --state open \
+              --json number,mergeStateStatus,title \
+              --jq '.[] | select(.mergeStateStatus=="CLEAN") | .number') || continue
+
+            for pr in $prs; do
+              echo "Merging ${repo}#${pr}"
+              if gh pr merge --repo "$repo" --squash --delete-branch "$pr"; then
+                merged="$merged ${repo}#${pr}"
+              else
+                echo "WARN: failed to merge ${repo}#${pr}"
+              fi
+            done
+          done
+
+          echo ""
+          echo "Merged Dependabot PRs:$merged"

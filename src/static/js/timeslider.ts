@@ -33,6 +33,39 @@ import padutils from './pad_utils'
 const socketio = require('./socketio');
 import html10n from '../js/vendors/html10n'
 let token, padId, exportLinks, socket, changesetLoader, BroadcastSlider;
+let cp = '';
+const playbackSpeedCookie = 'timesliderPlaybackSpeed';
+
+const getPrefsCookieName = () => `${cp}${window.location.protocol === 'https:' ? 'prefs' : 'prefsHttp'}`;
+
+const readPadPrefs = () => {
+  try {
+    let json = Cookies.get(getPrefsCookieName());
+    if (json == null) {
+      const unprefixed = window.location.protocol === 'https:' ? 'prefs' : 'prefsHttp';
+      if (unprefixed !== getPrefsCookieName()) json = Cookies.get(unprefixed);
+    }
+    return json == null ? {} : JSON.parse(json);
+  } catch (err) {
+    return {};
+  }
+};
+
+const writePadPrefs = (prefs) => {
+  Cookies.set(getPrefsCookieName(), JSON.stringify(prefs), {expires: 365 * 100});
+};
+
+const setPadPref = (prefName, value) => {
+  const prefs = readPadPrefs();
+  prefs[prefName] = value;
+  writePadPrefs(prefs);
+};
+
+const applyShowLineNumbers = (showLineNumbers) => {
+  padutils.setCheckbox($('#options-linenoscheck'), showLineNumbers);
+  $('body').toggleClass('line-numbers-hidden', !showLineNumbers);
+  window.requestAnimationFrame(() => $(window).trigger('resize'));
+};
 
 const init = () => {
   padutils.setupGlobalExceptionHandler();
@@ -48,10 +81,11 @@ const init = () => {
     document.title = `${padId.replace(/_+/g, ' ')} | ${document.title}`;
 
     // ensure we have a token
-    token = Cookies.get('token');
+    cp = (window as any).clientVars?.cookiePrefix || '';
+    token = Cookies.get(`${cp}token`) || Cookies.get('token');
     if (token == null) {
       token = `t.${randomString()}`;
-      Cookies.set('token', token, {expires: 60});
+      Cookies.set(`${cp}token`, token, {expires: 60});
     }
 
     socket = socketio.connect(exports.baseURL, '/', {query: {padId}});
@@ -101,7 +135,7 @@ const sendSocketMsg = (type, data) => {
     data,
     padId,
     token,
-    sessionID: Cookies.get('sessionID'),
+    sessionID: Cookies.get(`${cp}sessionID`) || Cookies.get('sessionID'),
   });
 };
 
@@ -110,6 +144,7 @@ const fireWhenAllScriptsAreLoaded = [];
 const handleClientVars = (message) => {
   // save the client Vars
   window.clientVars = message.data;
+  cp = (window as any).clientVars?.cookiePrefix || '';
 
   if (window.clientVars.sessionRefreshInterval) {
     const ping =
@@ -165,10 +200,25 @@ const handleClientVars = (message) => {
   $('#playpause_button_icon').attr('title', html10n.get('timeslider.playPause'));
   $('#leftstep').attr('title', html10n.get('timeslider.backRevision'));
   $('#rightstep').attr('title', html10n.get('timeslider.forwardRevision'));
+  padutils.bindCheckboxChange($('#options-linenoscheck'), () => {
+    const showLineNumbers = padutils.getCheckbox('#options-linenoscheck');
+    setPadPref('showLineNumbers', showLineNumbers);
+    applyShowLineNumbers(showLineNumbers);
+  });
+  applyShowLineNumbers(readPadPrefs().showLineNumbers !== false);
 
   // font family change
   $('#viewfontmenu').on('change', function () {
     $('#innerdocbody').css('font-family', $(this).val() || '');
+  });
+
+  const savedPlaybackSpeed = Cookies.get(`${cp}${playbackSpeedCookie}`) || '100';
+  $('#playbackspeed').val(savedPlaybackSpeed);
+  BroadcastSlider.setPlaybackSpeed(savedPlaybackSpeed);
+  $('#playbackspeed').on('change', function () {
+    const speed = String($(this).val() || '100');
+    Cookies.set(`${cp}${playbackSpeedCookie}`, speed);
+    BroadcastSlider.setPlaybackSpeed(speed);
   });
 };
 

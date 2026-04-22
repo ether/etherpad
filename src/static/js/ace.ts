@@ -50,7 +50,15 @@ const eventFired = async (obj, event, cleanups = [], predicate = () => true) => 
       cleanup();
       resolve();
     };
-    const errorCb = () => {
+    const errorCb = (evt) => {
+      // Ignore error events from browser extension scripts — they are unrelated
+      // to Etherpad and should not block editor initialization.
+      // See https://github.com/ether/etherpad-lite/issues/6802
+      const src = evt?.target?.src || evt?.filename || '';
+      if (/^(moz|chrome|safari)-extension:\/\//.test(src)) {
+        debugLog('Ace2Editor.init() ignoring error from browser extension:', src);
+        return;
+      }
       const err = new Error(`Ace2Editor.init() error event while waiting for ${event} event`);
       debugLog(`${err} on object`, obj);
       cleanup();
@@ -284,7 +292,17 @@ const Ace2Editor = function () {
     // <body> tag
     innerDocument.body.id = 'innerdocbody';
     innerDocument.body.classList.add('innerdocbody');
+    innerDocument.body.setAttribute('role', 'textbox');
+    innerDocument.body.setAttribute('aria-multiline', 'true');
+    innerDocument.body.setAttribute('aria-label', 'Pad content');
+    innerDocument.body.setAttribute('aria-describedby', 'editor-keyboard-hint');
     innerDocument.body.setAttribute('spellcheck', 'false');
+    // Screen-reader-only keyboard hint inside the iframe so it's announced on focus.
+    const hint = innerDocument.createElement('div');
+    hint.id = 'editor-keyboard-hint';
+    hint.style.cssText = 'position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)';
+    hint.textContent = 'Press Escape to exit the editor. Press Alt+F9 to access the toolbar.';
+    innerDocument.body.appendChild(hint);
     innerDocument.body.appendChild(innerDocument.createTextNode('\u00A0')); // &nbsp;
 /*
     debugLog('Ace2Editor.init() waiting for require kernel load');

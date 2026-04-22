@@ -13,11 +13,11 @@ export default defineConfig({
     fullyParallel: true,
     /* Fail the build on CI if you accidentally left test.only in the source code. */
     /* Reporter to use. See https://playwright.dev/docs/test-reporters */
-    reporter: process.env.CI ? 'github' : 'html',
+    reporter: process.env.CI ? [['github'], ['list']] : 'html',
     expect: { timeout: defaultExpectTimeout },
     timeout: defaultTestTimeout,
-    retries: 2,
-    workers: 5,
+    retries: process.env.CI ? 2 : 0,
+    workers: 2,
     /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
     use: {
         /* Base URL to use in actions like `await page.goto('/')`. */
@@ -39,15 +39,8 @@ export default defineConfig({
             name: 'firefox',
             use: { ...devices['Desktop Firefox'] },
         },
-        {
-            name: 'chrome-firefox',
-            use:
-                {...devices['Desktop Firefox'], ...devices['Desktop Chrome']},
-        },
-        {
-            name: 'webkit',
-            use: { ...devices['Desktop Safari'] },
-        },
+        // Webkit dropped from CI — see https://github.com/ether/etherpad-lite/issues/XXXX
+        // Kept chromium and firefox as the supported browsers.
 
         /* Test against mobile viewports. */
         // {

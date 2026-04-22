@@ -32,7 +32,6 @@ import padutils from '../../static/js/pad_utils';
 import readOnlyManager from '../db/ReadOnlyManager';
 import settings, {
   exportAvailable,
-  abiwordAvailable,
   sofficeAvailable
 } from '../utils/Settings';
 const securityManager = require('../db/SecurityManager');
@@ -47,7 +46,7 @@ import {RateLimiterMemory} from 'rate-limiter-flexible';
 import {ChangesetRequest, PadUserInfo, SocketClientRequest} from "../types/SocketClientRequest";
 import {APool, AText, PadAuthor, PadType} from "../types/PadType";
 import {ChangeSet} from "../types/ChangeSet";
-import {ChatMessageMessage, ClientReadyMessage, ClientSaveRevisionMessage, ClientSuggestUserName, ClientUserChangesMessage, ClientVarMessage, CustomMessage, PadDeleteMessage, UserNewInfoMessage} from "../../static/js/types/SocketIOMessage";
+import {ChatMessageMessage, ClientReadyMessage, ClientSaveRevisionMessage, ClientSuggestUserName, ClientUserChangesMessage, ClientVarMessage, CustomMessage, PadDeleteMessage, PadOptionsMessage, UserNewInfoMessage} from "../../static/js/types/SocketIOMessage";
 import {Builder} from "../../static/js/Builder";
 const webaccess = require('../hooks/express/webaccess');
 const { checkValidRev } = require('../utils/checkValidRev');
@@ -235,7 +234,7 @@ const handlePadDelete = async (socket: any, padDeleteMessage: PadDeleteMessage) 
     // Only the one doing the first revision can delete the pad, otherwise people could troll a lot
     const firstContributor = await retrievedPad.getRevisionAuthor(0)
     if (session.author === firstContributor) {
-      retrievedPad.remove()
+      await retrievedPad.remove()
     } else {
 
       type ShoutMessage = {
@@ -263,6 +262,41 @@ const handlePadDelete = async (socket: any, padDeleteMessage: PadDeleteMessage) 
     }
   }
 }
+
+const isPadCreator = async (pad: any, authorId: string) => authorId === await pad.getRevisionAuthor(0);
+
+const handlePadOptionsMessage = async (
+    socket: any, message: PadOptionsMessage & {data: {payload: PadOptionsMessage}}) => {
+  const session = sessioninfos[socket.id];
+  if (!session || !session.author || !session.padId) throw new Error('session not ready');
+  if (!settings.enablePadWideSettings) return;
+  if (!await padManager.doesPadExist(session.padId)) {
+    messageLogger.warn(`Ignoring padoptions for missing pad ${session.padId}`);
+    return;
+  }
+  const pad = await padManager.getPad(session.padId, null, session.author);
+  if (!await isPadCreator(pad, session.author)) {
+    socket.emit('shout', {
+      type: 'COLLABROOM',
+      data: {
+        type: 'shoutMessage',
+        payload: {
+          message: {
+            message: 'Only the pad creator can change pad settings',
+            sticky: false,
+          },
+          timestamp: Date.now(),
+        },
+      },
+    });
+    return;
+  }
+  pad.setPadSettings(message.data.payload.options);
+  await pad.saveToDatabase();
+  _getRoomSockets(session.padId).forEach((socket) => {
+    socket.emit('message', message);
+  });
+};
 
 
 /**
@@ -414,6 +448,11 @@ exports.handleMessage = async (socket:any, message: ClientVarMessage) => {
               try {
                 switch (type) {
                   case 'suggestUserName': handleSuggestUserName(socket, message as unknown as ClientSuggestUserName); break;
+                  case 'padoptions':
+                    await handlePadOptionsMessage(
+                        socket,
+                        message as unknown as PadOptionsMessage & {data: {payload: PadOptionsMessage}});
+                    break;
                   default: throw new Error('unknown message type');
                 }
               } catch (err) {
@@ -652,7 +691,12 @@ const handleUserChanges = async (socket:any, message: {
     // Verify that the changeset has valid syntax and is in canonical form
     checkRep(changeset);
 
-    // Validate all added 'author' attribs to be the same value as the current user
+    // Validate all added 'author' attribs to be the same value as the current user.
+    // Exception: '=' ops (attribute changes on existing text) are allowed to restore other authors'
+    // IDs, but only if that author already exists in the pad's pool (i.e., they genuinely
+    // contributed to this pad). This is necessary for undoing "clear authorship colors", which
+    // re-applies the original author attributes for all authors.
+    // See https://github.com/ether/etherpad-lite/issues/2802
     for (const op of deserializeOps(unpack(changeset).ops)) {
       // + can add text with attribs
       // = can change or add attribs
@@ -664,8 +708,24 @@ const handleUserChanges = async (socket:any, message: {
       // an attribute number isn't in the pool).
       const opAuthorId = AttributeMap.fromString(op.attribs, wireApool).get('author');
       if (opAuthorId && opAuthorId !== thisSession.author) {
-        throw new Error(`Author ${thisSession.author} tried to submit changes as author ` +
-                        `${opAuthorId} in changeset ${changeset}`);
+        if (op.opcode === '=') {
+          // Allow restoring author attributes on existing text (undo of clear authorship),
+          // but only if the author ID is already known to this pad. This prevents a user
+          // from attributing text to a fabricated author who never contributed to the pad.
+          const knownAuthor = pad.pool.putAttrib(['author', opAuthorId], true) !== -1;
+          if (!knownAuthor) {
+            throw new Error(`Author ${thisSession.author} tried to set unknown author ` +
+                            `${opAuthorId} on existing text in changeset ${changeset}`);
+          }
+        } else {
+          // Reject '+' ops (inserting new text as another author) and '-' ops (deleting
+          // with another author's attribs). While '-' attribs are discarded from the
+          // document, they are added to the pad's attribute pool by moveOpsToNewPool,
+          // which could be exploited to inject fabricated author IDs into the pool and
+          // bypass the '=' op pool check above.
+          throw new Error(`Author ${thisSession.author} tried to submit changes as author ` +
+                          `${opAuthorId} in changeset ${changeset}`);
+        }
       }
     }
 
@@ -863,8 +923,13 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
   ]);
   ({colorId: authorColorId, name: authorName} = await authorManager.getAuthor(sessionInfo.author));
 
+  const padExisted = await padManager.doesPadExist(sessionInfo.padId);
   // load the pad-object from the database
   const pad = await padManager.getPad(sessionInfo.padId, null, sessionInfo.author);
+  if (settings.enablePadWideSettings && !padExisted && message.padSettingsDefaults) {
+    pad.setPadSettings(message.padSettingsDefaults);
+    await pad.saveToDatabase();
+  }
 
   // these db requests all need the pad object (timestamp of latest revision, author data)
   const authors = pad.getAllAuthors();
@@ -984,8 +1049,15 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
     // This is a normal first connect
     let atext;
     let apool;
+    let headRev: number;
     // prepare all values for the wire, there's a chance that this throws, if the pad is corrupted
     try {
+      // Capture atext AND head revision atomically to prevent a race condition where
+      // concurrent edits advance the revision between these two reads. If the client
+      // receives initialAttributedText from rev N but rev=N+3, the first NEW_CHANGES
+      // changeset will fail with "mismatched apply" because it expects rev N+3 text.
+      // See https://github.com/ether/etherpad-lite/issues/4040
+      headRev = pad.getHeadRevisionNumber();
       atext = cloneAText(pad.atext);
       const attribsForWire = prepareForWire(atext.attribs, pad.pool);
       apool = attribsForWire.pool.toJsonable();
@@ -998,6 +1070,8 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
 
     // Warning: never ever send sessionInfo.padId to the client. If the client is read only you
     // would open a security hole 1 swedish mile wide...
+    const canEditPadSettings = settings.enablePadWideSettings &&
+        !sessionInfo.readonly && await isPadCreator(pad, sessionInfo.author);
     const clientVars:MapArrayType<any> = {
       skinName: settings.skinName,
       skinVariants: settings.skinVariants,
@@ -1006,9 +1080,10 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
         maxRevisions: 100,
       },
       enableDarkMode: settings.enableDarkMode,
+      enablePadWideSettings: settings.enablePadWideSettings,
       automaticReconnectionTimeout: settings.automaticReconnectionTimeout,
       initialRevisionList: [],
-      initialOptions: {},
+      initialOptions: pad.getPadSettings(),
       savedRevisions: pad.getSavedRevisions(),
       collab_client_vars: {
         initialAttributedText: atext,
@@ -1016,7 +1091,7 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
         padId: sessionInfo.auth.padID,
         historicalAuthorData,
         apool,
-        rev: pad.getHeadRevisionNumber(),
+        rev: headRev,
         time: currentTime,
       },
       colorPalette: authorManager.getColorPalette(),
@@ -1030,15 +1105,16 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
       // tell the client the number of the latest chat-message, which will be
       // used to request the latest 100 chat-messages later (GET_CHAT_MESSAGES)
       chatHead: pad.chatHead,
-      numConnectedUsers: roomSockets.length,
+      numConnectedUsers: roomSockets.length + 1, // +1 for this user (not yet in room)
       readOnlyId: sessionInfo.readOnlyPadId,
       readonly: sessionInfo.readonly,
+      canEditPadSettings,
       serverTimestamp: Date.now(),
       sessionRefreshInterval: settings.cookie.sessionRefreshInterval,
       userId: sessionInfo.author,
-      abiwordAvailable: abiwordAvailable(),
       sofficeAvailable: sofficeAvailable(),
       exportAvailable: exportAvailable(),
+      docxExport: settings.docxExport,
       plugins: {
         plugins: plugins.plugins,
         parts: plugins.parts,
@@ -1058,6 +1134,7 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
             settings.scrollWhenFocusLineIsOutOfViewport.percentageToScrollWhenUserPressesArrowUp,
       },
       initialChangesets: [], // FIXME: REMOVE THIS SHIT,
+      cookiePrefix: settings.cookie.prefix,
       mode: process.env.NODE_ENV
     };
 
@@ -1080,8 +1157,24 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
     // Send the clientVars to the Client
     socket.emit('message', {type: 'CLIENT_VARS', data: clientVars});
 
-    // Save the current revision in sessioninfos, should be the same as in clientVars
-    sessionInfo.rev = pad.getHeadRevisionNumber();
+    // Save the revision in sessioninfos — must match what was sent in clientVars
+    sessionInfo.rev = headRev;
+
+    // Initialize sessionInfo.time to the timestamp of the snapshot revision so
+    // that subsequent NEW_CHANGES timeDelta calculations are valid.  Without
+    // this, the catch-up updatePadClients() call below would emit timeDelta=NaN
+    // which breaks the client's broadcast/timeslider time tracking.
+    try {
+      sessionInfo.time = await pad.getRevisionDate(headRev);
+    } catch (err) {
+      // Fallback: if we can't read the revision timestamp, use now.
+      sessionInfo.time = Date.now();
+    }
+
+    // Flush any revisions that may have been appended while we were awaiting the
+    // clientVars hook (before socket.join).  Those revisions were broadcast to
+    // existing room members but this socket hadn't joined yet so it missed them.
+    await exports.updatePadClients(pad);
   }
 
   // Notify other users about this new user.

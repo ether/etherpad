@@ -27,7 +27,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: [">=20.0.0 <21.0.0", ">=22.0.0 <23.0.0", ">=24.0.0 <25.0.0"]
+        # PRs: test on latest Node only. Push to develop: full matrix.
+        node: ${{ github.event_name == 'pull_request' && fromJSON('[">=24.0.0 <25.0.0"]') || fromJSON('[">=20.0.0 <21.0.0", ">=22.0.0 <23.0.0", ">=24.0.0 <25.0.0"]') }}
     steps:
       -
         name: Checkout repository
@@ -83,7 +84,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: [">=20.0.0 <21.0.0", ">=22.0.0 <23.0.0", ">=24.0.0 <25.0.0"]
+        node: ${{ github.event_name == 'pull_request' && fromJSON('[">=24.0.0 <25.0.0"]') || fromJSON('[">=20.0.0 <21.0.0", ">=22.0.0 <23.0.0", ">=24.0.0 <25.0.0"]') }}
     steps:
       -
         name: Checkout repository
@@ -124,14 +125,13 @@ jobs:
           ep_author_hover
           ep_cursortrace
           ep_font_size
-          ep_hash_auth
           ep_headings2
           ep_markdown
           ep_readonly_guest
           ep_set_title_on_pad
           ep_spellcheck
           ep_subscript_and_superscript
-          ep_table_of_contents   --runtimeVersion="${{ matrix.node }}"
+          ep_table_of_contents
       -
         name: Run the backend tests
         run: gnpm test   --runtimeVersion="${{ matrix.node }}"
@@ -139,14 +139,12 @@ jobs:
         working-directory: src
         run: gnpm run test:vitest   --runtimeVersion="${{ matrix.node }}"
 
+  # Windows tests only run on push to develop/master, not on PRs
   withoutpluginsWindows:
     env:
       PNPM_HOME: ~\\.pnpm-store
-    # run on pushes to any branch
-    # run on PRs from external forks
     if: |
-      (github.event_name != 'pull_request')
-      || (github.event.pull_request.head.repo.id != github.event.pull_request.base.repo.id)
+      github.event_name != 'pull_request'
     strategy:
       fail-fast: false
       matrix:
@@ -194,11 +192,8 @@ jobs:
   withpluginsWindows:
     env:
       PNPM_HOME: ~\\.pnpm-store
-    # run on pushes to any branch
-    # run on PRs from external forks
     if: |
-      (github.event_name != 'pull_request')
-      || (github.event.pull_request.head.repo.id != github.event.pull_request.base.repo.id)
+      github.event_name != 'pull_request'
     strategy:
       fail-fast: false
       matrix:
@@ -232,22 +227,19 @@ jobs:
         run: gnpm build --runtimeVersion="${{ matrix.node }}"
       -
         name: Install Etherpad plugins
-        # The --legacy-peer-deps flag is required to work around a bug in npm
-        # v7: https://github.com/npm/cli/issues/2199
         run: >
           gnpm install --workspace-root
           ep_align
           ep_author_hover
           ep_cursortrace
           ep_font_size
-          ep_hash_auth
           ep_headings2
           ep_markdown
           ep_readonly_guest
           ep_set_title_on_pad
           ep_spellcheck
           ep_subscript_and_superscript
-          ep_table_of_contents   --runtimeVersion="${{ matrix.node }}"
+          ep_table_of_contents
       # Etherpad core dependencies must be installed after installing the
       # plugin's dependencies, otherwise npm will try to hoist common
       # dependencies by removing them from src/node_modules and installing them

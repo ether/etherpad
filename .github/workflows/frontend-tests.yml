@@ -1,13 +1,15 @@
-# Leave the powered by Sauce Labs bit in as this means we get additional concurrency
-name: "Frontend tests powered by Sauce Labs"
+name: "Frontend tests"
 
 on:
   push:
     paths-ignore:
       - 'doc/**'
+  pull_request:
+    paths-ignore:
+      - 'doc/**'
 
 permissions:
-  contents: read # to fetch code (actions/checkout)
+  contents: read
 
 jobs:
   playwright-chrome:
@@ -16,12 +18,6 @@ jobs:
     name: Playwright Chrome
     runs-on: ubuntu-latest
     steps:
-      -
-        name: Generate Sauce Labs strings
-        id: sauce_strings
-        run: |
-          printf %s\\n '::set-output name=name::${{ github.workflow }} - ${{ github.job }}'
-          printf %s\\n '::set-output name=tunnel_id::${{ github.run_id }}-${{ github.run_number }}-${{ github.job }}'
       -
         name: Checkout repository
         uses: actions/checkout@v6
@@ -46,16 +42,12 @@ jobs:
         name: Install all dependencies and symlink for ep_etherpad-lite
         run: gnpm install --frozen-lockfile
       -
-        name: export GIT_HASH to env
-        id: environment
-        run: echo "::set-output name=sha_short::$(git rev-parse --short ${{ github.sha }})"
-      -
         name: Create settings.json
         run: cp ./src/tests/settings.json settings.json
       - name: Run the frontend tests
         shell: bash
         run: |
-          gnpm run prod  &
+          gnpm run prod > /tmp/etherpad-server.log 2>&1 &
           connected=false
           can_connect() {
           curl -sSfo /dev/null http://localhost:9001/ || return 1
@@ -69,10 +61,17 @@ jobs:
           cd src
           gnpm exec playwright install chromium  --with-deps
           gnpm run test-ui --project=chromium
-      - uses: actions/upload-artifact@v6
+      - name: Upload server log on failure
+        uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: server-log-chrome
+          path: /tmp/etherpad-server.log
+          retention-days: 7
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: playwright-report-${{ matrix.node }}-chrome
+          name: playwright-report-chrome
           path: src/playwright-report/
           retention-days: 30
   playwright-firefox:
@@ -81,11 +80,6 @@ jobs:
     name: Playwright Firefox
     runs-on: ubuntu-latest
     steps:
-      - name: Generate Sauce Labs strings
-        id: sauce_strings
-        run: |
-          printf %s\\n '::set-output name=name::${{ github.workflow }} - ${{ github.job }}'
-          printf %s\\n '::set-output name=tunnel_id::${{ github.run_id }}-${{ github.run_number }}-${{ github.job }}'
       - name: Checkout repository
         uses: actions/checkout@v6
       - uses: actions/cache@v5
@@ -107,15 +101,12 @@ jobs:
           version: 0.0.12
       - name: Install all dependencies and symlink for ep_etherpad-lite
         run: gnpm install --frozen-lockfile
-      - name: export GIT_HASH to env
-        id: environment
-        run: echo "::set-output name=sha_short::$(git rev-parse --short ${{ github.sha }})"
       - name: Create settings.json
         run: cp ./src/tests/settings.json settings.json
       - name: Run the frontend tests
         shell: bash
         run: |
-          gnpm run prod &
+          gnpm run prod > /tmp/etherpad-server.log 2>&1 &
           connected=false
           can_connect() {
           curl -sSfo /dev/null http://localhost:9001/ || return 1
@@ -129,76 +120,16 @@ jobs:
           cd src
           gnpm exec playwright install firefox  --with-deps
           gnpm run test-ui --project=firefox
-      - uses: actions/upload-artifact@v6
+      - name: Upload server log on failure
+        uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: server-log-firefox
+          path: /tmp/etherpad-server.log
+          retention-days: 7
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: playwright-report-${{ matrix.node }}-firefox
+          name: playwright-report-firefox
           path: src/playwright-report/
           retention-days: 30
-  playwright-webkit:
-    name: Playwright Webkit
-    runs-on: ubuntu-latest
-    env:
-      PNPM_HOME: ~/.pnpm-store
-    steps:
-      -
-        name: Generate Sauce Labs strings
-        id: sauce_strings
-        run: |
-          printf %s\\n '::set-output name=name::${{ github.workflow }} - ${{ github.job }}'
-          printf %s\\n '::set-output name=tunnel_id::${{ github.run_id }}-${{ github.run_number }}-${{ github.job }}'
-      -
-        name: Checkout repository
-        uses: actions/checkout@v6
-      - uses: actions/cache@v5
-        name: Setup gnpm cache
-        if: always()
-        with:
-          path: |
-            ${{ env.PNPM_HOME }}
-            ~/.local/share/gnpm
-            ~/.cache/ms-playwright
-            /usr/local/bin/gnpm
-            /usr/local/bin/gnpm-0.0.12
-          key: ${{ runner.os }}-gnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: ${{ runner.os }}-gnpm-store-
-      - name: Setup gnpm
-        uses: SamTV12345/gnpm-setup@main
-        with:
-          version: 0.0.12
-      -
-        name: Install all dependencies and symlink for ep_etherpad-lite
-        run: gnpm install --frozen-lockfile
-      -
-        name: export GIT_HASH to env
-        id: environment
-        run: echo "::set-output name=sha_short::$(git rev-parse --short ${{ github.sha }})"
-      -
-        name: Create settings.json
-        run: cp ./src/tests/settings.json settings.json
-      - name: Run the frontend tests
-        shell: bash
-        run: |
-          gnpm run prod &
-          connected=false
-          can_connect() {
-          curl -sSfo /dev/null http://localhost:9001/ || return 1
-          connected=true
-          }
-          now() { date +%s; }
-          start=$(now)
-          while [ $(($(now) - $start)) -le 15 ] && ! can_connect; do
-          sleep 1
-          done
-          cd src
-          gnpm exec playwright install webkit --with-deps
-          gnpm run test-ui --project=webkit || true
-      - uses: actions/upload-artifact@v6
-        if: always()
-        with:
-          name: playwright-report-${{ matrix.node }}-webkit
-          path: src/playwright-report/
-          retention-days: 30
-
-
-

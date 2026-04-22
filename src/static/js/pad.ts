@@ -80,10 +80,13 @@ const getParameters = [
     name: 'showChat',
     checkVal: null,
     callback: (val) => {
+      clientVars.initialOptions.showChat = val !== 'false';
       if (val === 'false') {
         settings.hideChat = true;
         chat.hide();
         $('#chaticon').hide();
+      } else {
+        settings.hideChat = false;
       }
     },
   },
@@ -119,9 +122,10 @@ const getParameters = [
   },
   {
     name: 'rtl',
-    checkVal: 'true',
-    callback: (val) => {
-      settings.rtlIsTrue = true;
+    checkVal: null,
+    callback: (val, fromUrl) => {
+      settings.rtlIsTrue = val === 'true';
+      if (fromUrl) settings.rtlIsExplicit = true;
     },
   },
   {
@@ -144,33 +148,73 @@ const getParameters = [
     callback: (val) => {
       console.log('Val is', val)
       html10n.localize([val, 'en']);
-      Cookies.set('language', val);
+      const prefix = (window as any).clientVars?.cookiePrefix || '';
+      Cookies.set(`${prefix}language`, val);
     },
   },
 ];
 
 const getParams = () => {
-  // Tries server enforced options first..
-  for (const setting of getParameters) {
-    let value = clientVars.padOptions[setting.name];
-    if (value == null) continue;
-    value = value.toString();
-    if (value === setting.checkVal || setting.checkVal == null) {
-      setting.callback(value);
-    }
-  }
-
-  // Then URL applied stuff
   const params = getUrlVars();
+
   for (const setting of getParameters) {
-    const value = params.get(setting.name);
-    if (value && (value === setting.checkVal || setting.checkVal == null)) {
-      setting.callback(value);
+    // URL query params take priority over server-enforced options.
+    // This prevents race conditions where both fire async callbacks
+    // (e.g., lang setting triggers html10n.localize twice).
+    const urlValue = params.get(setting.name);
+    if (urlValue && (urlValue === setting.checkVal || setting.checkVal == null)) {
+      setting.callback(urlValue, true);
+      continue;
+    }
+
+    // Fall back to server-enforced option
+    let serverValue = clientVars.padOptions[setting.name];
+    if (serverValue == null) continue;
+    serverValue = serverValue.toString();
+    if (serverValue === setting.checkVal || setting.checkVal == null) {
+      setting.callback(serverValue, false);
     }
   }
 };
 
 const getUrlVars = () => new URL(window.location.href).searchParams;
+
+const getCookieLanguage = () => {
+  const cp = (window as any).clientVars?.cookiePrefix || '';
+  return Cookies.get(`${cp}language`) || Cookies.get('language');
+};
+
+const getMyViewOverrides = () => {
+  const language = getCookieLanguage();
+  const overrides = {
+    showChat: padcookie.getPref('showChat'),
+    alwaysShowChat: padcookie.getPref('chatAlwaysVisible'),
+    chatAndUsers: padcookie.getPref('chatAndUsers'),
+    lang: language,
+    view: {
+      showAuthorColors: padcookie.getPref('showAuthorshipColors'),
+      showLineNumbers: padcookie.getPref('showLineNumbers'),
+      rtlIsTrue: padcookie.getPref('rtlIsTrue'),
+      padFontFamily: padcookie.getPref('padFontFamily'),
+    },
+  };
+  if (language == null) delete overrides.lang;
+  return overrides;
+};
+
+const normalizeChatOptions = (options) => {
+  if (options.showChat === false) {
+    options.alwaysShowChat = false;
+    options.chatAndUsers = false;
+  }
+  if (options.chatAndUsers === true) {
+    options.showChat = true;
+    options.alwaysShowChat = true;
+  } else if (options.alwaysShowChat === true) {
+    options.showChat = true;
+  }
+  return options;
+};
 
 const sendClientReady = (isReconnect) => {
   let padId = document.location.pathname.substring(document.location.pathname.lastIndexOf('/') + 1);
@@ -183,10 +227,11 @@ const sendClientReady = (isReconnect) => {
     document.title = `${padId.replace(/_+/g, ' ')} | ${title}`;
   }
 
-  let token = Cookies.get('token');
+  const cp = (window as any).clientVars?.cookiePrefix || '';
+  let token = Cookies.get(`${cp}token`) || Cookies.get('token');
   if (token == null || !padutils.isValidAuthorToken(token)) {
     token = padutils.generateAuthorToken();
-    Cookies.set('token', token, {expires: 60});
+    Cookies.set(`${cp}token`, token, {expires: 60});
   }
 
   // If known, propagate the display name and color to the server in the CLIENT_READY message. This
@@ -199,14 +244,24 @@ const sendClientReady = (isReconnect) => {
     name: params.get('userName'),
   };
 
-  const msg = {
+  const msg: any = {
     component: 'pad',
     type: 'CLIENT_READY',
     padId,
-    sessionID: Cookies.get('sessionID'),
+    sessionID: Cookies.get(`${cp}sessionID`) || Cookies.get('sessionID'),
     token,
     userInfo,
   };
+  const overrides = getMyViewOverrides();
+  const viewOverrides = Object.fromEntries(
+      Object.entries(overrides.view || {}).filter(([, v]) => v != null));
+  const hasTopLevelOverrides = ['showChat', 'alwaysShowChat', 'chatAndUsers', 'lang']
+      .some((k) => overrides[k] != null);
+  if (Object.keys(viewOverrides).length > 0 || hasTopLevelOverrides) {
+    if (Object.keys(viewOverrides).length > 0) overrides.view = viewOverrides;
+    else delete overrides.view;
+    msg.padSettingsDefaults = overrides;
+  }
 
   // this is a reconnect, lets tell the server our revisionnumber
   if (isReconnect) {
@@ -400,11 +455,122 @@ const pad = {
   getClientIp: () => clientVars.clientIp,
   getColorPalette: () => clientVars.colorPalette,
   getPrivilege: (name) => clientVars.accountPrivs[name],
+  canEditPadSettings: () => !!clientVars.canEditPadSettings,
   getUserId: () => pad.myUserInfo.userId,
   getUserName: () => pad.myUserInfo.name,
   userList: () => paduserlist.users(),
+  isPadSettingsEnforcedForMe: () => !!pad.padOptions.enforceSettings && !pad.canEditPadSettings(),
   sendClientMessage: (msg) => {
     pad.collabClient.sendClientMessage(msg);
+  },
+  getEffectivePadOptions: () => {
+    const effectiveOptions = $.extend(true, {}, pad.padOptions);
+    if (pad.isPadSettingsEnforcedForMe()) return normalizeChatOptions(effectiveOptions);
+    const overrides = getMyViewOverrides();
+    for (const key of ['showChat', 'alwaysShowChat', 'chatAndUsers', 'lang']) {
+      if (overrides[key] != null) effectiveOptions[key] = overrides[key];
+    }
+    if (!effectiveOptions.view) effectiveOptions.view = {};
+    for (const [key, value] of Object.entries(overrides.view)) {
+      if (value != null) effectiveOptions.view[key] = value;
+    }
+    return normalizeChatOptions(effectiveOptions);
+  },
+  refreshPadSettingsControls: () => {
+    const padOptions = normalizeChatOptions($.extend(true, {}, pad.padOptions || {}));
+    const view = padOptions.view || {};
+    $('#padsettings-options-disablechat').prop('checked', padOptions.showChat === false);
+    $('#padsettings-options-stickychat').prop('checked', !!padOptions.alwaysShowChat);
+    $('#padsettings-options-chatandusers').prop('checked', !!padOptions.chatAndUsers);
+    $('#padsettings-options-colorscheck').prop('checked', view.showAuthorColors !== false);
+    $('#padsettings-options-linenoscheck').prop('checked', view.showLineNumbers !== false);
+    $('#padsettings-options-rtlcheck').prop('checked', !!view.rtlIsTrue);
+    $('#padsettings-viewfontmenu').val(view.padFontFamily || '');
+    $('#padsettings-languagemenu').val(padOptions.lang || 'en');
+    $('#padsettings-enforcecheck').prop('checked', !!padOptions.enforceSettings);
+    $('#padsettings-options-stickychat, #padsettings-options-chatandusers')
+        .prop('disabled', padOptions.showChat === false);
+    if ($('select').niceSelect) $('select').niceSelect('update');
+  },
+  refreshMyViewControls: () => {
+    const effectiveOptions = pad.getEffectivePadOptions();
+    const disabled = pad.isPadSettingsEnforcedForMe();
+    $('#options-disablechat').prop('checked', effectiveOptions.showChat === false);
+    $('#options-stickychat').prop('checked', !!effectiveOptions.alwaysShowChat);
+    $('#options-chatandusers').prop('checked', !!effectiveOptions.chatAndUsers);
+    $('#options-colorscheck').prop('checked', effectiveOptions.view?.showAuthorColors !== false);
+    $('#options-linenoscheck').prop('checked', effectiveOptions.view?.showLineNumbers !== false);
+    $('#options-rtlcheck').prop('checked', !!effectiveOptions.view?.rtlIsTrue);
+    $('#viewfontmenu').val(effectiveOptions.view?.padFontFamily || '');
+    $('#languagemenu').val(effectiveOptions.lang || 'en');
+    $('#settings input[id^="options-"]').prop('disabled', disabled);
+    $('#viewfontmenu, #languagemenu').prop('disabled', disabled);
+    $('#options-stickychat, #options-chatandusers')
+        .prop('disabled', disabled || effectiveOptions.showChat === false);
+    $('#enforce-settings-notice').prop('hidden', !disabled);
+    if ($('select').niceSelect) $('select').niceSelect('update');
+  },
+  setMyViewOption: (key, value) => {
+    switch (key) {
+      case 'showChat':
+        padcookie.setPref('showChat', value);
+        if (!value) {
+          padcookie.setPref('chatAlwaysVisible', false);
+          padcookie.setPref('chatAndUsers', false);
+        }
+        break;
+      case 'alwaysShowChat':
+        padcookie.setPref('chatAlwaysVisible', value);
+        if (value) padcookie.setPref('showChat', true);
+        break;
+      case 'chatAndUsers':
+        padcookie.setPref('chatAndUsers', value);
+        if (value) padcookie.setPref('chatAlwaysVisible', true);
+        if (value) padcookie.setPref('showChat', true);
+        break;
+      case 'showAuthorColors':
+        padcookie.setPref('showAuthorshipColors', value);
+        break;
+      default:
+        padcookie.setPref(key, value);
+        break;
+    }
+    pad.refreshMyViewControls();
+    pad.applyOptionsChange();
+  },
+  setMyViewLanguage: (lang) => {
+    const cp = (window as any).clientVars?.cookiePrefix || '';
+    Cookies.set(`${cp}language`, lang);
+    pad.refreshMyViewControls();
+    pad.applyOptionsChange();
+  },
+  applyShowChat: (enabled) => {
+    settings.hideChat = !enabled;
+    if (enabled) {
+      if (!window.clientVars.readonly) $('#chaticon').show();
+    } else {
+      $('#users, .sticky-container').removeClass('chatAndUsers popup-show stickyUsers');
+      $('#chatbox').removeClass('chatAndUsersChat stickyChat visible').hide();
+      $('#options-stickychat, #options-chatandusers').prop('checked', false);
+      $('#chaticon').hide();
+    }
+  },
+  applyStickyChat: (enabled) => {
+    const isSticky = $('#chatbox').hasClass('stickyChat');
+    $('#options-stickychat').prop('checked', enabled);
+    if (enabled !== isSticky) chat.stickToScreen(enabled, false);
+    if (!enabled) $('#options-stickychat').prop('disabled', false);
+  },
+  applyChatAndUsers: (enabled) => {
+    const isEnabled = $('#users').hasClass('chatAndUsers');
+    $('#options-chatandusers').prop('checked', enabled);
+    if (enabled !== isEnabled) chat.chatAndUsers(enabled, false);
+    if (!enabled) $('#options-stickychat').prop('disabled', false);
+  },
+  applyLanguage: (lang) => {
+    html10n.localize([lang, 'en']);
+    $('#languagemenu').val(lang);
+    if ($('select').niceSelect) $('select').niceSelect('update');
   },
 
   init() {
@@ -444,29 +610,13 @@ const pad = {
       setTimeout(() => {
         padeditor.ace.focus();
       }, 0);
-      const optionsStickyChat = $('#options-stickychat');
-      optionsStickyChat.on('click', () => { chat.stickToScreen(); });
-      // if we have a cookie for always showing chat then show it
-      if (padcookie.getPref('chatAlwaysVisible')) {
-        chat.stickToScreen(true); // stick it to the screen
-        optionsStickyChat.prop('checked', true); // set the checkbox to on
+      pad.refreshPadSettingsControls();
+      pad.applyOptionsChange();
+      pad.refreshMyViewControls();
+      if (settings.rtlIsExplicit) {
+        // URL or server config explicitly set RTL — takes priority over cookie
+        pad.changeViewOption('rtlIsTrue', settings.rtlIsTrue === true);
       }
-      // if we have a cookie for always showing chat then show it
-      if (padcookie.getPref('chatAndUsers')) {
-        chat.chatAndUsers(true); // stick it to the screen
-        $('#options-chatandusers').prop('checked', true); // set the checkbox to on
-      }
-      if (padcookie.getPref('showAuthorshipColors') === false) {
-        pad.changeViewOption('showAuthorColors', false);
-      }
-      if (padcookie.getPref('showLineNumbers') === false) {
-        pad.changeViewOption('showLineNumbers', false);
-      }
-      if (padcookie.getPref('rtlIsTrue') === true) {
-        pad.changeViewOption('rtlIsTrue', true);
-      }
-      pad.changeViewOption('padFontFamily', padcookie.getPref('padFontFamily'));
-      $('#viewfontmenu').val(padcookie.getPref('padFontFamily')).niceSelect('update');
 
       // Prevent sticky chat or chat and users to be checked for mobiles
       const checkChatAndUsersVisibility = (x) => {
@@ -481,12 +631,12 @@ const pad = {
 
       $('#editorcontainer').addClass('initialized');
 
-      if (window.clientVars.enableDarkMode) {
-        $('#theme-switcher').attr('style', 'display: flex;');
-      }
-
       if (window.location.hash.toLowerCase() !== '#skinvariantsbuilder' && window.clientVars.enableDarkMode && (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) && !skinVariants.isWhiteModeEnabledInLocalStorage()) {
         skinVariants.updateSkinVariantsClasses(['super-dark-editor', 'dark-background', 'super-dark-toolbar']);
+      }
+      if (window.clientVars.enableDarkMode) {
+        $('#theme-toggle-row').prop('hidden', false);
+        $('#options-darkmode').prop('checked', skinVariants.isDarkMode());
       }
 
       hooks.aCallAll('postAceInit', {ace: padeditor.ace, clientVars, pad});
@@ -495,7 +645,7 @@ const pad = {
     // order of inits is important here:
     padimpexp.init(this);
     padsavedrevs.init(this);
-    padeditor.init(pad.padOptions.view || {}, this).then(postAceInit);
+    padeditor.init(pad.getEffectivePadOptions().view || {}, this).then(postAceInit);
     paduserlist.init(pad.myUserInfo, this);
     padconnectionstatus.init();
     padmodals.init(this);
@@ -547,9 +697,8 @@ const pad = {
       this.changeViewOption('noColors', true);
     }
 
-    if (settings.rtlIsTrue === true) {
-      this.changeViewOption('rtlIsTrue', true);
-    }
+    // RTL override is applied in postAceInit (after padeditor.init resolves)
+    // to avoid a race where setViewOptions(initialViewOptions) overwrites it.
 
     // If the Monospacefont value is set to true then change it to monospace.
     if (settings.useMonospaceFontGlobal === true) {
@@ -585,7 +734,20 @@ const pad = {
   changePadOption: (key, value) => {
     const options = {};
     options[key] = value;
-    pad.handleOptionsChange(options);
+    pad.applyPadSettings(options);
+    pad.collabClient.sendClientMessage(
+        {
+          type: 'padoptions',
+          options,
+          changedBy: pad.myUserInfo.name || 'unnamed',
+        });
+  },
+  changePadViewOption: (key, value) => {
+    const options = {
+      view: {},
+    };
+    options.view[key] = value;
+    pad.applyPadSettings(options);
     pad.collabClient.sendClientMessage(
         {
           type: 'padoptions',
@@ -594,25 +756,43 @@ const pad = {
         });
   },
   changeViewOption: (key, value) => {
-    const options = {
-      view: {},
-    };
-    options.view[key] = value;
-    pad.handleOptionsChange(options);
+    const effectiveOptions = pad.getEffectivePadOptions();
+    if (!effectiveOptions.view) effectiveOptions.view = {};
+    effectiveOptions.view[key] = value;
+    padeditor.setViewOptions(effectiveOptions.view);
   },
-  handleOptionsChange: (opts) => {
+  applyPadSettings: (opts = {}) => {
     // opts object is a full set of options or just
     // some options to change
+    for (const key of ['enforceSettings', 'showChat', 'alwaysShowChat', 'chatAndUsers', 'lang']) {
+      if (opts[key] == null) continue;
+      pad.padOptions[key] = key === 'lang' ? opts[key] : `${opts[key]}` === 'true';
+    }
     if (opts.view) {
       if (!pad.padOptions.view) {
         pad.padOptions.view = {};
       }
       for (const [k, v] of Object.entries(opts.view)) {
         pad.padOptions.view[k] = v;
-        padcookie.setPref(k, v);
       }
-      padeditor.setViewOptions(pad.padOptions.view);
     }
+    normalizeChatOptions(pad.padOptions);
+    pad.refreshPadSettingsControls();
+    pad.applyOptionsChange();
+  },
+  applyOptionsChange: () => {
+    const effectiveOptions = pad.getEffectivePadOptions();
+    padeditor.setViewOptions(effectiveOptions.view || {});
+    pad.applyShowChat(effectiveOptions.showChat !== false);
+    if (effectiveOptions.showChat !== false) {
+      if (effectiveOptions.lang) pad.applyLanguage(effectiveOptions.lang);
+      pad.applyChatAndUsers(!!effectiveOptions.chatAndUsers);
+      if (!effectiveOptions.chatAndUsers) pad.applyStickyChat(!!effectiveOptions.alwaysShowChat);
+    }
+    pad.refreshMyViewControls();
+  },
+  handleOptionsChange: (opts) => {
+    pad.applyPadSettings(opts);
   },
   // caller shouldn't mutate the object
   getPadOptions: () => pad.padOptions,
@@ -647,6 +827,14 @@ const pad = {
       const opts = msg.options;
       pad.handleOptionsChange(opts);
     }
+  },
+  showUnacceptedCommitWarning: () => {
+    $.gritter.add({
+      title: html10n.get('pad.gritter.unacceptedCommit.title'),
+      text: html10n.get('pad.gritter.unacceptedCommit.text'),
+      sticky: true,
+      class_name: 'disconnected unsaved-warning',
+    });
   },
   handleChannelStateChange: (newState, message) => {
     const oldFullyConnected = !!padconnectionstatus.isFullyConnected();
@@ -685,6 +873,7 @@ const pad = {
       padimpexp.disable();
 
       padconnectionstatus.disconnected(message);
+      if (pad.collabClient.hasUnacceptedCommit()) pad.showUnacceptedCommitWarning();
     }
     const newFullyConnected = !!padconnectionstatus.isFullyConnected();
     if (newFullyConnected !== oldFullyConnected) {
@@ -692,39 +881,19 @@ const pad = {
     }
   },
   handleIsFullyConnected: (isConnected, isInitialConnect) => {
-    pad.determineChatVisibility(isConnected && !isInitialConnect);
-    pad.determineChatAndUsersVisibility(isConnected && !isInitialConnect);
-    pad.determineAuthorshipColorsVisibility();
+    pad.refreshMyViewControls();
     setTimeout(() => {
       padeditbar.toggleDropDown('none');
     }, 1000);
   },
   determineChatVisibility: (asNowConnectedFeedback) => {
-    const chatVisCookie = padcookie.getPref('chatAlwaysVisible');
-    if (chatVisCookie) { // if the cookie is set for chat always visible
-      chat.stickToScreen(true); // stick it to the screen
-      $('#options-stickychat').prop('checked', true); // set the checkbox to on
-    } else {
-      $('#options-stickychat').prop('checked', false); // set the checkbox for off
-    }
+    pad.refreshMyViewControls();
   },
   determineChatAndUsersVisibility: (asNowConnectedFeedback) => {
-    const chatAUVisCookie = padcookie.getPref('chatAndUsersVisible');
-    if (chatAUVisCookie) { // if the cookie is set for chat always visible
-      chat.chatAndUsers(true); // stick it to the screen
-      $('#options-chatandusers').prop('checked', true); // set the checkbox to on
-    } else {
-      $('#options-chatandusers').prop('checked', false); // set the checkbox for off
-    }
+    pad.refreshMyViewControls();
   },
   determineAuthorshipColorsVisibility: () => {
-    const authColCookie = padcookie.getPref('showAuthorshipColors');
-    if (authColCookie) {
-      pad.changeViewOption('showAuthorColors', true);
-      $('#options-colorscheck').prop('checked', true);
-    } else {
-      $('#options-colorscheck').prop('checked', false);
-    }
+    pad.refreshMyViewControls();
   },
   handleCollabAction: (action) => {
     if (action === 'commitPerformed') {
@@ -735,7 +904,7 @@ const pad = {
   },
   asyncSendDiagnosticInfo: () => {
     const currentUrl = window.location.href;
-    fetch('../ep/pad/connection-diagnostic-info', {
+    fetch(`${exports.baseURL}ep/pad/connection-diagnostic-info`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -780,6 +949,7 @@ const settings = {
   globalUserName: false,
   globalUserColor: false,
   rtlIsTrue: false,
+  rtlIsExplicit: false,
 };
 
 pad.settings = settings;

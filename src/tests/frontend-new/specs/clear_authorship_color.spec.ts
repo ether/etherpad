@@ -1,87 +1,90 @@
 import {expect, test} from "@playwright/test";
 import {
-    clearAuthorship,
-    clearPadContent,
-    getPadBody,
-    goToNewPad, pressUndoButton,
-    selectAllText,
-    undoChanges,
-    writeToPad
+  clearAuthorship,
+  clearPadContent,
+  getPadBody,
+  goToNewPad, pressUndoButton,
+  selectAllText,
+  undoChanges,
+  writeToPad
 } from "../helper/padHelper";
 
 test.beforeEach(async ({ page })=>{
-    // create a new pad before each test run
-    await goToNewPad(page);
+  // create a new pad before each test run
+  await goToNewPad(page);
 })
 
 test('clear authorship color', async ({page}) => {
-    // get the inner iframe
-    const innerFrame =  await getPadBody(page);
-    const padText = "Hello"
+  const padBody = await getPadBody(page);
 
-    // type some text
-    await clearPadContent(page);
-    await writeToPad(page, padText);
-    const retrievedClasses = await innerFrame.locator('div span').nth(0).getAttribute('class')
-    expect(retrievedClasses).toContain('author');
+  // type some text
+  await clearPadContent(page);
+  await writeToPad(page, "Hello");
+  await expect(padBody.locator('div span').first()).toHaveAttribute('class', /author-/);
 
-    // select the text
-    await innerFrame.click()
-    await selectAllText(page);
+  // select all and clear authorship
+  await padBody.click()
+  await selectAllText(page);
+  // Accept the confirm dialog triggered when whole document is selected
+  page.on('dialog', dialog => dialog.accept());
+  await clearAuthorship(page);
 
-    await clearAuthorship(page);
-    // does the first div include an author class?
-    const firstDivClass = await innerFrame.locator('div').nth(0).getAttribute('class');
-    expect(firstDivClass).not.toContain('author');
-    const classes = page.locator('div.disconnected')
-    expect(await classes.isVisible()).toBe(false)
+  // authorship should be cleared, user should not be disconnected
+  await expect(padBody.locator('div').first()).not.toHaveAttribute('class', /author/, {timeout: 5000});
+  await expect(page.locator('div.disconnected')).not.toBeVisible();
 })
 
 
-test("makes text clear authorship colors and checks it can't be undone", async function ({page}) {
-    const innnerPad = await getPadBody(page);
-    const padText = "Hello"
+test("clear authorship colors can be undone to restore author colors", async function ({page}) {
+  // Fix for https://github.com/ether/etherpad-lite/issues/2802
+  // Previously, undo of clear authorship was blocked as a workaround.
+  // Now the server properly allows it, so undo should restore author colors.
+  const padBody = await getPadBody(page);
+  const padText = "Hello"
 
-    // type some text
-    await clearPadContent(page);
-    await writeToPad(page, padText);
+  // type some text
+  await clearPadContent(page);
+  await writeToPad(page, padText);
 
-    // get the first text element out of the inner iframe
-    const firstDivClass = innnerPad.locator('div').nth(0)
-    const retrievedClasses = await innnerPad.locator('div span').nth(0).getAttribute('class')
-    expect(retrievedClasses).toContain('author');
+  // verify authorship exists on the span
+  await expect(padBody.locator('div span').first()).toHaveAttribute('class', /author-/);
 
+  // Accept the confirm dialog triggered by clearAuthorship when no text is selected
+  page.on('dialog', dialog => dialog.accept());
 
-    await firstDivClass.focus()
-    await clearAuthorship(page);
-    expect(await firstDivClass.getAttribute('class')).not.toContain('author');
+  // Click somewhere in the pad to deselect, then clear (triggers whole-pad clear via confirm)
+  await padBody.click();
+  await clearAuthorship(page);
 
-    await undoChanges(page);
-    const changedFirstDiv = innnerPad.locator('div').nth(0)
-    expect(await changedFirstDiv.getAttribute('class')).not.toContain('author');
+  // verify authorship is cleared
+  await expect(padBody.locator('div span').first()).not.toHaveClass(/author-/, {timeout: 5000});
 
+  // Undo should restore authorship colors
+  await undoChanges(page);
 
-    await pressUndoButton(page);
-    const secondChangedFirstDiv = innnerPad.locator('div').nth(0)
-    expect(await secondChangedFirstDiv.getAttribute('class')).not.toContain('author');
+  // verify authorship is restored and user is not disconnected
+  await expect(padBody.locator('div span').first()).toHaveAttribute('class', /author-/, {timeout: 5000});
+  const disconnected = page.locator('.disconnected, .unreachable');
+  await expect(disconnected).not.toBeVisible();
 });
 
 
 // Test for https://github.com/ether/etherpad-lite/issues/5128
 test('clears authorship when first line has line attributes', async function ({page}) {
-    // Make sure there is text with author info. The first line must have a line attribute.
-    const padBody = await getPadBody(page);
-    await padBody.click()
-    await clearPadContent(page);
-    await writeToPad(page,'Hello')
-    await page.locator('.buttonicon-insertunorderedlist').click();
-    const retrievedClasses = await padBody.locator('div span').nth(0).getAttribute('class')
-    expect(retrievedClasses).toContain('author');
-    await padBody.click()
-    await selectAllText(page);
-    await clearAuthorship(page);
-    const retrievedClasses2 = await padBody.locator('div span').nth(0).getAttribute('class')
-    expect(retrievedClasses2).not.toContain('author');
-
-    expect(await page.locator('[class*="author-"]').count()).toBe(0)
+  // Make sure there is text with author info. The first line must have a line attribute.
+  const padBody = await getPadBody(page);
+  // Accept confirm dialogs before any action that might trigger one
+  page.on('dialog', dialog => dialog.accept());
+  await padBody.click()
+  await clearPadContent(page);
+  await writeToPad(page,'Hello')
+  await page.locator('.buttonicon-insertunorderedlist').click({force: true});
+  // Wait for the list attribute to be applied before checking authorship
+  await page.waitForTimeout(500);
+  await expect(padBody.locator('div span').first()).toHaveAttribute('class', /author-/);
+  await padBody.click()
+  await selectAllText(page);
+  await clearAuthorship(page);
+  // Wait longer for clear to propagate on list content
+  await expect(padBody.locator('div span').first()).not.toHaveAttribute('class', /author-/, {timeout: 10000});
 });

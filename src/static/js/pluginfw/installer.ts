@@ -124,7 +124,11 @@ export const checkForMigration = async () => {
 
   for (const plugin of installedPlugins.plugins) {
     if (plugin.name.startsWith(plugins.prefix) && plugin.name !== 'ep_etherpad-lite') {
-      await linkInstaller.installPlugin(plugin.name, plugin.version);
+      try {
+        await linkInstaller.installPlugin(plugin.name, plugin.version);
+      } catch (e) {
+        logger.error(`Error installing plugin ${plugin.name} with version ${plugin.version}: ${e}`);
+      }
     }
   }
 };
@@ -174,7 +178,18 @@ export const getAvailablePlugins = async (maxCacheAge: number | false) => {
   }
 
   const pluginsLoaded: AxiosResponse<MapArrayType<PackageInfo>> = await axios.get(`${settings.updateServer}/plugins.json`, {headers})
-  availablePlugins = pluginsLoaded.data;
+  const data = pluginsLoaded.data;
+  // Normalize: the registry may use numeric keys instead of plugin names
+  const normalized: MapArrayType<PackageInfo> = {};
+  for (const key in data) {
+    const entry = data[key];
+    if (entry && entry.name) {
+      normalized[entry.name] = entry;
+    } else {
+      normalized[key] = entry;
+    }
+  }
+  availablePlugins = normalized;
   cacheTimestamp = nowTimestamp;
   return availablePlugins;
 };

@@ -22,8 +22,7 @@
  * limitations under the License.
  */
 
-import padutils,{Cookies} from "./pad_utils";
-const padcookie = require('./pad_cookie').padcookie;
+import padutils from "./pad_utils";
 const Ace2Editor = require('./ace').Ace2Editor;
 import html10n from '../js/vendors/html10n'
 const skinVariants = require('./skin_variants');
@@ -56,56 +55,120 @@ const padeditor = (() => {
       $('#viewbarcontents').show();
     },
     initViewOptions: () => {
-      // Line numbers
+      // My View
+      padutils.bindCheckboxChange($('#options-disablechat'), () => {
+        pad.setMyViewOption('showChat', !padutils.getCheckbox($('#options-disablechat')));
+      });
+      padutils.bindCheckboxChange($('#options-stickychat'), () => {
+        pad.setMyViewOption('alwaysShowChat', padutils.getCheckbox($('#options-stickychat')));
+      });
+      padutils.bindCheckboxChange($('#options-chatandusers'), () => {
+        pad.setMyViewOption('chatAndUsers', padutils.getCheckbox($('#options-chatandusers')));
+      });
+      padutils.bindCheckboxChange($('#options-colorscheck'), () => {
+        pad.setMyViewOption('showAuthorColors', padutils.getCheckbox($('#options-colorscheck')));
+      });
       padutils.bindCheckboxChange($('#options-linenoscheck'), () => {
-        pad.changeViewOption('showLineNumbers', padutils.getCheckbox($('#options-linenoscheck')));
+        pad.setMyViewOption('showLineNumbers', padutils.getCheckbox($('#options-linenoscheck')));
+      });
+      padutils.bindCheckboxChange($('#options-rtlcheck'), () => {
+        pad.setMyViewOption('rtlIsTrue', padutils.getCheckbox($('#options-rtlcheck')));
+      });
+      $('#viewfontmenu').on('change', () => {
+        pad.setMyViewOption('padFontFamily', $('#viewfontmenu').val());
+      });
+      $('#languagemenu').on('change', () => {
+        pad.setMyViewLanguage($('#languagemenu').val());
+      });
+
+      // Pad settings
+      padutils.bindCheckboxChange($('#padsettings-enforcecheck'), () => {
+        pad.changePadOption('enforceSettings', padutils.getCheckbox($('#padsettings-enforcecheck')));
+      });
+      padutils.bindCheckboxChange($('#padsettings-options-disablechat'), () => {
+        pad.changePadOption('showChat', !padutils.getCheckbox($('#padsettings-options-disablechat')));
+      });
+      padutils.bindCheckboxChange($('#padsettings-options-stickychat'), () => {
+        pad.changePadOption(
+            'alwaysShowChat', padutils.getCheckbox($('#padsettings-options-stickychat')));
+      });
+      padutils.bindCheckboxChange($('#padsettings-options-chatandusers'), () => {
+        pad.changePadOption(
+            'chatAndUsers', padutils.getCheckbox($('#padsettings-options-chatandusers')));
+      });
+      // Line numbers
+      padutils.bindCheckboxChange($('#padsettings-options-linenoscheck'), () => {
+        pad.changePadViewOption(
+            'showLineNumbers', padutils.getCheckbox($('#padsettings-options-linenoscheck')));
       });
 
       // Author colors
-      padutils.bindCheckboxChange($('#options-colorscheck'), () => {
-        padcookie.setPref('showAuthorshipColors', padutils.getCheckbox('#options-colorscheck'));
-        pad.changeViewOption('showAuthorColors', padutils.getCheckbox('#options-colorscheck'));
+      padutils.bindCheckboxChange($('#padsettings-options-colorscheck'), () => {
+        pad.changePadViewOption(
+            'showAuthorColors', padutils.getCheckbox('#padsettings-options-colorscheck'));
       });
 
       // Right to left
-      padutils.bindCheckboxChange($('#options-rtlcheck'), () => {
-        pad.changeViewOption('rtlIsTrue', padutils.getCheckbox($('#options-rtlcheck')));
+      padutils.bindCheckboxChange($('#padsettings-options-rtlcheck'), () => {
+        pad.changePadViewOption(
+            'rtlIsTrue', padutils.getCheckbox($('#padsettings-options-rtlcheck')));
       });
       html10n.bind('localized', () => {
-        pad.changeViewOption('rtlIsTrue', ('rtl' === html10n.getDirection()));
-        padutils.setCheckbox($('#options-rtlcheck'), ('rtl' === html10n.getDirection()));
+        $('#languagemenu').val(html10n.getLanguage());
+        $('#padsettings-languagemenu').val(html10n.getLanguage());
       });
 
 
 
       // font family change
-      $('#viewfontmenu').on('change', () => {
-        pad.changeViewOption('padFontFamily', $('#viewfontmenu').val());
+      $('#padsettings-viewfontmenu').on('change', () => {
+        pad.changePadViewOption('padFontFamily', $('#padsettings-viewfontmenu').val());
+      });
+
+      padutils.bindCheckboxChange($('#options-darkmode'), () => {
+        const isDark = padutils.getCheckbox($('#options-darkmode'));
+        skinVariants.setDarkModeInLocalStorage(isDark);
+        if (isDark) {
+          skinVariants.updateSkinVariantsClasses(
+              ['super-dark-editor', 'dark-background', 'super-dark-toolbar']);
+        } else {
+          skinVariants.updateSkinVariantsClasses(
+              ['super-light-toolbar super-light-editor light-background']);
+        }
       });
 
       // delete pad
       $('#delete-pad').on('click', () => {
         if (window.confirm(html10n.get('pad.delete.confirm'))) {
+          // Wait for the server to confirm deletion before navigating away.
+          // Navigating immediately caused a race condition where the browser
+          // (especially Firefox) would close the WebSocket before the delete
+          // message reached the server. See #7306.
+          let handled = false;
+          pad.socket.on('message', (data: any) => {
+            if (data && data.disconnect === 'deleted') {
+              handled = true;
+              window.location.href = '/';
+            }
+          });
+          // If the user is not the pad creator, the server sends a shout
+          // message instead of deleting. Listen for it and show the error.
+          pad.socket.on('shout', (data: any) => {
+            handled = true;
+            const msg = data?.data?.payload?.message?.message;
+            if (msg) window.alert(msg);
+          });
           pad.collabClient.sendMessage({type: 'PAD_DELETE', data:{padId: pad.getPadId()}});
-          // redirect to home page after deletion
-          window.location.href = '/';
+          // Fallback: if the server doesn't respond within 5 seconds
+          // (e.g. socket dropped), navigate away anyway.
+          setTimeout(() => {
+            if (!handled) window.location.href = '/';
+          }, 5000);
         }
-      })
-
-      // theme switch
-      $('#theme-switcher').on('click',()=>{
-          if (skinVariants.isDarkMode()) {
-            skinVariants.setDarkModeInLocalStorage(false);
-            skinVariants.updateSkinVariantsClasses(['super-light-toolbar super-light-editor light-background']);
-          } else {
-            skinVariants.setDarkModeInLocalStorage(true);
-            skinVariants.updateSkinVariantsClasses(['super-dark-editor', 'dark-background', 'super-dark-toolbar']);
-          }
       })
 
       // Language
       html10n.bind('localized', () => {
-        $('#languagemenu').val(html10n.getLanguage());
         // translate the value of 'unnamed' and 'Enter your name' textboxes in the userlist
 
         // this does not interfere with html10n's normal value-setting because
@@ -119,14 +182,14 @@ const padeditor = (() => {
           }
         });
       });
-      $('#languagemenu').val(html10n.getLanguage());
-      $('#languagemenu').on('change', () => {
-        Cookies.set('language', $('#languagemenu').val());
-        html10n.localize([$('#languagemenu').val(), 'en']);
-        if ($('select').niceSelect) {
-          $('select').niceSelect('update');
-        }
+      $('#padsettings-languagemenu').val(html10n.getLanguage());
+      $('#padsettings-languagemenu').on('change', () => {
+        pad.changePadOption('lang', $('#padsettings-languagemenu').val());
       });
+      if (pad.canEditPadSettings()) {
+        $('#pad-settings-section').prop('hidden', false);
+        $('.settings-sections').addClass('has-pad-settings');
+      }
     },
     setViewOptions: (newOptions) => {
       const getOption = (key, defaultValue) => {
@@ -158,6 +221,8 @@ const padeditor = (() => {
       }
 
       self.ace.setProperty('textface', newOptions.padFontFamily || '');
+      $('#viewfontmenu').val(newOptions.padFontFamily || '');
+      if ($('select').niceSelect) $('select').niceSelect('update');
     },
     dispose: () => {
       if (self.ace) {

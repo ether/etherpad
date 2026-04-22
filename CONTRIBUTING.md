@@ -1,5 +1,7 @@
 # Contributor Guidelines
-(Please talk to people on the mailing list before you change this page, see our section on [how to get in touch](https://github.com/ether/etherpad-lite#get-in-touch))
+(Please talk to people on the mailing list before you change this page, see our section on [how to get in touch](https://github.com/ether/etherpad#get-in-touch))
+
+**We have decided that LLM/Agent/AI contributions are fine as long as they are within the instructions set out by this document.**
 
 ## Pull requests
 
@@ -81,7 +83,7 @@ Also, keep it maintainable. We don't wanna end up as the monster Etherpad was!
 ## Coding style
 * Do write comments. (You don't have to comment every line, but if you come up with something that's a bit complex/weird, just leave a comment. Bear in mind that you will probably leave the project at some point and that other people will read your code. Undocumented huge amounts of code are worthless!)
 * Never ever use tabs
-* Indentation: JS/CSS: 2 spaces; HTML: 4 spaces
+* Indentation: 2 spaces
 * Don't overengineer. Don't try to solve any possible problem in one step, but try to solve problems as easy as possible and improve the solution over time!
 * Do generalize sooner or later! (if an old solution, quickly hacked together, poses more problems than it solves today, refactor it!)
 * Keep it compatible. Do not introduce changes to the public API, db schema or configurations too lightly. Don't make incompatible changes without good reasons!
@@ -138,5 +140,5 @@ Etherpad is much more than software.  So if you aren't a developer then worry no
  * Write proposals for grants
  * Co-Author and Publish CVEs
  * Work with SFC to maintain legal side of project
- * Maintain TODO page - https://github.com/ether/etherpad-lite/wiki/TODO#IMPORTANT_TODOS
+ * Maintain TODO page - https://github.com/ether/etherpad/wiki/TODO#IMPORTANT_TODOS
 

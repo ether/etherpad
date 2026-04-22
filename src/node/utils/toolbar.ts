@@ -276,6 +276,9 @@ module.exports = {
      * Valid values for page:      'pad'  | 'timeslider'
      */
     menu(buttons: string[][], isReadOnly: boolean, whichMenu: string, page: string) {
+        if (!buttons || buttons.length === 0 || !buttons[0]) {
+            return '';
+        }
         if (isReadOnly) {
             // The best way to detect if it's the left editbar is to check for a bold button
             if (buttons[0].indexOf('bold') !== -1) {
