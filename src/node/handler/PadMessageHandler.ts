@@ -1068,6 +1068,11 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
       throw new Error('corrupt pad');
     }
 
+    let pluginsSanitized: any = plugins.plugins
+    Object.keys(plugins.plugins).forEach(function(element) {
+      const p: any = plugins.plugins[element].package
+      pluginsSanitized[element].package = {name: p.name, version: p.version};
+    });
     // Warning: never ever send sessionInfo.padId to the client. If the client is read only you
     // would open a security hole 1 swedish mile wide...
     const canEditPadSettings = settings.enablePadWideSettings &&
@@ -1116,7 +1121,7 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
       exportAvailable: exportAvailable(),
       docxExport: settings.docxExport,
       plugins: {
-        plugins: plugins.plugins,
+        plugins: pluginsSanitized,
         parts: plugins.parts,
       },
       indentationOnNewLine: settings.indentationOnNewLine,
