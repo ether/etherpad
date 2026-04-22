@@ -1,3 +1,51 @@
+# 2.7.0
+
+### Breaking changes
+
+- **Abiword has been replaced with LibreOffice for document import/export.** If you were using Abiword for DOCX/ODT/PDF conversion, update your `settings.json` to point `soffice` at your LibreOffice binary. DOCX export is now supported out of the box.
+
+### Notable enhancements
+
+- Added line numbers to the timeslider so you can follow along with specific lines while replaying a pad's history.
+- Added a playback speed setting to the timeslider — you can now scrub through history faster (or slower) than real time.
+- Creator-owned pad settings defaults: the user who creates a pad now seeds its default settings, giving pad creators more control over initial configuration.
+- Cookie names are now configurable via a prefix setting. Useful when running multiple Etherpads on the same domain and you need to keep their session cookies from colliding.
+- Added a new `aceRegisterLineAttributes` hook so plugins can preserve custom line attributes across Enter / line-split operations. Documentation for the hook is included.
+- Added a one-line installer script for getting Etherpad running quickly on a fresh machine.
+- Docker images are now published to GitHub Container Registry (GHCR) in addition to Docker Hub.
+- npm publishing of core and plugins has been migrated to OIDC trusted publishing for stronger supply-chain security.
+
+### Notable fixes
+
+- Database drivers are now bundled with Etherpad again, so fresh installs no longer fail to connect to Postgres, MySQL, and friends out of the box. A regression test has been added to prevent this from breaking again.
+- Pending changesets are now flushed immediately after a reconnect instead of being silently dropped, and users are warned when a pending edit is not accepted by the server.
+- Head revision and atext are now captured atomically, preventing the occasional "mismatched apply" errors on busy pads.
+- Clearing authorship colors can now be undone without forcing a client disconnect.
+- Added periodic cleanup of expired/stale sessions from the database, and fixed a race condition in the session cleanup timeout.
+- Error messages returned to clients are now sanitized by default with deduplication, so internal details no longer leak through error responses.
+- Raised the maximum socket.io message size to 10 MB so large pastes no longer get rejected.
+- Dev mode entrypoint paths now respect the `x-proxy-path` header, fixing reverse-proxy setups in development.
+- Numerous list-related fixes: numbered list wrapped lines now indent correctly, ordered list numbering is preserved across bullet interruptions during export, consecutive numbering survives indented sub-bullets, switching from unordered to ordered resets numbering, and line attributes are preserved across drag-and-drop.
+- Bold (and other) formatting is now retained after copy-paste.
+- Dead-key / compose-key input no longer eats the preceding space.
+- `POST` API requests with a JSON body no longer time out.
+- `appendText` now correctly attributes the new text to the specified author.
+- `createDiffHTML` no longer fails with `Not a changeset: undefined`.
+- Added `padId` to the `padUpdate` / `padCreate` hook context.
+- Fixed `numConnectedUsers` to include the joining user in its count.
+- Accessibility improvements: keyboard trap fix, better screen reader support, and `aria-live` announcements.
+- RTL URL parameter `rtl=false` now correctly disables RTL mode.
+- Language dropdown is now sorted alphabetically by native name.
+- PageDown now advances the caret by a full page of lines.
+- ESM/CJS interop issues in the Settings module that had been breaking plugin compatibility have been resolved, with setters added to the CJS compatibility layer and regression tests in place.
+- Several Docker build fixes: git submodule handling, `hardlink` package-import-method for ZFS, and production-only workspace config.
+
+### Other
+
+- Many occurrences of "etherpad-lite" have been renamed to "etherpad" across the codebase and documentation.
+- Pinned 33 transitive dependencies to patched versions to clear out Dependabot security alerts.
+- Restricted `GITHUB_TOKEN` permissions in the update-plugins workflow.
+
 # 2.6.1
 
 For those wondering where the new updates are and why it was very quite throughout the last 1 1/2 years – I've been working on a new implementation of Etherpad from scratch in Go. It's called Etherpad-Go and you can find it here: `https://github.com/ether/etherpad-go`
