@@ -2,6 +2,7 @@
 	"@metadata": {
 		"authors": [
 			"Amire80",
+			"Neriah",
 			"Ofrahod",
 			"Steeve815",
 			"YaronSh",
@@ -158,6 +159,11 @@
 	"timeslider.exportCurrent": "יצוא הגרסה הנוכחית בתור:",
 	"timeslider.version": "גרסה {{version}}",
 	"timeslider.saved": "נשמרה ב־{{day}} ב{{month}} {{year}}",
+	"timeslider.settings.playbackSpeed": "מהירות נגינה:",
+	"timeslider.settings.playbackSpeed.realtime": "זמן אמת",
+	"timeslider.settings.playbackSpeed.200ms": "200 מ\"ש",
+	"timeslider.settings.playbackSpeed.500ms": "500 מ\"ש",
+	"timeslider.settings.playbackSpeed.1000ms": "1000 מ\"ש",
 	"timeslider.playPause": "לנגן / לעצור את תוכן הפנקס",
 	"timeslider.backRevision": "לחזור לגרסה של הפנקס הזה",
 	"timeslider.forwardRevision": "ללכת לגרסה חדשה יותר בפנקס הזה",

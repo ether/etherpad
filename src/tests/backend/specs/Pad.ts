@@ -45,12 +45,31 @@ describe(__filename, function () {
       ['x\ry\n', 'x\ny\n'],
       ['x\r\ny\n', 'x\ny\n'],
       ['x\r\r\ny\n', 'x\n\ny\n'],
+      // Non-breaking space (U+00A0) must survive cleanText (issue #3037).
+      ['100\u00a0km\n', '100\u00a0km\n'],
+      ['a\u00a0\u00a0b\n', 'a\u00a0\u00a0b\n'],
     ];
     for (const [input, want] of testCases) {
       it(`${JSON.stringify(input)} -> ${JSON.stringify(want)}`, async function () {
         assert.equal(Pad.cleanText(input), want);
       });
     }
+  });
+
+  describe('non-breaking space preservation (issue #3037)', function () {
+    it('spliceText round-trips U+00A0', async function () {
+      pad = await padManager.getPad(padId, '');
+      // spliceText is an existing runtime Pad method; cast avoids
+      // adding a type-only declaration to PadType in this PR.
+      await (pad as any).spliceText(0, 0, '100\u00a0km');
+      assert.equal(pad!.text(), '100\u00a0km\n');
+    });
+
+    it('setText round-trips U+00A0', async function () {
+      pad = await padManager.getPad(padId, '');
+      await pad!.setText('a\u00a0b\n');
+      assert.equal(pad!.text(), 'a\u00a0b\n');
+    });
   });
 
   describe('padDefaultContent hook', function () {
@@ -138,6 +157,25 @@ describe(__filename, function () {
       }});
       pad = await padManager.getPad(padId);
       assert.equal(pad!.text(), `${want}\n`);
+    });
+  });
+
+  describe('normalizePadSettings lang (issue #7586)', function () {
+    it('defaults lang to null when not provided, so client auto-detects locale', function () {
+      const ps = Pad.Pad.normalizePadSettings({});
+      assert.equal(ps.lang, null);
+    });
+
+    it('preserves an explicit string lang (creator override)', function () {
+      const ps = Pad.Pad.normalizePadSettings({lang: 'de'});
+      assert.equal(ps.lang, 'de');
+    });
+
+    it('drops non-string lang values to null rather than coercing to "en"', function () {
+      for (const bogus of [42, true, {}, [], null, undefined]) {
+        const ps = Pad.Pad.normalizePadSettings({lang: bogus});
+        assert.equal(ps.lang, null, `bogus input ${JSON.stringify(bogus)}`);
+      }
     });
   });
 });

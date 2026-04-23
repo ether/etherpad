@@ -185,7 +185,7 @@ const testCases = [
     description: 'non-breaking and normal space should be preserved',
     html: '<html><body>Text&nbsp;with&nbsp; more&nbsp;&nbsp;&nbsp;than   &nbsp;one space.<br></body></html>',
     wantAlines: ['+10'],
-    wantText: ['Text with  more   than    one space.'],
+    wantText: ['Text\u00a0with  more\u00a0\u00a0\u00a0than    one space.'],
   },
   {
     description: 'Multiple nbsp should be preserved',
@@ -197,7 +197,7 @@ const testCases = [
     description: 'Multiple nbsp between words ',
     html: '<html><body>&nbsp;&nbsp;word1&nbsp;&nbsp;word2&nbsp;&nbsp;&nbsp;word3<br></body></html>',
     wantAlines: ['+m'],
-    wantText: ['  word1  word2   word3'],
+    wantText: ['  word1\u00a0\u00a0word2\u00a0\u00a0\u00a0word3'],
   },
   {
     description: 'A non-breaking space preceded by a normal space',
@@ -358,6 +358,16 @@ pre
       '+5',
     ],
     wantText: ['before', '*bare item', 'after'],
+  },
+  {
+    // Regression for PR #7585 review feedback: a user-intended nbsp
+    // sitting at a DOM text-node boundary (split across spans) must
+    // still be preserved because canonicalization runs on the whole
+    // line, not per text node.
+    description: 'nbsp preserved across span boundary',
+    html: '<html><body><p><span>100</span><span>&nbsp;km</span></p></body></html>',
+    wantAlines: ['+6'],
+    wantText: ['100\u00a0km'],
   },
 ];
 

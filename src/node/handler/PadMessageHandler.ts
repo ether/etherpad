@@ -109,6 +109,34 @@ function getActivePadCountFromSessionInfos() {
 }
 exports.getActivePadCountFromSessionInfos = getActivePadCountFromSessionInfos;
 
+/**
+ * Build a sanitized copy of the plugins registry suitable for sending to the
+ * client as part of clientVars. The shape is preserved but each plugin's
+ * `package` field is reduced to `{name, version}` so internal paths (realPath,
+ * path, location) are not leaked to the browser.
+ *
+ * CRITICAL: this function MUST NOT mutate the shared server-side registry.
+ * Other components — notably `src/node/utils/Minify.ts` — read
+ * `plugins.plugins[x].package.realPath` on every static asset request to
+ * resolve `/static/plugins/ep_<name>/...` URLs to disk. Mutating the shared object
+ * in place would clobber `realPath` and cause every such request to 500 with
+ * `ERR_INVALID_ARG_TYPE: The "path" argument must be of type string`.
+ */
+const sanitizePluginsForWire = (
+  pluginsRegistry: MapArrayType<any>,
+): MapArrayType<any> => {
+  const out: MapArrayType<any> = {};
+  for (const [name, plugin] of Object.entries(pluginsRegistry)) {
+    const p: any = plugin.package;
+    out[name] = {
+      ...plugin,
+      package: {name: p.name, version: p.version},
+    };
+  }
+  return out;
+};
+exports.sanitizePluginsForWire = sanitizePluginsForWire;
+
 stats.gauge('totalUsers', () => getTotalActiveUsers());
 stats.gauge('activePads', () => {
   return getActivePadCountFromSessionInfos();
@@ -1068,6 +1096,7 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
       throw new Error('corrupt pad');
     }
 
+    const pluginsSanitized = sanitizePluginsForWire(plugins.plugins);
     // Warning: never ever send sessionInfo.padId to the client. If the client is read only you
     // would open a security hole 1 swedish mile wide...
     const canEditPadSettings = settings.enablePadWideSettings &&
@@ -1116,7 +1145,7 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
       exportAvailable: exportAvailable(),
       docxExport: settings.docxExport,
       plugins: {
-        plugins: plugins.plugins,
+        plugins: pluginsSanitized,
         parts: plugins.parts,
       },
       indentationOnNewLine: settings.indentationOnNewLine,

@@ -32,7 +32,7 @@
   "dependencies": {
     "@elastic/elasticsearch": "^9.3.4",
     "async": "^3.2.6",
-    "axios": "^1.15.1",
+    "axios": "^1.15.2",
     "cassandra-driver": "^4.8.0",
     "cookie-parser": "^1.4.7",
     "cross-env": "^10.1.0",
@@ -60,7 +60,7 @@
     "mime-types": "^3.0.2",
     "mongodb": "^7.1.1",
     "mssql": "^12.2.1",
-    "mysql2": "^3.22.0",
+    "mysql2": "^3.22.2",
     "nano": "^11.0.5",
     "oidc-provider": "9.8.2",
     "openapi-backend": "^5.16.1",
@@ -118,7 +118,7 @@
     "@types/underscore": "^1.13.0",
     "@types/whatwg-mimetype": "^5.0.0",
     "chokidar": "^5.0.0",
-    "eslint": "^10.2.0",
+    "eslint": "^10.2.1",
     "eslint-config-etherpad": "^4.0.5",
     "etherpad-cli-client": "^3.0.5",
     "mocha": "^11.7.5",
@@ -130,7 +130,7 @@
     "split-grid": "^1.0.11",
     "supertest": "^7.2.2",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.4"
+    "vitest": "^4.1.5"
   },
   "engines": {
     "node": ">=20.0.0",
@@ -157,6 +157,6 @@
     "debug:socketio": "cross-env DEBUG=socket.io* node --require tsx/cjs node/server.ts",
     "test:vitest": "vitest"
   },
-  "version": "2.7.0",
+  "version": "2.7.1",
   "license": "Apache-2.0"
 }
