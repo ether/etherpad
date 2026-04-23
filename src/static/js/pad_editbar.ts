@@ -270,14 +270,23 @@ exports.padeditbar = new class {
         // Skip if a command handler already placed focus inside this popup — the Embed
         // command focuses #linkinput deliberately, which is different from the first
         // tabbable element (a readonly checkbox) and should win.
+        // Fallback: if no focusable descendant exists (e.g. #users where the only
+        // input is disabled), focus the popup div itself so keydown events fire on
+        // the outer document instead of being trapped in the ace editor iframe.
         const target = openedModule;
         requestAnimationFrame(() => {
+          // If a command handler already placed focus inside the popup (e.g.
+          // the Embed command focuses #linkinput, showusers focuses
+          // #myusernameedit), honour that.
           if (target[0].contains(document.activeElement)) return;
-          const focusable = target.find(
-              'button:visible, a[href]:visible, input:not([disabled]):visible, ' +
-              'select:not([disabled]):visible, textarea:not([disabled]):visible, ' +
-              '[tabindex]:not([tabindex="-1"]):visible').first();
-          if (focusable.length) focusable[0].focus();
+          // Otherwise focus the popup container itself. This keeps keydown
+          // events on the outer document (so Esc always dismisses the popup,
+          // even when the popup has no directly-focusable descendants like
+          // #users does), and it works uniformly across browsers without
+          // getting tripped up by `visibility: hidden` nested popups.
+          // Keyboard users can Tab from here into the popup's controls.
+          if (!target.attr('tabindex')) target.attr('tabindex', '-1');
+          target[0].focus();
         });
       } else if ($('.popup.popup-show').length === 0 && this._lastTrigger) {
         // All popups closed — restore focus to the element that opened the first one.
@@ -335,15 +344,17 @@ exports.padeditbar = new class {
   }
 
   _bodyKeyEvent(evt) {
-    // Escape from inside any open popup: close the popup and let
-    // toggleDropDown('none') restore focus to the trigger.
-    if (evt.keyCode === 27 && $(':focus').closest('.popup.popup-show').length === 1) {
-      // `toggleDropDown('none')` intentionally skips the users popup so switching
-      // between other popups doesn't hide the user list. For Escape we want the
-      // users popup to close too (unless it's pinned via stickyUsers).
-      const focusedPopup = $(':focus').closest('.popup.popup-show');
-      if (focusedPopup.attr('id') === 'users' && !focusedPopup.hasClass('stickyUsers')) {
-        focusedPopup.removeClass('popup-show');
+    // Escape while any popup is open: close it. We don't restrict to
+    // `:focus inside popup` because some popups (e.g. #users) have no
+    // focusable content on open — focus stays in the ace editor iframe —
+    // but Esc should still dismiss them for keyboard users.
+    if (evt.keyCode === 27 && $('.popup.popup-show').length > 0) {
+      // `toggleDropDown('none')` intentionally skips the users popup so
+      // switching between other popups doesn't hide the user list. For
+      // Escape we want the users popup to close too (unless pinned).
+      const openPopup = $('.popup.popup-show').first();
+      if (openPopup.attr('id') === 'users' && !openPopup.hasClass('stickyUsers')) {
+        openPopup.removeClass('popup-show');
         $('li[data-key=users] > a').removeClass('selected');
       }
       this.toggleDropDown('none');

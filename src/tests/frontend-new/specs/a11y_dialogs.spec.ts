@@ -55,6 +55,17 @@ test('users popup has dialog semantics with aria-label', async ({page}) => {
   await expect(dialog).toHaveAttribute('aria-label', 'Users on this pad');
 });
 
+test('users popup closes on Escape even when focus is outside the popup', async ({page}) => {
+  // Opening #users leaves focus in the ace editor iframe because its only
+  // would-be-focusable element (#myusernameedit) is disabled. Esc must still
+  // dismiss the dialog. Regression for PR #7584 review feedback.
+  await page.locator('button[data-l10n-id="pad.toolbar.showusers.title"]').click();
+  const dialog = page.locator('#users');
+  await expect(dialog).toHaveClass(/popup-show/);
+  await page.keyboard.press('Escape');
+  await expect(dialog).not.toHaveClass(/popup-show/);
+});
+
 test('export links have accessible names', async ({page}) => {
   await page.locator('button[data-l10n-id="pad.toolbar.import_export.title"]').click();
   // The Word/PDF/ODF export links are removed client-side by

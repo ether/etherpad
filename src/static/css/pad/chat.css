@@ -133,10 +133,11 @@
 #chaticon {
   /* #chaticon was converted from <span> to <button> for a11y; reset the
      UA-default button chrome so the corner icon keeps its pre-conversion
-     shape. Without these, Chromium adds a 1px border + grey fill that
-     pushes the glyph off-centre. See PR #7584 review feedback. */
+     shape. Deliberately do NOT reset `border` here — the 1px grey border
+     is supplied earlier (#chaticon {border:1px solid #ccc; border-bottom:
+     none}) and is part of the intended visual. Overriding with border:0
+     visibly broke the icon. See PR #7584 review feedback. */
   appearance: none;
-  border: 0;
   margin: 0;
   background-color: #fff;
   cursor: pointer;
@@ -144,6 +145,14 @@
   padding: 5px;
   font: inherit;
   color: inherit;
+}
+/* Scope: the inner .buttonicon span here is just a glyph holder. Its global
+   rule in icons.css applies `display: flex` which is fine for toolbar
+   <button class="buttonicon"> instances but breaks inline layout when
+   nested inside a button that's laying out label + glyph + counter on one
+   line. Keep the glyph inline for the chat-icon corner widget. */
+#chaticon .buttonicon {
+  display: inline;
 }
 #chaticon:focus-visible {
   outline: 2px solid #0066cc;
