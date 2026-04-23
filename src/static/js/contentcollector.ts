@@ -79,7 +79,6 @@ const makeContentCollector = (collectStyles, abrowser, apool, className2Author) 
   const textify = (str) => sanitizeUnicode(
       str.replace(/(\n | \n)/g, ' ')
           .replace(/[\n\r ]/g, ' ')
-          .replace(/\xa0/g, ' ')
           .replace(/\t/g, '        '));
 
   const getAssoc = (node, name) => node[`_magicdom_${name}`];

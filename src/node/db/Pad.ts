@@ -51,8 +51,7 @@ type PadSettings = {
  */
 exports.cleanText = (txt:string): string => txt.replace(/\r\n/g, '\n')
     .replace(/\r/g, '\n')
-    .replace(/\t/g, '        ')
-    .replace(/\xa0/g, ' ');
+    .replace(/\t/g, '        ');
 
 class Pad {
   private db: Database;

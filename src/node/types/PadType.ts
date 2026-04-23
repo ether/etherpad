@@ -15,6 +15,7 @@ export type PadType = {
   remove: ()=>Promise<void>,
   text: ()=>string,
   setText: (text: string, authorId?: string)=>Promise<void>,
+  spliceText: (start: number, ndel: number, ins: string, authorId?: string)=>Promise<void>,
   appendText: (text: string, authorId?: string)=>Promise<void>,
   getHeadRevisionNumber: ()=>number,
   getRevisionDate: (rev: number)=>Promise<number>,
