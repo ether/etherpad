@@ -2,9 +2,12 @@
   var langs = require("ep_etherpad-lite/node/hooks/i18n").availableLangs
     , pluginUtils = require('ep_etherpad-lite/static/js/pluginfw/shared')
     ;
+  var renderLang = (req && typeof req.acceptsLanguages === 'function'
+    && req.acceptsLanguages(Object.keys(langs))) || 'en';
+  var renderDir = (langs[renderLang] && langs[renderLang].direction === 'rtl') ? 'rtl' : 'ltr';
 %>
 <!doctype html>
-<html translate="no" class="pad <%=pluginUtils.clientPluginNames().join(' '); %> <%=settings.skinVariants%>">
+<html lang="<%=renderLang%>" dir="<%=renderDir%>" translate="no" class="pad <%=pluginUtils.clientPluginNames().join(' '); %> <%=settings.skinVariants%>">
 <head>
   <% e.begin_block("htmlHead"); %>
   <% e.end_block(); %>
