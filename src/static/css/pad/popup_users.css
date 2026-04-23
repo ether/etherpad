@@ -58,6 +58,10 @@
 
 #myusernameform {
   margin-left: 10px;
+  /* Constrain the username input so the adjacent Log out button does not
+     get pushed off the Users popup — previously the input expanded to its
+     natural default width and overlapped the button. Fixes #7593. */
+  width: 75px;
 }
 input#myusernameedit {
   height: 26px;
@@ -66,6 +70,11 @@ input#myusernameedit {
   border: 1px solid #ccc;
   background-color: transparent;
   margin: 0;
+  /* Keep the input inside its 75px container (border + padding included).
+     Without these the text field renders wider than the container on its
+     natural content width and overlaps the Log out button. */
+  width: 100%;
+  box-sizing: border-box;
 }
 input#myusernameedit:not(.editable) {
   color: grey;
