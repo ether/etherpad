@@ -159,4 +159,23 @@ describe(__filename, function () {
       assert.equal(pad!.text(), `${want}\n`);
     });
   });
+
+  describe('normalizePadSettings lang (issue #7586)', function () {
+    it('defaults lang to null when not provided, so client auto-detects locale', function () {
+      const ps = Pad.Pad.normalizePadSettings({});
+      assert.equal(ps.lang, null);
+    });
+
+    it('preserves an explicit string lang (creator override)', function () {
+      const ps = Pad.Pad.normalizePadSettings({lang: 'de'});
+      assert.equal(ps.lang, 'de');
+    });
+
+    it('drops non-string lang values to null rather than coercing to "en"', function () {
+      for (const bogus of [42, true, {}, [], null, undefined]) {
+        const ps = Pad.Pad.normalizePadSettings({lang: bogus});
+        assert.equal(ps.lang, null, `bogus input ${JSON.stringify(bogus)}`);
+      }
+    });
+  });
 });
