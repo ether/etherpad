@@ -2893,8 +2893,13 @@ function Ace2Inner(editorInfo, cssManagers) {
             const newVisibleLineRange = scroll.getVisibleLineRange(rep);
             // total count of lines in pad IE 10
             const linesCount = rep.lines.length();
-            // How many lines are in the viewport right now?
-            const numberOfLinesInViewport = newVisibleLineRange[1] - newVisibleLineRange[0];
+            // How many logical lines are in the viewport right now? `getVisibleLineRange`
+            // returns indices into `rep.lines` (logical lines, not visual rows), so when a
+            // single wrapped line fills the viewport the range collapses to [n, n] and this
+            // count is 0 — which would make PageDown/PageUp no-ops (issue #4562). Guarantee
+            // at least one line of movement so the caret and viewport always advance.
+            const numberOfLinesInViewport =
+                Math.max(1, newVisibleLineRange[1] - newVisibleLineRange[0]);
 
             if (isPageUp && padShortcutEnabled.pageUp) {
               rep.selStart[0] -= numberOfLinesInViewport;
