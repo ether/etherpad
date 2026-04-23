@@ -445,18 +445,18 @@
         <!----------- CHAT ------------>
         <!----------------------------->
 
-        <div id="chaticon" class="visible" onclick="chat.show();return false;" title="Chat (Alt C)">
+        <button type="button" id="chaticon" class="visible" title="Chat (Alt C)" aria-label="Open chat" data-l10n-id="pad.chat.title">
             <span id="chatlabel" data-l10n-id="pad.chat"></span>
-            <span class="buttonicon buttonicon-chat"></span>
-            <span id="chatcounter">0</span>
-        </div>
+            <span class="buttonicon buttonicon-chat" aria-hidden="true"></span>
+            <span id="chatcounter" aria-label="Unread messages">0</span>
+        </button>
 
         <div id="chatbox">
           <div class="chat-content">
             <div id="titlebar">
               <h1 id ="titlelabel" data-l10n-id="pad.chat"></h1>
-              <a id="titlecross" class="hide-reduce-btn" onClick="chat.hide();return false;">-&nbsp;</a>
-              <a id="titlesticky" class="stick-to-screen-btn" onClick="chat.stickToScreen(true);return false;" data-l10n-id="pad.chat.stick.title">█&nbsp;&nbsp;</a>
+              <button type="button" id="titlecross" class="hide-reduce-btn" aria-label="Close chat">&minus;</button>
+              <button type="button" id="titlesticky" class="stick-to-screen-btn" aria-label="Pin chat to screen" data-l10n-id="pad.chat.stick.title">&#9608;</button>
             </div>
             <div id="chattext" class="thin-scrollbar" aria-live="polite" aria-relevant="additions removals text" role="log" aria-atomic="false">
                 <div alt="loading.." id="chatloadmessagesball" class="chatloadmessages loadingAnimation" align="top"></div>
