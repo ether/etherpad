@@ -45,12 +45,31 @@ describe(__filename, function () {
       ['x\ry\n', 'x\ny\n'],
       ['x\r\ny\n', 'x\ny\n'],
       ['x\r\r\ny\n', 'x\n\ny\n'],
+      // Non-breaking space (U+00A0) must survive cleanText (issue #3037).
+      ['100\u00a0km\n', '100\u00a0km\n'],
+      ['a\u00a0\u00a0b\n', 'a\u00a0\u00a0b\n'],
     ];
     for (const [input, want] of testCases) {
       it(`${JSON.stringify(input)} -> ${JSON.stringify(want)}`, async function () {
         assert.equal(Pad.cleanText(input), want);
       });
     }
+  });
+
+  describe('non-breaking space preservation (issue #3037)', function () {
+    it('spliceText round-trips U+00A0', async function () {
+      pad = await padManager.getPad(padId, '');
+      // spliceText is an existing runtime Pad method; cast avoids
+      // adding a type-only declaration to PadType in this PR.
+      await (pad as any).spliceText(0, 0, '100\u00a0km');
+      assert.equal(pad!.text(), '100\u00a0km\n');
+    });
+
+    it('setText round-trips U+00A0', async function () {
+      pad = await padManager.getPad(padId, '');
+      await pad!.setText('a\u00a0b\n');
+      assert.equal(pad!.text(), 'a\u00a0b\n');
+    });
   });
 
   describe('padDefaultContent hook', function () {

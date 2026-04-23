@@ -476,8 +476,8 @@ function Ace2Inner(editorInfo, cssManagers) {
       if (text.charAt(text.length - 1) !== '\n') {
         throw new Error('new raw text must end with newline');
       }
-      if (/[\r\t\xa0]/.exec(text)) {
-        throw new Error('new raw text must not contain CR, tab, or nbsp');
+      if (/[\r\t]/.exec(text)) {
+        throw new Error('new raw text must not contain CR or tab');
       }
       lines = text.substring(0, text.length - 1).split('\n');
     } else {
@@ -2042,7 +2042,7 @@ function Ace2Inner(editorInfo, cssManagers) {
       (nonEmpty) => domline.createDomLine(nonEmpty, doesWrap, browser, document);
 
   const textify =
-      (str) => str.replace(/[\n\r ]/g, ' ').replace(/\xa0/g, ' ').replace(/\t/g, '        ');
+      (str) => str.replace(/[\n\r ]/g, ' ').replace(/\t/g, '        ');
 
   const _blockElems = {
     div: 1,
