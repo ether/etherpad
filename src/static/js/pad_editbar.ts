@@ -67,16 +67,21 @@ class ToolbarItem {
     if (this.isButton()) {
       this.$el.on('click', (event) => {
         // Stash the clicked button as the focus-restore target BEFORE we
-        // blur :focus. The blur moves activeElement to <body>, so without
-        // this the capture in toggleDropDown() falls back to <body> and
-        // Escape can't return focus to the toolbar button that opened
-        // the popup (breaks keyboard flow, caught by a11y_dialogs.spec).
-        const trigger = (this.$el.find('button')[0] as HTMLElement | undefined) ||
-            (this.$el[0] as HTMLElement);
+        // blur :focus — but only for dropdown-opening buttons. Non-dropdown
+        // commands (list toggles, bold, etc.) return focus to the ace editor
+        // and should not touch _lastTrigger (it would retain a stale
+        // reference and mess with later popup Esc-close focus handling).
+        const cmd = this.getCommand();
         // @ts-ignore — padeditbar is the exported singleton defined below
-        if (trigger) exports.padeditbar._lastTrigger = trigger;
+        const isDropdownTrigger = exports.padeditbar.dropdowns.indexOf(cmd) !== -1;
+        if (isDropdownTrigger) {
+          const trigger = (this.$el.find('button')[0] as HTMLElement | undefined) ||
+              (this.$el[0] as HTMLElement);
+          // @ts-ignore
+          if (trigger) exports.padeditbar._lastTrigger = trigger;
+        }
         $(':focus').trigger('blur');
-        callback(this.getCommand(), this);
+        callback(cmd, this);
         event.preventDefault();
       });
     } else if (this.isSelect()) {
