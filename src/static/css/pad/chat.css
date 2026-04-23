@@ -131,6 +131,13 @@
 
 /* -- CHAT ICON -- */
 #chaticon {
+  /* #chaticon was converted from <span> to <button> for a11y; reset the
+     UA-default button chrome so the corner icon keeps its pre-conversion
+     shape. Without these, Chromium adds a 1px border + grey fill that
+     pushes the glyph off-centre. See PR #7584 review feedback. */
+  appearance: none;
+  border: 0;
+  margin: 0;
   background-color: #fff;
   cursor: pointer;
   display: none;

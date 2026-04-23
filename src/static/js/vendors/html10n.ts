@@ -662,9 +662,15 @@ export class Html10n {
     if (node.children.length === 0 || prop != 'textContent') {
       // @ts-ignore
       node[prop] = str.str!
-      node.setAttribute("aria-label", str.str!); // Sets the aria-label
-      // The idea of the above is that we always have an aria value
-      // This might be a bit of an abrupt solution but let's see how it goes
+      // Populate aria-label from the translation so screen readers always get
+      // a localized accessible name, but do not overwrite an explicit
+      // aria-label that an author has already set. This lets templates use
+      // static English aria-labels for icon-only controls (export links,
+      // chat icon, close/pin buttons) without losing them at localization
+      // time. See PR #7584 review feedback.
+      if (!node.hasAttribute('aria-label')) {
+        node.setAttribute('aria-label', str.str!);
+      }
     } else {
       let children = node.childNodes,
         found = false

@@ -66,6 +66,15 @@ class ToolbarItem {
   bind(callback) {
     if (this.isButton()) {
       this.$el.on('click', (event) => {
+        // Stash the clicked button as the focus-restore target BEFORE we
+        // blur :focus. The blur moves activeElement to <body>, so without
+        // this the capture in toggleDropDown() falls back to <body> and
+        // Escape can't return focus to the toolbar button that opened
+        // the popup (breaks keyboard flow, caught by a11y_dialogs.spec).
+        const trigger = (this.$el.find('button')[0] as HTMLElement | undefined) ||
+            (this.$el[0] as HTMLElement);
+        // @ts-ignore — padeditbar is the exported singleton defined below
+        if (trigger) exports.padeditbar._lastTrigger = trigger;
         $(':focus').trigger('blur');
         callback(this.getCommand(), this);
         event.preventDefault();
@@ -211,8 +220,12 @@ exports.padeditbar = new class {
       $('.toolbar-popup').removeClass('popup-show');
 
       // Remember the trigger so we can restore focus when the dialog closes.
+      // The Button click handler pre-sets `_lastTrigger` before calling blur(),
+      // because blur would make document.activeElement === <body>. For other
+      // paths (keyboard shortcut, programmatic open) fall back to whatever has
+      // focus right now.
       const wasAnyOpen = $('.popup.popup-show').length > 0;
-      if (!wasAnyOpen && moduleName !== 'none') {
+      if (!wasAnyOpen && moduleName !== 'none' && !this._lastTrigger) {
         const active = document.activeElement;
         if (active && active !== document.body) this._lastTrigger = active;
       }
@@ -254,8 +267,12 @@ exports.padeditbar = new class {
 
       if (openedModule) {
         // Move focus into the now-visible popup so keyboard users land inside the dialog.
+        // Skip if a command handler already placed focus inside this popup — the Embed
+        // command focuses #linkinput deliberately, which is different from the first
+        // tabbable element (a readonly checkbox) and should win.
         const target = openedModule;
         requestAnimationFrame(() => {
+          if (target[0].contains(document.activeElement)) return;
           const focusable = target.find(
               'button:visible, a[href]:visible, input:not([disabled]):visible, ' +
               'select:not([disabled]):visible, textarea:not([disabled]):visible, ' +
@@ -321,6 +338,14 @@ exports.padeditbar = new class {
     // Escape from inside any open popup: close the popup and let
     // toggleDropDown('none') restore focus to the trigger.
     if (evt.keyCode === 27 && $(':focus').closest('.popup.popup-show').length === 1) {
+      // `toggleDropDown('none')` intentionally skips the users popup so switching
+      // between other popups doesn't hide the user list. For Escape we want the
+      // users popup to close too (unless it's pinned via stickyUsers).
+      const focusedPopup = $(':focus').closest('.popup.popup-show');
+      if (focusedPopup.attr('id') === 'users' && !focusedPopup.hasClass('stickyUsers')) {
+        focusedPopup.removeClass('popup-show');
+        $('li[data-key=users] > a').removeClass('selected');
+      }
       this.toggleDropDown('none');
       evt.preventDefault();
       return;
