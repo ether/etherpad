@@ -76,26 +76,33 @@ const makeContentCollector = (collectStyles, abrowser, apool, className2Author) 
 
   const isBlockElement = (n) => !!_blockElems[tagName(n) || ''];
 
+  const textify = (str) => sanitizeUnicode(
+      str.replace(/(\n | \n)/g, ' ')
+          .replace(/[\n\r ]/g, ' ')
+          .replace(/\t/g, '        '));
+
   // processSpaces (domline.ts, ExportHtml.ts) is a lossy one-way display
   // transform: leading/trailing spaces and all-but-the-last space in a run
   // are rendered as &nbsp; to defeat HTML whitespace collapsing, so any
   // round-trip through the DOM sees nbsps where the model has plain spaces.
-  // To keep the model canonical, a [  ]+ run read back from the DOM is
-  // collapsed to plain spaces unless it is strictly interior to word chars
-  // AND contains only U+00A0 (issue #3037 — user-intended nbsp between words
-  // such as "100 km").
-  const textify = (str) => sanitizeUnicode(
-      str.replace(/(\n | \n)/g, ' ')
-          .replace(/[\n\r ]/g, ' ')
-          .replace(/[ \u00a0]+/g, (run, offset, src) => {
-            const before = offset > 0 ? src[offset - 1] : '';
-            const after = offset + run.length < src.length
-                ? src[offset + run.length] : '';
-            const pureNbsp = !run.includes(' ');
-            const interiorOfWord = /\S/.test(before) && /\S/.test(after);
-            return pureNbsp && interiorOfWord ? run : ' '.repeat(run.length);
-          })
-          .replace(/\t/g, '        '));
+  // To keep the model canonical, a [ \u00a0]+ run read back from the fully
+  // assembled line is collapsed to plain spaces unless it is strictly
+  // interior to non-whitespace chars AND contains only U+00A0 (issue #3037 -
+  // user-intended nbsp between words such as "100 km"). The rule runs on
+  // the whole line (not per DOM text node) so that nbsps sitting at a
+  // span boundary - e.g. <span>100</span><span>&nbsp;km</span> - are still
+  // seen as interior. The transform is length-preserving so attribution
+  // offsets stay consistent.
+  const canonicalizeNbspRuns = (s: string) => s.replace(
+      /[ \u00a0]+/g,
+      (run: string, offset: number, src: string) => {
+        const before = offset > 0 ? src[offset - 1] : '';
+        const after = offset + run.length < src.length
+            ? src[offset + run.length] : '';
+        const pureNbsp = !run.includes(' ');
+        const interiorOfWord = /\S/.test(before) && /\S/.test(after);
+        return pureNbsp && interiorOfWord ? run : ' '.repeat(run.length);
+      });
 
   const getAssoc = (node, name) => node[`_magicdom_${name}`];
 
@@ -656,6 +663,12 @@ const makeContentCollector = (collectStyles, abrowser, apool, className2Author) 
 
     lineStrings.length--;
     lineAttribs.length--;
+
+    // Canonicalize display-artifact nbsps on the whole-line string (issue
+    // #3037). Length-preserving, so no attribute adjustments are required.
+    for (let i = 0; i < lineStrings.length; i++) {
+      lineStrings[i] = canonicalizeNbspRuns(lineStrings[i]);
+    }
 
     const ss = getSelectionStart();
     const se = getSelectionEnd();

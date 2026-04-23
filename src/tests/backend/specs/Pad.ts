@@ -59,7 +59,9 @@ describe(__filename, function () {
   describe('non-breaking space preservation (issue #3037)', function () {
     it('spliceText round-trips U+00A0', async function () {
       pad = await padManager.getPad(padId, '');
-      await pad!.spliceText(0, 0, '100\u00a0km');
+      // spliceText is an existing runtime Pad method; cast avoids
+      // adding a type-only declaration to PadType in this PR.
+      await (pad as any).spliceText(0, 0, '100\u00a0km');
       assert.equal(pad!.text(), '100\u00a0km\n');
     });
 

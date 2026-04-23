@@ -359,6 +359,16 @@ pre
     ],
     wantText: ['before', '*bare item', 'after'],
   },
+  {
+    // Regression for PR #7585 review feedback: a user-intended nbsp
+    // sitting at a DOM text-node boundary (split across spans) must
+    // still be preserved because canonicalization runs on the whole
+    // line, not per text node.
+    description: 'nbsp preserved across span boundary',
+    html: '<html><body><p><span>100</span><span>&nbsp;km</span></p></body></html>',
+    wantAlines: ['+6'],
+    wantText: ['100\u00a0km'],
+  },
 ];
 
 describe(__filename, function () {
