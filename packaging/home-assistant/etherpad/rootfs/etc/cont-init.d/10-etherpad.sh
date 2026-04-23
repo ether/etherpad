@@ -32,16 +32,23 @@ mkdir -p "$(dirname "${ENV_FILE}")"
 
   db_type=$(bashio::config 'db_type')
   echo "export DB_TYPE=${db_type}"
-  if [ "${db_type}" = "dirty" ]; then
-    # Persist the dirty DB under /data so pads survive restarts.
-    echo "export DB_FILENAME=/data/dirty.db"
-  else
-    echo "export DB_HOST=$(bashio::config 'db_host')"
-    echo "export DB_PORT=$(bashio::config 'db_port')"
-    echo "export DB_NAME=$(bashio::config 'db_name')"
-    echo "export DB_USER=$(bashio::config 'db_user')"
-    echo "export DB_PASS=$(bashio::config 'db_password' | jq -Rr @sh)"
-  fi
+  case "${db_type}" in
+    sqlite)
+      # Default — ACID, single file, survives restarts under /data.
+      echo "export DB_FILENAME=/data/etherpad.db"
+      ;;
+    dirty)
+      # Opt-in only; the upstream template warns dirty is dev-only.
+      echo "export DB_FILENAME=/data/dirty.db"
+      ;;
+    *)
+      echo "export DB_HOST=$(bashio::config 'db_host')"
+      echo "export DB_PORT=$(bashio::config 'db_port')"
+      echo "export DB_NAME=$(bashio::config 'db_name')"
+      echo "export DB_USER=$(bashio::config 'db_user')"
+      echo "export DB_PASS=$(bashio::config 'db_password' | jq -Rr @sh)"
+      ;;
+  esac
 
   # Ingress: HA proxies through a random base path; Etherpad picks up
   # X-Forwarded-* headers when trustProxy is true.

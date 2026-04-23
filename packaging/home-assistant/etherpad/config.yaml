@@ -32,7 +32,7 @@ options:
     This pad text is synchronized as you type, so that everyone viewing this
     page sees the same text. This allows you to collaborate seamlessly on
     documents!
-  db_type: dirty
+  db_type: sqlite
   db_host: ""
   db_port: 0
   db_name: ""

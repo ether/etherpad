@@ -32,16 +32,18 @@ Once published, installation will be:
 | `admin_password`        | Password for the built-in `admin` user (access to `/admin`).          |
 | `user_password`         | Password for the built-in `user` account.                             |
 | `default_pad_text`      | Text inserted into every newly-created pad.                           |
-| `db_type`               | One of `dirty` (default, file-backed), `mysql`, `postgres`, `sqlite`. |
-| `db_host`/`db_port`/... | Used only when `db_type` is not `dirty`.                              |
+| `db_type`               | One of `sqlite` (default, file-backed, ACID), `mysql`, `postgres`, `dirty`. |
+| `db_host`/`db_port`/... | Used only when `db_type` is `mysql` or `postgres`.                    |
 | `trust_proxy`           | Leave `true` so Home Assistant ingress works correctly.               |
 | `log_level`             | Etherpad log verbosity.                                               |
 
 ### Data persistence
 
-When `db_type` is `dirty` (the default), pads are stored in
-`/data/dirty.db` inside the add-on's persistent volume. Other DB types
-expect an external database you operate yourself.
+When `db_type` is `sqlite` (the default), pads are stored in
+`/data/etherpad.db` inside the add-on's persistent volume. The
+`dirty` backend (opt-in) writes to `/data/dirty.db` but is flagged
+dev-only by the upstream settings template. `mysql`/`postgres` expect
+an external database you operate yourself.
 
 ### Ingress
 
