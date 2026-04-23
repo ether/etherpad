@@ -39,8 +39,12 @@ A few values are exposed as snap config for convenience:
 | `snap set etherpad-lite port=9001`  | `9001`    | Listen port     |
 | `snap set etherpad-lite ip=0.0.0.0` | `0.0.0.0` | Bind address    |
 
-Pad data (dirty DB, logs) lives in `/var/snap/etherpad-lite/common/` and
-survives `snap refresh`.
+Pad data (sqlite DB at `var/etherpad.db`, logs) lives in
+`/var/snap/etherpad-lite/common/` and survives `snap refresh`. The
+shipped `settings.json.template` defaults to `dbType: "dirty"`, which
+the template itself warns is dev-only; the launch wrapper rewrites the
+seeded copy to `sqlite` on first run so users get an ACID-safe DB out
+of the box.
 
 ## Publish to the Snap Store
 

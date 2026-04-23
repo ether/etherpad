@@ -3,8 +3,8 @@
 #
 # 1. On first run, copy settings.json.template -> $SNAP_COMMON/etc/settings.json
 #    so the admin can edit it outside the read-only squashfs. Patch the
-#    seeded file so dirty-DB / ip / port point at writable paths and pick
-#    up env-var overrides.
+#    seeded file so the DB (switched from dev-only dirty to sqlite) / ip /
+#    port point at writable paths and pick up env-var overrides.
 # 2. Create writable data dirs under $SNAP_COMMON.
 # 3. Apply `snap set` overrides (port, ip) via env vars — Etherpad's
 #    settings.json supports ${PORT:9001}-style substitution natively.
@@ -27,9 +27,13 @@ SETTINGS="${ETC_DIR}/settings.json"
 if [ ! -f "${SETTINGS}" ]; then
   echo "[etherpad-snap] bootstrapping ${SETTINGS} from template"
   cp "${APP_DIR}/settings.json.template" "${SETTINGS}"
-  # Point the default dirty-DB at $SNAP_COMMON (absolute path, writable).
+  # Switch the template's dev-only dirty default to sqlite and point it
+  # at $SNAP_COMMON (absolute path, writable under strict confinement).
+  # sqlite is shipped by ueberdb2 via the prebuilt rusty-store-kv native
+  # module — no additional build deps required.
   sed -i \
-    -e 's|"filename": "var/dirty.db"|"filename": "'"${VAR_DIR}"'/dirty.db"|' \
+    -e 's|"dbType": "dirty"|"dbType": "sqlite"|' \
+    -e 's|"filename": "var/dirty.db"|"filename": "'"${VAR_DIR}"'/etherpad.db"|' \
     "${SETTINGS}"
   # Rewrite ip/port literals to Etherpad's env-substitution syntax so
   # `snap set etherpad-lite port=<n>` / `ip=<addr>` actually take effect.
