@@ -1,3 +1,11 @@
+# 2.7.1
+
+### Notable enhancements and fixes
+
+- fixed stop harcoding lang=en, letting the client auto detect locale
+- Stop mutating the shared plugin registry during sanitization
+- Preserve non-breaking space
+
 # 2.7.0
 
 ### Breaking changes
