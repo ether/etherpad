@@ -128,6 +128,7 @@ exports.padeditbar = new class {
     this._editbarPosition = 0;
     this.commands = {};
     this.dropdowns = [];
+    this._lastTrigger = null;
   }
 
   init() {
@@ -208,6 +209,15 @@ exports.padeditbar = new class {
       $('.nice-select').removeClass('open');
       $('.toolbar-popup').removeClass('popup-show');
 
+      // Remember the trigger so we can restore focus when the dialog closes.
+      const wasAnyOpen = $('.popup.popup-show').length > 0;
+      if (!wasAnyOpen && moduleName !== 'none') {
+        const active = document.activeElement;
+        if (active && active !== document.body) this._lastTrigger = active;
+      }
+
+      let openedModule = null;
+
       // hide all modules and remove highlighting of all buttons
       if (moduleName === 'none') {
         for (const thisModuleName of this.dropdowns) {
@@ -236,8 +246,26 @@ exports.padeditbar = new class {
           } else if (thisModuleName === moduleName) {
             $(`li[data-key=${thisModuleName}] > a`).addClass('selected');
             module.addClass('popup-show');
+            openedModule = module;
           }
         }
+      }
+
+      if (openedModule) {
+        // Move focus into the now-visible popup so keyboard users land inside the dialog.
+        const target = openedModule;
+        requestAnimationFrame(() => {
+          const focusable = target.find(
+              'button:visible, a[href]:visible, input:not([disabled]):visible, ' +
+              'select:not([disabled]):visible, textarea:not([disabled]):visible, ' +
+              '[tabindex]:not([tabindex="-1"]):visible').first();
+          if (focusable.length) focusable[0].focus();
+        });
+      } else if ($('.popup.popup-show').length === 0 && this._lastTrigger) {
+        // All popups closed — restore focus to the element that opened the first one.
+        const trigger = this._lastTrigger;
+        this._lastTrigger = null;
+        if (document.body.contains(trigger)) trigger.focus();
       }
     } catch (err) {
       cbErr = err || new Error(err);
@@ -289,6 +317,13 @@ exports.padeditbar = new class {
   }
 
   _bodyKeyEvent(evt) {
+    // Escape from inside any open popup: close the popup and let
+    // toggleDropDown('none') restore focus to the trigger.
+    if (evt.keyCode === 27 && $(':focus').closest('.popup.popup-show').length === 1) {
+      this.toggleDropDown('none');
+      evt.preventDefault();
+      return;
+    }
     // If the event is Alt F9 or Escape & we're already in the editbar menu
     // Send the users focus back to the pad
     if ((evt.keyCode === 120 && evt.altKey) || evt.keyCode === 27) {
