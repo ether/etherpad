@@ -146,7 +146,8 @@ exports.padeditbar = new class {
     });
 
     $('.show-more-icon-btn').on('click', () => {
-      $('.toolbar').toggleClass('full-icons');
+      const expanded = $('.toolbar').toggleClass('full-icons').hasClass('full-icons');
+      $('.show-more-icon-btn').attr('aria-expanded', String(expanded));
     });
     this.checkAllIconsAreDisplayedInToolbar();
     $(window).on('resize', _.debounce(() => this.checkAllIconsAreDisplayedInToolbar(), 100));
