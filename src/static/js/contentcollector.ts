@@ -76,9 +76,25 @@ const makeContentCollector = (collectStyles, abrowser, apool, className2Author) 
 
   const isBlockElement = (n) => !!_blockElems[tagName(n) || ''];
 
+  // processSpaces (domline.ts, ExportHtml.ts) is a lossy one-way display
+  // transform: leading/trailing spaces and all-but-the-last space in a run
+  // are rendered as &nbsp; to defeat HTML whitespace collapsing, so any
+  // round-trip through the DOM sees nbsps where the model has plain spaces.
+  // To keep the model canonical, a [  ]+ run read back from the DOM is
+  // collapsed to plain spaces unless it is strictly interior to word chars
+  // AND contains only U+00A0 (issue #3037 — user-intended nbsp between words
+  // such as "100 km").
   const textify = (str) => sanitizeUnicode(
       str.replace(/(\n | \n)/g, ' ')
           .replace(/[\n\r ]/g, ' ')
+          .replace(/[ \u00a0]+/g, (run, offset, src) => {
+            const before = offset > 0 ? src[offset - 1] : '';
+            const after = offset + run.length < src.length
+                ? src[offset + run.length] : '';
+            const pureNbsp = !run.includes(' ');
+            const interiorOfWord = /\S/.test(before) && /\S/.test(after);
+            return pureNbsp && interiorOfWord ? run : ' '.repeat(run.length);
+          })
           .replace(/\t/g, '        '));
 
   const getAssoc = (node, name) => node[`_magicdom_${name}`];
