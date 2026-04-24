@@ -263,6 +263,19 @@ exports.chat = (() => {
 
       // initial messages are loaded in pad.js' _afterHandshake
 
+      $('#chaticon').on('click', (e) => {
+        e.preventDefault();
+        this.show();
+      });
+      $('#titlecross').on('click', (e) => {
+        e.preventDefault();
+        this.hide();
+      });
+      $('#titlesticky').on('click', (e) => {
+        e.preventDefault();
+        this.stickToScreen(true);
+      });
+
       $('#chatcounter').text(0);
       $('#chatloadmessagesbutton').on('click', () => {
         const start = Math.max(this.historyPointer - 20, 0);

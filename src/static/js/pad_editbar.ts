@@ -66,8 +66,22 @@ class ToolbarItem {
   bind(callback) {
     if (this.isButton()) {
       this.$el.on('click', (event) => {
+        // Stash the clicked button as the focus-restore target BEFORE we
+        // blur :focus — but only for dropdown-opening buttons. Non-dropdown
+        // commands (list toggles, bold, etc.) return focus to the ace editor
+        // and should not touch _lastTrigger (it would retain a stale
+        // reference and mess with later popup Esc-close focus handling).
+        const cmd = this.getCommand();
+        // @ts-ignore — padeditbar is the exported singleton defined below
+        const isDropdownTrigger = exports.padeditbar.dropdowns.indexOf(cmd) !== -1;
+        if (isDropdownTrigger) {
+          const trigger = (this.$el.find('button')[0] as HTMLElement | undefined) ||
+              (this.$el[0] as HTMLElement);
+          // @ts-ignore
+          if (trigger) exports.padeditbar._lastTrigger = trigger;
+        }
         $(':focus').trigger('blur');
-        callback(this.getCommand(), this);
+        callback(cmd, this);
         event.preventDefault();
       });
     } else if (this.isSelect()) {
@@ -128,6 +142,7 @@ exports.padeditbar = new class {
     this._editbarPosition = 0;
     this.commands = {};
     this.dropdowns = [];
+    this._lastTrigger = null;
   }
 
   init() {
@@ -145,7 +160,8 @@ exports.padeditbar = new class {
     });
 
     $('.show-more-icon-btn').on('click', () => {
-      $('.toolbar').toggleClass('full-icons');
+      const expanded = $('.toolbar').toggleClass('full-icons').hasClass('full-icons');
+      $('.show-more-icon-btn').attr('aria-expanded', String(expanded));
     });
     this.checkAllIconsAreDisplayedInToolbar();
     $(window).on('resize', _.debounce(() => this.checkAllIconsAreDisplayedInToolbar(), 100));
@@ -208,6 +224,19 @@ exports.padeditbar = new class {
       $('.nice-select').removeClass('open');
       $('.toolbar-popup').removeClass('popup-show');
 
+      // Remember the trigger so we can restore focus when the dialog closes.
+      // The Button click handler pre-sets `_lastTrigger` before calling blur(),
+      // because blur would make document.activeElement === <body>. For other
+      // paths (keyboard shortcut, programmatic open) fall back to whatever has
+      // focus right now.
+      const wasAnyOpen = $('.popup.popup-show').length > 0;
+      if (!wasAnyOpen && moduleName !== 'none' && !this._lastTrigger) {
+        const active = document.activeElement;
+        if (active && active !== document.body) this._lastTrigger = active;
+      }
+
+      let openedModule = null;
+
       // hide all modules and remove highlighting of all buttons
       if (moduleName === 'none') {
         for (const thisModuleName of this.dropdowns) {
@@ -236,8 +265,43 @@ exports.padeditbar = new class {
           } else if (thisModuleName === moduleName) {
             $(`li[data-key=${thisModuleName}] > a`).addClass('selected');
             module.addClass('popup-show');
+            openedModule = module;
           }
         }
+      }
+
+      if (openedModule) {
+        // Move focus into the now-visible popup so keyboard users land inside the dialog.
+        // Skip if a command handler already placed focus inside this popup — the Embed
+        // command focuses #linkinput deliberately, which is different from the first
+        // tabbable element (a readonly checkbox) and should win.
+        // Fallback: if no focusable descendant exists (e.g. #users where the only
+        // input is disabled), focus the popup div itself so keydown events fire on
+        // the outer document instead of being trapped in the ace editor iframe.
+        const target = openedModule;
+        requestAnimationFrame(() => {
+          // If a command handler already placed focus inside the popup (e.g.
+          // the Embed command focuses #linkinput, showusers focuses
+          // #myusernameedit), honour that.
+          if (target[0].contains(document.activeElement)) return;
+          // Otherwise focus the popup container itself. This keeps keydown
+          // events on the outer document (so Esc always dismisses the popup,
+          // even when the popup has no directly-focusable descendants like
+          // #users does), and it works uniformly across browsers without
+          // getting tripped up by `visibility: hidden` nested popups.
+          // Keyboard users can Tab from here into the popup's controls.
+          if (!target.attr('tabindex')) target.attr('tabindex', '-1');
+          target[0].focus();
+        });
+      } else if (wasAnyOpen && $('.popup.popup-show').length === 0 && this._lastTrigger) {
+        // A popup was open at entry and is now closed — restore focus to the
+        // trigger that opened it. Gated on `wasAnyOpen` so background callers
+        // (e.g. connectivity-modal setup, periodic state handling) that
+        // dispatch `toggleDropDown('none')` with no popup open don't yank
+        // focus away from the editor to a stale toolbar button.
+        const trigger = this._lastTrigger;
+        this._lastTrigger = null;
+        if (document.body.contains(trigger)) trigger.focus();
       }
     } catch (err) {
       cbErr = err || new Error(err);
@@ -289,6 +353,35 @@ exports.padeditbar = new class {
   }
 
   _bodyKeyEvent(evt) {
+    // Escape while any popup is open: close it. We don't restrict to
+    // `:focus inside popup` because some popups (e.g. #users) have no
+    // focusable content on open — focus stays in the ace editor iframe —
+    // but Esc should still dismiss them for keyboard users.
+    if (evt.keyCode === 27 && $('.popup.popup-show').length > 0) {
+      // Manually close popups that toggleDropDown('none') can't close:
+      //   * #users — explicitly skipped by the 'none' branch of
+      //     toggleDropDown so switching between other popups doesn't
+      //     hide the user list. Close here unless pinned (stickyUsers).
+      //   * Popups opened outside the editbar framework that were never
+      //     registered as dropdowns (e.g. #mycolorpicker, toggled
+      //     directly by pad_userlist.ts). toggleDropDown iterates only
+      //     this.dropdowns so these are invisible to it.
+      // Leave registered-dropdown popups (settings/embed/etc.) for
+      // toggleDropDown('none') so its `wasAnyOpen` detection still sees
+      // them as open and its focus-restore branch fires for the trigger.
+      const registered = this.dropdowns;
+      $('.popup.popup-show').each((_, el) => {
+        const $p = $(el);
+        const id = $p.attr('id') || '';
+        if (id === 'users' && $p.hasClass('stickyUsers')) return;
+        if (id !== 'users' && id !== '' && registered.indexOf(id) !== -1) return;
+        $p.removeClass('popup-show');
+        if (id) $(`li[data-key="${id}"] > a`).removeClass('selected');
+      });
+      this.toggleDropDown('none');
+      evt.preventDefault();
+      return;
+    }
     // If the event is Alt F9 or Escape & we're already in the editbar menu
     // Send the users focus back to the pad
     if ((evt.keyCode === 120 && evt.altKey) || evt.keyCode === 27) {

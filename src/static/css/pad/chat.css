@@ -76,10 +76,20 @@
   text-align: right;
   text-decoration: none;
   cursor: pointer;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  font-family: inherit;
+  line-height: 1;
 }
 #titlebar .stick-to-screen-btn {
   font-size: 10px;
   padding-top: 2px;
+}
+#titlebar .stick-to-screen-btn:focus-visible,
+#titlebar .hide-reduce-btn:focus-visible {
+  outline: 2px solid #0066cc;
+  outline-offset: 2px;
 }
 
 /* -- MESSAGES -- */
@@ -121,10 +131,32 @@
 
 /* -- CHAT ICON -- */
 #chaticon {
+  /* #chaticon was converted from <span> to <button> for a11y; reset the
+     UA-default button chrome so the corner icon keeps its pre-conversion
+     shape. Deliberately do NOT reset `border` here — the 1px grey border
+     is supplied earlier (#chaticon {border:1px solid #ccc; border-bottom:
+     none}) and is part of the intended visual. Overriding with border:0
+     visibly broke the icon. See PR #7584 review feedback. */
+  appearance: none;
+  margin: 0;
   background-color: #fff;
   cursor: pointer;
   display: none;
   padding: 5px;
+  font: inherit;
+  color: inherit;
+}
+/* Scope: the inner .buttonicon span here is just a glyph holder. Its global
+   rule in icons.css applies `display: flex` which is fine for toolbar
+   <button class="buttonicon"> instances but breaks inline layout when
+   nested inside a button that's laying out label + glyph + counter on one
+   line. Keep the glyph inline for the chat-icon corner widget. */
+#chaticon .buttonicon {
+  display: inline;
+}
+#chaticon:focus-visible {
+  outline: 2px solid #0066cc;
+  outline-offset: -2px;
 }
 #chaticon a {
   text-decoration: none
