@@ -11,8 +11,7 @@ test('html element has a non-empty lang attribute', async ({page}) => {
   expect(lang!.length).toBeGreaterThan(0);
 });
 
-test('settings popup has dialog semantics, Escape closes it, focus returns to trigger',
-    async ({page}) => {
+test('settings popup has dialog semantics, Escape closes it, focus returns to trigger', async ({page}) => {
   const settingsButton = page.locator('button[data-l10n-id="pad.toolbar.settings.title"]');
   await settingsButton.click();
 
@@ -66,48 +65,57 @@ test('users popup closes on Escape even when focus is outside the popup', async 
   await expect(dialog).not.toHaveClass(/popup-show/);
 });
 
-test('export links have accessible names', async ({page}) => {
+test('export links have an accessible name from their localized content', async ({page}) => {
   await page.locator('button[data-l10n-id="pad.toolbar.import_export.title"]').click();
-  // The Word/PDF/ODF export links are removed client-side by
-  // pad_impexp.ts when soffice is not configured, so only assert on
-  // links that the environment actually renders. The three
-  // always-present links are etherpad / html / plain.
-  for (const [id, expected] of [
-    ['#exportetherpada', 'Export as Etherpad'],
-    ['#exporthtmla', 'Export as HTML'],
-    ['#exportplaina', 'Export as plain text'],
-    ['#exportworda', 'Export as Microsoft Word'],
-    ['#exportpdfa', 'Export as PDF'],
-    ['#exportopena', 'Export as ODF (Open Document Format)'],
-  ] as const) {
+  // The Word/PDF/ODF export links are removed client-side by pad_impexp.ts
+  // when soffice is not configured, so only assert on links that the
+  // environment actually renders. For the ones that are present, their
+  // accessible name comes from the localized child span (data-l10n-id
+  // pad.importExport.exportetherpad etc.), not a hard-coded English
+  // aria-label. Assert the visible text is non-empty, which is what a
+  // screen reader will announce.
+  const ids = [
+    '#exportetherpada',
+    '#exporthtmla',
+    '#exportplaina',
+    '#exportworda',
+    '#exportpdfa',
+    '#exportopena',
+  ];
+  for (const id of ids) {
     const locator = page.locator(id);
     if ((await locator.count()) === 0) continue;
-    await expect(locator).toHaveAttribute('aria-label', expected);
+    const text = (await locator.innerText()).trim();
+    expect(text.length).toBeGreaterThan(0);
   }
 });
 
-test('chaticon is a button with accessible name', async ({page}) => {
+test('chaticon is a button with an accessible name', async ({page}) => {
   const chatIcon = page.locator('#chaticon');
   const tagName = await chatIcon.evaluate((el) => el.tagName.toLowerCase());
   expect(tagName).toBe('button');
-  await expect(chatIcon).toHaveAttribute('aria-label', 'Open chat');
+  // aria-label is populated by html10n from the pad.chat.title translation,
+  // so we assert it is non-empty rather than a specific English string.
+  const label = await chatIcon.getAttribute('aria-label');
+  expect(label && label.length > 0).toBe(true);
 });
 
-test('chat header close/pin controls are buttons with labels', async ({page}) => {
+test('chat header close/pin controls are buttons with accessible names', async ({page}) => {
   await page.locator('#chaticon').click();
-  for (const [id, label, tag] of [
-    ['#titlecross', 'Close chat', 'button'],
-    ['#titlesticky', 'Pin chat to screen', 'button'],
-  ] as const) {
-    const el = page.locator(id);
-    const tagName = await el.evaluate((node) => node.tagName.toLowerCase());
-    expect(tagName).toBe(tag);
-    await expect(el).toHaveAttribute('aria-label', label);
-  }
+  // #titlecross has no data-l10n-id so its aria-label stays static English.
+  // #titlesticky has data-l10n-id, so html10n fills aria-label from the
+  // translation; assert non-empty rather than a specific value.
+  const close = page.locator('#titlecross');
+  expect(await close.evaluate((n) => n.tagName.toLowerCase())).toBe('button');
+  await expect(close).toHaveAttribute('aria-label', 'Close chat');
+
+  const sticky = page.locator('#titlesticky');
+  expect(await sticky.evaluate((n) => n.tagName.toLowerCase())).toBe('button');
+  const stickyLabel = await sticky.getAttribute('aria-label');
+  expect(stickyLabel && stickyLabel.length > 0).toBe(true);
 });
 
-test('otherusers region has aria-live and aria-label (no aria-role typo)',
-    async ({page}) => {
+test('otherusers region has aria-live and aria-label (no aria-role typo)', async ({page}) => {
   await page.locator('button[data-l10n-id="pad.toolbar.showusers.title"]').click();
   const region = page.locator('#otherusers');
   await expect(region).toHaveAttribute('role', 'region');

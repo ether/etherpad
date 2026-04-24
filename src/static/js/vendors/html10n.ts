@@ -662,14 +662,19 @@ export class Html10n {
     if (node.children.length === 0 || prop != 'textContent') {
       // @ts-ignore
       node[prop] = str.str!
-      // Populate aria-label from the translation so screen readers always get
-      // a localized accessible name, but do not overwrite an explicit
-      // aria-label that an author has already set. This lets templates use
-      // static English aria-labels for icon-only controls (export links,
-      // chat icon, close/pin buttons) without losing them at localization
-      // time. See PR #7584 review feedback.
-      if (!node.hasAttribute('aria-label')) {
+      // Populate aria-label from the translation so screen readers get a
+      // localized accessible name. Preserve an author-supplied aria-label
+      // (one present in the template without a marker), but keep our own
+      // html10n-generated values in sync across language changes by
+      // overwriting them. The `data-l10n-aria-label` marker distinguishes
+      // the two: set when we populate it, checked on subsequent passes so
+      // `pad.applyLanguage()` refreshes the accessible name.
+      // See PR #7584 review feedback.
+      const generatedMarker = 'data-l10n-aria-label';
+      if (!node.hasAttribute('aria-label') ||
+          node.getAttribute(generatedMarker) === 'true') {
         node.setAttribute('aria-label', str.str!);
+        node.setAttribute(generatedMarker, 'true');
       }
     } else {
       let children = node.childNodes,

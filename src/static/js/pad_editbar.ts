@@ -293,8 +293,12 @@ exports.padeditbar = new class {
           if (!target.attr('tabindex')) target.attr('tabindex', '-1');
           target[0].focus();
         });
-      } else if ($('.popup.popup-show').length === 0 && this._lastTrigger) {
-        // All popups closed — restore focus to the element that opened the first one.
+      } else if (wasAnyOpen && $('.popup.popup-show').length === 0 && this._lastTrigger) {
+        // A popup was open at entry and is now closed — restore focus to the
+        // trigger that opened it. Gated on `wasAnyOpen` so background callers
+        // (e.g. connectivity-modal setup, periodic state handling) that
+        // dispatch `toggleDropDown('none')` with no popup open don't yank
+        // focus away from the editor to a stale toolbar button.
         const trigger = this._lastTrigger;
         this._lastTrigger = null;
         if (document.body.contains(trigger)) trigger.focus();
@@ -354,14 +358,26 @@ exports.padeditbar = new class {
     // focusable content on open — focus stays in the ace editor iframe —
     // but Esc should still dismiss them for keyboard users.
     if (evt.keyCode === 27 && $('.popup.popup-show').length > 0) {
-      // `toggleDropDown('none')` intentionally skips the users popup so
-      // switching between other popups doesn't hide the user list. For
-      // Escape we want the users popup to close too (unless pinned).
-      const openPopup = $('.popup.popup-show').first();
-      if (openPopup.attr('id') === 'users' && !openPopup.hasClass('stickyUsers')) {
-        openPopup.removeClass('popup-show');
-        $('li[data-key=users] > a').removeClass('selected');
-      }
+      // Manually close popups that toggleDropDown('none') can't close:
+      //   * #users — explicitly skipped by the 'none' branch of
+      //     toggleDropDown so switching between other popups doesn't
+      //     hide the user list. Close here unless pinned (stickyUsers).
+      //   * Popups opened outside the editbar framework that were never
+      //     registered as dropdowns (e.g. #mycolorpicker, toggled
+      //     directly by pad_userlist.ts). toggleDropDown iterates only
+      //     this.dropdowns so these are invisible to it.
+      // Leave registered-dropdown popups (settings/embed/etc.) for
+      // toggleDropDown('none') so its `wasAnyOpen` detection still sees
+      // them as open and its focus-restore branch fires for the trigger.
+      const registered = this.dropdowns;
+      $('.popup.popup-show').each((_, el) => {
+        const $p = $(el);
+        const id = $p.attr('id') || '';
+        if (id === 'users' && $p.hasClass('stickyUsers')) return;
+        if (id !== 'users' && id !== '' && registered.indexOf(id) !== -1) return;
+        $p.removeClass('popup-show');
+        if (id) $(`li[data-key="${id}"] > a`).removeClass('selected');
+      });
       this.toggleDropDown('none');
       evt.preventDefault();
       return;
