@@ -1,9 +1,8 @@
-// src/node/updater/types.ts
-
 export type InstallMethod = 'auto' | 'git' | 'docker' | 'npm' | 'managed';
 
 export type Tier = 'off' | 'notify' | 'manual' | 'auto' | 'autonomous';
 
+/** null = up-to-date (or not yet checked); 'severe' = at least one major version behind; 'vulnerable' = matched a vulnerable-below directive. */
 export type OutdatedLevel = null | 'severe' | 'vulnerable';
 
 export interface ReleaseInfo {
@@ -61,6 +60,7 @@ export interface UpdateState {
   email: EmailSendLog;
 }
 
+/** Zero-value initial state. Treat as immutable — spread before mutating: `{...EMPTY_STATE, lastCheckAt: x}`. */
 export const EMPTY_STATE: UpdateState = {
   schemaVersion: 1,
   lastCheckAt: null,
