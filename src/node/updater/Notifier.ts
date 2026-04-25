@@ -1,11 +1,12 @@
-import {EmailSendLog, VulnerableBelowDirective} from './types';
+import {EmailSendLog} from './types';
 
+// TODO(future): surface the threshold version in email bodies so admins know which version
+// clears the vulnerability. Requires extending NotifierInput with the relevant directive(s).
 export interface NotifierInput {
   adminEmail: string | null;
   current: string;
   latest: string;
   latestTag: string;
-  vulnerableBelow: VulnerableBelowDirective[];
   isVulnerable: boolean;
   isSevere: boolean;
   state: EmailSendLog;
@@ -51,13 +52,17 @@ export const decideEmails = (input: NotifierInput): NotifierResult => {
   if (isVulnerable) {
     const sinceVuln = sinceMs(state.vulnerableAt, now);
     const tagChanged = state.vulnerableNewReleaseTag !== null && state.vulnerableNewReleaseTag !== latestTag;
-    if (tagChanged && sinceVuln < VULNERABLE_INTERVAL) {
+    if (tagChanged) {
+      // A new release shipped while the instance is still vulnerable. Fire regardless
+      // of the 7-day cadence: the admin needs to know a fix exists.
       toSend.push({
         kind: 'vulnerable-new-release',
         subject: `[Etherpad] New release available — ${latest} (your version is vulnerable)`,
         body: `A new Etherpad release (${latestTag}) is available. Your version (${current}) is flagged as vulnerable. Please update.`,
       });
       newState.vulnerableNewReleaseTag = latestTag;
+      // Also reset the periodic clock so we don't immediately re-nag on next tick.
+      newState.vulnerableAt = now.toISOString();
     } else if (sinceVuln >= VULNERABLE_INTERVAL) {
       toSend.push({
         kind: 'vulnerable',
