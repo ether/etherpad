@@ -7,7 +7,6 @@ const base: NotifierInput = {
   current: '2.0.0',
   latest: '2.7.2',
   latestTag: 'v2.7.2',
-  vulnerableBelow: [],
   isVulnerable: false,
   isSevere: false,
   state: EMPTY_STATE.email,
@@ -80,5 +79,17 @@ describe('decideEmails', () => {
   it('vulnerable wins over severe in the same tick', () => {
     const r = decideEmails({...base, isSevere: true, isVulnerable: true});
     expect(r.toSend.map(e => e.kind)).toEqual(['vulnerable']);
+  });
+
+  it('emits new-release-while-vulnerable even after the 7-day window has passed', () => {
+    // Regression: tagChanged should fire regardless of cadence; admin must learn of the fix.
+    const r = decideEmails({
+      ...base,
+      isVulnerable: true,
+      state: {...base.state, vulnerableAt: '2026-04-01T12:00:00.000Z', vulnerableNewReleaseTag: 'v2.7.1'},
+    });
+    expect(r.toSend.map(e => e.kind)).toEqual(['vulnerable-new-release']);
+    expect(r.newState.vulnerableNewReleaseTag).toBe('v2.7.2');
+    expect(r.newState.vulnerableAt).toBe('2026-04-25T12:00:00.000Z');
   });
 });
