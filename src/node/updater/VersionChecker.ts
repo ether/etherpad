@@ -16,7 +16,7 @@ export type CheckResult =
   | {kind: 'updated'; release: ReleaseInfo; etag: string | null; vulnerableBelow: VulnerableBelowDirective[]}
   | {kind: 'notmodified'}
   | {kind: 'ratelimited'}
-  | {kind: 'skipped-prerelease'}
+  | {kind: 'skipped-prerelease'; etag: string | null}
   | {kind: 'error'; status: number};
 
 export interface CheckOptions {
@@ -41,9 +41,15 @@ export const checkLatestRelease = async (
   if (res.status !== 200 || !res.json) return {kind: 'error', status: res.status};
 
   const j = res.json;
-  if (j.prerelease) return {kind: 'skipped-prerelease'};
+  if (j.prerelease) return {kind: 'skipped-prerelease', etag: res.etag};
 
-  const tag: string = String(j.tag_name);
+  if (typeof j.tag_name !== 'string' ||
+      typeof j.html_url !== 'string' ||
+      typeof j.published_at !== 'string') {
+    return {kind: 'error', status: 200};
+  }
+
+  const tag = j.tag_name;
   const version = tag.replace(/^v/, '');
   const body: string = typeof j.body === 'string' ? j.body : '';
 
@@ -51,9 +57,9 @@ export const checkLatestRelease = async (
     version,
     tag,
     body,
-    publishedAt: String(j.published_at),
+    publishedAt: j.published_at,
     prerelease: false,
-    htmlUrl: String(j.html_url),
+    htmlUrl: j.html_url,
   };
 
   const directiveThreshold = parseVulnerableBelow(body);

@@ -46,12 +46,14 @@ describe('checkLatestRelease', () => {
     expect(r.kind).toBe('ratelimited');
   });
 
-  it('skips prereleases', async () => {
+  it('skips prereleases but preserves ETag', async () => {
     const fetcher = async () => ({
-      status: 200, etag: null, json: ghBody({prerelease: true}),
+      status: 200, etag: 'pre-etag', json: ghBody({prerelease: true}),
     } as FetchResult);
     const r = await checkLatestRelease({fetcher, prevEtag: null, repo: 'ether/etherpad'});
     expect(r.kind).toBe('skipped-prerelease');
+    if (r.kind !== 'skipped-prerelease') return;
+    expect(r.etag).toBe('pre-etag');
   });
 
   it('returns error on unexpected status', async () => {
@@ -68,5 +70,27 @@ describe('checkLatestRelease', () => {
     };
     await checkLatestRelease({fetcher, prevEtag: 'old', repo: 'ether/etherpad'});
     expect(observed).toBe('old');
+  });
+
+  it('returns error when required fields are missing', async () => {
+    const fetcher = async () => ({
+      status: 200,
+      etag: 'abc',
+      json: {body: 'no tag_name here'},
+    } as FetchResult);
+    const r = await checkLatestRelease({fetcher, prevEtag: null, repo: 'ether/etherpad'});
+    expect(r.kind).toBe('error');
+    if (r.kind !== 'error') return;
+    expect(r.status).toBe(200);
+  });
+
+  it('returns error when tag_name is null', async () => {
+    const fetcher = async () => ({
+      status: 200,
+      etag: 'abc',
+      json: {tag_name: null, html_url: 'x', published_at: 'y'},
+    } as FetchResult);
+    const r = await checkLatestRelease({fetcher, prevEtag: null, repo: 'ether/etherpad'});
+    expect(r.kind).toBe('error');
   });
 });
