@@ -19,6 +19,17 @@ describe('parseSemver', () => {
     expect(parseSemver('')).toBeNull();
     expect(parseSemver('2.7')).toBeNull();
   });
+  it('strips prerelease suffix', () => {
+    expect(parseSemver('2.7.1-rc.1')).toEqual({major: 2, minor: 7, patch: 1});
+    expect(parseSemver('v2.7.1-beta')).toEqual({major: 2, minor: 7, patch: 1});
+  });
+  it('strips build metadata', () => {
+    expect(parseSemver('2.7.1+build.123')).toEqual({major: 2, minor: 7, patch: 1});
+  });
+  it('rejects four-part versions', () => {
+    expect(parseSemver('2.7.1.4')).toBeNull();
+    expect(parseSemver('2.7.1.foo')).toBeNull();
+  });
 });
 
 describe('compareSemver', () => {

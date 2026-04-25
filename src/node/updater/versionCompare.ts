@@ -6,7 +6,9 @@ export interface ParsedSemver {
   patch: number;
 }
 
-const SEMVER_RE = /^v?(\d+)\.(\d+)\.(\d+)(?:[.-].*)?$/;
+// Accepts optional prerelease (e.g. -rc.1) and build-metadata (e.g. +build.123).
+// Four-part versions like 2.7.1.4 are rejected — use standard semver only.
+const SEMVER_RE = /^v?(\d+)\.(\d+)\.(\d+)(?:[-+].*)?$/;
 
 export const parseSemver = (s: string): ParsedSemver | null => {
   const m = SEMVER_RE.exec(s.trim());
