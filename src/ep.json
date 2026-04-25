@@ -103,6 +103,13 @@
       }
     },
     {
+      "name": "updater",
+      "hooks": {
+        "expressCreateServer": "ep_etherpad-lite/node/updater/index",
+        "shutdown": "ep_etherpad-lite/node/updater/index"
+      }
+    },
+    {
       "name": "admin",
       "hooks": {
         "expressCreateServer": "ep_etherpad-lite/node/hooks/express/admin"
