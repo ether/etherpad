@@ -13,6 +13,7 @@ import i18n from "./localization/i18n.ts";
 import {PadPage} from "./pages/PadPage.tsx";
 import {ToastDialog} from "./utils/Toast.tsx";
 import {ShoutPage} from "./pages/ShoutPage.tsx";
+import {UpdatePage} from "./pages/UpdatePage.tsx";
 
 const router = createBrowserRouter(createRoutesFromElements(
     <><Route element={<App/>}>
@@ -22,6 +23,7 @@ const router = createBrowserRouter(createRoutesFromElements(
         <Route path="/help" element={<HelpPage/>}/>
         <Route path="/pads" element={<PadPage/>}/>
         <Route path="/shout" element={<ShoutPage/>}/>
+        <Route path="/update" element={<UpdatePage/>}/>
     </Route><Route path="/login">
         <Route index element={<LoginScreen/>}/>
     </Route></>
