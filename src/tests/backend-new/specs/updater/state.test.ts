@@ -35,6 +35,22 @@ describe('loadState', () => {
     const s = await loadState(statePath());
     expect(s).toEqual(EMPTY_STATE_FOR_TESTS);
   });
+
+  it('returns empty state when email is null', async () => {
+    // Regression: typeof null === 'object', so a hand-edited file with email:null
+    // would have passed an earlier shape check and crashed downstream consumers.
+    const broken = {...EMPTY_STATE_FOR_TESTS, email: null};
+    await fs.writeFile(statePath(), JSON.stringify(broken));
+    const s = await loadState(statePath());
+    expect(s).toEqual(EMPTY_STATE_FOR_TESTS);
+  });
+
+  it('returns empty state when latest is an array', async () => {
+    const broken = {...EMPTY_STATE_FOR_TESTS, latest: []};
+    await fs.writeFile(statePath(), JSON.stringify(broken));
+    const s = await loadState(statePath());
+    expect(s).toEqual(EMPTY_STATE_FOR_TESTS);
+  });
 });
 
 describe('saveState', () => {
