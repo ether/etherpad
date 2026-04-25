@@ -1,16 +1,12 @@
 'use strict';
 
-import path from 'node:path';
 import {ArgsExpressType} from '../../types/ArgsExpressType';
-import settings from '../../utils/Settings';
-import {getDetectedInstallMethod} from '../../updater';
+import settings, {getEpVersion} from '../../utils/Settings';
+import {getDetectedInstallMethod, stateFilePath} from '../../updater';
 import {evaluatePolicy} from '../../updater/UpdatePolicy';
 import {compareSemver, isMajorBehind, isVulnerable} from '../../updater/versionCompare';
 import {loadState} from '../../updater/state';
 
-const getEpVersion = (): string => require('../../../package.json').version;
-
-const stateFilePath = (): string => path.join(settings.root, 'var', 'update-state.json');
 
 let badgeCache: {value: 'severe' | 'vulnerable' | null; at: number} = {value: null, at: 0};
 const BADGE_CACHE_MS = 60 * 1000;
