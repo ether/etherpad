@@ -2,8 +2,6 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {EMPTY_STATE, UpdateState} from './types';
 
-export {EMPTY_STATE as EMPTY_STATE_FOR_TESTS};
-
 const isPlainObject = (v: unknown): v is Record<string, unknown> =>
   v !== null && typeof v === 'object' && !Array.isArray(v);
 

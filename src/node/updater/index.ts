@@ -1,6 +1,6 @@
 import path from 'node:path';
 import log4js from 'log4js';
-import settings from '../utils/Settings';
+import settings, {getEpVersion} from '../utils/Settings';
 import {detectInstallMethod} from './InstallMethodDetector';
 import {checkLatestRelease, realFetcher} from './VersionChecker';
 import {loadState, saveState} from './state';
@@ -15,9 +15,7 @@ let detectedMethod: Exclude<InstallMethod, 'auto'> = 'managed';
 let timer: NodeJS.Timeout | null = null;
 let inMemoryState: UpdateState | null = null;
 
-const stateFilePath = () => path.join(settings.root, 'var', 'update-state.json');
-
-const getEpVersion = (): string => require('../../package.json').version;
+export const stateFilePath = () => path.join(settings.root, 'var', 'update-state.json');
 
 /** Returns the current state from memory; loads on first call. */
 export const getCurrentState = async (): Promise<UpdateState> => {
@@ -61,7 +59,7 @@ const performCheck = async (): Promise<void> => {
     } else if (result.kind === 'notmodified') {
       // 304 — no state change.
     } else if (result.kind === 'ratelimited') {
-      logger.warn('GitHub rate-limited; backing off');
+      logger.warn('GitHub rate-limited; will retry at next interval');
     } else if (result.kind === 'error') {
       logger.warn(`GitHub fetch error status=${result.status}`);
     }
