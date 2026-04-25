@@ -54,6 +54,8 @@ const socketio = require('./socketio');
 
 const hooks = require('./pluginfw/hooks');
 
+import './pad_version_badge';
+
 // This array represents all GET-parameters which can be used to change a setting.
 //   name:     the parameter-name, eg  `?noColors=true`  =>  `noColors`
 //   checkVal: the callback is only executed when
