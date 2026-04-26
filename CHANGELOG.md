@@ -1,3 +1,15 @@
+# 2.7.2
+
+### Notable enhancements and fixes
+
+- Accessibility pass: corrected dialog semantics, improved focus management, added missing icon labels, and set the `html lang` attribute correctly.
+- Chat: clicking the chat icon works again, disabled toggles render properly, and the username layout no longer overflows.
+- `/export/etherpad` now honors the `:rev` URL segment, so revision-specific exports return the requested revision instead of the latest.
+- Undo / redo now scrolls the viewport to follow the caret, so reverted edits stay in view.
+- Page Down / Page Up now scrolls by viewport height instead of a fixed line count, matching standard editor behavior on tall and short windows alike.
+- Editbar: caret is restored to the pad after changing a toolbar select, so typing continues in the document instead of falling through to the toolbar.
+- Admin: i18n is restored on `/admin` so the admin UI is translated again.
+
 # 2.7.1
 
 ### Notable enhancements and fixes
