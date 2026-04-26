@@ -144,7 +144,7 @@
     "lint": "eslint .",
     "test": "cross-env NODE_ENV=production vitest run",
     "test-utils": "cross-env NODE_ENV=production vitest run tests/backend/specs --testTimeout 5000",
-    "test-container": "cross-env NODE_ENV=production vitest run tests/container/specs/api",
+    "test-container": "cross-env NODE_ENV=production vitest run --include 'tests/container/specs/**/*.ts'",
     "dev": "cross-env NODE_ENV=development  node --import tsx node/server.ts",
     "prod": "cross-env NODE_ENV=production node --import tsx node/server.ts",
     "ts-check": "tsc --noEmit",
