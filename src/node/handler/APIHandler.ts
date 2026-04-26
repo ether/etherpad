@@ -159,7 +159,7 @@ export { version };
  * @param req express request object
  */
 export const handle = async function (apiVersion: string, functionName: string, fields: APIFields,
-                                 req: Http2ServerRequest) {
+                                 req: Http2ServerRequest, res?: any) {
   // say goodbye if this is an unknown API version
   if (!(apiVersion in version)) {
     throw new createHTTPError.NotFound('no such api version');

@@ -57,7 +57,7 @@ const sortHooks = (hookSetName, hooks) => {
 };
 
 
-export const getHooks = (hookSetName) => {
+export const getHooks = (hookSetName: string, _html?: any) => {
   const hooks = new Map();
   sortHooks(hookSetName, hooks);
   return hooks;

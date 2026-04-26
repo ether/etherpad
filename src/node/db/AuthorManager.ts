@@ -196,7 +196,7 @@ export const createAuthorIfNotExistsFor = async (authorMapper: string, name: str
  * Internal function that creates the database entry for an author
  * @param {String} name The name of the author
  */
-export const createAuthor = async (name: string) => {
+export const createAuthor = async (name?: string | null) => {
   // create the new author name
   const author = `a.${randomString(16)}`;
 

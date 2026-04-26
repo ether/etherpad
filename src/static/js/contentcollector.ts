@@ -61,7 +61,7 @@ const supportedElems = new Set([
   'ul',
 ]);
 
-const makeContentCollector = (collectStyles, abrowser, apool, className2Author) => {
+const makeContentCollector = (collectStyles: any, abrowser: any, apool: any, className2Author?: any) => {
   const _blockElems = {
     div: 1,
     p: 1,
