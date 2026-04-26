@@ -68,9 +68,6 @@ jobs:
       -
         name: Run the backend tests
         run: pnpm test
-      - name: Run the new vitest tests
-        working-directory: src
-        run: pnpm run test:vitest
 
   withpluginsLinux:
     env:
@@ -137,9 +134,6 @@ jobs:
       -
         name: Run the backend tests
         run: pnpm test
-      - name: Run the new vitest tests
-        working-directory: src
-        run: pnpm run test:vitest
 
   # Windows tests only run on push to develop/master, not on PRs
   withoutpluginsWindows:
@@ -189,9 +183,6 @@ jobs:
         name: Run the backend tests
         working-directory: src
         run: pnpm test
-      - name: Run the new vitest tests
-        working-directory: src
-        run: pnpm run test:vitest
 
   withpluginsWindows:
     env:
@@ -267,6 +258,3 @@ jobs:
         name: Run the backend tests
         working-directory: src
         run: pnpm test
-      - name: Run the new vitest tests
-        working-directory: src
-        run: pnpm run test:vitest

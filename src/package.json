@@ -145,9 +145,9 @@
   },
   "scripts": {
     "lint": "eslint .",
-    "test": "cross-env NODE_ENV=production mocha --import=tsx --timeout 120000 --recursive tests/backend/specs/**.ts ../node_modules/ep_*/static/tests/backend/specs/**",
-    "test-utils": "cross-env NODE_ENV=production mocha --import=tsx --timeout 5000 --recursive tests/backend/specs/*utils.ts",
-    "test-container": "mocha --import=tsx --timeout 5000 tests/container/specs/api",
+    "test": "cross-env NODE_ENV=production vitest run",
+    "test-utils": "cross-env NODE_ENV=production vitest run tests/backend/specs --testTimeout 5000",
+    "test-container": "cross-env NODE_ENV=production vitest run tests/container/specs/api",
     "dev": "cross-env NODE_ENV=development  node --import tsx node/server.ts",
     "prod": "cross-env NODE_ENV=production node --import tsx node/server.ts",
     "ts-check": "tsc --noEmit",
@@ -157,7 +157,7 @@
     "test-admin": "cross-env NODE_ENV=production npx playwright test tests/frontend-new/admin-spec --workers 1 --project=chromium",
     "test-admin:ui": "cross-env NODE_ENV=production npx playwright test tests/frontend-new/admin-spec --ui --workers 1",
     "debug:socketio": "cross-env DEBUG=socket.io* node --import tsx node/server.ts",
-    "test:vitest": "vitest"
+    "test:watch": "cross-env NODE_ENV=production vitest"
   },
   "version": "2.7.2",
   "license": "Apache-2.0"
