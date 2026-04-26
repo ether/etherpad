@@ -94,6 +94,12 @@
 #titlebar .stick-to-screen-btn {
   font-size: 10px;
 }
+/* The `_` glyph in #titlecross renders at the bottom of its em-box, which
+   places it visibly far below the CHAT baseline. Lift it without changing
+   the flex row layout. */
+#titlebar .hide-reduce-btn {
+  transform: translateY(-5px);
+}
 #titlebar .stick-to-screen-btn:focus-visible,
 #titlebar .hide-reduce-btn:focus-visible {
   outline: 2px solid #0066cc;
