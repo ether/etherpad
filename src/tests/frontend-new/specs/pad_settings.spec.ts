@@ -160,4 +160,38 @@ test.describe('creator-owned pad settings', () => {
 
     await context2.close();
   });
+
+  // #7592: ticking "Disable chat" must visibly disable the dependent
+  // "Chat always on screen" / "Show Chat and Users" toggles, not just
+  // make the underlying inputs non-interactive.
+  test('disabling chat disables and visually greys the dependent chat toggles', async ({page}) => {
+    await goToNewPad(page);
+    await showSettings(page);
+
+    // Initial state: dependent toggles are interactive.
+    await expect(page.locator('#options-stickychat')).toBeEnabled();
+    await expect(page.locator('#options-chatandusers')).toBeEnabled();
+
+    await page.locator('label[for="options-disablechat"]').click();
+    await expect(page.locator('#options-disablechat')).toBeChecked();
+
+    // Inputs become disabled (refreshMyViewControls in pad.ts).
+    await expect(page.locator('#options-stickychat')).toBeDisabled();
+    await expect(page.locator('#options-chatandusers')).toBeDisabled();
+
+    // Colibris toggle visualisation dims via opacity:.4 on the label
+    // (covers the hidden checkbox + before/after pseudo-elements).
+    const stickyLabelOpacity = await page.evaluate(
+        () => getComputedStyle(document.querySelector('label[for="options-stickychat"]')!).opacity);
+    const chatAndUsersLabelOpacity = await page.evaluate(
+        () => getComputedStyle(document.querySelector('label[for="options-chatandusers"]')!).opacity);
+    expect(parseFloat(stickyLabelOpacity)).toBeLessThan(1);
+    expect(parseFloat(chatAndUsersLabelOpacity)).toBeLessThan(1);
+
+    // Untick "Disable chat" → dependent toggles are interactive again.
+    await page.locator('label[for="options-disablechat"]').click();
+    await expect(page.locator('#options-disablechat')).not.toBeChecked();
+    await expect(page.locator('#options-stickychat')).toBeEnabled();
+    await expect(page.locator('#options-chatandusers')).toBeEnabled();
+  });
 });
