@@ -18,13 +18,13 @@ import {ErrorCaused} from "../../types/ErrorCaused";
  * - /rest/{version}/openapi.json
  */
 
-const OpenAPIBackend = require('openapi-backend').default;
-const IncomingForm = require('formidable').IncomingForm;
-const cloneDeep = require('lodash.clonedeep');
-const createHTTPError = require('http-errors');
+import { OpenAPIBackend } from 'openapi-backend';
+import { IncomingForm } from 'formidable';
+import cloneDeep from 'lodash.clonedeep';
+import createHTTPError from 'http-errors';
 
-const apiHandler = require('../../handler/APIHandler');
-import settings from '../../utils/Settings';
+import * as apiHandler from '../../handler/APIHandler.js';
+import settings from '../../utils/Settings.js';
 
 import log4js from 'log4js';
 const logger = log4js.getLogger('API');
@@ -575,7 +575,7 @@ const generateDefinitionForVersion = (version:string, style = APIPathStyle.FLAT)
   return definition;
 };
 
-exports.expressPreSession = async (hookName:string, {app}:any) => {
+export const expressPreSession = async (hookName:string, {app}:any) => {
   // create openapi-backend handlers for each api version under /api/{version}/*
   for (const version of Object.keys(apiHandler.version)) {
     // we support two different styles of api: flat + rest
