@@ -1,7 +1,12 @@
 'use strict';
 
+import {fileURLToPath} from 'node:url';
+import {dirname} from 'node:path';
 import {strict as assert} from 'assert';
-const {sanitizePluginsForWire} = require('../../../node/handler/PadMessageHandler');
+import {sanitizePluginsForWire} from '../../../node/handler/PadMessageHandler.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 describe(__filename, function () {
   const makeRegistry = () => ({

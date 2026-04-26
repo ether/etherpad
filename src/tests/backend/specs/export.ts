@@ -1,10 +1,15 @@
 'use strict';
 
+import {fileURLToPath} from 'node:url';
+import {dirname} from 'node:path';
 import {MapArrayType} from "../../../node/types/MapType";
 
-const common = require('../common');
-const padManager = require('../../../node/db/PadManager');
-import settings from '../../../node/utils/Settings';
+import common from '../common.js';
+import padManager from '../../../node/db/PadManager.js';
+import settings from '../../../node/utils/Settings.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 describe(__filename, function () {
   let agent:any;

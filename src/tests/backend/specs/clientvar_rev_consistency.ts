@@ -1,5 +1,8 @@
 'use strict';
 
+import {fileURLToPath} from 'node:url';
+import {dirname} from 'node:path';
+
 /**
  * Regression test for https://github.com/ether/etherpad-lite/issues/4040
  *
@@ -13,12 +16,17 @@
  * production failures were observed.
  */
 
-const assert = require('assert').strict;
-const common = require('../common');
-const padManager = require('../../../node/db/PadManager');
-const plugins = require('../../../static/js/pluginfw/plugin_defs');
-const settings = require('../../../node/utils/Settings');
-import {randomString} from '../../../static/js/pad_utils';
+import assert from 'assert';
+import common from '../common.js';
+import padManager from '../../../node/db/PadManager.js';
+import pluginDefs from '../../../static/js/pluginfw/plugin_defs.js';
+import settings from '../../../node/utils/Settings.js';
+import {randomString} from '../../../static/js/pad_utils.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+const plugins = pluginDefs;
 
 describe(__filename, function () {
   let agent: any;
