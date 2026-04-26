@@ -47,8 +47,8 @@ const dbModule: any = {
       }
     }
     for (const fn of ['get', 'set', 'findKeys', 'getSub', 'setSub', 'remove']) {
-      const f = dbModule.db[fn];
-      dbModule[fn] = async (...args: string[]) => await f.call(dbModule.db, ...args);
+      const f = dbModule.db[fn].bind(dbModule.db);
+      dbModule[fn] = async (...args: string[]) => await f(...args);
       Object.setPrototypeOf(dbModule[fn], Object.getPrototypeOf(f));
       Object.defineProperties(dbModule[fn], Object.getOwnPropertyDescriptors(f));
     }

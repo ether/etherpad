@@ -34,6 +34,7 @@ import socketio from './socketio.js';
 import html10n from '../js/vendors/html10n.js'
 let token, padId, exportLinks, socket, changesetLoader, BroadcastSlider;
 let cp = '';
+let baseURL = '';
 const playbackSpeedCookie = 'timesliderPlaybackSpeed';
 
 const getPrefsCookieName = () => `${cp}${window.location.protocol === 'https:' ? 'prefs' : 'prefsHttp'}`;
@@ -220,5 +221,7 @@ const handleClientVars = async (message) => {
   });
 };
 
-export const baseURL = '';
+export const setBaseURL = (url) => {
+  baseURL = url;
+};
 export {init};

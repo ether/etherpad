@@ -20,7 +20,8 @@ let BroadcastSlider;
 
   window.browser = require('ep_etherpad-lite/static/js/vendors/browser');
 
-  window.plugins = require('ep_etherpad-lite/static/js/pluginfw/client_plugins');
+  const clientPlugins = require('ep_etherpad-lite/static/js/pluginfw/client_plugins');
+  window.plugins = clientPlugins.default || clientPlugins;
   const socket = timeSlider.socket;
   BroadcastSlider = timeSlider.BroadcastSlider;
   plugins.baseURL = baseURL;
@@ -32,7 +33,7 @@ let BroadcastSlider;
   });
   const padeditbar = require('ep_etherpad-lite/static/js/pad_editbar').padeditbar;
   const padimpexp = require('ep_etherpad-lite/static/js/pad_impexp').padimpexp;
-  timeSlider.baseURL = baseURL;
+  if (typeof timeSlider.setBaseURL === 'function') timeSlider.setBaseURL(baseURL);
   timeSlider.init();
   padeditbar.init()
 })();
