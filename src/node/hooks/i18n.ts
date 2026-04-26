@@ -137,12 +137,12 @@ export const expressPreSession = async (hookName:string, {app}:any) => {
   // regenerate locales on server restart
   const locales = getAllLocales();
   const localeIndex = generateLocaleIndex(locales);
-  exports.availableLangs = availableLangs = getAvailableLangs(locales);
+  availableLangs = getAvailableLangs(locales);
 
   app.get('/locales/:locale', (req:any, res:any) => {
     // works with /locale/en and /locale/en.json requests
     const locale = req.params.locale.split('.')[0];
-    if (Object.prototype.hasOwnProperty.call(exports.availableLangs, locale)) {
+    if (Object.prototype.hasOwnProperty.call(availableLangs, locale)) {
       res.setHeader('Cache-Control', `public, max-age=${settings.maxAge}`);
       res.setHeader('Content-Type', 'application/json; charset=utf-8');
       res.send(`{"${locale}":${JSON.stringify(locales[locale])}}`);
