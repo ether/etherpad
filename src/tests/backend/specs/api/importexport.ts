@@ -238,7 +238,7 @@ describe(__filename, function () {
       const testPadId = makeid();
       const test = testImports[testName];
       if (test.disabled) {
-        return xit(`DISABLED: ${testName}`, function (done) {
+        return xit(`DISABLED: ${testName}`, function (done: any) {
           done();
         });
       }

@@ -25,7 +25,8 @@ import {binarySearch} from "./ace2_common.js";
  */
 
 import Security from './security.js';
-import jsCookie, {CookiesStatic} from 'js-cookie'
+import jsCookie from 'js-cookie'
+type CookiesStatic = typeof jsCookie;
 
 /**
  * Generates a random String with the given length. Is needed to generate the Author, Group,
@@ -279,7 +280,7 @@ class PadUtils {
         return (`${n} ${word}${n !== 1 ? 's' : ''} ago`);
       }
     ;
-    d = Math.max(0, (+(new Date()) - (+d) - pad.clientTimeOffset) / 1000);
+    d = Math.max(0, (+(new Date()) - (+d) - (pad.clientTimeOffset || 0)) / 1000);
     if (d < 60) {
       return format(d, 'second');
     }
@@ -501,7 +502,7 @@ const inThirdPartyIframe = () => {
   }
 };
 
-export let Cookies: CookiesStatic<string>
+export let Cookies: CookiesStatic
 // This file is included from Node so that it can reuse randomString, but Node doesn't have a global
 // window object.
 if (typeof window !== 'undefined') {

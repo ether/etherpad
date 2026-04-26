@@ -54,13 +54,13 @@ export const cleanText = (txt:string): string => txt.replace(/\r\n/g, '\n')
     .replace(/\t/g, '        ');
 
 class Pad {
-  private db: Database;
-  private atext: AText;
-  private pool: AttributePool;
-  private head: number;
-    private chatHead: number;
+  public db: Database;
+  public atext: AText;
+  public pool: AttributePool;
+  public head: number;
+    public chatHead: number;
     private publicStatus: boolean;
-    private id: string;
+    public id: string;
     private savedRevisions: any[];
     private padSettings: PadSettings;
   /**
@@ -289,7 +289,7 @@ class Pad {
     await Promise.all(
         authorIds.map((authorId) => authorManager.getAuthorColorId(authorId).then((colorId:string) => {
           // colorId might be a hex color or an number out of the palette
-          returnTable[authorId] = colorPalette[colorId] || colorId;
+          returnTable[authorId] = colorPalette[colorId as any] || colorId;
         })));
 
     return returnTable;

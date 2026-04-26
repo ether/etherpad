@@ -1,6 +1,6 @@
 'use strict';
 
-import SkipList from 'ep_etherpad-lite/static/js/skiplist';
+import SkipList from '../../../static/js/skiplist.js';
 import {expect, describe, it} from 'vitest';
 
 describe('skiplist.js', function () {

@@ -2,7 +2,8 @@ import {IPluginInfo, PluginManager} from "live-plugin-manager";
 import path from "path";
 import {node_modules, pluginInstallPath} from "./installer.js";
 import {accessSync, constants, rmSync, symlinkSync, unlinkSync} from "node:fs";
-import {dependencies, name} from '../../../package.json'
+import pkg from '../../../package.json' with { type: 'json' };
+const {dependencies, name} = pkg;
 import settings from '../../../node/utils/Settings.js';
 import {readFileSync} from "fs";
 

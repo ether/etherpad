@@ -590,7 +590,7 @@ export const restoreRevision = async (padID: string, rev: number, authorId = '')
   if (lastNewlinePos < 0) {
     builder.remove(oldText.length - 1, 0);
   } else {
-    builder.remove(lastNewlinePos, oldText.match(/\n/g).length - 1);
+    builder.remove(lastNewlinePos, (oldText.match(/\n/g) || []).length - 1);
     builder.remove(oldText.length - lastNewlinePos - 1, 0);
   }
 

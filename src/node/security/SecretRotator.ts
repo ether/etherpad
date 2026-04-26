@@ -10,7 +10,7 @@ import log4js from 'log4js';
 
 class Kdf {
   async generateParams(): Promise<{ salt: string; digest: string; keyLen: number; secret: string }> { throw new Error('not implemented'); }
-  async derive(params: DeriveModel, info: any) { throw new Error('not implemented'); }
+  async derive(params: DeriveModel, info: any): Promise<any> { throw new Error('not implemented'); }
 }
 
 class LegacyStaticSecret extends Kdf {

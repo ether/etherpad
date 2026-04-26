@@ -135,14 +135,14 @@ class PadDiff {
 
     let superChangeset = null;
 
-    for (let rev = this._fromRev + 1; rev <= this._toRev; rev += bulkSize) {
+    for (let rev = Number(this._fromRev) + 1; rev <= Number(this._toRev); rev += bulkSize) {
       // get the bulk
       const {changesets, authors} = await this._getChangesetsInBulk(rev, bulkSize);
 
       const addedAuthors = [];
 
       // run through all changesets
-      for (let i = 0; i < changesets.length && (rev + i) <= this._toRev; ++i) {
+      for (let i = 0; i < changesets.length && (rev + i) <= Number(this._toRev); ++i) {
         let changeset = changesets[i];
 
         // skip clearAuthorship Changesets

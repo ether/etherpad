@@ -13,9 +13,9 @@ import pluginDefs from './plugin_defs.js';
 //
 export const deprecationNotices: Record<string, string> = {};
 
-const deprecationWarned = {};
+const deprecationWarned: Record<string, boolean> = {};
 
-const checkDeprecation = (hook) => {
+const checkDeprecation = (hook: any) => {
   const notice = deprecationNotices[hook.hook_name];
   if (notice == null) return;
   if (deprecationWarned[hook.hook_fn_name]) return;

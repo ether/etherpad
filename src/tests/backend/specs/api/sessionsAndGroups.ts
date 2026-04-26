@@ -4,6 +4,7 @@ import {fileURLToPath} from 'node:url';
 import {dirname} from 'node:path';
 import {agent, generateJWTToken, init, logger} from "../../common.js";
 
+// @ts-ignore - subpath import for type only
 import TestAgent from "supertest/lib/agent";
 import supertest from "supertest";
 import assert from 'assert';
@@ -369,7 +370,7 @@ describe(__filename, function () {
           .set("Authorization", await generateJWTToken())
           .expect(200)
           .expect('Content-Type', /json/)
-          .expect((res) => {
+          .expect((res: any) => {
             assert.equal(res.body.code, 0);
             assert.equal(res.body.data.padIDs.length, 1);
           });

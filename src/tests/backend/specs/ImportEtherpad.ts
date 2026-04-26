@@ -221,7 +221,7 @@ describe(__filename, function () {
   });
 
   describe('exportEtherpadAdditionalContent', function () {
-    let hookBackup: Function;
+    let hookBackup: any;
 
     before(async function () {
       hookBackup = plugins.hooks.exportEtherpadAdditionalContent || [];

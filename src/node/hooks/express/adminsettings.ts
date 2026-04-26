@@ -213,7 +213,7 @@ export const socketio = (hookName: string, {io}: any) => {
        data.results = currentWinners;
       } else if (query.sortBy === "lastEdited") {
        const currentWinners: PadQueryResult[] = []
-       const padMapping = [] as {padId: string, lastEdited: string}[]
+       const padMapping = [] as {padId: string, lastEdited: string|number}[]
        for (let res of result) {
         const pad = await padManager.getPad(res);
         const lastEdited = await pad.getLastEdit();

@@ -152,7 +152,7 @@ export const checkTodos = async () => {
 
     const revisionDate = await pad.getRevisionDate(pad.getHeadRevisionNumber())
 
-    if (pad.head < settings.minHead || padMessageHandler.padUsersCount(padId) > 0 || Date.now() < revisionDate + settings.minAge) {
+    if (pad.head < settings.minHead || padMessageHandler.padUsersCount(padId).padUsersCount > 0 || Date.now() < revisionDate + settings.minAge) {
       return
     }
 

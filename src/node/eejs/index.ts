@@ -38,7 +38,7 @@ import { createRequire } from 'node:module';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const requireFromHere = createRequire(import.meta.url);
-const templateModules = new Map([
+const templateModules = new Map<string, any>([
   ['ep_etherpad-lite/node/hooks/i18n', i18n],
   ['ep_etherpad-lite/static/js/pluginfw/shared', pluginUtils],
 ]);

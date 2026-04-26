@@ -4,7 +4,7 @@ import {fileURLToPath} from 'node:url';
 import {dirname} from 'node:path';
 import assert from 'assert';
 import * as common from '../common.js';
-import i18n from '../../../node/hooks/i18n.js';
+import * as i18n from '../../../node/hooks/i18n.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);

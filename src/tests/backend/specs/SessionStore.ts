@@ -21,7 +21,7 @@ type Session = {
 }
 
 describe(__filename, function () {
-  let ss: Session|null;
+  let ss: any;
   let sid: string|null;
 
   const set = async (sess: string|null) => await util.promisify(ss!.set).call(ss, sid, sess);

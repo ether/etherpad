@@ -131,11 +131,13 @@ const generateLocaleIndex = (locales:MapArrayType<string>) => {
 };
 
 
+export let availableLangs: any;
+
 export const expressPreSession = async (hookName:string, {app}:any) => {
   // regenerate locales on server restart
   const locales = getAllLocales();
   const localeIndex = generateLocaleIndex(locales);
-  exports.availableLangs = getAvailableLangs(locales);
+  exports.availableLangs = availableLangs = getAvailableLangs(locales);
 
   app.get('/locales/:locale', (req:any, res:any) => {
     // works with /locale/en and /locale/en.json requests

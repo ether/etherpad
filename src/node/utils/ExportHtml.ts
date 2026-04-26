@@ -91,7 +91,7 @@ const getHTMLFromAtext = async (pad:PadType, atext: AText, authorColors?: string
         const newLength = props.push(propName);
         anumMap[a] = newLength - 1;
 
-        css += `.${propName} {background-color: ${authorColors[attr[1]]}}\n`;
+        css += `.${propName} {background-color: ${(authorColors as any)[attr[1]]}}\n`;
       } else if (attr[0] === 'removed') {
         const propName = 'removed';
         const newLength = props.push(propName);
@@ -378,7 +378,7 @@ const getHTMLFromAtext = async (pad:PadType, atext: AText, authorColors?: string
                  // pieces.push("</li>");
 
               */
-              if ((nextLine.listTypeName === 'number') && (nextLine.text === '')) {
+              if ((nextLine!.listTypeName === 'number') && (nextLine!.text === '')) {
                 // is the listTypeName check needed here?  null text might be completely fine!
                 // TODO Check against Uls
                 // don't do anything because the next item is a nested ol openener so

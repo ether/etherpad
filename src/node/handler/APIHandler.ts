@@ -215,5 +215,5 @@ export const handle = async function (apiVersion: string, functionName: string, 
   const functionParams = version[apiVersion][functionName].map((field) => fields[field]);
 
   // call the api function
-  return (api as any)[functionName].apply(this, functionParams);
+  return (api as any)[functionName].apply(null, functionParams);
 };
