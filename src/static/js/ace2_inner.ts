@@ -3001,6 +3001,25 @@ function Ace2Inner(editorInfo, cssManagers) {
                 lineAndColumnFromChar(selectionInfo.selStart),
                 lineAndColumnFromChar(selectionInfo.selEnd),
                 selectionInfo.selFocusAtStart);
+            // Issue #7007: bring the caret's line into view after
+            // undo/redo so the user can actually see the change that
+            // just got reverted. The outer inCallStack's finally-block
+            // scroll path is fragile on large pads — in particular
+            // `scrollNodeVerticallyIntoView`'s caret-below-viewport
+            // branch intentionally scrolls to a fixed offset to keep
+            // the Enter-on-last-line experience smooth (see PR #4639),
+            // which leaves undo/redo pointed at the wrong spot
+            // whenever the caret jumps to a mid-document line. Using
+            // Element.scrollIntoView with block:"center" is native,
+            // framework-agnostic, and matches the behavior other
+            // editors (gedit, libreoffice) use.
+            const focusPoint = selectionInfo.selFocusAtStart
+                ? lineAndColumnFromChar(selectionInfo.selStart)
+                : lineAndColumnFromChar(selectionInfo.selEnd);
+            const caretLineNode = rep.lines.atIndex(focusPoint[0])?.lineNode;
+            if (caretLineNode && typeof caretLineNode.scrollIntoView === 'function') {
+              caretLineNode.scrollIntoView({block: 'center', behavior: 'auto'});
+            }
           }
           const oldEvent = currentCallStack.startNewEvent(oldEventType, true);
           return oldEvent;
