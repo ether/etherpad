@@ -59,20 +59,29 @@
 }
 
 /* -- TITLE BAR -- */
+/* Single flex row, vertically centred:  [ CHAT          _  [] ]
+   - #titlelabel takes the remaining width so the controls sit at the
+     right edge.
+   - Source order is titlecross then titlesticky, which is also the
+     desired visual order (minus on the left, sticky on the right). */
 #titlebar {
   font-weight: bold;
-  padding: 5px;
+  /* Equal horizontal padding so CHAT on the left and the sticky button on
+     the right sit the same distance from the title-bar edges. */
+  padding: 5px 9px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 #titlebar #titlelabel {
-  margin: 4px 0 0 4px;
-  display: inline;
+  margin: 0;
   font-size: 1.4rem;
+  flex: 1;
 }
 #titlebar .stick-to-screen-btn,
 #titlebar .hide-reduce-btn {
   font-size: 25px;
   color: inherit;
-  float: right;
   text-align: right;
   text-decoration: none;
   cursor: pointer;
@@ -84,7 +93,12 @@
 }
 #titlebar .stick-to-screen-btn {
   font-size: 10px;
-  padding-top: 2px;
+}
+/* The `_` glyph in #titlecross renders at the bottom of its em-box, which
+   places it visibly far below the CHAT baseline. Lift it without changing
+   the flex row layout. */
+#titlebar .hide-reduce-btn {
+  transform: translateY(-5px);
 }
 #titlebar .stick-to-screen-btn:focus-visible,
 #titlebar .hide-reduce-btn:focus-visible {
@@ -147,12 +161,22 @@
   color: inherit;
 }
 /* Scope: the inner .buttonicon span here is just a glyph holder. Its global
-   rule in icons.css applies `display: flex` which is fine for toolbar
-   <button class="buttonicon"> instances but breaks inline layout when
-   nested inside a button that's laying out label + glyph + counter on one
-   line. Keep the glyph inline for the chat-icon corner widget. */
+   rule in icons.css applies `display: flex; align-items: center;
+   justify-content: center; position: relative;` which is fine for toolbar
+   `<button class="buttonicon">` instances (where the class IS the button)
+   but breaks the chat-icon corner widget — here `.buttonicon` is on a
+   `<span>` *inside* the button, alongside two more inline `<span>`s for
+   the label and unread counter. Turning the middle span into a flex
+   container disrupts the inline row and, in some layouts, leaves it
+   sitting on top of the button's clickable surface so clicks never reach
+   the `<button>`'s own handler. Reset the flex behaviour and make the
+   span pointer-transparent so clicks always fall through to #chaticon. */
 #chaticon .buttonicon {
   display: inline;
+  align-items: initial;
+  justify-content: initial;
+  position: static;
+  pointer-events: none;
 }
 #chaticon:focus-visible {
   outline: 2px solid #0066cc;
