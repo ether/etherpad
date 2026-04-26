@@ -14,7 +14,7 @@ import {dirname} from 'node:path';
  * The server should allow undo of clear authorship without disconnecting the user.
  */
 
-import {PadType} from "../../../node/types/PadType";
+import {PadType} from "../../../node/types/PadType.js";
 
 import assert from 'assert';
 import * as common from '../common.js';

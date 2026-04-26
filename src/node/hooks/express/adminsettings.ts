@@ -1,7 +1,7 @@
 'use strict';
 
 
-import {PadQueryResult, PadSearchQuery} from "../../types/PadSearchQuery";
+import {PadQueryResult, PadSearchQuery} from "../../types/PadSearchQuery.js";
 import log4js from 'log4js';
 
 import { promises as fsp } from 'fs';

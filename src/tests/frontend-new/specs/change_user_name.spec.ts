@@ -1,6 +1,6 @@
 import {expect, test} from "@playwright/test";
 import {randomInt} from "node:crypto";
-import {goToNewPad, sendChatMessage, setUserName, showChat, toggleUserList} from "../helper/padHelper";
+import {goToNewPad, sendChatMessage, setUserName, showChat, toggleUserList} from "../helper/padHelper.js";
 
 test.beforeEach(async ({ page })=>{
   // create a new pad before each test run

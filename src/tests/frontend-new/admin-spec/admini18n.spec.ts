@@ -1,5 +1,5 @@
 import {expect, test} from "@playwright/test";
-import {loginToAdmin} from "../helper/adminhelper";
+import {loginToAdmin} from "../helper/adminhelper.js";
 
 // Regression coverage for https://github.com/ether/etherpad/issues/7586
 //

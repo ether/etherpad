@@ -2,7 +2,7 @@
 
 import {fileURLToPath} from 'node:url';
 import {dirname} from 'node:path';
-import {PadType} from "../../../../node/types/PadType";
+import {PadType} from "../../../../node/types/PadType.js";
 
 import assert from 'assert';
 import * as authorManager from '../../../../node/db/AuthorManager.js';

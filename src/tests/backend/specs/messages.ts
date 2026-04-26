@@ -2,8 +2,8 @@
 
 import {fileURLToPath} from 'node:url';
 import {dirname} from 'node:path';
-import {PadType} from "../../../node/types/PadType";
-import {MapArrayType} from "../../../node/types/MapType";
+import {PadType} from "../../../node/types/PadType.js";
+import {MapArrayType} from "../../../node/types/MapType.js";
 
 import assert from 'assert';
 import * as common from '../common.js';

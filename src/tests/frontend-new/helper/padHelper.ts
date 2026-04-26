@@ -1,5 +1,5 @@
 import {Frame, Locator, Page} from "@playwright/test";
-import {MapArrayType} from "../../../node/types/MapType";
+import {MapArrayType} from "../../../node/types/MapType.js";
 import {randomUUID} from "node:crypto";
 
 export const getPadOuter =  async (page: Page): Promise<Frame> => {

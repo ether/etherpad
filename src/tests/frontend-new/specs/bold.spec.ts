@@ -1,6 +1,6 @@
 import {expect, test} from "@playwright/test";
 import {randomInt} from "node:crypto";
-import {getPadBody, goToNewPad, selectAllText} from "../helper/padHelper";
+import {getPadBody, goToNewPad, selectAllText} from "../helper/padHelper.js";
 import exp from "node:constants";
 
 test.beforeEach(async ({ page })=>{

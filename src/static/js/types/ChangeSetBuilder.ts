@@ -1,5 +1,5 @@
-import {Attribute} from "./Attribute";
-import AttributePool from "../AttributePool";
+import {Attribute} from "./Attribute.js";
+import AttributePool from "../AttributePool.js";
 
 export type ChangeSetBuilder = {
   remove: (start: number, end?: number)=>void,

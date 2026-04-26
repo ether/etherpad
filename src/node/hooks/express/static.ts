@@ -1,12 +1,12 @@
 'use strict';
 
-import {MapArrayType} from "../../types/MapType";
-import {PartType} from "../../types/PartType";
+import {MapArrayType} from "../../types/MapType.js";
+import {PartType} from "../../types/PartType.js";
 
 import { promises as fs } from 'fs';
 import {minify} from '../../utils/Minify.js';
 import path from 'node:path';
-import {ArgsExpressType} from "../../types/ArgsExpressType";
+import {ArgsExpressType} from "../../types/ArgsExpressType.js";
 import plugins from '../../../static/js/pluginfw/plugin_defs.js';
 import settings from '../../utils/Settings.js';
 

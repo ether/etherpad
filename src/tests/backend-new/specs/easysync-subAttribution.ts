@@ -1,6 +1,6 @@
 'use strict';
 
-import {subattribution} from '../../../static/js/Changeset';
+import {subattribution} from '../../../static/js/Changeset.js';
 import {expect, describe, it} from 'vitest';
 describe('easysync-subAttribution', function () {
   const testSubattribution = (testId: number, astr: string, start: number, end: number | undefined, correctOutput: string) => {

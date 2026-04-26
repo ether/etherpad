@@ -6,7 +6,7 @@ import {strict as assert} from 'assert';
 import hooks from '../../../static/js/pluginfw/hooks.js';
 import pluginDefs from '../../../static/js/pluginfw/plugin_defs.js';
 import sinon from 'sinon';
-import {MapArrayType} from "../../../node/types/MapType";
+import {MapArrayType} from "../../../node/types/MapType.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);

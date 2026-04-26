@@ -12,7 +12,7 @@ import {dirname} from 'node:path';
  * If you add tests here, please also add them to importexport.js
  */
 
-import {APool} from "../../../node/types/PadType";
+import {APool} from "../../../node/types/PadType.js";
 
 import AttributePool from '../../../static/js/AttributePool.js';
 import * as Changeset from '../../../static/js/Changeset.js';
@@ -20,7 +20,7 @@ import assert from 'assert';
 import * as attributes from '../../../static/js/attributes.js';
 import * as contentcollector from '../../../static/js/contentcollector.js';
 import jsdom from 'jsdom';
-import {Attribute} from "../../../static/js/types/Attribute";
+import {Attribute} from "../../../static/js/types/Attribute.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);

@@ -1,6 +1,6 @@
 import {expect, test} from "@playwright/test";
-import {getPadBody, goToNewPad} from "../helper/padHelper";
-import {showSettings} from "../helper/settingsHelper";
+import {getPadBody, goToNewPad} from "../helper/padHelper.js";
+import {showSettings} from "../helper/settingsHelper.js";
 
 test.beforeEach(async ({ page, browser })=>{
   const context = await browser.newContext()

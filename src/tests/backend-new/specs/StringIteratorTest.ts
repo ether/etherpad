@@ -1,5 +1,5 @@
 import {expect, describe, it} from 'vitest'
-import {StringIterator} from "../../../static/js/StringIterator";
+import {StringIterator} from "../../../static/js/StringIterator.js";
 
 
 describe('Test string iterator take', function () {

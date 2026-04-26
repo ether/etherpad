@@ -1,6 +1,6 @@
 import {expect, test} from "@playwright/test";
-import {goToNewPad, goToPad, sendChatMessage, showChat} from "../helper/padHelper";
-import {showSettings} from "../helper/settingsHelper";
+import {goToNewPad, goToPad, sendChatMessage, showChat} from "../helper/padHelper.js";
+import {showSettings} from "../helper/settingsHelper.js";
 
 test.describe('creator-owned pad settings', () => {
   test('shows pad settings only to the creator and keeps delete pad there', async ({page, browser}) => {

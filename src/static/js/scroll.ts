@@ -1,5 +1,5 @@
-import {getBottomOfNextBrowserLine, getNextVisibleLine, getPosition, getPositionTopOfPreviousBrowserLine, getPreviousVisibleLine} from './caretPosition';
-import {Position, RepModel, RepNode, WindowElementWithScrolling} from "./types/RepModel";
+import {getBottomOfNextBrowserLine, getNextVisibleLine, getPosition, getPositionTopOfPreviousBrowserLine, getPreviousVisibleLine} from './caretPosition.js';
+import {Position, RepModel, RepNode, WindowElementWithScrolling} from "./types/RepModel.js";
 
 
 class Scroll {

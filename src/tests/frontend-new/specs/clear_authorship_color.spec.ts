@@ -7,7 +7,7 @@ import {
   selectAllText,
   undoChanges,
   writeToPad
-} from "../helper/padHelper";
+} from "../helper/padHelper.js";
 
 test.beforeEach(async ({ page })=>{
   // create a new pad before each test run

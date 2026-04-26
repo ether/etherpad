@@ -2,9 +2,9 @@
 
 import {fileURLToPath} from 'node:url';
 import {dirname} from 'node:path';
-import {MapArrayType} from "../../../node/types/MapType";
+import {MapArrayType} from "../../../node/types/MapType.js";
 import {Func} from "mocha";
-import {SettingsUser} from "../../../node/types/SettingsUser";
+import {SettingsUser} from "../../../node/types/SettingsUser.js";
 
 import assert from 'assert';
 import * as common from '../common.js';

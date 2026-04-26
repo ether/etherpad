@@ -2,7 +2,7 @@
 
 import {fileURLToPath} from 'node:url';
 import {dirname} from 'node:path';
-import {MapArrayType} from "../../../node/types/MapType";
+import {MapArrayType} from "../../../node/types/MapType.js";
 
 import * as common from '../common.js';
 import * as padManager from '../../../node/db/PadManager.js';

@@ -17,8 +17,8 @@
  * @typedef {string} AttributeString
  */
 
-import AttributePool from "./AttributePool";
-import {Attribute} from "./types/Attribute";
+import AttributePool from "./AttributePool.js";
+import {Attribute} from "./types/Attribute.js";
 
 /**
  * Converts an attribute string into a sequence of attribute identifier numbers.

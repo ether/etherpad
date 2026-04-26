@@ -12,7 +12,7 @@ import * as webaccess from './webaccess.js';
 import plugins from '../../../static/js/pluginfw/plugin_defs.js';
 
 import {build, buildSync} from 'esbuild'
-import {ArgsExpressType} from "../../types/ArgsExpressType";
+import {ArgsExpressType} from "../../types/ArgsExpressType.js";
 import prometheus from "../../prometheus.js";
 import stats from '../../stats.js';
 

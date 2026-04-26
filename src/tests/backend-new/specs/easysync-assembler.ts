@@ -1,13 +1,13 @@
 'use strict';
 
-import {deserializeOps, opsFromAText} from '../../../static/js/Changeset';
-import padutils from '../../../static/js/pad_utils';
+import {deserializeOps, opsFromAText} from '../../../static/js/Changeset.js';
+import padutils from '../../../static/js/pad_utils.js';
 import {poolOrArray} from '../easysync-helper.js';
 
 import {describe, it, expect} from 'vitest'
-import {OpAssembler} from "../../../static/js/OpAssembler";
-import {SmartOpAssembler} from "../../../static/js/SmartOpAssembler";
-import Op from "../../../static/js/Op";
+import {OpAssembler} from "../../../static/js/OpAssembler.js";
+import {SmartOpAssembler} from "../../../static/js/SmartOpAssembler.js";
+import Op from "../../../static/js/Op.js";
 
 
 describe('easysync-assembler', function () {

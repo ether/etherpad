@@ -2,7 +2,7 @@
 
 import {fileURLToPath} from 'node:url';
 import {dirname} from 'node:path';
-import {MapArrayType} from "../../../node/types/MapType";
+import {MapArrayType} from "../../../node/types/MapType.js";
 
 import assert from 'assert';
 import * as common from '../common.js';

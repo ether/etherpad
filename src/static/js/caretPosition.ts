@@ -3,7 +3,7 @@
 // One rep.line(div) can be broken in more than one line in the browser.
 // This function is useful to get the caret position of the line as
 // is represented by the browser
-import {Position, RepModel, RepNode} from "./types/RepModel";
+import {Position, RepModel, RepNode} from "./types/RepModel.js";
 
 export const getPosition = () => {
   const range = getSelectionRange();

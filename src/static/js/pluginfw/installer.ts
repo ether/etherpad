@@ -19,7 +19,7 @@ import  settings, {
 } from '../../../node/utils/Settings.js';
 import {LinkInstaller} from "./LinkInstaller.js";
 
-import {findEtherpadRoot} from '../../../node/utils/AbsolutePaths';
+import {findEtherpadRoot} from '../../../node/utils/AbsolutePaths.js';
 const logger = log4js.getLogger('plugins');
 
 export const pluginInstallPath = path.join(settings.root, 'src','plugin_packages');

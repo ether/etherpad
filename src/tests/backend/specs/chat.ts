@@ -2,8 +2,8 @@
 
 import {fileURLToPath} from 'node:url';
 import {dirname} from 'node:path';
-import {MapArrayType} from "../../../node/types/MapType";
-import {PluginDef} from "../../../node/types/PartType";
+import {MapArrayType} from "../../../node/types/MapType.js";
+import {PluginDef} from "../../../node/types/PartType.js";
 
 import ChatMessage from '../../../static/js/ChatMessage.js';
 import {Pad} from '../../../node/db/Pad.js';
