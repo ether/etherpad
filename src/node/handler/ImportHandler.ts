@@ -111,7 +111,7 @@ const performImport = async (req:any, res:any, padId:string, authorId:string) =>
 
   // ensure this is a file ending we know, else we change the file ending to .txt
   // this allows us to accept source code files like .c or .java
-  const fileEnding = path.extname(files.file[0].originalFilename).toLowerCase();
+  const fileEnding = path.extname(files.file[0].originalFilename || '').toLowerCase();
   const knownFileEndings =
     ['.txt', '.doc', '.docx', '.pdf', '.odt', '.html', '.htm', '.etherpad', '.rtf'];
   const fileEndingUnknown = (knownFileEndings.indexOf(fileEnding) < 0);
@@ -190,7 +190,7 @@ const performImport = async (req:any, res:any, padId:string, authorId:string) =>
   let pad = await padManager.getPad(padId, '\n', authorId);
 
   // read the text
-  let text;
+  let text: string = '';
 
   if (!directDatabaseAccess) {
     text = await fs.readFile(destFile, 'utf8');

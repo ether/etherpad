@@ -421,9 +421,9 @@ class Pad {
    *     (inclusive), in order. Note: `start` and `end` form a closed interval, not a half-open
    *     interval as is typical in code.
    */
-  async getChatMessages(start: string, end: number) {
+  async getChatMessages(start: string|number, end: string|number) {
     const entries =
-        await Promise.all(Stream.range(start, end + 1).map(this.getChatMessage.bind(this)));
+        await Promise.all(Stream.range(Number(start), Number(end) + 1).map(this.getChatMessage.bind(this)));
 
     // sort out broken chat entries
     // it looks like in happened in the past that the chat head was
@@ -437,7 +437,7 @@ class Pad {
     });
   }
 
-  async init(text:string, authorId = '') {
+  async init(text?: string|null, authorId = '') {
     // try to load the pad
     const value = await this.db.get(`pad:${this.id}`);
 

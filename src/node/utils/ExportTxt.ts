@@ -199,7 +199,7 @@ const getTXTFromAtext = (pad: PadType, atext: AText, authorColors?:string) => {
 
   for (let i = 0; i < textLines.length; i++) {
     const line = _analyzeLine(textLines[i], attribLines[i], apool);
-    let lineContent = getLineTXT(line.text, line.aline);
+    let lineContent = getLineTXT(line.text as string, line.aline as string);
 
     if (line.listTypeName === 'bullet') {
       lineContent = `* ${lineContent}`; // add a bullet

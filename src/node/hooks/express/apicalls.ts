@@ -49,7 +49,7 @@ export const expressPreSession = async (hookName:string, {app}:any) => {
   // The Etherpad client side sends information about client side javscript errors
   app.post('/jserror', (req:any, res:any, next:Function) => {
     (async () => {
-      const data = JSON.parse(await parseJserrorForm(req));
+      const data = JSON.parse(await parseJserrorForm(req) as any);
       clientLogger.warn(`${data.msg} --`, {
         [util.inspect.custom]: (depth: number, options:any) => {
           // Depth is forced to infinity to ensure that all of the provided data is logged.

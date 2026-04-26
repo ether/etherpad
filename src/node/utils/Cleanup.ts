@@ -91,7 +91,7 @@ export const deleteRevisions = async (padId: string, keepRevisions: number): Pro
   let newAText = Changeset.makeAText('\n');
   let pool = pad.apool()
 
-  newAText = Changeset.applyToAText(changeset, newAText, pool);
+  newAText = Changeset.applyToAText(changeset as any, newAText, pool);
 
   const revision = await createRevision(
     changeset,
@@ -110,7 +110,7 @@ export const deleteRevisions = async (padId: string, keepRevisions: number): Pro
     const rev = i + cleanupUntilRevision + 1
     const newRev = rev - cleanupUntilRevision;
 
-    newAText = Changeset.applyToAText(revisions[rev].changeset, newAText, pool);
+    newAText = Changeset.applyToAText(revisions[rev].changeset as any, newAText, pool);
 
     const revision = await createRevision(
       revisions[rev].changeset,

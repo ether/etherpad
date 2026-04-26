@@ -16,11 +16,11 @@ import * as exportHtml from './ExportHtml.js';
 
 class PadDiff {
   private readonly _pad: PadType;
-    private readonly _fromRev: string;
-    private readonly _toRev: string;
+    private readonly _fromRev: string|number;
+    private readonly _toRev: string|number;
     private _html: any;
     public _authors: any[];
-  constructor(pad: PadType, fromRev:string, toRev:string) {
+  constructor(pad: PadType, fromRev:string|number, toRev:string|number) {
     // check parameters
     if (!pad || !pad.id || !pad.atext || !pad.pool) {
       throw new Error('Invalid pad');

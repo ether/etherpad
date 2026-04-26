@@ -25,7 +25,7 @@ import {Builder} from "../../static/js/Builder.js";
 const apiLogger = log4js.getLogger('ImportHtml');
 let processor:any;
 
-export const setPadHTML = async (pad: PadType, html:string, authorId = '') => {
+export const setPadHTML = async (pad: PadType, html:string|null|undefined, authorId = '') => {
   if (processor == null) {
     const [{rehype}, {default: minifyWhitespace}] =
         await Promise.all([import('rehype'), import('rehype-minify-whitespace')]);

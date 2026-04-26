@@ -101,7 +101,7 @@ describe(__filename, function () {
 
   const newRotator = (s:string|null = null) => new SecretRotator(dbPrefix, interval, lifetime, s);
 
-  const setFakeClock = (sr: { _t: { now: () => number; setTimeout: (fn: Function, wait?: number) => number; clearTimeout: (id: number) => void; }; }, fc:FakeClock|null = null) => {
+  const setFakeClock = (sr: any, fc:FakeClock|null = null) => {
     if (fc == null) fc = new FakeClock();
     sr._t = {
       now: () => fc!.now,

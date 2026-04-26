@@ -387,7 +387,7 @@ export const handleMessage = async (socket:any, message: ClientVarMessage) => {
 
   const {session: {user} = {}} = socket.client.request as SocketClientRequest;
   const {accessStatus, authorID} =
-      await securityManager.checkAccess(auth.padID, auth.sessionID, auth.token, user);
+      await securityManager.checkAccess(auth.padID, auth.sessionID, auth.token, user as any);
   if (accessStatus !== 'grant') {
     socket.emit('message', {accessStatus});
     throw new Error('access denied');
@@ -575,7 +575,7 @@ const handleChatMessage = async (socket:any, message: ChatMessageMessage) => {
 export const sendChatMessageToPadClients = async (mt: ChatMessage|number, puId: string, text:string|null = null, padId:string|null = null) => {
   const message = mt instanceof ChatMessage ? mt : new ChatMessage(text, puId, mt);
   padId = mt instanceof ChatMessage ? puId : padId;
-  const pad = await padManager.getPad(padId, null, message.authorId);
+  const pad = await padManager.getPad(padId!, null, message.authorId);
   await hooks.aCallAll('chatNewMessage', {message, pad, padId});
   // pad.appendChatMessage() ignores the displayName property so we don't need to wait for
   // authorManager.getAuthorName() to resolve before saving the message to the database.
@@ -1425,7 +1425,7 @@ export const composePadChangesets = async (pad: PadType, startNum: number, endNu
   }
 };
 
-const _getRoomSockets = (padID: string) => {
+const _getRoomSockets = (padID: string|undefined) => {
   const ns = socketioServer.sockets; // Default namespace.
   // We could call adapter.clients(), but that method is unnecessarily asynchronous. Replicate what
   // it does here, but synchronously to avoid a race condition. This code will have to change when
@@ -1442,7 +1442,7 @@ const _getRoomSockets = (padID: string) => {
 /**
  * Get the number of users in a pad
  */
-export const padUsersCount = (padID:string) => ({
+export const padUsersCount = (padID:string|undefined) => ({
   padUsersCount: _getRoomSockets(padID).length,
 });
 

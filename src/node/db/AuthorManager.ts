@@ -230,21 +230,21 @@ export const getAuthorColorId = async (author: string) => await db.getSub(`globa
  * @param {String} author The id of the author
  * @param {String} colorId The color id of the author
  */
-export const setAuthorColorId = async (author: string, colorId: string) => await db.setSub(
+export const setAuthorColorId = async (author: string, colorId: string|null|undefined) => await db.setSub(
     `globalAuthor:${author}`, ['colorId'], colorId);
 
 /**
  * Returns the name of the author
  * @param {String} author The id of the author
  */
-export const getAuthorName = async (author: string) => await db.getSub(`globalAuthor:${author}`, ['name']);
+export const getAuthorName = async (author: string | null | undefined) => await db.getSub(`globalAuthor:${author}`, ['name']);
 
 /**
  * Sets the name of the author
  * @param {String} author The id of the author
  * @param {String} name The name of the author
  */
-export const setAuthorName = async (author: string, name: string) => await db.setSub(
+export const setAuthorName = async (author: string, name: string|null|undefined) => await db.setSub(
     `globalAuthor:${author}`, ['name'], name);
 
 /**
@@ -276,7 +276,7 @@ export const listPadsOfAuthor = async (authorID: string) => {
  * @param {String} authorID The id of the author
  * @param {String} padID The id of the pad the author contributes to
  */
-export const addPad = async (authorID: string, padID: string) => {
+export const addPad = async (authorID: unknown, padID: string) => {
   // get the entry
   const author = await db.get(`globalAuthor:${authorID}`);
 

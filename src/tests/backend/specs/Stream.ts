@@ -6,7 +6,7 @@ import {fileURLToPath} from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
 
-class DemoIterable {
+class DemoIterable implements Iterable<any>, Iterator<any> {
   private value: number;
     errs: Error[];
     rets: any[];
@@ -18,7 +18,7 @@ class DemoIterable {
 
   completed() { return this.errs.length > 0 || this.rets.length > 0; }
 
-  next() {
+  next(): IteratorResult<any> {
     if (this.completed()) return {value: undefined, done: true}; // Mimic standard generators.
     return {value: this.value++, done: false};
   }
@@ -37,7 +37,7 @@ class DemoIterable {
     return {value: ret, done: true};
   }
 
-  [Symbol.iterator]() { return this; }
+  [Symbol.iterator](): IterableIterator<any> { return this as any; }
 }
 
 const assertUnhandledRejection = async (action: any, want: any) => {

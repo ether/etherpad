@@ -30,7 +30,7 @@ import padutils from "../../static/js/pad_utils.js";
 import {StringIterator} from "../../static/js/StringIterator.js";
 import {StringAssembler} from "../../static/js/StringAssembler.js";
 
-const getPadHTML = async (pad: PadType, revNum: string) => {
+const getPadHTML = async (pad: PadType, revNum: string|number|undefined) => {
   let atext = pad.atext;
 
   // fetch revision atext
@@ -42,7 +42,7 @@ const getPadHTML = async (pad: PadType, revNum: string) => {
   return await getHTMLFromAtext(pad, atext);
 };
 
-const getHTMLFromAtext = async (pad:PadType, atext: AText, authorColors?: string[]) => {
+const getHTMLFromAtext = async (pad:PadType, atext: AText, authorColors?: string[]|MapArrayType<string>) => {
   const apool = pad.apool();
   const textLines = atext.text.slice(0, -1).split('\n');
   const attribLines = splitAttributionLines(atext.attribs, atext.text);
@@ -124,7 +124,7 @@ const getHTMLFromAtext = async (pad:PadType, atext: AText, authorColors?: string
     }
   });
 
-  const getLineHTML = (text: string, attribs: string[]) => {
+  const getLineHTML = (text: string, attribs: string[]|string) => {
     // Use order of tags (b/i/u) as order of nesting, for simplicity
     // and decent nesting.  For example,
     // <b>Just bold<b> <b><i>Bold and italics</i></b> <i>Just italics</i>
@@ -313,7 +313,7 @@ const getHTMLFromAtext = async (pad:PadType, atext: AText, authorColors?: string
   for (let i = 0; i < textLines.length; i++) {
     let context;
     const line = _analyzeLine(textLines[i], attribLines[i], apool);
-    const lineContent = getLineHTML(line.text, line.aline);
+    const lineContent = getLineHTML(line.text as string, line.aline as string);
     // If we are inside a list
     if (line.listLevel) {
       context = {
@@ -508,7 +508,7 @@ const getHTMLFromAtext = async (pad:PadType, atext: AText, authorColors?: string
   return pieces.join('');
 };
 
-export const getPadHTMLDocument = async (padId: string, revNum: string, readOnlyId: number) => {
+export const getPadHTMLDocument = async (padId: string, revNum: string|number|undefined, readOnlyId?: string|number|null) => {
   const pad = await padManager.getPad(padId);
 
   // Include some Styles into the Head for Export

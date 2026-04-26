@@ -21,7 +21,7 @@ import * as authorManager from '../db/AuthorManager.js';
 import hooks from '../../static/js/pluginfw/hooks.js';
 import * as padManager from '../db/PadManager.js';
 
-export const getPadRaw = async (padId:string, readOnlyId:string, revNum?: number) => {
+export const getPadRaw = async (padId:string, readOnlyId:string|null|undefined, revNum?: number) => {
   const dstPfx = `pad:${readOnlyId || padId}`;
   const [pad, customPrefixes] = await Promise.all([
     padManager.getPad(padId),

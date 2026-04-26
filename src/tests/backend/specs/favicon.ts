@@ -19,9 +19,9 @@ describe(__filename, function () {
   let agent:any;
   let backupSettings:MapArrayType<any>;
   let skinDir: string;
-  let wantCustomIcon: boolean;
-  let wantDefaultIcon: boolean;
-  let wantSkinIcon: boolean;
+  let wantCustomIcon: Buffer;
+  let wantDefaultIcon: Buffer;
+  let wantSkinIcon: Buffer;
 
   before(async function () {
     agent = await common.init();
