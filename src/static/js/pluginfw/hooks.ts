@@ -76,7 +76,7 @@ const flatten1 = (array) => array.reduce((a, b) => a.concat(b), []);
 // See the tests in src/tests/backend/specs/hooks.js for examples of supported and prohibited
 // behaviors.
 //
-const callHookFnSync = (hook, context) => {
+const callHookFnSync = (hook: any, context?: any) => {
   checkDeprecation(hook);
 
   // This var is used to keep track of whether the hook function already settled.
@@ -190,7 +190,7 @@ const callHookFnSync = (hook, context) => {
 //     1. Collect all values returned by the hook functions into an array.
 //     2. Convert each `undefined` entry into `[]`.
 //     3. Flatten one level.
-export const callAll = (hookName, context) => {
+export const callAll = (hookName: string, context?: any) => {
   if (context == null) context = {};
   const hooks = pluginDefs.hooks[hookName] || [];
   return flatten1(hooks.map((hook) => normalizeValue(callHookFnSync(hook, context))));
@@ -231,7 +231,7 @@ export const callAll = (hookName, context) => {
 // See the tests in src/tests/backend/specs/hooks.js for examples of supported and prohibited
 // behaviors.
 //
-const callHookFnAsync = async (hook, context) => {
+const callHookFnAsync = async (hook: any, context?: any) => {
   checkDeprecation(hook);
   return await new Promise((resolve, reject) => {
     // This var is used to keep track of whether the hook function already settled.
@@ -343,7 +343,7 @@ const callHookFnAsync = async (hook, context) => {
 //     2. Convert each `undefined` entry into `[]`.
 //     3. Flatten one level.
 //   If cb is non-null, this function resolves to the value returned by cb.
-export const aCallAll = async (hookName, context, cb = null) => {
+export const aCallAll = async (hookName: string, context?: any, cb: any = null) => {
   if (cb != null) return await attachCallback(aCallAll(hookName, context), cb);
   if (context == null) context = {};
   const hooks = pluginDefs.hooks[hookName] || [];
@@ -355,7 +355,7 @@ export const aCallAll = async (hookName, context, cb = null) => {
 // Like `aCallAll()` except the hook functions are called one at a time instead of concurrently.
 // Only use this function if the hook functions must be called one at a time, otherwise use
 // `aCallAll()`.
-export const callAllSerial = async (hookName, context) => {
+export const callAllSerial = async (hookName: string, context?: any) => {
   if (context == null) context = {};
   const hooks = pluginDefs.hooks[hookName] || [];
   const results = [];
@@ -368,7 +368,7 @@ export const callAllSerial = async (hookName, context) => {
 // DEPRECATED: Use `aCallFirst()` instead.
 //
 // Like `aCallFirst()`, but synchronous. Hook functions must provide their values synchronously.
-export const callFirst = (hookName, context) => {
+export const callFirst = (hookName: string, context?: any) => {
   if (context == null) context = {};
   const predicate = (val) => val.length;
   const hooks = pluginDefs.hooks[hookName] || [];
@@ -400,7 +400,7 @@ export const callFirst = (hookName, context) => {
 //   If cb is nullish, resolves to an array that is either the normalized value that satisfied the
 //   predicate or empty if the predicate was never satisfied. If cb is non-nullish, resolves to the
 //   value returned from cb().
-export const aCallFirst = async (hookName, context, cb = null, predicate = null) => {
+export const aCallFirst = async (hookName: string, context?: any, cb: any = null, predicate: any = null) => {
   if (cb != null) {
     return await attachCallback(aCallFirst(hookName, context, null, predicate), cb);
   }
