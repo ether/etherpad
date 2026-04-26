@@ -1,11 +1,11 @@
 // @ts-nocheck
 
 
-const DB = require('./DB');
-import expressSession from 'express-session'
+import DB from './DB.js';
+import expressSession from 'express-session';
 
-const log4js = require('log4js');
-const util = require('util');
+import log4js from 'log4js';
+import util from 'util';
 
 const logger = log4js.getLogger('SessionStore');
 
@@ -192,4 +192,4 @@ for (const m of ['get', 'set', 'destroy', 'touch']) {
   SessionStore.prototype[m] = util.callbackify(SessionStore.prototype[`_${m}`]);
 }
 
-module.exports = SessionStore;
+export default SessionStore;

@@ -19,18 +19,18 @@
  * limitations under the License.
  */
 
-import {UserSettingsObject} from "../types/UserSettingsObject";
+import {UserSettingsObject} from "../types/UserSettingsObject.js";
 
-const authorManager = require('./AuthorManager');
-const hooks = require('../../static/js/pluginfw/hooks');
-const padManager = require('./PadManager');
-import readOnlyManager from './ReadOnlyManager';
-const sessionManager = require('./SessionManager');
-import settings from '../utils/Settings';
-const webaccess = require('../hooks/express/webaccess');
-const log4js = require('log4js');
+import * as authorManager from './AuthorManager.js';
+import hooks from '../../static/js/pluginfw/hooks.js';
+import * as padManager from './PadManager.js';
+import readOnlyManager from './ReadOnlyManager.js';
+import * as sessionManager from './SessionManager.js';
+import settings from '../utils/Settings.js';
+import * as webaccess from '../hooks/express/webaccess.js';
+import log4js from 'log4js';
 const authLogger = log4js.getLogger('auth');
-import padutils from '../../static/js/pad_utils'
+import padutils from '../../static/js/pad_utils.js';
 
 const DENY = Object.freeze({accessStatus: 'deny'});
 
@@ -57,7 +57,7 @@ const DENY = Object.freeze({accessStatus: 'deny'});
  * @param {Object} userSettings
  * @return {DENY|{accessStatus: String, authorID: String}}
  */
-exports.checkAccess = async (padID:string, sessionCookie:string, token:string, userSettings:UserSettingsObject) => {
+export const checkAccess = async (padID:string, sessionCookie:string, token:string, userSettings:UserSettingsObject) => {
   if (!padID) {
     authLogger.debug('access denied: missing padID');
     return DENY;

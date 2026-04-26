@@ -19,13 +19,13 @@
  * limitations under the License.
  */
 
-import {MapArrayType} from "../types/MapType";
-import {PadType} from "../types/PadType";
+import {MapArrayType} from "../types/MapType.js";
+import {PadType} from "../types/PadType.js";
 
-const CustomError = require('../utils/customError');
-const Pad = require('../db/Pad');
-const db = require('./DB');
-import settings from '../utils/Settings';
+import CustomError from '../utils/customError.js';
+import * as Pad from '../db/Pad.js';
+import db from './DB.js';
+import settings from '../utils/Settings.js';
 
 /**
  * A cache of all loaded Pads.
@@ -106,9 +106,9 @@ const padList = new class {
  * @param {string} [authorId] - Optional author ID of the user that initiated the pad creation (if
  *     applicable).
  */
-exports.getPad = async (id: string, text?: string|null, authorId:string|null = ''):Promise<PadType> => {
+export const getPad = async (id: string, text?: string|null, authorId:string|null = ''):Promise<PadType> => {
   // check if this is a valid padId
-  if (!exports.isValidPadId(id)) {
+  if (!isValidPadId(id)) {
     throw new CustomError(`${id} is not a valid padId`, 'apierror');
   }
 
@@ -143,7 +143,7 @@ exports.getPad = async (id: string, text?: string|null, authorId:string|null = '
   return pad;
 };
 
-exports.listAllPads = async () => {
+export const listAllPads = async () => {
   const padIDs = await padList.getPads();
 
   return {padIDs};
@@ -153,14 +153,14 @@ exports.listAllPads = async () => {
 
 
 // checks if a pad exists
-exports.doesPadExist = async (padId: string) => {
+export const doesPadExist = async (padId: string) => {
   const value = await db.get(`pad:${padId}`);
 
   return (value != null && value.atext);
 };
 
 // alias for backwards compatibility
-exports.doesPadExists = exports.doesPadExist;
+export const doesPadExists = doesPadExist;
 
 /**
  * An array of padId transformations. These represent changes in pad name policy over
@@ -172,9 +172,9 @@ const padIdTransforms = [
 ];
 
 // returns a sanitized padId, respecting legacy pad id formats
-exports.sanitizePadId = async (padId: string) => {
+export const sanitizePadId = async (padId: string) => {
   for (let i = 0, n = padIdTransforms.length; i < n; ++i) {
-    const exists = await exports.doesPadExist(padId);
+    const exists = await doesPadExist(padId);
 
     if (exists) {
       return padId;
@@ -192,19 +192,19 @@ exports.sanitizePadId = async (padId: string) => {
   return padId;
 };
 
-exports.isValidPadId = (padId: string) => /^(g.[a-zA-Z0-9]{16}\$)?[^$]{1,50}$/.test(padId);
+export const isValidPadId = (padId: string) => /^(g.[a-zA-Z0-9]{16}\$)?[^$]{1,50}$/.test(padId);
 
 /**
  * Removes the pad from database and unloads it.
  */
-exports.removePad = async (padId: string) => {
+export const removePad = async (padId: string) => {
   const p = db.remove(`pad:${padId}`);
-  exports.unloadPad(padId);
+  unloadPad(padId);
   padList.removePad(padId);
   await p;
 };
 
 // removes a pad from the cache
-exports.unloadPad = (padId: string) => {
+export const unloadPad = (padId: string) => {
   globalPads.remove(padId);
 };
