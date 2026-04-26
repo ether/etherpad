@@ -1,10 +1,10 @@
 'use strict';
-import {ArgsExpressType} from "../../types/ArgsExpressType";
+import {ArgsExpressType} from "../../types/ArgsExpressType.js";
 import path from "path";
 import fs from "fs";
-import {MapArrayType} from "../../types/MapType";
+import {MapArrayType} from "../../types/MapType.js";
 
-import settings from 'ep_etherpad-lite/node/utils/Settings';
+import settings from '../../utils/Settings.js';
 
 const ADMIN_PATH = path.join(settings.root, 'src', 'templates');
 const PROXY_HEADER = "x-proxy-path"
@@ -15,7 +15,7 @@ const PROXY_HEADER = "x-proxy-path"
  * @param {Function} cb  the callback function
  * @return {*}
  */
-exports.expressCreateServer = (hookName: string, args: ArgsExpressType, cb: Function): any => {
+export const expressCreateServer = (hookName: string, args: ArgsExpressType, cb: Function): any => {
 
   if (!fs.existsSync(ADMIN_PATH)) {
     console.error('admin template not found, skipping admin interface. You need to rebuild it in /admin with pnpm run build-copy')

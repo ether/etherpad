@@ -1,20 +1,21 @@
 'use strict';
 
-import {ArgsExpressType} from "../../types/ArgsExpressType";
-import {ErrorCaused} from "../../types/ErrorCaused";
-import {QueryType} from "../../types/QueryType";
+import {ArgsExpressType} from "../../types/ArgsExpressType.js";
+import {ErrorCaused} from "../../types/ErrorCaused.js";
+import {QueryType} from "../../types/QueryType.js";
 
-import {getAvailablePlugins, install, search, uninstall} from "../../../static/js/pluginfw/installer";
-import {PackageData, PackageInfo} from "../../types/PackageInfo";
+import {getAvailablePlugins, install, search, uninstall} from "../../../static/js/pluginfw/installer.js";
+import {PackageData, PackageInfo} from "../../types/PackageInfo.js";
 import semver from 'semver';
 import log4js from 'log4js';
-import {MapArrayType} from "../../types/MapType";
+import {MapArrayType} from "../../types/MapType.js";
 
-const pluginDefs = require('../../../static/js/pluginfw/plugin_defs');
+import pluginDefs from '../../../static/js/pluginfw/plugin_defs.js';
+import stats from '../../stats.js';
 const logger = log4js.getLogger('adminPlugins');
 
 
-exports.socketio = (hookName:string, args:ArgsExpressType, cb:Function) => {
+export const socketio = (hookName:string, args:ArgsExpressType, cb:Function) => {
   const io = args.io.of('/pluginfw/installer');
   io.on('connection', (socket:any) => {
     // @ts-ignore
@@ -41,7 +42,7 @@ exports.socketio = (hookName:string, args:ArgsExpressType, cb:Function) => {
 
     socket.on('getStats', ()=>{
       console.log("Getting stats for admin plugins");
-      socket.emit('results:stats', require('../../stats').toJSON());
+      socket.emit('results:stats', stats.toJSON());
     })
 
     socket.on('getInstalled', async (query: string) => {

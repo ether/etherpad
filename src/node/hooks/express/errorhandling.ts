@@ -1,12 +1,13 @@
 'use strict';
 
-import {ArgsExpressType} from "../../types/ArgsExpressType";
-import {ErrorCaused} from "../../types/ErrorCaused";
+import {ArgsExpressType} from "../../types/ArgsExpressType.js";
+import {ErrorCaused} from "../../types/ErrorCaused.js";
 
-const stats = require('../../stats')
+import stats from '../../stats.js';
 
-exports.expressCreateServer = (hook_name:string, args: ArgsExpressType, cb:Function) => {
-  exports.app = args.app;
+export let app: any = null;
+export const expressCreateServer = (hook_name:string, args: ArgsExpressType, cb:Function) => {
+  app = args.app;
 
   // Handle errors
   args.app.use((err:ErrorCaused, req:any, res:any, next:Function) => {
