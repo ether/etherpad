@@ -62,29 +62,17 @@
 #titlebar {
   font-weight: bold;
   padding: 5px;
-  /* Lay the label and corner controls on a single row. Replaces the prior
-     `float: right` layout so we can place each control on its own cross-
-     axis position (titlesticky at the top, titlecross at the bottom of
-     the title bar). After #7584 turned the corner controls from inline
-     `<a>` glyphs into `<button>`s, the float layout left them stacked at
-     the top of the line and the minus glyph no longer sat near the title
-     baseline. Fixes #7590. */
-  display: flex;
-  gap: 6px;
 }
 #titlebar #titlelabel {
   margin: 4px 0 0 4px;
+  display: inline;
   font-size: 1.4rem;
-  /* Take the remaining row width so the corner buttons are pushed to the
-     right edge (replaces the prior float-right layout). */
-  flex: 1;
-  /* Don't stretch the heading vertically; let it sit on its own baseline. */
-  align-self: center;
 }
 #titlebar .stick-to-screen-btn,
 #titlebar .hide-reduce-btn {
   font-size: 25px;
   color: inherit;
+  float: right;
   text-align: right;
   text-decoration: none;
   cursor: pointer;
@@ -94,15 +82,6 @@
   font-family: inherit;
   line-height: 1;
 }
-/* Preserve the historical visual order [titlesticky] [titlecross] — when
-   both controls were `float: right`, source order was reversed visually,
-   so titlesticky sat to the left of titlecross. Restore that with `order`
-   so we don't have to renumber the markup. The cross-axis position differs
-   per control: titlesticky stays where it always sat (top of the bar),
-   titlecross drops to the bottom so its `−` glyph sits on the title's
-   baseline rather than floating above it. */
-#titlebar .stick-to-screen-btn { order: 1; align-self: flex-start; }
-#titlebar .hide-reduce-btn { order: 2; align-self: flex-end; }
 #titlebar .stick-to-screen-btn {
   font-size: 10px;
   padding-top: 2px;
