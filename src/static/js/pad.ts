@@ -26,6 +26,7 @@ import skinVariants from './skin_variants.js';
 
 let socket;
 
+const baseURL = '';
 
 // These jQuery things should create local references, but for now `require()`
 // assigns to the global `$` and augments it with plugins.
@@ -278,9 +279,7 @@ const handshake = async () => {
   // unescape necessary due to Safari and Opera interpretation of spaces
   padId = decodeURIComponent(padId);
 
-  // padId is used here for sharding / scaling.  We prefix the padId with padId: so it's clear
-  // to the proxy/gateway/whatever that this is a pad connection and should be treated as such
-  socket = pad.socket = socketio.connect(exports.baseURL, '/', {
+  socket = pad.socket = socketio.connect(baseURL, '/', {
     query: {padId},
     reconnectionAttempts: 5,
     reconnection: true,
@@ -904,7 +903,7 @@ const pad = {
   },
   asyncSendDiagnosticInfo: () => {
     const currentUrl = window.location.href;
-    fetch(`${exports.baseURL}ep/pad/connection-diagnostic-info`, {
+    fetch(`${baseURL}ep/pad/connection-diagnostic-info`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -940,7 +939,7 @@ const pad = {
   },
 };
 
-const init = () => pad.init();
+export const init = () => pad.init();
 
 const settings = {
   LineNumbersDisabled: false,
@@ -953,9 +952,9 @@ const settings = {
 };
 pad.settings = settings;
 
-export const baseURL = '';
 export {settings};
 export {randomString};
 export {getParams};
 export {pad};
 export {init};
+export {baseURL};
