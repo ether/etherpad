@@ -93,12 +93,13 @@ export const init = async function () {
   backups.authnFailureDelayMs = webaccess.authnFailureDelayMs;
   webaccess.setAuthnFailureDelayMs(0);
 
-  afterAll(async () => {
-    webaccess.setAuthnFailureDelayMs(backups.authnFailureDelayMs);
-    // Note: This does not unset settings that were added.
-    Object.assign(settings, backups.settings);
-    await server.exit();
-  });
+  // Note: under vitest with `isolate: false`, registering an `afterAll` here
+  // would attach to whichever test file first triggered this init (since the
+  // module is shared across all files). That file's teardown would then kill
+  // the Etherpad server while later files still need it, surfacing as
+  // ECONNREFUSED in tests that come after the first file (e.g. apicalls.ts,
+  // pads-with-spaces.ts). The server lives for the whole test process; the
+  // OS reclaims the port and any unflushed state when vitest exits.
 
   agentResolve!(agent);
   return agent;
