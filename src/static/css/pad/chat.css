@@ -59,20 +59,27 @@
 }
 
 /* -- TITLE BAR -- */
+/* Single flex row, vertically centred:  [ CHAT          _  [] ]
+   - #titlelabel takes the remaining width so the controls sit at the
+     right edge.
+   - Source order is titlecross then titlesticky, which is also the
+     desired visual order (minus on the left, sticky on the right). */
 #titlebar {
   font-weight: bold;
   padding: 5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 #titlebar #titlelabel {
-  margin: 4px 0 0 4px;
-  display: inline;
+  margin: 0 0 0 4px;
   font-size: 1.4rem;
+  flex: 1;
 }
 #titlebar .stick-to-screen-btn,
 #titlebar .hide-reduce-btn {
   font-size: 25px;
   color: inherit;
-  float: right;
   text-align: right;
   text-decoration: none;
   cursor: pointer;
@@ -84,7 +91,6 @@
 }
 #titlebar .stick-to-screen-btn {
   font-size: 10px;
-  padding-top: 2px;
 }
 #titlebar .stick-to-screen-btn:focus-visible,
 #titlebar .hide-reduce-btn:focus-visible {
