@@ -14,27 +14,27 @@ const api = supertest(`http://${settings.ip}:${settings.port}`);
 const apiVersion = 1;
 
 describe('Connectivity', function () {
-  it('can connect', function (done) {
-    api.get('/api/')
+  it('can connect', async function () {
+    await api.get('/api/')
         .expect('Content-Type', /json/)
-        .expect(200, done);
+        .expect(200);
   });
 });
 
 describe('API Versioning', function () {
-  it('finds the version tag', function (done) {
-    api.get('/api/')
+  it('finds the version tag', async function () {
+    await api.get('/api/')
         .expect((res) => {
           if (!res.body.currentVersion) throw new Error('No version set in API');
           return;
         })
-        .expect(200, done);
+        .expect(200);
   });
 });
 
 describe('Permission', function () {
-  it('errors with invalid OAuth token', function (done) {
-    api.get(`/api/${apiVersion}/createPad?padID=test`)
-        .expect(401, done);
+  it('errors with invalid OAuth token', async function () {
+    await api.get(`/api/${apiVersion}/createPad?padID=test`)
+        .expect(401);
   });
 });
