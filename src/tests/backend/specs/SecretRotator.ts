@@ -1,10 +1,13 @@
 'use strict';
 
 import {strict} from "assert";
-const common = require('../common');
-const crypto = require('../../../node/security/crypto');
-const db = require('../../../node/db/DB');
-const SecretRotator = require("../../../node/security/SecretRotator").SecretRotator;
+import * as common from '../common.js';
+import * as crypto from '../../../node/security/crypto.js';
+import db from '../../../node/db/DB.js';
+import {SecretRotator} from '../../../node/security/SecretRotator.js';
+import {fileURLToPath} from 'node:url';
+
+const __filename = fileURLToPath(import.meta.url);
 
 const logger = common.logger;
 

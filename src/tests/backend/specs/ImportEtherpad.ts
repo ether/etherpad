@@ -1,14 +1,17 @@
 'use strict';
 
-import {MapArrayType} from "../../../node/types/MapType";
+import {MapArrayType} from "../../../node/types/MapType.js";
 
-const assert = require('assert').strict;
-const authorManager = require('../../../node/db/AuthorManager');
-const db = require('../../../node/db/DB');
-const importEtherpad = require('../../../node/utils/ImportEtherpad');
-const padManager = require('../../../node/db/PadManager');
-const plugins = require('../../../static/js/pluginfw/plugin_defs');
-import {randomString} from '../../../static/js/pad_utils';
+import {strict as assert} from 'assert';
+import * as authorManager from '../../../node/db/AuthorManager.js';
+import db from '../../../node/db/DB.js';
+import * as importEtherpad from '../../../node/utils/ImportEtherpad.js';
+import * as padManager from '../../../node/db/PadManager.js';
+import plugins from '../../../static/js/pluginfw/plugin_defs.js';
+import {randomString} from '../../../static/js/pad_utils.js';
+import {fileURLToPath} from 'node:url';
+
+const __filename = fileURLToPath(import.meta.url);
 
 describe(__filename, function () {
   let padId: string;

@@ -4,17 +4,22 @@
  * Import and Export tests for the /p/whateverPadId/import and /p/whateverPadId/export endpoints.
  */
 
-import {MapArrayType} from "../../../../node/types/MapType";
+import {MapArrayType} from "../../../../node/types/MapType.js";
 import {SuperTestStatic} from "supertest";
-import TestAgent from "supertest/lib/agent";
+import TestAgent from "supertest/lib/agent.js";
 
-const assert = require('assert').strict;
-const common = require('../../common');
-const fs = require('fs');
-import settings from '../../../../node/utils/Settings';
-const superagent = require('superagent');
-const padManager = require('../../../../node/db/PadManager');
-const plugins = require('../../../../static/js/pluginfw/plugin_defs');
+import {strict as assert} from 'assert';
+import * as common from '../../common.js';
+import fs from 'fs';
+import settings from '../../../../node/utils/Settings.js';
+import superagent from 'superagent';
+import * as padManager from '../../../../node/db/PadManager.js';
+import plugins from '../../../../static/js/pluginfw/plugin_defs.js';
+import {fileURLToPath} from 'node:url';
+import {dirname} from 'node:path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const padText = fs.readFileSync(`${__dirname}/test.txt`);
 const etherpadDoc = fs.readFileSync(`${__dirname}/test.etherpad`);

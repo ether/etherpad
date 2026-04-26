@@ -117,6 +117,7 @@
     "@types/supertest": "^7.2.0",
     "@types/swagger-ui-express": "^4.1.8",
     "@types/underscore": "^1.13.0",
+    "@types/superagent": "^8.1.9",
     "@types/whatwg-mimetype": "^5.0.0",
     "chokidar": "^5.0.0",
     "eslint": "^10.2.1",

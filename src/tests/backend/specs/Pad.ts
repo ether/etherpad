@@ -1,15 +1,18 @@
 'use strict';
 
-import {PadType} from "../../../node/types/PadType";
+import {PadType} from "../../../node/types/PadType.js";
 
-const Pad = require('../../../node/db/Pad');
+import * as Pad from '../../../node/db/Pad.js';
 import { strict as assert } from 'assert';
-import {MapArrayType} from "../../../node/types/MapType";
-const authorManager = require('../../../node/db/AuthorManager');
-const common = require('../common');
-const padManager = require('../../../node/db/PadManager');
-const plugins = require('../../../static/js/pluginfw/plugin_defs');
-import settings from '../../../node/utils/Settings';
+import {MapArrayType} from "../../../node/types/MapType.js";
+import * as authorManager from '../../../node/db/AuthorManager.js';
+import * as common from '../common.js';
+import * as padManager from '../../../node/db/PadManager.js';
+import plugins from '../../../static/js/pluginfw/plugin_defs.js';
+import settings from '../../../node/utils/Settings.js';
+import {fileURLToPath} from 'node:url';
+
+const __filename = fileURLToPath(import.meta.url);
 
 describe(__filename, function () {
   const backups:MapArrayType<any> = {};

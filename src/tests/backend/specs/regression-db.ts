@@ -4,7 +4,7 @@ import {fileURLToPath} from 'node:url';
 import {dirname} from 'node:path';
 import authorManager from '../../../node/db/AuthorManager.js';
 import {strict as assert} from "assert";
-import common from '../common.js';
+import * as common from '../common.js';
 import db from '../../../node/db/DB.js';
 
 const __filename = fileURLToPath(import.meta.url);

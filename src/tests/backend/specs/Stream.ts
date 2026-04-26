@@ -1,7 +1,10 @@
 'use strict';
 
-const Stream = require('../../../node/utils/Stream');
+import Stream from '../../../node/utils/Stream.js';
 import {strict} from "assert";
+import {fileURLToPath} from 'node:url';
+
+const __filename = fileURLToPath(import.meta.url);
 
 class DemoIterable {
   private value: number;

@@ -1,11 +1,14 @@
 'use strict';
 
-const assert = require('assert').strict;
-const common = require('../common');
-const exportEtherpad = require('../../../node/utils/ExportEtherpad');
-const padManager = require('../../../node/db/PadManager');
-const plugins = require('../../../static/js/pluginfw/plugin_defs');
-import readOnlyManager from '../../../node/db/ReadOnlyManager';
+import {strict as assert} from 'assert';
+import * as common from '../common.js';
+import * as exportEtherpad from '../../../node/utils/ExportEtherpad.js';
+import * as padManager from '../../../node/db/PadManager.js';
+import plugins from '../../../static/js/pluginfw/plugin_defs.js';
+import readOnlyManager from '../../../node/db/ReadOnlyManager.js';
+import {fileURLToPath} from 'node:url';
+
+const __filename = fileURLToPath(import.meta.url);
 
 describe(__filename, function () {
   let padId:string;

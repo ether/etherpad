@@ -5,7 +5,7 @@ import {dirname} from 'node:path';
 import {MapArrayType} from "../../../node/types/MapType";
 
 import assert from 'assert';
-import common from '../common.js';
+import * as common from '../common.js';
 import padManager from '../../../node/db/PadManager.js';
 import pluginDefs from '../../../static/js/pluginfw/plugin_defs.js';
 import readOnlyManager from '../../../node/db/ReadOnlyManager.js';

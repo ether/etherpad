@@ -1,22 +1,22 @@
 'use strict';
 
-import {MapArrayType} from "../../node/types/MapType";
+import {MapArrayType} from "../../node/types/MapType.js";
 
-import AttributePool from '../../static/js/AttributePool';
-const assert = require('assert').strict;
-const io = require('socket.io-client');
-const log4js = require('log4js');
-import padutils from '../../static/js/pad_utils';
-const process = require('process');
-const server = require('../../node/server');
-const setCookieParser = require('set-cookie-parser');
-import settings from '../../node/utils/Settings';
+import AttributePool from '../../static/js/AttributePool.js';
+import {strict as assert} from 'assert';
+import {io} from 'socket.io-client';
+import log4js from 'log4js';
+import padutils from '../../static/js/pad_utils.js';
+import process from 'process';
+import * as server from '../../node/server.js';
+import setCookieParser from 'set-cookie-parser';
+import settings from '../../node/utils/Settings.js';
 import supertest from 'supertest';
-import TestAgent from "supertest/lib/agent";
+import TestAgent from "supertest/lib/agent.js";
 import {Http2Server} from "node:http2";
 import {SignJWT} from "jose";
-import {privateKeyExported} from "../../node/security/OAuth2Provider";
-const webaccess = require('../../node/hooks/express/webaccess');
+import {privateKeyExported} from "../../node/security/OAuth2Provider.js";
+import * as webaccess from '../../node/hooks/express/webaccess.js';
 
 const backups:MapArrayType<any> = {};
 let agentPromise:Promise<any>|null = null;
@@ -90,10 +90,10 @@ export const init = async function () {
       //.set('Authorization', `Bearer ${await generateJWTToken()}`);
   // Speed up authn tests.
   backups.authnFailureDelayMs = webaccess.authnFailureDelayMs;
-  webaccess.authnFailureDelayMs = 0;
+  webaccess.setAuthnFailureDelayMs(0);
 
   after(async function () {
-    webaccess.authnFailureDelayMs = backups.authnFailureDelayMs;
+    webaccess.setAuthnFailureDelayMs(backups.authnFailureDelayMs);
     // Note: This does not unset settings that were added.
     Object.assign(settings, backups.settings);
     await server.exit();

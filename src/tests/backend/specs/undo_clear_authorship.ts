@@ -17,7 +17,7 @@ import {dirname} from 'node:path';
 import {PadType} from "../../../node/types/PadType";
 
 import assert from 'assert';
-import common from '../common.js';
+import * as common from '../common.js';
 import padManager from '../../../node/db/PadManager.js';
 import AttributePool from '../../../static/js/AttributePool.js';
 import padutils from '../../../static/js/pad_utils.js';

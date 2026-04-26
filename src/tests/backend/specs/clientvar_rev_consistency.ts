@@ -17,7 +17,7 @@ import {dirname} from 'node:path';
  */
 
 import assert from 'assert';
-import common from '../common.js';
+import * as common from '../common.js';
 import padManager from '../../../node/db/PadManager.js';
 import pluginDefs from '../../../static/js/pluginfw/plugin_defs.js';
 import settings from '../../../node/utils/Settings.js';

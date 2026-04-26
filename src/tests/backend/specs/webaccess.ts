@@ -7,7 +7,7 @@ import {Func} from "mocha";
 import {SettingsUser} from "../../../node/types/SettingsUser";
 
 import assert from 'assert';
-import common from '../common.js';
+import * as common from '../common.js';
 import pluginDefs from '../../../static/js/pluginfw/plugin_defs.js';
 import settings from '../../../node/utils/Settings.js';
 

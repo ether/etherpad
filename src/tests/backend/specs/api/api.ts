@@ -8,9 +8,13 @@
  * and openapi definitions.
  */
 
-const common = require('../../common');
-const validateOpenAPI = require('openapi-schema-validation').validate;
-import settings from '../../../../node/utils/Settings';
+import * as common from '../../common.js';
+import openApiSchemaValidation from 'openapi-schema-validation';
+import settings from '../../../../node/utils/Settings.js';
+import {fileURLToPath} from 'node:url';
+
+const validateOpenAPI = openApiSchemaValidation.validate;
+const __filename = fileURLToPath(import.meta.url);
 
 let agent: any;
 let apiVersion = 1;

@@ -7,8 +7,11 @@
  */
 
 import { strict as assert } from 'assert';
-import {MapArrayType} from "../../../../node/types/MapType";
-const common = require('../../common');
+import {MapArrayType} from "../../../../node/types/MapType.js";
+import * as common from '../../common.js';
+import {fileURLToPath} from 'node:url';
+
+const __filename = fileURLToPath(import.meta.url);
 
 let agent:any;
 const apiVersion = 1;

@@ -5,6 +5,9 @@ import path from 'path';
 import fs from 'fs';
 import os from 'os';
 import sinon from 'sinon';
+import {fileURLToPath} from 'node:url';
+
+const __filename = fileURLToPath(import.meta.url);
 
 /**
  * Tests for LinkInstaller dependency resolution.
