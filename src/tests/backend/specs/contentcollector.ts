@@ -1,5 +1,8 @@
 'use strict';
 
+import {fileURLToPath} from 'node:url';
+import {dirname} from 'node:path';
+
 /*
  * While importexport tests target the `setHTML` API endpoint, which is nearly identical to what
  * happens when a user manually imports a document via the UI, the contentcollector tests here don't
@@ -11,13 +14,16 @@
 
 import {APool} from "../../../node/types/PadType";
 
-import AttributePool from '../../../static/js/AttributePool';
-const Changeset = require('../../../static/js/Changeset');
-const assert = require('assert').strict;
-import attributes from '../../../static/js/attributes';
-const contentcollector = require('../../../static/js/contentcollector');
+import AttributePool from '../../../static/js/AttributePool.js';
+import Changeset from '../../../static/js/Changeset.js';
+import assert from 'assert';
+import attributes from '../../../static/js/attributes.js';
+import contentcollector from '../../../static/js/contentcollector.js';
 import jsdom from 'jsdom';
 import {Attribute} from "../../../static/js/types/Attribute";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // All test case `wantAlines` values must only refer to attributes in this list so that the
 // attribute numbers do not change due to changes in pool insertion order.

@@ -1,14 +1,19 @@
 'use strict';
 
+import {fileURLToPath} from 'node:url';
+import {dirname} from 'node:path';
 import {MapArrayType} from "../../../node/types/MapType";
 
-const assert = require('assert').strict;
-const common = require('../common');
-const fs = require('fs');
+import assert from 'assert';
+import common from '../common.js';
+import fs from 'fs';
 const fsp = fs.promises;
-const path = require('path');
-import settings from '../../../node/utils/Settings';
-const superagent = require('superagent');
+import path from 'path';
+import settings from '../../../node/utils/Settings.js';
+import superagent from 'superagent';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 describe(__filename, function () {
   let agent:any;

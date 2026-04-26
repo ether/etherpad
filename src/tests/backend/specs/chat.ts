@@ -1,14 +1,19 @@
 'use strict';
 
+import {fileURLToPath} from 'node:url';
+import {dirname} from 'node:path';
 import {MapArrayType} from "../../../node/types/MapType";
 import {PluginDef} from "../../../node/types/PartType";
 
-import ChatMessage from '../../../static/js/ChatMessage';
-const {Pad} = require('../../../node/db/Pad');
-const assert = require('assert').strict;
-const common = require('../common');
-const padManager = require('../../../node/db/PadManager');
-const pluginDefs = require('../../../static/js/pluginfw/plugin_defs');
+import ChatMessage from '../../../static/js/ChatMessage.js';
+import {Pad} from '../../../node/db/Pad.js';
+import assert from 'assert';
+import common from '../common.js';
+import padManager from '../../../node/db/PadManager.js';
+import pluginDefs from '../../../static/js/pluginfw/plugin_defs.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const logger = common.logger;
 

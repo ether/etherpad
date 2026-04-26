@@ -1,5 +1,8 @@
 'use strict';
 
+import {fileURLToPath} from 'node:url';
+import {dirname} from 'node:path';
+
 /*
  * ACHTUNG: there is a copied & modified version of this file in
  * <basedir>/src/tests/container/specs/api/pad.js
@@ -7,9 +10,12 @@
  * TODO: unify those two files, and merge in a single one.
  */
 
-const assert = require('assert').strict;
-const common = require('../../common');
-const padManager = require('../../../../node/db/PadManager');
+import assert from 'assert';
+import common from '../../common.js';
+import padManager from '../../../../node/db/PadManager.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 let agent:any;
 let apiVersion = 1;
