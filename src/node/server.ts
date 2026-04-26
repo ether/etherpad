@@ -32,6 +32,14 @@ import axios from "axios";
 
 import settings from './utils/Settings.js';
 
+const forceExit = (code: number): void => {
+  if (process.env.VITEST != null) {
+    process.exitCode = code;
+    return;
+  }
+  process.exit(code);
+};
+
 let wtfnode: any;
 if (settings.dumpOnUncleanExit) {
   // wtfnode should be loaded after log4js.replaceConsole() so that it uses log4js for logging, and
@@ -144,8 +152,7 @@ export const start = async (): Promise<any> => {
       exit(err)
           .catch((err: ErrorCaused) => {
             logger.error('Error in process exit', err);
-            // eslint-disable-next-line n/no-process-exit
-            process.exit(1);
+            forceExit(1);
           });
     });
     // As of v14, Node.js does not exit when there is an unhandled Promise rejection. Convert an
@@ -259,7 +266,7 @@ export const exit = async (err: ErrorCaused|string|null = null): Promise<any> =>
     process.exitCode = 1;
     if (exitCalled) {
       logger.error('Error occurred while waiting to exit. Forcing an immediate unclean exit...');
-      process.exit(1);
+      forceExit(1);
     }
   }
   if (!exitCalled) logger.info('Exiting...');
@@ -304,7 +311,7 @@ export const exit = async (err: ErrorCaused|string|null = null): Promise<any> =>
     }
 
     logger.error('Forcing an unclean exit...');
-    process.exit(1);
+    forceExit(1);
   }, 5000).unref();
 
   logger.info('Waiting for Node.js to exit...');

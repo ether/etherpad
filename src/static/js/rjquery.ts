@@ -1,9 +1,13 @@
 // @ts-nocheck
 'use strict';
 // Provides a require'able version of jQuery without leaking $ and jQuery;
-import $ from './vendors/jquery.js';
-window.$ = $;
-const jq = window.$.noConflict(true);
+import './vendors/jquery.js';
 
-export {jq as jQuery, jq as $};
-export default jq;
+const jq = window.jQuery ?? window.$;
+if (jq == null || typeof jq.noConflict !== 'function') {
+  throw new Error('Failed to initialize jQuery from ./vendors/jquery.js');
+}
+const noConflictJq = jq.noConflict(true);
+
+export {noConflictJq as jQuery, noConflictJq as $};
+export default noConflictJq;

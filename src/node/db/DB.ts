@@ -40,7 +40,10 @@ const dbModule: any = {
     if (dbModule.db.metrics != null) {
       for (const [metric, value] of Object.entries(dbModule.db.metrics)) {
         if (typeof value !== 'number') continue;
-        stats.gauge(`ueberdb_${metric}`, () => dbModule.db.metrics[metric]);
+        stats.gauge(`ueberdb_${metric}`, () => {
+          const metricValue = dbModule.db?.metrics?.[metric];
+          return typeof metricValue === 'number' ? metricValue : 0;
+        });
       }
     }
     for (const fn of ['get', 'set', 'findKeys', 'getSub', 'setSub', 'remove']) {
