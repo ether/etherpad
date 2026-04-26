@@ -112,7 +112,7 @@ export const init = async function () {
  * @param {string} event - The socket.io Socket event to listen for.
  * @returns The argument(s) passed to the event handler.
  */
-export const waitForSocketEvent = async (socket: any, event:string) => {
+export const waitForSocketEvent = async (socket: any, event:string): Promise<any> => {
   const errorEvents = [
     'error',
     'connect_error',
@@ -204,7 +204,7 @@ export const connect = async (res:any = null) => {
  * @param token
  * @returns The CLIENT_VARS message from the server.
  */
-export const handshake = async (socket: any, padId:string, token = padutils.generateAuthorToken()) => {
+export const handshake = async (socket: any, padId:string, token = padutils.generateAuthorToken()): Promise<any> => {
   logger.debug('sending CLIENT_READY...');
   socket.emit('message', {
     component: 'pad',
