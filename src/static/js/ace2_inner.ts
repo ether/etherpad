@@ -2879,22 +2879,36 @@ function Ace2Inner(editorInfo, cssManagers) {
           // This is required, browsers will try to do normal default behavior on
           // page up / down and the default behavior SUCKS
           evt.preventDefault();
-          const oldVisibleLineRange = scroll.getVisibleLineRange(rep);
-          let topOffset = rep.selStart[0] - oldVisibleLineRange[0];
-          if (topOffset < 0) {
-            topOffset = 0;
-          }
 
           const isPageDown = evt.which === 34;
           const isPageUp = evt.which === 33;
 
+          const oldVisibleLineRange = scroll.getVisibleLineRange(rep);
+          let topOffset = rep.selStart[0] - oldVisibleLineRange[0];
+          if (topOffset < 0) topOffset = 0;
+
           scheduler.setTimeout(() => {
-            // the visible lines IE 1,10
             const newVisibleLineRange = scroll.getVisibleLineRange(rep);
-            // total count of lines in pad IE 10
             const linesCount = rep.lines.length();
-            // How many lines are in the viewport right now?
-            const numberOfLinesInViewport = newVisibleLineRange[1] - newVisibleLineRange[0];
+
+            // Calculate lines to skip based on viewport pixel height divided by
+            // the average rendered line height. This correctly handles long wrapped
+            // lines that consume multiple visual rows (fixes #4562).
+            const viewportHeight = getInnerHeight();
+            const visibleStart = newVisibleLineRange[0];
+            const visibleEnd = newVisibleLineRange[1];
+            let totalPixelHeight = 0;
+            for (let i = visibleStart; i <= Math.min(visibleEnd, linesCount - 1); i++) {
+              const entry = rep.lines.atIndex(i);
+              if (entry && entry.lineNode) {
+                totalPixelHeight += entry.lineNode.offsetHeight;
+              }
+            }
+            const visibleLogicalLines = visibleEnd - visibleStart + 1;
+            // Use pixel-based count: how many logical lines fit in one viewport
+            const numberOfLinesInViewport = visibleLogicalLines > 0 && totalPixelHeight > 0
+                ? Math.max(1, Math.round(visibleLogicalLines * viewportHeight / totalPixelHeight))
+                : Math.max(1, visibleLogicalLines);
 
             if (isPageUp && padShortcutEnabled.pageUp) {
               rep.selStart[0] -= numberOfLinesInViewport;
@@ -2910,18 +2924,11 @@ function Ace2Inner(editorInfo, cssManagers) {
             rep.selStart[0] = Math.max(0, Math.min(rep.selStart[0], linesCount - 1));
             rep.selEnd[0] = Math.max(0, Math.min(rep.selEnd[0], linesCount - 1));
             updateBrowserSelectionFromRep();
-            // get the current caret selection, can't use rep. here because that only gives
-            // us the start position not the current
+            // scroll to the caret position
             const myselection = targetDoc.getSelection();
-            // get the carets selection offset in px IE 214
             let caretOffsetTop = myselection.focusNode.parentNode.offsetTop ||
                 myselection.focusNode.offsetTop;
-
-            // sometimes the first selection is -1 which causes problems
-            // (Especially with ep_page_view)
-            // so use focusNode.offsetTop value.
             if (caretOffsetTop === -1) caretOffsetTop = myselection.focusNode.offsetTop;
-            // set the scrollY offset of the viewport on the document
             scroll.setScrollY(caretOffsetTop);
           }, 200);
         }
