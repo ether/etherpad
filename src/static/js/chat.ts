@@ -36,7 +36,11 @@ exports.chat = (() => {
     show() {
       if (pad.settings.hideChat) return;
       $('#chaticon').removeClass('visible');
-      $('#chatbox').addClass('visible');
+      // Clear any inline `display: none` left by applyShowChat(false)'s
+      // jQuery .hide() — without this, re-enabling chat then clicking the
+      // icon would only add the .visible class while the box stayed hidden
+      // by the inline style. The .visible class only flips visibility.
+      $('#chatbox').css('display', '').addClass('visible');
       this.scrollDown(true);
       chatMentions = 0;
       Tinycon.setBubble(0);
