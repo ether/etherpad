@@ -97,7 +97,7 @@ const performImport = async (req:any, res:any, padId:string, authorId:string) =>
     [fields, files] = await form.parse(req);
   } catch (err:any) {
     logger.warn(`Import failed due to form error: ${err.stack || err}`);
-    if (err.code === Formidable.formidableErrors.biggerThanMaxFileSize) {
+    if (err.code === (Formidable as any).formidableErrors.biggerThanMaxFileSize) {
       throw new ImportError('maxFileSize');
     }
     throw new ImportError('uploadFailed');

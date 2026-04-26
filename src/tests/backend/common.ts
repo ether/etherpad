@@ -27,7 +27,7 @@ export let baseUrl:string|null = null;
 export let httpServer: Http2Server|null = null;
 export const logger = log4js.getLogger('test');
 
-const logLevel = logger.level;
+const logLevel = logger.level as any;
 
 // Mocha doesn't monitor unhandled Promise rejections, so convert them to uncaught exceptions.
 // https://github.com/mochajs/mocha/issues/2640

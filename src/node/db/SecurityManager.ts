@@ -32,7 +32,7 @@ import log4js from 'log4js';
 const authLogger = log4js.getLogger('auth');
 import padutils from '../../static/js/pad_utils.js';
 
-const DENY = Object.freeze({accessStatus: 'deny'});
+const DENY = Object.freeze({accessStatus: 'deny' as const, authorID: undefined as any});
 
 /**
  * Determines whether the user can access a pad.

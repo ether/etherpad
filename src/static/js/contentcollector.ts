@@ -139,7 +139,7 @@ const makeContentCollector = (collectStyles: any, abrowser: any, apool: any, cla
     self.startNew();
     return self;
   })();
-  const cc = {};
+  const cc: any = {};
 
   const _ensureColumnZero = (state) => {
     if (!lines.atColumnZero()) {

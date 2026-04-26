@@ -679,7 +679,7 @@ export const expressPreSession = async (hookName:string, {app}:any) => {
               // an unknown error happened
               // log it and throw internal error
               logger.error(errCaused.stack || errCaused.toString());
-              throw new createHTTPError.InternalError('internal error');
+              throw new createHTTPError.InternalServerError('internal error');
             }
           }
 
