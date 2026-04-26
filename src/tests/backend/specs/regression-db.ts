@@ -1,9 +1,16 @@
 'use strict';
 
-const AuthorManager = require('../../../node/db/AuthorManager');
+import {fileURLToPath} from 'node:url';
+import {dirname} from 'node:path';
+import authorManager from '../../../node/db/AuthorManager.js';
 import {strict as assert} from "assert";
-const common = require('../common');
-const db = require('../../../node/db/DB');
+import common from '../common.js';
+import db from '../../../node/db/DB.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+const AuthorManager = authorManager;
 
 describe(__filename, function () {
   let setBackup: Function;

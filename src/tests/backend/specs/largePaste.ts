@@ -1,7 +1,12 @@
 'use strict';
 
-const assert = require('assert').strict;
-const common = require('../common');
+import {fileURLToPath} from 'node:url';
+import {dirname} from 'node:path';
+import assert from 'assert';
+import common from '../common.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 let agent: any;
 let apiVersion = 1;
