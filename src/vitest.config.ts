@@ -9,9 +9,6 @@ export default defineConfig({
       'tests/backend/specs/**/*.ts',
       'tests/container/specs/**/*.ts',
     ],
-    exclude: [
-      'tests/backend/specs/api/fuzzImportTest.ts',
-    ],
     hookTimeout: 60000,
     testTimeout: 120000,
   },
