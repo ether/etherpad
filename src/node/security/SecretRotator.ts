@@ -1,12 +1,12 @@
 
 
-import {DeriveModel} from "../types/DeriveModel";
-import {LegacyParams} from "../types/LegacyParams";
+import {DeriveModel} from "../types/DeriveModel.js";
+import {LegacyParams} from "../types/LegacyParams.js";
 
-const {Buffer} = require('buffer');
-const crypto = require('./crypto');
-const db = require('../db/DB');
-const log4js = require('log4js');
+import { Buffer } from 'buffer';
+import * as crypto from './crypto.js';
+import db from '../db/DB.js';
+import log4js from 'log4js';
 
 class Kdf {
   async generateParams(): Promise<{ salt: string; digest: string; keyLen: number; secret: string }> { throw new Error('not implemented'); }

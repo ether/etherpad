@@ -1,15 +1,15 @@
 'use strict';
 
-const crypto = require('crypto');
-const util = require('util');
+import crypto from 'crypto';
+import util from 'util';
 
 
 /**
  * Promisified version of Node.js's crypto.hkdf.
  */
-exports.hkdf = util.promisify(crypto.hkdf);
+export const hkdf = util.promisify(crypto.hkdf);
 
 /**
  * Promisified version of Node.js's crypto.randomBytes
  */
-exports.randomBytes = util.promisify(crypto.randomBytes);
+export const randomBytes = util.promisify(crypto.randomBytes);
