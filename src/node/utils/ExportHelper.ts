@@ -48,7 +48,7 @@ export const getPadPlainText = (pad: { getInternalRevisionAText: (arg0: any) => 
   return pieces.join('');
 };
 type LineModel = {
-  [id:string]:string|number|LineModel
+  [id:string]:any
 }
 
 export const _analyzeLine = (text:string, aline: string, apool: AttributePool) => {

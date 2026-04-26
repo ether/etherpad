@@ -341,14 +341,14 @@ const getHTMLFromAtext = async (pad:PadType, atext: AText, authorColors?: string
         if (!exists) {
           let prevLevel = 0;
           if (prevLine && prevLine.listLevel) {
-            prevLevel = prevLine.listLevel;
+            prevLevel = prevLine.listLevel as number;
           }
           if (prevLine && line.listTypeName !== prevLine.listTypeName) {
             prevLevel = 0;
           }
 
-          for (let diff = prevLevel; diff < line.listLevel; diff++) {
-            openLists.push({level: diff, type: line.listTypeName});
+          for (let diff = prevLevel; diff < (line.listLevel as number); diff++) {
+            openLists.push({level: diff, type: line.listTypeName as string});
             const prevPiece = pieces[pieces.length - 1];
 
             if (prevPiece.indexOf('<ul') === 0 ||
@@ -453,7 +453,7 @@ const getHTMLFromAtext = async (pad:PadType, atext: AText, authorColors?: string
           (line.listTypeName !== nextLine.listTypeName)) {
         let nextLevel = 0;
         if (nextLine && nextLine.listLevel) {
-          nextLevel = nextLine.listLevel;
+          nextLevel = nextLine.listLevel as number;
         }
         // The actual depth the next line lives at (ignoring type changes)
         const actualNextLevel = (nextLine && nextLine.listLevel) ? nextLine.listLevel : 0;

@@ -124,7 +124,7 @@ Example returns:
 }
 
 */
-export const getRevisionChangeset = async (padID: string, rev: string) => {
+export const getRevisionChangeset = async (padID: string, rev: string|number) => {
   // try to parse the revision number
   if (rev !== undefined) {
     rev = checkValidRev(rev);
@@ -157,7 +157,7 @@ Example returns:
 {code: 0, message:"ok", data: {text:"Welcome Text"}}
 {code: 1, message:"padID does not exist", data: null}
 */
-export const getText = async (padID: string, rev: string) => {
+export const getText = async (padID: string, rev?: string|number) => {
   // try to parse the revision number
   if (rev !== undefined) {
     rev = checkValidRev(rev);
@@ -249,7 +249,7 @@ Example returns:
  @param {String} rev the revision number, defaulting to the latest revision
  @return {Promise<{html: string}>} the html of the pad
 */
-export const getHTML = async (padID: string, rev: string): Promise<{ html: string; }> => {
+export const getHTML = async (padID: string, rev?: string|number): Promise<{ html: string; }> => {
   if (rev !== undefined) {
     rev = checkValidRev(rev);
   }

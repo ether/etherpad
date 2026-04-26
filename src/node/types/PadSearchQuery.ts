@@ -9,7 +9,7 @@ export type PadSearchQuery = {
 
 export type PadQueryResult = {
   padName: string,
-  lastEdited: string,
+  lastEdited: string|number,
   userCount: number,
   revisionNumber: number
 }

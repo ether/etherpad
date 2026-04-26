@@ -36,7 +36,7 @@ const doConvertTask = async (task:{
   const tmpDir = os.tmpdir();
   // @ts-ignore
   const p = runCmd([
-    settings.soffice,
+    settings.soffice!,
     '--headless',
     '--invisible',
     '--nologo',

@@ -608,7 +608,7 @@ export const expressPreSession = async (hookName:string, {app}:any) => {
 
       // build openapi-backend instance for this api version
       const api = new OpenAPIBackend({
-        definition,
+        definition: definition as any,
         validate: false,
         // for a small optimisation, we can run the quick startup for older
         // API versions since they are subsets of the latest api definition
