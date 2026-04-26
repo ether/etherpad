@@ -115,6 +115,7 @@ If your database needs additional settings, you will have to use a personalized 
 | `PAD_OPTIONS_ALWAYS_SHOW_CHAT`   |             | `false` |
 | `PAD_OPTIONS_CHAT_AND_USERS`     |             | `false` |
 | `PAD_OPTIONS_LANG`               |             | `null`  |
+| `PAD_OPTIONS_FADE_INACTIVE_AUTHOR_COLORS` | Fade each author's caret/background toward white as they go inactive. Set to `false` if users pick light colors that become indistinguishable from the faded variants. | `true`  |
 
 
 ### Shortcuts
