@@ -17,13 +17,13 @@
  * limitations under the License.
  */
 
-const async = require('async');
-const fs = require('fs').promises;
-const log4js = require('log4js');
-const os = require('os');
-const path = require('path');
-const runCmd = require('./run_cmd');
-import settings from './Settings';
+import async from 'async';
+import { promises as fs } from 'fs';
+import log4js from 'log4js';
+import os from 'os';
+import path from 'path';
+import runCmd from './run_cmd.js';
+import settings from './Settings.js';
 
 const logger = log4js.getLogger('LibreOffice');
 
@@ -89,7 +89,7 @@ const queue = async.queue(doConvertTask, 1);
  * @param  {String}     type        The type to convert into
  * @param  {Function}   callback    Standard callback function
  */
-exports.convertFile = async (srcFile: string, destFile: string, type:string) => {
+export const convertFile = async (srcFile: string, destFile: string, type:string) => {
   // Used for the moving of the file, not the conversion
   const fileExtension = type;
 

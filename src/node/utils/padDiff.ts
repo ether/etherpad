@@ -1,17 +1,17 @@
 'use strict';
 
-import {PadAuthor, PadType} from "../types/PadType";
-import {MapArrayType} from "../types/MapType";
+import {PadAuthor, PadType} from "../types/PadType.js";
+import {MapArrayType} from "../types/MapType.js";
 
-import AttributeMap from '../../static/js/AttributeMap';
-import {applyToAText, checkRep, compose, deserializeOps, pack, splitAttributionLines, splitTextLines, unpack} from '../../static/js/Changeset';
-import {Builder} from "../../static/js/Builder";
-import {OpAssembler} from "../../static/js/OpAssembler";
-import {numToString} from "../../static/js/ChangesetUtils";
-import Op from "../../static/js/Op";
-import {StringAssembler} from "../../static/js/StringAssembler";
-const attributes = require('../../static/js/attributes');
-const exportHtml = require('./ExportHtml');
+import AttributeMap from '../../static/js/AttributeMap.js';
+import {applyToAText, checkRep, compose, deserializeOps, pack, splitAttributionLines, splitTextLines, unpack} from '../../static/js/Changeset.js';
+import {Builder} from "../../static/js/Builder.js";
+import {OpAssembler} from "../../static/js/OpAssembler.js";
+import {numToString} from "../../static/js/ChangesetUtils.js";
+import Op from "../../static/js/Op.js";
+import {StringAssembler} from "../../static/js/StringAssembler.js";
+import * as attributes from '../../static/js/attributes.js';
+import * as exportHtml from './ExportHtml.js';
 
 
 class PadDiff {
@@ -456,4 +456,4 @@ class PadDiff {
 
 
 // export the constructor
-module.exports = PadDiff;
+export default PadDiff;

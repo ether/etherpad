@@ -1,13 +1,13 @@
 'use strict'
 
-import {AChangeSet} from "../types/PadType";
-import {Revision} from "../types/Revision";
+import {AChangeSet} from "../types/PadType.js";
+import {Revision} from "../types/Revision.js";
 
-import {timesLimit, firstSatisfies} from './promises';
-const padManager = require('ep_etherpad-lite/node/db/PadManager');
-const db = require('ep_etherpad-lite/node/db/DB');
-const Changeset = require('ep_etherpad-lite/static/js/Changeset');
-const padMessageHandler = require('ep_etherpad-lite/node/handler/PadMessageHandler');
+import {timesLimit, firstSatisfies} from './promises.js';
+import padManager from 'ep_etherpad-lite/node/db/PadManager.js';
+import db from 'ep_etherpad-lite/node/db/DB.js';
+import * as Changeset from 'ep_etherpad-lite/static/js/Changeset.js';
+import padMessageHandler from 'ep_etherpad-lite/node/handler/PadMessageHandler.js';
 import log4js from 'log4js';
 const logger = log4js.getLogger('cleanup');
 

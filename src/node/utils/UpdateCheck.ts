@@ -1,6 +1,6 @@
 'use strict';
 import semver from 'semver';
-import settings, {getEpVersion} from './Settings';
+import settings, {getEpVersion} from './Settings.js';
 import axios from 'axios';
 const headers = {
   'User-Agent': 'Etherpad/' + getEpVersion(),
