@@ -4,7 +4,7 @@
     "moduleDetection": "force",
     "lib": ["ES2023", "DOM"],
     /* Language and Environment */
-    "target": "es6",                                  /* Set the JavaScript language version for emitted JavaScript and include compatible library declarations. */
+    "target": "es2022",                                  /* Set the JavaScript language version for emitted JavaScript and include compatible library declarations. */
     /* Modules */
     "module": "NodeNext",                                /* Specify what module code is generated. */
     "moduleResolution": "NodeNext",                      /* Specify how TypeScript resolves modules. */
@@ -15,7 +15,8 @@
     /* Completeness */
     "skipLibCheck": true                                 /* Skip type checking all .d.ts files. */,
     "resolveJsonModule": true,
-    "types": ["node", "jquery", "mocha", "vitest/globals"]
+    "types": ["node", "jquery", "vitest/globals"]
   },
-  "exclude": ["../plugin_packages", "node_modules"]
+  "include": ["./**/*.ts"],
+  "exclude": ["plugin_packages", "node_modules", "../plugin_packages"]
 }
