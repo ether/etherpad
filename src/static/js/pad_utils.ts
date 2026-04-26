@@ -6,7 +6,7 @@
  * TL;DR COMMENTS ON THIS FILE ARE HIGHLY APPRECIATED
  */
 
-import {binarySearch} from "./ace2_common";
+import {binarySearch} from "./ace2_common.js";
 
 /**
  * Copyright 2009 Google Inc.
@@ -24,7 +24,7 @@ import {binarySearch} from "./ace2_common";
  * limitations under the License.
  */
 
-const Security = require('security');
+import Security from './security.js';
 import jsCookie, {CookiesStatic} from 'js-cookie'
 
 /**
@@ -159,8 +159,9 @@ class PadUtils {
     (this.warnDeprecatedFlags.logger || console).warn(...args);
   }
   escapeHtml = (x: string) => Security.escapeHTML(String(x))
-  uniqueId = () => {
-    const pad = require('./pad').pad; // Sidestep circular dependency
+  uniqueId = async () => {
+    const padModule = await import('./pad.js');
+    const pad = padModule.pad; // Sidestep circular dependency
     // returns string that is exactly 'width' chars, padding with zeros and taking rightmost digits
     const encodeNum =
       (n: number, width: number) => (Array(width + 1).join('0') + Number(n).toString(35)).slice(-width);
@@ -270,8 +271,9 @@ class PadUtils {
     }
   }
 
-  timediff = (d: number) => {
-    const pad = require('./pad').pad; // Sidestep circular dependency
+  timediff = async (d: number) => {
+    const padModule = await import('./pad.js');
+    const pad = padModule.pad; // Sidestep circular dependency
     const format = (n: number, word: string) => {
         n = Math.round(n);
         return (`${n} ${word}${n !== 1 ? 's' : ''} ago`);
