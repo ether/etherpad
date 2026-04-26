@@ -90,6 +90,18 @@ name of a function exported by the named module. See
 [`module.exports`](https://nodejs.org/docs/latest/api/modules.html#modules_module_exports)
 for how to export a function.
 
+> **Note (Etherpad ≥ 2.7.x):** the core was migrated to ECMAScript modules,
+> but the plugin loader uses Node's `createRequire` so existing CommonJS
+> plugins (the documented format above) continue to load unchanged. ESM
+> plugins are also supported — name your hook entry file with a `.mjs`
+> extension or set `"type": "module"` in your plugin's `package.json`, and
+> export hook functions with `export const`. One contract change: plugins
+> that previously read core settings via `require('ep_etherpad-lite/node/utils/Settings').toolbar`
+> must now use either `import settings from 'ep_etherpad-lite/node/utils/Settings'`
+> (ESM) or `require('ep_etherpad-lite/node/utils/Settings').default.toolbar`
+> (CJS via the bridge). The accessor-property shim that exposed top-level
+> fields directly on the require() result is gone.
+
 For the module name you can omit the `.js` suffix, and if the file is `index.js`
 you can use just the directory name. You can also omit the module name entirely,
 in which case it defaults to the plugin name (e.g., `ep_example`).
