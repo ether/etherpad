@@ -1,6 +1,6 @@
 // @ts-nocheck
 'use strict';
-const skinVariants = require('./skin_variants');
+import skinVariants from './skin_variants.js';
 
 /**
  * This code is mostly from the old Etherpad. Please help us to comment this code.
@@ -29,30 +29,30 @@ let socket;
 
 // These jQuery things should create local references, but for now `require()`
 // assigns to the global `$` and augments it with plugins.
-require('./vendors/jquery');
-require('./vendors/farbtastic');
-require('./vendors/gritter');
+import './vendors/jquery.js';
+import './vendors/farbtastic.js';
+import './vendors/gritter.js';
 
-import html10n from './vendors/html10n'
+import html10n from './vendors/html10n.js'
 
-import {Cookies} from "./pad_utils";
+import {Cookies} from "./pad_utils.js";
 
-const chat = require('./chat').chat;
-const getCollabClient = require('./collab_client').getCollabClient;
-const padconnectionstatus = require('./pad_connectionstatus').padconnectionstatus;
-const padcookie = require('./pad_cookie').padcookie;
-const padeditbar = require('./pad_editbar').padeditbar;
-const padeditor = require('./pad_editor').padeditor;
-const padimpexp = require('./pad_impexp').padimpexp;
-const padmodals = require('./pad_modals').padmodals;
-const padsavedrevs = require('./pad_savedrevs');
-const paduserlist = require('./pad_userlist').paduserlist;
-import padutils from './pad_utils'
-const colorutils = require('./colorutils').colorutils;
-import {randomString} from "./pad_utils";
-const socketio = require('./socketio');
+import {chat} from './chat.js';
+import {getCollabClient} from './collab_client.js';
+import {padconnectionstatus} from './pad_connectionstatus.js';
+import {padcookie} from './pad_cookie.js';
+import {padeditbar} from './pad_editbar.js';
+import {padeditor} from './pad_editor.js';
+import {padimpexp} from './pad_impexp.js';
+import {padmodals} from './pad_modals.js';
+import padsavedrevs from './pad_savedrevs.js';
+import {paduserlist} from './pad_userlist.js';
+import padutils from './pad_utils.js'
+import {colorutils} from './colorutils.js';
+import {randomString} from "./pad_utils.js";
+import socketio from './socketio.js';
 
-const hooks = require('./pluginfw/hooks');
+import hooks from './pluginfw/hooks.js';
 
 // This array represents all GET-parameters which can be used to change a setting.
 //   name:     the parameter-name, eg  `?noColors=true`  =>  `noColors`
@@ -951,12 +951,11 @@ const settings = {
   rtlIsTrue: false,
   rtlIsExplicit: false,
 };
-
 pad.settings = settings;
 
-exports.baseURL = '';
-exports.settings = settings;
-exports.randomString = randomString;
-exports.getParams = getParams;
-exports.pad = pad;
-exports.init = init;
+export const baseURL = '';
+export {settings};
+export {randomString};
+export {getParams};
+export {pad};
+export {init};

@@ -23,7 +23,7 @@
  * limitations under the License.
  */
 
-const padmodals = require('./pad_modals').padmodals;
+import {padmodals} from './pad_modals.js';
 
 const padconnectionstatus = (() => {
   let status = {
@@ -90,4 +90,4 @@ const padconnectionstatus = (() => {
   return self;
 })();
 
-exports.padconnectionstatus = padconnectionstatus;
+export {padconnectionstatus};
