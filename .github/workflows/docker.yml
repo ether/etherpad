@@ -49,19 +49,6 @@ jobs:
           key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
             ${{ runner.os }}-pnpm-store-
-      - uses: actions/cache@v5
-        name: Cache node_modules
-        with:
-          path: |
-            node_modules
-            src/node_modules
-            admin/node_modules
-            ui/node_modules
-            bin/node_modules
-            doc/node_modules
-          key: ${{ runner.os }}-node-modules-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-node-modules-
       - uses: pnpm/action-setup@v6
         name: Install pnpm
         with:

@@ -54,20 +54,6 @@ jobs:
           key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
             ${{ runner.os }}-pnpm-store-
-      - uses: actions/cache@v5
-        name: Cache node_modules (ether.github.com)
-        with:
-          path: ether.github.com/node_modules
-          key: ${{ runner.os }}-ghpages-node-modules-${{ hashFiles('ether.github.com/pnpm-lock.yaml', 'ether.github.com/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-ghpages-node-modules-
-      - uses: actions/cache@v5
-        name: Cache node_modules (etherpad bin)
-        with:
-          path: etherpad/bin/node_modules
-          key: ${{ runner.os }}-bin-node-modules-${{ hashFiles('etherpad/bin/package.json') }}
-          restore-keys: |
-            ${{ runner.os }}-bin-node-modules-
       - uses: pnpm/action-setup@v6
         name: Install pnpm
         with:
