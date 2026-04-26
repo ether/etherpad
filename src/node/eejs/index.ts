@@ -24,11 +24,13 @@
 import ejs from 'ejs';
 import fs from 'fs';
 import hooks from '../../static/js/pluginfw/hooks.js';
+import * as i18n from '../hooks/i18n.js';
 import path from 'node:path';
 // @ts-ignore
 import resolve from 'resolve';
 import settings from '../utils/Settings.js';
 import { pluginInstallPath } from '../../static/js/pluginfw/installer.js';
+import pluginUtils from '../../static/js/pluginfw/shared.js';
 import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';
 import { createRequire } from 'node:module';
@@ -36,6 +38,10 @@ import { createRequire } from 'node:module';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const requireFromHere = createRequire(import.meta.url);
+const templateModules = new Map([
+  ['ep_etherpad-lite/node/hooks/i18n', i18n],
+  ['ep_etherpad-lite/static/js/pluginfw/shared', pluginUtils],
+]);
 
 const templateCache = new Map();
 
@@ -111,7 +117,7 @@ eejs.require = (
   const ejspath = resolve.sync(name, { paths, basedir, extensions: ['.html', '.ejs'] });
 
   args.e = eejs;
-  args.require = requireFromHere;
+  args.require = (name: string) => templateModules.get(name) ?? requireFromHere(name);
 
   const cache = settings.maxAge !== 0;
   const template =

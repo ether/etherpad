@@ -15,7 +15,7 @@
     /* Completeness */
     "skipLibCheck": true                                 /* Skip type checking all .d.ts files. */,
     "resolveJsonModule": true,
-    "types": ["node", "jquery", "mocha"]
+    "types": ["node", "jquery", "mocha", "vitest/globals"]
   },
   "exclude": ["../plugin_packages", "node_modules"]
 }

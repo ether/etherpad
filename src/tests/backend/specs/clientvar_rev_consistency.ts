@@ -49,7 +49,6 @@ describe(__filename, function () {
   });
 
   it('CLIENT_VARS rev matches initialAttributedText state at that exact rev', async function () {
-    this.timeout(30000);
     const padId = randomString(10);
 
     // Create a pad with initial text
@@ -97,7 +96,6 @@ describe(__filename, function () {
     //   (b) lands several edits during that delay.
     // The bug also applied at higher load — to also reproduce the load
     // scenario, we pre-populate the pad with many revisions before connecting.
-    this.timeout(60000);
     const padId = randomString(10);
     const pad = await padManager.getPad(padId, 'rev0\n');
 
@@ -173,7 +171,6 @@ describe(__filename, function () {
   });
 
   it('client receives revisions created during clientVars hook await window', async function () {
-    this.timeout(30000);
     const padId = randomString(10);
     const pad = await padManager.getPad(padId, 'start\n');
 

@@ -8,7 +8,6 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 describe(__filename, function () {
-  this.timeout(30000);
   let agent: any;
   before(async function () { agent = await common.init(); });
 

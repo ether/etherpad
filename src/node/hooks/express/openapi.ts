@@ -1,8 +1,8 @@
 'use strict';
 
-import {OpenAPIOperations, OpenAPISuccessResponse, SwaggerUIResource} from "../../types/SwaggerUIResource";
-import {MapArrayType} from "../../types/MapType";
-import {ErrorCaused} from "../../types/ErrorCaused";
+import type {OpenAPIOperations, OpenAPISuccessResponse, SwaggerUIResource} from "../../types/SwaggerUIResource.ts";
+import type {MapArrayType} from "../../types/MapType.js";
+import type {ErrorCaused} from "../../types/ErrorCaused.js";
 
 /**
  * node/hooks/express/openapi.js

@@ -79,3 +79,10 @@ if (window.location.hash.toLowerCase() === '#skinvariantsbuilder') {
 }
 
 export {isDarkMode, setDarkModeInLocalStorage, isWhiteModeEnabledInLocalStorage, isDarkModeEnabledInLocalStorage, updateSkinVariantsClasses};
+export default {
+  isDarkMode,
+  setDarkModeInLocalStorage,
+  isWhiteModeEnabledInLocalStorage,
+  isDarkModeEnabledInLocalStorage,
+  updateSkinVariantsClasses,
+};

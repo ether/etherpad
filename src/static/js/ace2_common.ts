@@ -6,7 +6,7 @@
  * TL;DR COMMENTS ON THIS FILE ARE HIGHLY APPRECIATED
  */
 
-import {MapArrayType} from "../../node/types/MapType";
+import type {MapArrayType} from "../../node/types/MapType.js";
 
 /**
  * Copyright 2009 Google Inc.
@@ -63,3 +63,12 @@ export const binarySearchInfinite = (expectedLength: number, func: (num: number)
 };
 
 export const noop = () => {};
+
+export default {
+  isNodeText,
+  getAssoc,
+  setAssoc,
+  binarySearch,
+  binarySearchInfinite,
+  noop,
+};

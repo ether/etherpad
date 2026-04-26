@@ -17,7 +17,6 @@ const __dirname = dirname(__filename);
 const plugins = pluginDefs;
 
 describe(__filename, function () {
-  this.timeout(30000);
   let agent:any;
   const backups:MapArrayType<any> = {};
   const authHookNames = ['preAuthorize', 'authenticate', 'authorize'];

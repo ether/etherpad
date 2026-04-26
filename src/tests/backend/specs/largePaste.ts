@@ -22,7 +22,6 @@ describe(__filename, function () {
   });
 
   it('can set and retrieve 50,000 characters of text on a pad', async function () {
-    this.timeout(30000);
     const padId = `largePasteTest${Date.now()}`;
     const largeText = 'A'.repeat(50000);
 

@@ -3736,3 +3736,7 @@ export const init = async (editorInfo, cssManagers) => {
   const editor = new Ace2Inner(editorInfo, cssManagers);
   await editor.init();
 };
+
+export default {
+  init,
+};

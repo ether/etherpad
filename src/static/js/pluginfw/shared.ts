@@ -1,19 +1,36 @@
 // @ts-nocheck
 'use strict';
 
-import {createRequire} from 'node:module';
 import defs from './plugin_defs.js';
-
-// `createRequire` gives us a synchronous CommonJS-style `require` even though this file is now
-// ESM. This is needed to keep the existing plugin contract (CJS plugins via `module.exports`)
-// working when `loadFn` loads a plugin entry path at runtime. See `doc/plugins.md`.
-const requireFromHere = createRequire(import.meta.url);
 
 const disabledHookReasons = {
   hooks: {
     indexCustomInlineScripts: 'The hook makes it impossible to use a Content Security Policy ' +
         'that prohibits inline code. Permitting inline code makes XSS vulnerabilities more likely',
   },
+};
+
+const loadModule = (path, modules) => {
+  if (modules !== undefined && 'get' in modules) return modules.get(path);
+  if (typeof require !== 'function') throw new Error('dynamic hook loading unavailable');
+  return require(path);
+};
+
+const getHookFunction = (fn, functionName) => {
+  const namespaces = [fn, fn?.default].filter((ns) => ns != null);
+  for (const namespace of namespaces) {
+    let hookFn = namespace;
+    let missing = false;
+    for (const name of functionName.split('.')) {
+      if (hookFn == null || !(name in hookFn)) {
+        missing = true;
+        break;
+      }
+      hookFn = hookFn[name];
+    }
+    if (!missing) return hookFn;
+  }
+  return undefined;
 };
 
 const loadFn = (path, hookName, modules) => {
@@ -31,18 +48,8 @@ const loadFn = (path, hookName, modules) => {
     functionName = parts[1];
   }
 
-  let fn
-  if (modules === undefined || !("get" in modules)) {
-    fn = requireFromHere(/* webpackIgnore: true */ path);
-  } else {
-    fn = modules.get(path);
-  }
-
   functionName = functionName ? functionName : hookName;
-
-  for (const name of functionName.split('.')) {
-    fn = fn[name];
-  }
+  let fn = getHookFunction(loadModule(path, modules), functionName);
   return fn;
 };
 

@@ -1,8 +1,8 @@
 'use strict';
-import {ArgsExpressType} from "../../types/ArgsExpressType.js";
+import type {ArgsExpressType} from "../../types/ArgsExpressType.js";
 import path from "path";
 import fs from "fs";
-import {MapArrayType} from "../../types/MapType.js";
+import type {MapArrayType} from "../../types/MapType.js";
 
 import settings from '../../utils/Settings.js';
 

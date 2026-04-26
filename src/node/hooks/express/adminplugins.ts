@@ -1,14 +1,14 @@
 'use strict';
 
-import {ArgsExpressType} from "../../types/ArgsExpressType.js";
-import {ErrorCaused} from "../../types/ErrorCaused.js";
-import {QueryType} from "../../types/QueryType.js";
+import type {ArgsExpressType} from "../../types/ArgsExpressType.js";
+import type {ErrorCaused} from "../../types/ErrorCaused.js";
+import type {QueryType} from "../../types/QueryType.js";
 
 import {getAvailablePlugins, install, search, uninstall} from "../../../static/js/pluginfw/installer.js";
-import {PackageData, PackageInfo} from "../../types/PackageInfo.js";
+import type {PackageData, PackageInfo} from "../../types/PackageInfo.js";
 import semver from 'semver';
 import log4js from 'log4js';
-import {MapArrayType} from "../../types/MapType.js";
+import type {MapArrayType} from "../../types/MapType.js";
 
 import pluginDefs from '../../../static/js/pluginfw/plugin_defs.js';
 import stats from '../../stats.js';

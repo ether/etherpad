@@ -75,7 +75,7 @@ const tmpDirectory = os.tmpdir();
  * @param {String} padId the pad id to export
  * @param {String} authorId the author id to use for the import
  */
-const doImport = async (req:any, res:any, padId:string, authorId:string) => {
+const performImport = async (req:any, res:any, padId:string, authorId:string) => {
   // pipe to a file
   // convert file to html via soffice
   // set html in the pad
@@ -248,7 +248,7 @@ export const doImport = async (req:any, res:any, padId:string, authorId:string =
   let message = 'ok';
   let directDatabaseAccess;
   try {
-    directDatabaseAccess = await doImport(req, res, padId, authorId);
+    directDatabaseAccess = await performImport(req, res, padId, authorId);
   } catch (err:any) {
     const known = err instanceof ImportError && err.status;
     if (!known) logger.error(`Internal error during import: ${err.stack || err}`);

@@ -194,3 +194,7 @@ CountDownTimer.parse = (seconds) => ({
   minutes: (seconds / 60) | 0,
   seconds: (seconds % 60) | 0,
 });
+
+export default {
+  showCountDownTimerToReconnectOnModal,
+};

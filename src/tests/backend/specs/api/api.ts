@@ -47,7 +47,6 @@ describe(__filename, function () {
   });
 
   it('can obtain valid openapi definition document', async function () {
-    this.timeout(15000);
     await agent.get('/api/openapi.json')
         .expect(200)
         .expect((res:any) => {
@@ -106,7 +105,6 @@ describe(__filename, function () {
     });
 
     it('/api/openapi.json exposes apiKey security in apikey mode', async function () {
-      this.timeout(15000);
       const res = await agent.get('/api/openapi.json').expect(200);
       const schemes = res.body.components.securitySchemes;
       const hasApiKey = Object.values(schemes).some((s: any) => s.type === 'apiKey');

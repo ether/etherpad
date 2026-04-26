@@ -1,7 +1,7 @@
-import {ArgsExpressType} from "../types/ArgsExpressType.js";
-import {MapArrayType} from "../types/MapType.js";
+import type {ArgsExpressType} from "../types/ArgsExpressType.js";
+import type {MapArrayType} from "../types/MapType.js";
 import {IncomingForm} from "formidable";
-import {ErrorCaused} from "../types/ErrorCaused.js";
+import type {ErrorCaused} from "../types/ErrorCaused.js";
 import createHTTPError from "http-errors";
 
 import * as apiHandler from './APIHandler.js';

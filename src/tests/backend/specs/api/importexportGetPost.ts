@@ -41,7 +41,6 @@ const deleteTestPad = async () => {
 };
 
 describe(__filename, function () {
-  this.timeout(45000);
   before(async function () { agent = await common.init(); });
 
   describe('Connectivity', function () {
@@ -319,7 +318,6 @@ describe(__filename, function () {
     }); // End of LibreOffice tests.
 
     it('Tries to import .etherpad', async function () {
-      this.timeout(3000);
       await agent.post(`/p/${testPadId}/import`)
           .set("authorization", await common.generateJWTToken())
           .attach('file', etherpadDoc, {
@@ -336,7 +334,6 @@ describe(__filename, function () {
     });
 
     it('exports Etherpad', async function () {
-      this.timeout(3000);
       await agent.get(`/p/${testPadId}/export/etherpad`)
           .set("authorization", await common.generateJWTToken())
           .buffer(true).parse(superagent.parse.text)
@@ -345,7 +342,6 @@ describe(__filename, function () {
     });
 
     it('exports HTML for this Etherpad file', async function () {
-      this.timeout(3000);
       await agent.get(`/p/${testPadId}/export/html`)
           .set("authorization", await common.generateJWTToken())
           .expect(200)
@@ -354,7 +350,6 @@ describe(__filename, function () {
     });
 
     it('Tries to import unsupported file type', async function () {
-      this.timeout(3000);
       settings.allowUnknownFileEnds = false;
       await agent.post(`/p/${testPadId}/import`)
           .set("authorization", await common.generateJWTToken())
@@ -685,7 +680,6 @@ describe(__filename, function () {
         return pad;
       };
 
-      this.timeout(1000);
 
       beforeEach(async function () {
         await deleteTestPad();

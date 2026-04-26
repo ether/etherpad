@@ -1,6 +1,7 @@
 'use strict';
 
 import {MapArrayType} from "../../node/types/MapType.js";
+import {afterAll, beforeAll} from 'vitest';
 
 import AttributePool from '../../static/js/AttributePool.js';
 import {strict as assert} from 'assert';
@@ -32,10 +33,9 @@ const logLevel = logger.level;
 // https://github.com/mochajs/mocha/issues/2640
 process.on('unhandledRejection', (reason: string) => { throw reason; });
 
-before(async function () {
-  this.timeout(60000);
+beforeAll(async () => {
   await init();
-});
+}, 60000);
 
 
 export const generateJWTToken =  () => {
@@ -82,6 +82,7 @@ export const init = async function () {
   settings.importExportRateLimiting = {max: 999999};
   settings.commitRateLimiting = {duration: 0.001, points: 1e6};
   httpServer = await server.start();
+  if (httpServer == null) throw new Error('server.start() did not return an HTTP server');
   // @ts-ignore
   baseUrl = `http://localhost:${httpServer!.address()!.port}`;
   logger.debug(`HTTP server at ${baseUrl}`);
@@ -92,7 +93,7 @@ export const init = async function () {
   backups.authnFailureDelayMs = webaccess.authnFailureDelayMs;
   webaccess.setAuthnFailureDelayMs(0);
 
-  after(async function () {
+  afterAll(async () => {
     webaccess.setAuthnFailureDelayMs(backups.authnFailureDelayMs);
     // Note: This does not unset settings that were added.
     Object.assign(settings, backups.settings);

@@ -133,7 +133,6 @@ describe(__filename, function () {
 
   describe('undo of clear authorship colors (bug #2802)', function () {
     it('should not disconnect when undoing clear authorship with multiple authors', async function () {
-      this.timeout(30000);
 
       // Step 1: Connect User A
       const userA = await connectUser();

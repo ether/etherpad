@@ -9,18 +9,13 @@
   * MIT License | (c) Dustin Diaz 2015
   */
 
-!function (name, definition) {
-  if (typeof module != 'undefined' && module.exports) module.exports = definition()
-  else if (typeof define == 'function' && define.amd) define(definition)
-  else this[name] = definition()
-}('bowser', function () {
-  /**
-    * See useragents.js for examples of navigator.userAgent
-    */
+/**
+  * See useragents.js for examples of navigator.userAgent
+  */
 
-  var t = true
+const t = true;
 
-  function detect(ua) {
+function detect(ua) {
 
     function getFirstMatch(regex) {
       var match = ua.match(regex);
@@ -284,28 +279,28 @@
     } else result.x = t
 
     return result
-  }
+}
 
-  var bowser = detect(typeof navigator !== 'undefined' ? navigator.userAgent : '')
+const bowser = detect(typeof navigator !== 'undefined' ? navigator.userAgent : '');
 
-  bowser.test = function (browserList) {
-    for (var i = 0; i < browserList.length; ++i) {
-      var browserItem = browserList[i];
-      if (typeof browserItem=== 'string') {
-        if (browserItem in bowser) {
-          return true;
-        }
+bowser.test = function (browserList) {
+  for (let i = 0; i < browserList.length; ++i) {
+    const browserItem = browserList[i];
+        if (typeof browserItem=== 'string') {
+      if (browserItem in bowser) {
+        return true;
       }
     }
-    return false;
   }
+  return false;
+};
 
-  /*
-   * Set our detect method to the main bowser object so we can
-   * reuse it to test other user agents.
-   * This is needed to implement future tests.
-   */
-  bowser._detect = detect;
+/*
+ * Set our detect method to the main bowser object so we can
+ * reuse it to test other user agents.
+ * This is needed to implement future tests.
+ */
+bowser._detect = detect;
 
-  return bowser
-});
+export {detect};
+export default bowser;

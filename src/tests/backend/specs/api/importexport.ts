@@ -230,7 +230,6 @@ const testImports:MapArrayType<any> = {
 };
 
 describe(__filename, function () {
-  this.timeout(1000);
 
   before(async function () { agent = await common.init(); });
 

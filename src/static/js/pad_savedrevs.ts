@@ -37,3 +37,8 @@ export const saveNow = () => {
 export const init = (_pad) => {
   pad = _pad;
 };
+
+export default {
+  saveNow,
+  init,
+};

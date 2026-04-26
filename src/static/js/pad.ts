@@ -956,5 +956,4 @@ export {settings};
 export {randomString};
 export {getParams};
 export {pad};
-export {init};
 export {baseURL};

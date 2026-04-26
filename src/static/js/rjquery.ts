@@ -6,3 +6,4 @@ window.$ = $;
 const jq = window.$.noConflict(true);
 
 export {jq as jQuery, jq as $};
+export default jq;
