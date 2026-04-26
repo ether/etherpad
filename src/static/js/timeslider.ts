@@ -88,7 +88,7 @@ const init = () => {
       Cookies.set(`${cp}token`, token, {expires: 60});
     }
 
-    socket = socketio.connect(exports.baseURL, '/', {query: {padId}});
+    socket = socketio.connect(baseURL, '/', {query: {padId}});
 
     // send the ready message once we're connected
     socket.on('connect', () => {
@@ -120,8 +120,8 @@ const init = () => {
       window.location.reload();
     });
 
-    exports.socket = socket; // make the socket available
-    exports.BroadcastSlider = BroadcastSlider; // Make the slider available
+    window.socket = socket; // make the socket available
+    window.BroadcastSlider = BroadcastSlider; // Make the slider available
 
     hooks.aCallAll('postTimesliderInit');
   });
@@ -141,7 +141,7 @@ const sendSocketMsg = (type, data) => {
 
 const fireWhenAllScriptsAreLoaded = [];
 
-const handleClientVars = (message) => {
+const handleClientVars = async (message) => {
   // save the client Vars
   window.clientVars = message.data;
   cp = (window as any).clientVars?.cookiePrefix || '';
@@ -160,16 +160,14 @@ const handleClientVars = (message) => {
     })
   }
 
-  // load all script that doesn't work without the clientVars
-  BroadcastSlider = require('./broadcast_slider')
-      .loadBroadcastSliderJS(fireWhenAllScriptsAreLoaded);
+    // load all script that doesn't work without the clientVars
+    BroadcastSlider = (await import('./broadcast_slider.js')).loadBroadcastSliderJS(fireWhenAllScriptsAreLoaded);
 
-  require('./broadcast_revisions').loadBroadcastRevisionsJS();
-  changesetLoader = require('./broadcast')
-      .loadBroadcastJS(socket, sendSocketMsg, fireWhenAllScriptsAreLoaded, BroadcastSlider);
+    (await import('./broadcast_revisions.js')).loadBroadcastRevisionsJS();
+    changesetLoader = (await import('./broadcast.js')).loadBroadcastJS(socket, sendSocketMsg, fireWhenAllScriptsAreLoaded, BroadcastSlider);
 
-  // initialize export ui
-  require('./pad_impexp').padimpexp.init();
+    // initialize export ui
+    (await import('./pad_impexp.js')).padimpexp.init();
 
   // Create a base URI used for timeslider exports
   const baseURI = document.location.pathname;
