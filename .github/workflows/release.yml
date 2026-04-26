@@ -48,24 +48,33 @@ jobs:
           path: ether.github.com
           token: '${{ secrets.ETHER_RELEASE_TOKEN }}'
       - uses: actions/cache@v5
-        name: Setup gnpm cache
-        if: always()
+        name: Cache pnpm store
         with:
-          path: |
-            ${{ env.STORE_PATH }}
-            ~/.local/share/gnpm
-            ~/.cache/ms-playwright
-            /usr/local/bin/gnpm
-            /usr/local/bin/gnpm-0.0.12
-          key: ${{ runner.os }}-gnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          path: ${{ env.PNPM_HOME }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
-            ${{ runner.os }}-gnpm-store-
-      - name: Setup gnpm
-        uses: SamTV12345/gnpm-setup@main
+            ${{ runner.os }}-pnpm-store-
+      - uses: actions/cache@v5
+        name: Cache node_modules (ether.github.com)
         with:
-          version: 0.0.12
+          path: ether.github.com/node_modules
+          key: ${{ runner.os }}-ghpages-node-modules-${{ hashFiles('ether.github.com/pnpm-lock.yaml', 'ether.github.com/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-ghpages-node-modules-
+      - uses: actions/cache@v5
+        name: Cache node_modules (etherpad bin)
+        with:
+          path: etherpad/bin/node_modules
+          key: ${{ runner.os }}-bin-node-modules-${{ hashFiles('etherpad/bin/package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-bin-node-modules-
+      - uses: pnpm/action-setup@v6
+        name: Install pnpm
+        with:
+          version: 10.33.2
+          run_install: false
       - name: Install dependencies ether.github.com
-        run: gnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile
         working-directory: ether.github.com
       - name: Set git user
         run: |
@@ -82,8 +91,8 @@ jobs:
         working-directory: etherpad
         run: |
           cd bin
-          gnpm install
-          gnpm run release ${{ inputs.release_type }}
+          pnpm install
+          pnpm run release ${{ inputs.release_type }}
       - name: Push after release
         working-directory: etherpad
         run: |

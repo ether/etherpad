@@ -29,30 +29,41 @@ jobs:
         name: Checkout repository
         uses: actions/checkout@v6
       - uses: actions/cache@v5
-        name: Setup gnpm cache
-        if: always()
+        name: Cache pnpm store
+        with:
+          path: ${{ env.PNPM_HOME }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+      - uses: actions/cache@v5
+        name: Cache node_modules
         with:
           path: |
-            ${{ env.STORE_PATH }}
-            ~/.local/share/gnpm
-            ~/.cache/ms-playwright
-            /usr/local/bin/gnpm
-            /usr/local/bin/gnpm-0.0.12
-          key: ${{ runner.os }}-gnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+            node_modules
+            src/node_modules
+            admin/node_modules
+            ui/node_modules
+            bin/node_modules
+            doc/node_modules
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
-            ${{ runner.os }}-gnpm-store-
-      - name: Setup gnpm
-        uses: SamTV12345/gnpm-setup@main
+            ${{ runner.os }}-node-modules-
+      - uses: pnpm/action-setup@v6
+        name: Install pnpm
         with:
-          version: 0.0.12
+          version: 10.33.2
+          run_install: false
       - name: Install all dependencies and symlink for ep_etherpad-lite
-        run: gnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile
       - name: Build etherpad
-        run: gnpm run build:etherpad
-      # On release, create release
+        run: pnpm run build:etherpad
+      # On release, create release. `--silent` suppresses pnpm's lifecycle
+      # banner ("> generateChangelog\n> node ...") that would otherwise be
+      # captured into CHANGELOG.txt and end up at the top of the GitHub
+      # release notes.
       - name: Generate Changelog
         working-directory: bin
-        run: gnpm run generateChangelog ${{ github.ref }} > ${{ github.workspace }}-CHANGELOG.txt
+        run: pnpm --silent run generateChangelog ${{ github.ref }} > ${{ github.workspace }}-CHANGELOG.txt
       - name: Release
         uses: softprops/action-gh-release@v3
         if: ${{startsWith(github.ref, 'refs/tags/v') }}

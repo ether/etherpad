@@ -34,28 +34,44 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
       - uses: actions/cache@v5
-        name: Setup gnpm cache
-        if: always()
+        name: Cache pnpm store
+        with:
+          path: ~/.pnpm-store
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+      - uses: actions/cache@v5
+        name: Cache node_modules
         with:
           path: |
-            ${{ env.STORE_PATH }}
-            ~/.local/share/gnpm
-            /usr/local/bin/gnpm
-            /usr/local/bin/gnpm-0.0.12
-          key: ${{ runner.os }}-gnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+            node_modules
+            src/node_modules
+            admin/node_modules
+            ui/node_modules
+            bin/node_modules
+            doc/node_modules
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
-            ${{ runner.os }}-gnpm-store-
-      - name: Setup gnpm
-        uses: SamTV12345/gnpm-setup@main
+            ${{ runner.os }}-node-modules-
+      - uses: actions/cache@v5
+        name: Cache vitepress build
         with:
-          version: 0.0.12
+          path: doc/.vitepress/cache
+          key: ${{ runner.os }}-vitepress-${{ hashFiles('doc/**/*.md', 'doc/.vitepress/config.*') }}
+          restore-keys: |
+            ${{ runner.os }}-vitepress-
+      - uses: pnpm/action-setup@v6
+        name: Install pnpm
+        with:
+          version: 10.33.2
+          run_install: false
       - name: Setup Pages
         uses: actions/configure-pages@v6
       - name: Install dependencies
-        run: gnpm install
+        run: pnpm install --frozen-lockfile
       - name: Build app
         working-directory: doc
-        run: gnpm run docs:build
+        run: pnpm run docs:build
         env:
           COMMIT_REF: ${{ github.sha }}
       - name: Upload artifact

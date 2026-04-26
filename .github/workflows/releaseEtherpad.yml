@@ -23,33 +23,38 @@ jobs:
             registry-url: https://registry.npmjs.org/
         - name: Upgrade npm to >=11.5.1 (required for trusted publishing)
           run: npm install -g npm@latest
-        - name: Get pnpm store directory
-          shell: bash
-          run: |
-            echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
         - uses: actions/cache@v5
-          name: Setup pnpm cache
-          if: always()
+          name: Cache pnpm store
+          with:
+            path: ${{ env.PNPM_HOME }}
+            key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+            restore-keys: |
+              ${{ runner.os }}-pnpm-store-
+        - uses: actions/cache@v5
+          name: Cache node_modules
           with:
             path: |
-              ${{ env.STORE_PATH }}
-              ~/.local/share/gnpm
-              /usr/local/bin/gnpm
-              /usr/local/bin/gnpm-0.0.12
-            key: ${{ runner.os }}-gnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+              node_modules
+              src/node_modules
+              admin/node_modules
+              ui/node_modules
+              bin/node_modules
+              doc/node_modules
+            key: ${{ runner.os }}-node-modules-${{ hashFiles('**/pnpm-lock.yaml') }}
             restore-keys: |
-              ${{ runner.os }}-gnpm-store-
-        - name: Setup gnpm
-          uses: SamTV12345/gnpm-setup@main
+              ${{ runner.os }}-node-modules-
+        - uses: pnpm/action-setup@v6
+          name: Install pnpm
           with:
-            version: 0.0.12
+            version: 10.33.2
+            run_install: false
         - name: Install dependencies
-          run: gnpm install --frozen-lockfile
+          run: pnpm install --frozen-lockfile
         - name: Rename etherpad
           working-directory: ./src
           run: sed -i 's/ep_etherpad-lite/ep_etherpad/g' package.json
-        # Use `npm publish` directly (not `gnpm`/`pnpm` wrappers) because OIDC
-        # trusted publishing requires npm CLI >= 11.5.1 and the wrappers shell
+        # Use `npm publish` directly (not the `pnpm` wrapper) because OIDC
+        # trusted publishing requires npm CLI >= 11.5.1 and the wrapper shells
         # out to npm; calling npm directly avoids any shim ambiguity. The
         # ep_etherpad package must have a trusted publisher configured on
         # npmjs.com pointing at this workflow file. See:
