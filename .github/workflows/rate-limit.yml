@@ -29,22 +29,17 @@ jobs:
         name: Checkout repository
         uses: actions/checkout@v6
       - uses: actions/cache@v5
-        name: Setup gnpm cache
-        if: always()
+        name: Cache pnpm store
         with:
-          path: |
-            ${{ env.STORE_PATH }}
-            ~/.local/share/gnpm
-            ~/.cache/ms-playwright
-            /usr/local/bin/gnpm
-            /usr/local/bin/gnpm-0.0.12
-          key: ${{ runner.os }}-gnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          path: ${{ env.PNPM_HOME }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
-            ${{ runner.os }}-gnpm-store-
-      - name: Setup gnpm
-        uses: SamTV12345/gnpm-setup@main
+            ${{ runner.os }}-pnpm-store-
+      - uses: pnpm/action-setup@v6
+        name: Install pnpm
         with:
-          version: 0.0.12
+          version: 10.33.2
+          run_install: false
 
       -
         name: docker network
@@ -63,7 +58,7 @@ jobs:
           docker run --rm --network ep_net --ip 172.23.42.3 --name anotherip -dt anotherip
       -
         name: install dependencies and create symlink for ep_etherpad-lite
-        run: gnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile
       -
         name: run rate limit test
         run: |

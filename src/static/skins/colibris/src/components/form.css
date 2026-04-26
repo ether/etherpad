@@ -109,9 +109,12 @@ select:hover, .nice-select:hover {
   transform: translateX(14px);
 }
 
-[type="checkbox"]:checked:disabled + label,
-[type="checkbox"]:checked:disabled + label:before,
-[type="checkbox"]:checked:disabled + label:after {
+/* Apply to any disabled checkbox (checked or unchecked), not just checked
+   ones, so dependent toggles like "Chat always on screen" visibly grey out
+   when "Disable chat" is ticked. Fixes #7592. */
+[type="checkbox"]:disabled + label,
+[type="checkbox"]:disabled + label:before,
+[type="checkbox"]:disabled + label:after {
   cursor: not-allowed;
   opacity: .4;
 }

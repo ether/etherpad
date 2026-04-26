@@ -53,6 +53,17 @@
   margin: 5px 0;
 }
 
+/* When a settings checkbox is disabled (e.g. "Chat always on screen" while
+   "Disable chat" is ticked), the browser greys the checkbox itself but the
+   adjacent `<label>` still looks active, leaving the row visually clickable
+   even though it isn't. Match the row to the checkbox's disabled state.
+   Fixes #7592. */
+.popup input[type="checkbox"]:disabled + label,
+.popup input[type="radio"]:disabled + label {
+  color: #999;
+  cursor: not-allowed;
+}
+
 /* Mobile devices */
 @media only screen and (max-width: 800px) {
   .popup {

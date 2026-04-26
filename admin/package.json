@@ -1,7 +1,7 @@
 {
   "name": "admin",
   "private": true,
-  "version": "2.7.1",
+  "version": "2.7.2",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -25,9 +25,9 @@
     "eslint": "^10.2.1",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
-    "i18next": "^26.0.6",
+    "i18next": "^26.0.7",
     "i18next-browser-languagedetector": "^8.2.1",
-    "lucide-react": "^1.8.0",
+    "lucide-react": "^1.11.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "react-hook-form": "^7.73.1",
@@ -37,7 +37,6 @@
     "typescript": "^6.0.3",
     "vite": "npm:rolldown-vite@7.2.10",
     "vite-plugin-babel": "^1.6.0",
-    "vite-plugin-static-copy": "^4.1.0",
     "zustand": "^5.0.12"
   },
   "overrides": {

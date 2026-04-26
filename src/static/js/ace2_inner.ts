@@ -2879,22 +2879,36 @@ function Ace2Inner(editorInfo, cssManagers) {
           // This is required, browsers will try to do normal default behavior on
           // page up / down and the default behavior SUCKS
           evt.preventDefault();
-          const oldVisibleLineRange = scroll.getVisibleLineRange(rep);
-          let topOffset = rep.selStart[0] - oldVisibleLineRange[0];
-          if (topOffset < 0) {
-            topOffset = 0;
-          }
 
           const isPageDown = evt.which === 34;
           const isPageUp = evt.which === 33;
 
+          const oldVisibleLineRange = scroll.getVisibleLineRange(rep);
+          let topOffset = rep.selStart[0] - oldVisibleLineRange[0];
+          if (topOffset < 0) topOffset = 0;
+
           scheduler.setTimeout(() => {
-            // the visible lines IE 1,10
             const newVisibleLineRange = scroll.getVisibleLineRange(rep);
-            // total count of lines in pad IE 10
             const linesCount = rep.lines.length();
-            // How many lines are in the viewport right now?
-            const numberOfLinesInViewport = newVisibleLineRange[1] - newVisibleLineRange[0];
+
+            // Calculate lines to skip based on viewport pixel height divided by
+            // the average rendered line height. This correctly handles long wrapped
+            // lines that consume multiple visual rows (fixes #4562).
+            const viewportHeight = getInnerHeight();
+            const visibleStart = newVisibleLineRange[0];
+            const visibleEnd = newVisibleLineRange[1];
+            let totalPixelHeight = 0;
+            for (let i = visibleStart; i <= Math.min(visibleEnd, linesCount - 1); i++) {
+              const entry = rep.lines.atIndex(i);
+              if (entry && entry.lineNode) {
+                totalPixelHeight += entry.lineNode.offsetHeight;
+              }
+            }
+            const visibleLogicalLines = visibleEnd - visibleStart + 1;
+            // Use pixel-based count: how many logical lines fit in one viewport
+            const numberOfLinesInViewport = visibleLogicalLines > 0 && totalPixelHeight > 0
+                ? Math.max(1, Math.round(visibleLogicalLines * viewportHeight / totalPixelHeight))
+                : Math.max(1, visibleLogicalLines);
 
             if (isPageUp && padShortcutEnabled.pageUp) {
               rep.selStart[0] -= numberOfLinesInViewport;
@@ -2910,18 +2924,11 @@ function Ace2Inner(editorInfo, cssManagers) {
             rep.selStart[0] = Math.max(0, Math.min(rep.selStart[0], linesCount - 1));
             rep.selEnd[0] = Math.max(0, Math.min(rep.selEnd[0], linesCount - 1));
             updateBrowserSelectionFromRep();
-            // get the current caret selection, can't use rep. here because that only gives
-            // us the start position not the current
+            // scroll to the caret position
             const myselection = targetDoc.getSelection();
-            // get the carets selection offset in px IE 214
             let caretOffsetTop = myselection.focusNode.parentNode.offsetTop ||
                 myselection.focusNode.offsetTop;
-
-            // sometimes the first selection is -1 which causes problems
-            // (Especially with ep_page_view)
-            // so use focusNode.offsetTop value.
             if (caretOffsetTop === -1) caretOffsetTop = myselection.focusNode.offsetTop;
-            // set the scrollY offset of the viewport on the document
             scroll.setScrollY(caretOffsetTop);
           }, 200);
         }
@@ -2994,6 +3001,25 @@ function Ace2Inner(editorInfo, cssManagers) {
                 lineAndColumnFromChar(selectionInfo.selStart),
                 lineAndColumnFromChar(selectionInfo.selEnd),
                 selectionInfo.selFocusAtStart);
+            // Issue #7007: bring the caret's line into view after
+            // undo/redo so the user can actually see the change that
+            // just got reverted. The outer inCallStack's finally-block
+            // scroll path is fragile on large pads — in particular
+            // `scrollNodeVerticallyIntoView`'s caret-below-viewport
+            // branch intentionally scrolls to a fixed offset to keep
+            // the Enter-on-last-line experience smooth (see PR #4639),
+            // which leaves undo/redo pointed at the wrong spot
+            // whenever the caret jumps to a mid-document line. Using
+            // Element.scrollIntoView with block:"center" is native,
+            // framework-agnostic, and matches the behavior other
+            // editors (gedit, libreoffice) use.
+            const focusPoint = selectionInfo.selFocusAtStart
+                ? lineAndColumnFromChar(selectionInfo.selStart)
+                : lineAndColumnFromChar(selectionInfo.selEnd);
+            const caretLineNode = rep.lines.atIndex(focusPoint[0])?.lineNode;
+            if (caretLineNode && typeof caretLineNode.scrollIntoView === 'function') {
+              caretLineNode.scrollIntoView({block: 'center', behavior: 'auto'});
+            }
           }
           const oldEvent = currentCallStack.startNewEvent(oldEventType, true);
           return oldEvent;

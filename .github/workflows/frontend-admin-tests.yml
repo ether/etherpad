@@ -29,24 +29,25 @@ jobs:
         name: Checkout repository
         uses: actions/checkout@v6
       - uses: actions/cache@v5
-        name: Setup gnpm cache
-        if: always()
+        name: Cache pnpm store
         with:
-          path: |
-            ${{ env.PNPM_HOME }}
-            ~/.local/share/gnpm
-            /usr/local/bin/gnpm
-            /usr/local/bin/gnpm-0.0.12
-          key: ${{ runner.os }}-gnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          path: ${{ env.PNPM_HOME }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
-            ${{ runner.os }}-gnpm-store-
-      - name: Setup gnpm
-        uses: SamTV12345/gnpm-setup@main
+            ${{ runner.os }}-pnpm-store-
+      - uses: pnpm/action-setup@v6
+        name: Install pnpm
         with:
-          version: 0.0.12
+          version: 10.33.2
+          run_install: false
+      - name: Use Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node }}
+          cache: pnpm
       -
         name: Install all dependencies and symlink for ep_etherpad-lite
-        run: gnpm i --runtimeVersion="${{ matrix.node }}"
+        run: pnpm i
       - name: Cache Playwright browsers
         uses: actions/cache@v5
         id: playwright-cache
@@ -71,11 +72,11 @@ jobs:
       - name: Build admin frontend
         working-directory: admin
         run: |
-            gnpm run build --runtimeVersion="${{ matrix.node }}"
+            pnpm run build
       - name: Run the frontend admin tests
         shell: bash
         run: |
-          gnpm run prod --runtimeVersion="${{ matrix.node }}" > /tmp/etherpad-server.log 2>&1 &
+          pnpm run prod > /tmp/etherpad-server.log 2>&1 &
           connected=false
           can_connect() {
           curl -sSfo /dev/null http://localhost:9001/ || return 1
@@ -87,7 +88,7 @@ jobs:
           sleep 1
           done
           cd src
-          gnpm run test-admin --runtimeVersion="${{ matrix.node }}"
+          pnpm run test-admin
       - name: Upload server log on failure
         uses: actions/upload-artifact@v7
         if: failure()

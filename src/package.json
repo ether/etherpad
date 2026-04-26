@@ -40,7 +40,7 @@
     "ejs": "^5.0.2",
     "esbuild": "^0.28.0",
     "express": "^5.2.1",
-    "express-rate-limit": "^8.3.2",
+    "express-rate-limit": "^8.4.0",
     "express-session": "^1.19.0",
     "find-root": "1.1.0",
     "formidable": "^3.5.4",
@@ -59,7 +59,7 @@
     "measured-core": "^2.0.0",
     "mime-types": "^3.0.2",
     "mongodb": "^7.1.1",
-    "mssql": "^12.2.1",
+    "mssql": "^12.5.0",
     "mysql2": "^3.22.2",
     "nano": "^11.0.5",
     "oidc-provider": "9.8.2",
@@ -157,6 +157,6 @@
     "debug:socketio": "cross-env DEBUG=socket.io* node --require tsx/cjs node/server.ts",
     "test:vitest": "vitest"
   },
-  "version": "2.7.1",
+  "version": "2.7.2",
   "license": "Apache-2.0"
 }

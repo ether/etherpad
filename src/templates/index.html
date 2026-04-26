@@ -1,5 +1,11 @@
+<%
+  var langs = require("ep_etherpad-lite/node/hooks/i18n").availableLangs;
+  var renderLang = (req && typeof req.acceptsLanguages === 'function'
+    && req.acceptsLanguages(Object.keys(langs))) || 'en';
+  var renderDir = (langs[renderLang] && langs[renderLang].direction === 'rtl') ? 'rtl' : 'ltr';
+%>
 <!doctype html>
-<html>
+<html lang="<%=renderLang%>" dir="<%=renderDir%>">
 
         <title><%=settings.title%></title>
         <meta charset="utf-8">

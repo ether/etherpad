@@ -98,6 +98,15 @@
 }
 
 .toolbar .show-more-icon-btn {
+  /* Reset user-agent <button> styling introduced when this was converted
+     from <span> for a11y. Without these the native button border/background
+     leak through and shift the glyph off-centre. */
+  appearance: none;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  font: inherit;
   display:none;
   cursor: pointer;
   height: 39px;
