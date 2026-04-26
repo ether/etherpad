@@ -26,7 +26,7 @@ import {deserializeOps, splitAttributionLines, subattribution} from '../../stati
 import {StringIterator} from "../../static/js/StringIterator.js";
 import {StringAssembler} from "../../static/js/StringAssembler.js";
 import * as attributes from '../../static/js/attributes.js';
-import padManager from '../db/PadManager.js';
+import * as padManager from '../db/PadManager.js';
 import { _analyzeLine } from './ExportHelper.js';
 
 // This is slightly different than the HTML method as it passes the output to getTXTFromAText

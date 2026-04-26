@@ -5,9 +5,9 @@ import {dirname} from 'node:path';
 import {PadType} from "../../../../node/types/PadType";
 
 import assert from 'assert';
-import authorManager from '../../../../node/db/AuthorManager.js';
+import * as authorManager from '../../../../node/db/AuthorManager.js';
 import * as common from '../../common.js';
-import padManager from '../../../../node/db/PadManager.js';
+import * as padManager from '../../../../node/db/PadManager.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);

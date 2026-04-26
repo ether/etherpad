@@ -12,7 +12,7 @@ import {dirname} from 'node:path';
 
 import assert from 'assert';
 import * as common from '../../common.js';
-import padManager from '../../../../node/db/PadManager.js';
+import * as padManager from '../../../../node/db/PadManager.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);

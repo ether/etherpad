@@ -21,7 +21,7 @@ import {APool} from "../types/PadType.js";
 import AttributePool from '../../static/js/AttributePool.js';
 import { Pad } from '../db/Pad.js';
 import Stream from './Stream.js';
-import authorManager from '../db/AuthorManager.js';
+import * as authorManager from '../db/AuthorManager.js';
 import db from '../db/DB.js';
 import hooks from '../../static/js/pluginfw/hooks.js';
 import log4js from 'log4js';

@@ -9,7 +9,7 @@ import ChatMessage from '../../../static/js/ChatMessage.js';
 import {Pad} from '../../../node/db/Pad.js';
 import assert from 'assert';
 import * as common from '../common.js';
-import padManager from '../../../node/db/PadManager.js';
+import * as padManager from '../../../node/db/PadManager.js';
 import pluginDefs from '../../../static/js/pluginfw/plugin_defs.js';
 
 const __filename = fileURLToPath(import.meta.url);

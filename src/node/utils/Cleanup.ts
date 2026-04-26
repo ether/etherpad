@@ -4,7 +4,7 @@ import {AChangeSet} from "../types/PadType.js";
 import {Revision} from "../types/Revision.js";
 
 import {timesLimit, firstSatisfies} from './promises.js';
-import padManager from 'ep_etherpad-lite/node/db/PadManager.js';
+import * as padManager from 'ep_etherpad-lite/node/db/PadManager.js';
 import db from 'ep_etherpad-lite/node/db/DB.js';
 import * as Changeset from 'ep_etherpad-lite/static/js/Changeset.js';
 import padMessageHandler from 'ep_etherpad-lite/node/handler/PadMessageHandler.js';

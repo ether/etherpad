@@ -18,7 +18,7 @@ import {dirname} from 'node:path';
 
 import assert from 'assert';
 import * as common from '../common.js';
-import padManager from '../../../node/db/PadManager.js';
+import * as padManager from '../../../node/db/PadManager.js';
 import pluginDefs from '../../../static/js/pluginfw/plugin_defs.js';
 import settings from '../../../node/utils/Settings.js';
 import {randomString} from '../../../static/js/pad_utils.js';

@@ -2,7 +2,7 @@
 
 import {fileURLToPath} from 'node:url';
 import {dirname} from 'node:path';
-import authorManager from '../../../node/db/AuthorManager.js';
+import * as authorManager from '../../../node/db/AuthorManager.js';
 import {strict as assert} from "assert";
 import * as common from '../common.js';
 import db from '../../../node/db/DB.js';

@@ -17,9 +17,9 @@
 
 import Stream from './Stream.js';
 import { strict as assert } from 'assert';
-import authorManager from '../db/AuthorManager.js';
+import * as authorManager from '../db/AuthorManager.js';
 import hooks from '../../static/js/pluginfw/hooks.js';
-import padManager from '../db/PadManager.js';
+import * as padManager from '../db/PadManager.js';
 
 export const getPadRaw = async (padId:string, readOnlyId:string, revNum?: number) => {
   const dstPfx = `pad:${readOnlyId || padId}`;

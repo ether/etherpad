@@ -20,7 +20,7 @@ import {MapArrayType} from "../types/MapType.js";
 
 import {deserializeOps, splitAttributionLines, subattribution} from '../../static/js/Changeset.js';
 import * as attributes from '../../static/js/attributes.js';
-import padManager from '../db/PadManager.js';
+import * as padManager from '../db/PadManager.js';
 import _ from 'underscore';
 import Security from '../../static/js/security.js';
 import hooks from '../../static/js/pluginfw/hooks.js';

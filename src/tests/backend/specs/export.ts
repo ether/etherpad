@@ -5,7 +5,7 @@ import {dirname} from 'node:path';
 import {MapArrayType} from "../../../node/types/MapType";
 
 import * as common from '../common.js';
-import padManager from '../../../node/db/PadManager.js';
+import * as padManager from '../../../node/db/PadManager.js';
 import settings from '../../../node/utils/Settings.js';
 
 const __filename = fileURLToPath(import.meta.url);
