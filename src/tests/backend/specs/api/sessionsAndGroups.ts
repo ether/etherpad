@@ -1,11 +1,16 @@
 'use strict';
 
-import {agent, generateJWTToken, init, logger} from "../../common";
+import {fileURLToPath} from 'node:url';
+import {dirname} from 'node:path';
+import {agent, generateJWTToken, init, logger} from "../../common.js";
 
 import TestAgent from "supertest/lib/agent";
 import supertest from "supertest";
-const assert = require('assert').strict;
-const db = require('../../../../node/db/DB');
+import assert from 'assert';
+import db from '../../../../node/db/DB.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 let apiVersion = 1;
 let groupID = '';

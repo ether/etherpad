@@ -1,11 +1,16 @@
 'use strict';
 
+import {fileURLToPath} from 'node:url';
+import {dirname} from 'node:path';
 import {PadType} from "../../../../node/types/PadType";
 
-const assert = require('assert').strict;
-const authorManager = require('../../../../node/db/AuthorManager');
-const common = require('../../common');
-const padManager = require('../../../../node/db/PadManager');
+import assert from 'assert';
+import authorManager from '../../../../node/db/AuthorManager.js';
+import common from '../../common.js';
+import padManager from '../../../../node/db/PadManager.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 describe(__filename, function () {
   let agent:any;
