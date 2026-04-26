@@ -25,13 +25,13 @@
 // requires: top
 // requires: undefined
 
-const hooks = require('./pluginfw/hooks');
-const makeCSSManager = require('./cssmanager').makeCSSManager;
-const pluginUtils = require('./pluginfw/shared');
-const ace2_inner = require('ep_etherpad-lite/static/js/ace2_inner')
+import hooks from './pluginfw/hooks.js';
+import {makeCSSManager} from './cssmanager.js';
+import pluginUtils from './pluginfw/shared.js';
+import ace2_inner from 'ep_etherpad-lite/static/js/ace2_inner.js';
 const debugLog = (...args) => {};
-const cl_plugins = require('ep_etherpad-lite/static/js/pluginfw/client_plugins')
-const rJQuery = require('ep_etherpad-lite/static/js/rjquery')
+import cl_plugins from 'ep_etherpad-lite/static/js/pluginfw/client_plugins.js';
+import rJQuery from 'ep_etherpad-lite/static/js/rjquery.js';
 // The inner and outer iframe's locations are about:blank, so relative URLs are relative to that.
 // Firefox and Chrome seem to do what the developer intends if given a relative URL, but Safari
 // errors out unless given an absolute URL for a JavaScript-created element.
@@ -335,4 +335,4 @@ const Ace2Editor = function () {
   };
 };
 
-exports.Ace2Editor = Ace2Editor;
+export {Ace2Editor};

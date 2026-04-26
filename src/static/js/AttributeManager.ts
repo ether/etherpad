@@ -1,9 +1,9 @@
 // @ts-nocheck
-import AttributeMap from './AttributeMap';
-import {compose, deserializeOps, isIdentity} from './Changeset';
-import {Builder} from "./Builder";
-import {buildKeepRange, buildKeepToStartOfRange, buildRemoveRange} from './ChangesetUtils';
-import attributes from './attributes';
+import AttributeMap from './AttributeMap.js';
+import {compose, deserializeOps, isIdentity} from './Changeset.js';
+import {Builder} from "./Builder.js";
+import {buildKeepRange, buildKeepToStartOfRange, buildRemoveRange} from './ChangesetUtils.js';
+import attributes from './attributes.js';
 import underscore from "underscore";
 
 const lineMarkerAttribute = 'lmkr';
@@ -379,4 +379,4 @@ AttributeManager.prototype = underscore.default(AttributeManager.prototype).exte
   },
 });
 
-module.exports = AttributeManager;
+export default AttributeManager;

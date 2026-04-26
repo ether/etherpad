@@ -23,7 +23,7 @@
  * limitations under the License.
  */
 
-exports.makeCSSManager = (browserSheet) => {
+export const makeCSSManager = (browserSheet) => {
   const browserRules = () => (browserSheet.cssRules || browserSheet.rules);
 
   const browserDeleteRule = (i) => {

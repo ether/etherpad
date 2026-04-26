@@ -10,7 +10,7 @@
 // THIS FILE IS ALSO AN APPJET MODULE: etherpad.collab.ace.contentcollector
 // %APPJET%: import("etherpad.collab.ace.easysync2.Changeset");
 // %APPJET%: import("etherpad.admin.plugins");
-import Op from "./Op";
+import Op from "./Op.js";
 
 /**
  * Copyright 2009 Google Inc.
@@ -30,11 +30,11 @@ import Op from "./Op";
 
 const _MAX_LIST_LEVEL = 16;
 
-import AttributeMap from './AttributeMap';
+import AttributeMap from './AttributeMap.js';
 import UNorm from 'unorm';
-import {subattribution} from './Changeset';
-import {SmartOpAssembler} from "./SmartOpAssembler";
-const hooks = require('./pluginfw/hooks');
+import {subattribution} from './Changeset.js';
+import {SmartOpAssembler} from "./SmartOpAssembler.js";
+import hooks from './pluginfw/hooks.js';
 
 const sanitizeUnicode = (s) => UNorm.nfc(s);
 const tagName = (n) => n.tagName && n.tagName.toLowerCase();
@@ -744,6 +744,4 @@ const makeContentCollector = (collectStyles, abrowser, apool, className2Author) 
   return cc;
 };
 
-exports.sanitizeUnicode = sanitizeUnicode;
-exports.makeContentCollector = makeContentCollector;
-exports.supportedElems = supportedElems;
+export {sanitizeUnicode, makeContentCollector, supportedElems};

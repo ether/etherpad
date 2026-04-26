@@ -19,7 +19,7 @@
 
 let pad;
 
-exports.saveNow = () => {
+export const saveNow = () => {
   pad.collabClient.sendMessage({type: 'SAVE_REVISION'});
   window.$.gritter.add({
     // (string | mandatory) the heading of the notification
@@ -34,6 +34,6 @@ exports.saveNow = () => {
   });
 };
 
-exports.init = (_pad) => {
+export const init = (_pad) => {
   pad = _pad;
 };

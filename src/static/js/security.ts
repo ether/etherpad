@@ -17,4 +17,6 @@
  * limitations under the License.
  */
 
-module.exports = require('security');
+import Security from 'security';
+
+export default Security;

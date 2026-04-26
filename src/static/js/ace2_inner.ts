@@ -1,5 +1,5 @@
 // @ts-nocheck
-import {Builder} from "./Builder";
+import {Builder} from "./Builder.js";
 
 /**
  * Copyright 2009 Google Inc.
@@ -19,34 +19,35 @@ import {Builder} from "./Builder";
  */
 let documentAttributeManager;
 
-import AttributeMap from './AttributeMap';
-const browser = require('./vendors/browser');
-import padutils from './pad_utils'
-const Ace2Common = require('./ace2_common');
-const $ = require('./rjquery').$;
-import {characterRangeFollow, checkRep, cloneAText, compose, deserializeOps, filterAttribNumbers, inverse, isIdentity, makeAText, makeAttribution, mapAttribNumbers, moveOpsToNewPool, mutateAttributionLines, mutateTextLines, oldLen, opsFromAText, pack, splitAttributionLines} from './Changeset'
+import AttributeMap from './AttributeMap.js';
+import browser from './vendors/browser.js';
+import padutils from './pad_utils.js';
+import Ace2Common from './ace2_common.js';
+import {$} from './rjquery.js';
+import {characterRangeFollow, checkRep, cloneAText, compose, deserializeOps, filterAttribNumbers, inverse, isIdentity, makeAText, makeAttribution, mapAttribNumbers, moveOpsToNewPool, mutateAttributionLines, mutateTextLines, oldLen, opsFromAText, pack, splitAttributionLines} from './Changeset.js';
 
 
 const isNodeText = Ace2Common.isNodeText;
 const getAssoc = Ace2Common.getAssoc;
 const setAssoc = Ace2Common.setAssoc;
 const noop = Ace2Common.noop;
-const hooks = require('./pluginfw/hooks');
-import SkipList from "./skiplist";
-import Scroll from './scroll'
-import AttribPool from './AttributePool'
-import {SmartOpAssembler} from "./SmartOpAssembler";
-import Op from "./Op";
-import {buildKeepRange, buildKeepToStartOfRange, buildRemoveRange} from './ChangesetUtils'
+import hooks from './pluginfw/hooks.js';
+import SkipList from "./skiplist.js";
+import Scroll from './scroll.js';
+import AttribPool from './AttributePool.js';
+import {SmartOpAssembler} from "./SmartOpAssembler.js";
+import Op from "./Op.js";
+import {buildKeepRange, buildKeepToStartOfRange, buildRemoveRange} from './ChangesetUtils.js';
+
+import {makeChangesetTracker} from './changesettracker.js';
+import {colorutils} from './colorutils.js';
+import {makeContentCollector} from './contentcollector.js';
+import {domline} from './domline.js';
+import {linestylefilter} from './linestylefilter.js';
+import {undoModule} from './undomodule.js';
+import AttributeManager from './AttributeManager.js';
 
 function Ace2Inner(editorInfo, cssManagers) {
-  const makeChangesetTracker = require('./changesettracker').makeChangesetTracker;
-  const colorutils = require('./colorutils').colorutils;
-  const makeContentCollector = require('./contentcollector').makeContentCollector;
-  const domline = require('./domline').domline;
-  const linestylefilter = require('./linestylefilter').linestylefilter;
-  const undoModule = require('./undomodule').undoModule;
-  const AttributeManager = require('./AttributeManager');
   const DEBUG = false;
 
   const THE_TAB = '    '; // 4
@@ -3731,7 +3732,7 @@ function Ace2Inner(editorInfo, cssManagers) {
   };
 }
 
-exports.init = async (editorInfo, cssManagers) => {
+export const init = async (editorInfo, cssManagers) => {
   const editor = new Ace2Inner(editorInfo, cssManagers);
   await editor.init();
 };

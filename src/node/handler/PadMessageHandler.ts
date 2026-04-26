@@ -52,7 +52,7 @@ import * as webaccess from '../hooks/express/webaccess.js';
 import { checkValidRev } from '../utils/checkValidRev.js';
 
 let rateLimiter:any;
-let socketio: any = null;
+let socketioServer: any = null;
 
 hooks.deprecationNotices.clientReady = 'use the userJoin hook instead';
 
@@ -93,7 +93,7 @@ export const socketio = () => {
 export const sessioninfos:MapArrayType<any> = {};
 
 export function getTotalActiveUsers() {
-  return socketio ? (socketio as any).engine.clientsCount : 0;
+  return socketioServer ? (socketioServer as any).engine.clientsCount : 0;
 }
 
 export function getActivePadCountFromSessionInfos() {
@@ -184,7 +184,7 @@ const padChannels = new Channels((ch, {socket, message}) => handleUserChanges(so
  * @param socket_io The Socket
  */
 export const setSocketIO = (socket_io:any) => {
-  socketio = socket_io;
+  socketioServer = socket_io;
 };
 
 /**
@@ -203,13 +203,13 @@ export const handleConnect = (socket:any) => {
  */
 export const kickSessionsFromPad = (padID: string) => {
 
-  if(socketio.sockets == null) return;
+  if(socketioServer.sockets == null) return;
 
   // skip if there is nobody on this pad
   if (_getRoomSockets(padID).length === 0) return;
 
   // disconnect everyone from this pad
-  socketio.in(padID).emit('message', {disconnect: 'deleted'});
+  socketioServer.in(padID).emit('message', {disconnect: 'deleted'});
 };
 
 /**
@@ -521,10 +521,10 @@ export const handleCustomObjectMessage = (msg: CustomMessage, sessionID: string)
   if (msg.data.type === 'CUSTOM') {
     if (sessionID) {
       // a sessionID is targeted: directly to this sessionID
-      socketio.sockets.socket(sessionID).emit('message', msg);
+      socketioServer.sockets.socket(sessionID).emit('message', msg);
     } else {
       // broadcast to all clients on this pad
-      socketio.sockets.in(msg.data.payload.padId).emit('message', msg);
+      socketioServer.sockets.in(msg.data.payload.padId).emit('message', msg);
     }
   }
 };
@@ -544,7 +544,7 @@ export const handleCustomMessage = (padID: string, msgString:string) => {
       time,
     },
   };
-  socketio.sockets.in(padID).emit('message', msg);
+  socketioServer.sockets.in(padID).emit('message', msg);
 };
 
 /**
@@ -581,7 +581,7 @@ export const sendChatMessageToPadClients = async (mt: ChatMessage|number, puId: 
   // authorManager.getAuthorName() to resolve before saving the message to the database.
   const promise = pad.appendChatMessage(message);
   message.displayName = await authorManager.getAuthorName(message.authorId);
-  socketio.sockets.in(padId).emit('message', {
+  socketioServer.sockets.in(padId).emit('message', {
     type: 'COLLABROOM',
     data: {type: 'CHAT_MESSAGE', message},
   });
@@ -1426,7 +1426,7 @@ export const composePadChangesets = async (pad: PadType, startNum: number, endNu
 };
 
 const _getRoomSockets = (padID: string) => {
-  const ns = socketio.sockets; // Default namespace.
+  const ns = socketioServer.sockets; // Default namespace.
   // We could call adapter.clients(), but that method is unnecessarily asynchronous. Replicate what
   // it does here, but synchronously to avoid a race condition. This code will have to change when
   // we update to socket.io v3.

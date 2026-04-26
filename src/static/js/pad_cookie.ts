@@ -17,9 +17,9 @@
  * limitations under the License.
  */
 
-import {Cookies} from "./pad_utils";
+import {Cookies} from "./pad_utils.js";
 
-exports.padcookie = new class {
+const padcookie = new class {
   constructor() {
     const prefix = (window as any).clientVars?.cookiePrefix || '';
     this.cookieName_ = prefix + (window.location.protocol === 'https:' ? 'prefs' : 'prefsHttp');
@@ -75,3 +75,5 @@ exports.padcookie = new class {
     this.writePrefs_({});
   }
 }();
+
+export {padcookie};

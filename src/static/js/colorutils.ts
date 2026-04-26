@@ -119,4 +119,4 @@ colorutils.textColorFromBackgroundColor = (bgcolor, skinName) => {
   return colorutils.luminosity(colorutils.css2triple(bgcolor)) < 0.5 ? white : black;
 };
 
-exports.colorutils = colorutils;
+export {colorutils};
