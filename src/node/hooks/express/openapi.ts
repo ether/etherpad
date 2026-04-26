@@ -1,8 +1,8 @@
 'use strict';
 
-import {OpenAPIOperations, OpenAPISuccessResponse, SwaggerUIResource} from "../../types/SwaggerUIResource";
-import {MapArrayType} from "../../types/MapType";
-import {ErrorCaused} from "../../types/ErrorCaused";
+import type {OpenAPIOperations, OpenAPISuccessResponse, SwaggerUIResource} from "../../types/SwaggerUIResource.ts";
+import type {MapArrayType} from "../../types/MapType.js";
+import type {ErrorCaused} from "../../types/ErrorCaused.js";
 
 /**
  * node/hooks/express/openapi.js
@@ -18,13 +18,13 @@ import {ErrorCaused} from "../../types/ErrorCaused";
  * - /rest/{version}/openapi.json
  */
 
-const OpenAPIBackend = require('openapi-backend').default;
-const IncomingForm = require('formidable').IncomingForm;
-const cloneDeep = require('lodash.clonedeep');
-const createHTTPError = require('http-errors');
+import { OpenAPIBackend } from 'openapi-backend';
+import { IncomingForm } from 'formidable';
+import cloneDeep from 'lodash.clonedeep';
+import createHTTPError from 'http-errors';
 
-const apiHandler = require('../../handler/APIHandler');
-import settings from '../../utils/Settings';
+import * as apiHandler from '../../handler/APIHandler.js';
+import settings from '../../utils/Settings.js';
 
 import log4js from 'log4js';
 const logger = log4js.getLogger('API');
@@ -575,7 +575,7 @@ const generateDefinitionForVersion = (version:string, style = APIPathStyle.FLAT)
   return definition;
 };
 
-exports.expressPreSession = async (hookName:string, {app}:any) => {
+export const expressPreSession = async (hookName:string, {app}:any) => {
   // create openapi-backend handlers for each api version under /api/{version}/*
   for (const version of Object.keys(apiHandler.version)) {
     // we support two different styles of api: flat + rest
@@ -608,7 +608,7 @@ exports.expressPreSession = async (hookName:string, {app}:any) => {
 
       // build openapi-backend instance for this api version
       const api = new OpenAPIBackend({
-        definition,
+        definition: definition as any,
         validate: false,
         // for a small optimisation, we can run the quick startup for older
         // API versions since they are subsets of the latest api definition
@@ -679,7 +679,7 @@ exports.expressPreSession = async (hookName:string, {app}:any) => {
               // an unknown error happened
               // log it and throw internal error
               logger.error(errCaused.stack || errCaused.toString());
-              throw new createHTTPError.InternalError('internal error');
+              throw new createHTTPError.InternalServerError('internal error');
             }
           }
 

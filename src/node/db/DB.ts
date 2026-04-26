@@ -22,39 +22,50 @@
  */
 
 import {Database, DatabaseType} from 'ueberdb2';
-import settings from '../utils/Settings';
+import settings from '../utils/Settings.js';
 import log4js from 'log4js';
-const stats = require('../stats')
+import stats from '../stats.js';
 
 const logger = log4js.getLogger('ueberDB');
 
 /**
- * The UeberDB Object that provides the database functions
+ * The UeberDB Object provides the database functions. Mutable so the methods
+ * below (get/set/findKeys/...) can be re-bound after init().
  */
-exports.db = null;
-
-/**
- * Initializes the database with the settings provided by the settings module
- */
-exports.init = async () => {
-  exports.db = new Database(settings.dbType as DatabaseType, settings.dbSettings, null, logger);
-  await exports.db.init();
-  if (exports.db.metrics != null) {
-    for (const [metric, value] of Object.entries(exports.db.metrics)) {
-      if (typeof value !== 'number') continue;
-      stats.gauge(`ueberdb_${metric}`, () => exports.db.metrics[metric]);
+const dbModule: any = {
+  db: null as Database | null,
+  init: async () => {
+    dbModule.db = new Database(settings.dbType as DatabaseType, settings.dbSettings, null, logger);
+    await dbModule.db.init();
+    if (dbModule.db.metrics != null) {
+      for (const [metric, value] of Object.entries(dbModule.db.metrics)) {
+        if (typeof value !== 'number') continue;
+        stats.gauge(`ueberdb_${metric}`, () => {
+          const metricValue = dbModule.db?.metrics?.[metric];
+          return typeof metricValue === 'number' ? metricValue : 0;
+        });
+      }
     }
-  }
-  for (const fn of ['get', 'set', 'findKeys', 'getSub', 'setSub', 'remove']) {
-    const f = exports.db[fn];
-    exports[fn] = async (...args:string[]) => await f.call(exports.db, ...args);
-    Object.setPrototypeOf(exports[fn], Object.getPrototypeOf(f));
-    Object.defineProperties(exports[fn], Object.getOwnPropertyDescriptors(f));
-  }
+    for (const fn of ['get', 'set', 'findKeys', 'getSub', 'setSub', 'remove']) {
+      dbModule[fn] = async (...args: string[]) => {
+        // During shutdown, background timers (for example session cleanup) can still
+        // attempt DB access for a short period. Avoid crashing the process in that
+        // window if the DB has already been closed.
+        if (dbModule.db == null) {
+          if (fn === 'get' || fn === 'getSub') return null;
+          if (fn === 'findKeys') return [];
+          return;
+        }
+        const f = dbModule.db[fn];
+        return await f.call(dbModule.db, ...args);
+      };
+    }
+  },
+  shutdown: async (_hookName: string, _context: any) => {
+    if (dbModule.db != null) await dbModule.db.close();
+    dbModule.db = null;
+    logger.log('Database closed');
+  },
 };
 
-exports.shutdown = async (hookName: string, context:any) => {
-  if (exports.db != null) await exports.db.close();
-  exports.db = null;
-  logger.log('Database closed');
-};
+export default dbModule;

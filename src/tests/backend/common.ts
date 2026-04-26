@@ -1,22 +1,23 @@
 'use strict';
 
-import {MapArrayType} from "../../node/types/MapType";
+import {MapArrayType} from "../../node/types/MapType.js";
+import {afterAll, beforeAll} from 'vitest';
 
-import AttributePool from '../../static/js/AttributePool';
-const assert = require('assert').strict;
-const io = require('socket.io-client');
-const log4js = require('log4js');
-import padutils from '../../static/js/pad_utils';
-const process = require('process');
-const server = require('../../node/server');
-const setCookieParser = require('set-cookie-parser');
-import settings from '../../node/utils/Settings';
+import AttributePool from '../../static/js/AttributePool.js';
+import {strict as assert} from 'assert';
+import {io} from 'socket.io-client';
+import log4js from 'log4js';
+import padutils from '../../static/js/pad_utils.js';
+import process from 'process';
+import * as server from '../../node/server.js';
+import setCookieParser from 'set-cookie-parser';
+import settings from '../../node/utils/Settings.js';
 import supertest from 'supertest';
-import TestAgent from "supertest/lib/agent";
+import TestAgent from "supertest/lib/agent.js";
 import {Http2Server} from "node:http2";
 import {SignJWT} from "jose";
-import {privateKeyExported} from "../../node/security/OAuth2Provider";
-const webaccess = require('../../node/hooks/express/webaccess');
+import {privateKeyExported} from "../../node/security/OAuth2Provider.js";
+import * as webaccess from '../../node/hooks/express/webaccess.js';
 
 const backups:MapArrayType<any> = {};
 let agentPromise:Promise<any>|null = null;
@@ -26,16 +27,15 @@ export let baseUrl:string|null = null;
 export let httpServer: Http2Server|null = null;
 export const logger = log4js.getLogger('test');
 
-const logLevel = logger.level;
+const logLevel = logger.level as any;
 
 // Mocha doesn't monitor unhandled Promise rejections, so convert them to uncaught exceptions.
 // https://github.com/mochajs/mocha/issues/2640
 process.on('unhandledRejection', (reason: string) => { throw reason; });
 
-before(async function () {
-  this.timeout(60000);
+beforeAll(async () => {
   await init();
-});
+}, 60000);
 
 
 export const generateJWTToken =  () => {
@@ -82,6 +82,7 @@ export const init = async function () {
   settings.importExportRateLimiting = {max: 999999};
   settings.commitRateLimiting = {duration: 0.001, points: 1e6};
   httpServer = await server.start();
+  if (httpServer == null) throw new Error('server.start() did not return an HTTP server');
   // @ts-ignore
   baseUrl = `http://localhost:${httpServer!.address()!.port}`;
   logger.debug(`HTTP server at ${baseUrl}`);
@@ -90,14 +91,15 @@ export const init = async function () {
       //.set('Authorization', `Bearer ${await generateJWTToken()}`);
   // Speed up authn tests.
   backups.authnFailureDelayMs = webaccess.authnFailureDelayMs;
-  webaccess.authnFailureDelayMs = 0;
+  webaccess.setAuthnFailureDelayMs(0);
 
-  after(async function () {
-    webaccess.authnFailureDelayMs = backups.authnFailureDelayMs;
-    // Note: This does not unset settings that were added.
-    Object.assign(settings, backups.settings);
-    await server.exit();
-  });
+  // Note: under vitest with `isolate: false`, registering an `afterAll` here
+  // would attach to whichever test file first triggered this init (since the
+  // module is shared across all files). That file's teardown would then kill
+  // the Etherpad server while later files still need it, surfacing as
+  // ECONNREFUSED in tests that come after the first file (e.g. apicalls.ts,
+  // pads-with-spaces.ts). The server lives for the whole test process; the
+  // OS reclaims the port and any unflushed state when vitest exits.
 
   agentResolve!(agent);
   return agent;
@@ -111,7 +113,7 @@ export const init = async function () {
  * @param {string} event - The socket.io Socket event to listen for.
  * @returns The argument(s) passed to the event handler.
  */
-export const waitForSocketEvent = async (socket: any, event:string) => {
+export const waitForSocketEvent = async (socket: any, event:string): Promise<any> => {
   const errorEvents = [
     'error',
     'connect_error',
@@ -203,7 +205,7 @@ export const connect = async (res:any = null) => {
  * @param token
  * @returns The CLIENT_VARS message from the server.
  */
-export const handshake = async (socket: any, padId:string, token = padutils.generateAuthorToken()) => {
+export const handshake = async (socket: any, padId:string, token = padutils.generateAuthorToken()): Promise<any> => {
   logger.debug('sending CLIENT_READY...');
   socket.emit('message', {
     component: 'pad',

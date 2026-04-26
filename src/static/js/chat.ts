@@ -16,20 +16,19 @@
  * limitations under the License.
  */
 
-import ChatMessage from './ChatMessage';
-import padutils from './pad_utils'
-const padcookie = require('./pad_cookie').padcookie;
-const Tinycon = require('tinycon/tinycon');
-const hooks = require('./pluginfw/hooks');
-const padeditor = require('./pad_editor').padeditor;
+import ChatMessage from './ChatMessage.js';
+import padutils from './pad_utils.js'
+import {padcookie} from './pad_cookie.js';
+import Tinycon from 'tinycon/tinycon';
+import hooks from './pluginfw/hooks.js';
+import {padeditor} from './pad_editor.js';
 import html10n from './vendors/html10n';
 
 // Removes diacritics and lower-cases letters. https://stackoverflow.com/a/37511463
 const normalize = (s) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
 
-exports.chat = (() => {
-  let isStuck = false;
+const chat = (() => {
   let userAndChat = false;
   let chatMentions = 0;
   return {
@@ -296,3 +295,5 @@ exports.chat = (() => {
     },
   };
 })();
+
+export {chat};

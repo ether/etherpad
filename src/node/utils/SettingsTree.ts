@@ -1,4 +1,4 @@
-import {MapArrayType} from "../types/MapType";
+import {MapArrayType} from "../types/MapType.js";
 
 export class SettingsTree {
   private children: Map<string, SettingsNode>;

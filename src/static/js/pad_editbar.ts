@@ -23,12 +23,12 @@
  * limitations under the License.
  */
 
-const hooks = require('./pluginfw/hooks');
-import padutils from "./pad_utils";
-const padeditor = require('./pad_editor').padeditor;
-const padsavedrevs = require('./pad_savedrevs');
-const _ = require('underscore');
-require('./vendors/nice-select');
+import hooks from './pluginfw/hooks.js';
+import padutils from "./pad_utils.js";
+import {padeditor} from './pad_editor.js';
+import padsavedrevs from './pad_savedrevs.js';
+import _ from 'underscore';
+import './vendors/nice-select.js';
 
 class ToolbarItem {
   constructor(element) {
@@ -73,12 +73,12 @@ class ToolbarItem {
         // reference and mess with later popup Esc-close focus handling).
         const cmd = this.getCommand();
         // @ts-ignore — padeditbar is the exported singleton defined below
-        const isDropdownTrigger = exports.padeditbar.dropdowns.indexOf(cmd) !== -1;
+        const isDropdownTrigger = padeditbar.dropdowns.indexOf(cmd) !== -1;
         if (isDropdownTrigger) {
           const trigger = (this.$el.find('button')[0] as HTMLElement | undefined) ||
               (this.$el[0] as HTMLElement);
           // @ts-ignore
-          if (trigger) exports.padeditbar._lastTrigger = trigger;
+          if (trigger) padeditbar._lastTrigger = trigger;
         }
         $(':focus').trigger('blur');
         callback(cmd, this);
@@ -137,7 +137,7 @@ const syncAnimation = (() => {
   };
 })();
 
-exports.padeditbar = new class {
+const padeditbar = new class {
   constructor() {
     this._editbarPosition = 0;
     this.commands = {};
@@ -582,3 +582,5 @@ exports.padeditbar = new class {
     });
   }
 }();
+
+export {padeditbar};

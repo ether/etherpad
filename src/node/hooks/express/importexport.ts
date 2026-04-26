@@ -1,18 +1,18 @@
 'use strict';
 
-import {ArgsExpressType} from "../../types/ArgsExpressType";
+import type {ArgsExpressType} from "../../types/ArgsExpressType.js";
 
-const hasPadAccess = require('../../padaccess');
-import settings, {exportAvailable} from '../../utils/Settings';
-const exportHandler = require('../../handler/ExportHandler');
-const importHandler = require('../../handler/ImportHandler');
-const padManager = require('../../db/PadManager');
-import readOnlyManager from '../../db/ReadOnlyManager';
-const rateLimit = require('express-rate-limit');
-const securityManager = require('../../db/SecurityManager');
-const webaccess = require('./webaccess');
+import hasPadAccess from '../../padaccess.js';
+import settings, {exportAvailable} from '../../utils/Settings.js';
+import * as exportHandler from '../../handler/ExportHandler.js';
+import * as importHandler from '../../handler/ImportHandler.js';
+import * as padManager from '../../db/PadManager.js';
+import readOnlyManager from '../../db/ReadOnlyManager.js';
+import rateLimit from 'express-rate-limit';
+import * as securityManager from '../../db/SecurityManager.js';
+import * as webaccess from './webaccess.js';
 
-exports.expressCreateServer = (hookName:string, args:ArgsExpressType, cb:Function) => {
+export const expressCreateServer = (hookName:string, args:ArgsExpressType, cb:Function) => {
   const limiter = rateLimit({
     ...settings.importExportRateLimiting,
     handler: (request:any) => {

@@ -1,6 +1,6 @@
 import {strict as assert} from "assert";
 import path from 'path';
-import sanitizePathname from '../../../node/utils/sanitizePathname';
+import sanitizePathname from '../../../node/utils/sanitizePathname.js';
 import {describe, it, expect} from 'vitest';
 
 describe(__filename, function () {

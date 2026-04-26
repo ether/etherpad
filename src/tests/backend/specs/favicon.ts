@@ -1,22 +1,27 @@
 'use strict';
 
-import {MapArrayType} from "../../../node/types/MapType";
+import {fileURLToPath} from 'node:url';
+import {dirname} from 'node:path';
+import {MapArrayType} from "../../../node/types/MapType.js";
 
-const assert = require('assert').strict;
-const common = require('../common');
-const fs = require('fs');
+import assert from 'assert';
+import * as common from '../common.js';
+import fs from 'fs';
 const fsp = fs.promises;
-const path = require('path');
-import settings from '../../../node/utils/Settings';
-const superagent = require('superagent');
+import path from 'path';
+import settings from '../../../node/utils/Settings.js';
+import superagent from 'superagent';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 describe(__filename, function () {
   let agent:any;
   let backupSettings:MapArrayType<any>;
   let skinDir: string;
-  let wantCustomIcon: boolean;
-  let wantDefaultIcon: boolean;
-  let wantSkinIcon: boolean;
+  let wantCustomIcon: Buffer;
+  let wantDefaultIcon: Buffer;
+  let wantSkinIcon: Buffer;
 
   before(async function () {
     agent = await common.init();
@@ -42,7 +47,7 @@ describe(__filename, function () {
       // TODO: The {recursive: true} option wasn't added to fsp.rmdir() until Node.js v12.10.0 so we
       // can't rely on it until support for Node.js v10 is dropped.
       await fsp.unlink(path.join(skinDir, 'favicon.ico'));
-      await fsp.rmdir(skinDir, {recursive: true});
+      await fsp.rm(skinDir, {recursive: true, force: true});
     } catch (err) { /* intentionally ignored */ }
   });
 

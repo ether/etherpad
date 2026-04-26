@@ -8,7 +8,7 @@ import {
   selectAllText,
   undoChanges,
   writeToPad
-} from "../helper/padHelper";
+} from "../helper/padHelper.js";
 
 /**
  * Tests for https://github.com/ether/etherpad-lite/issues/2802

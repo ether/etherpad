@@ -1,14 +1,14 @@
 'use strict';
 
-import {MapArrayType} from "../../types/MapType";
-import {PartType} from "../../types/PartType";
+import {MapArrayType} from "../../types/MapType.js";
+import {PartType} from "../../types/PartType.js";
 
-const fs = require('fs').promises;
-import {minify} from '../../utils/Minify';
+import { promises as fs } from 'fs';
+import {minify} from '../../utils/Minify.js';
 import path from 'node:path';
-import {ArgsExpressType} from "../../types/ArgsExpressType";
-const plugins = require('../../../static/js/pluginfw/plugin_defs');
-import settings from '../../utils/Settings';
+import {ArgsExpressType} from "../../types/ArgsExpressType.js";
+import plugins from '../../../static/js/pluginfw/plugin_defs.js';
+import settings from '../../utils/Settings.js';
 
 // Rewrite tar to include modules with no extensions and proper rooted paths.
 const getTar = async () => {
@@ -31,7 +31,7 @@ const getTar = async () => {
   return tar;
 };
 
-exports.expressPreSession = async (hookName:string, {app}:ArgsExpressType) => {
+export const expressPreSession = async (hookName:string, {app}:ArgsExpressType) => {
 
   // Minify will serve static files compressed (minify enabled). It also has
   // file-specific hacks for ace/require-kernel/etc.

@@ -8,13 +8,13 @@
  * @property {Function} remove -
  * @property {Function} toString -
  */
-import {SmartOpAssembler} from "./SmartOpAssembler";
-import Op from "./Op";
-import {StringAssembler} from "./StringAssembler";
-import AttributeMap from "./AttributeMap";
-import {Attribute} from "./types/Attribute";
-import AttributePool from "./AttributePool";
-import {opsFromText, pack} from "./Changeset";
+import {SmartOpAssembler} from "./SmartOpAssembler.js";
+import Op from "./Op.js";
+import {StringAssembler} from "./StringAssembler.js";
+import AttributeMap from "./AttributeMap.js";
+import {Attribute} from "./types/Attribute.js";
+import AttributePool from "./AttributePool.js";
+import {opsFromText, pack} from "./Changeset.js";
 
 /**
  * @param {number} oldLen - Old length

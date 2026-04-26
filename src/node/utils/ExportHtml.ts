@@ -1,6 +1,6 @@
 'use strict';
-import {AText, PadType} from "../types/PadType";
-import {MapArrayType} from "../types/MapType";
+import {AText, PadType} from "../types/PadType.js";
+import {MapArrayType} from "../types/MapType.js";
 
 /**
  * Copyright 2009 Google Inc.
@@ -18,20 +18,19 @@ import {MapArrayType} from "../types/MapType";
  * limitations under the License.
  */
 
-import {deserializeOps, splitAttributionLines, subattribution} from '../../static/js/Changeset';
-const attributes = require('../../static/js/attributes');
-const padManager = require('../db/PadManager');
-const _ = require('underscore');
-const Security = require('../../static/js/security');
-const hooks = require('../../static/js/pluginfw/hooks');
-const eejs = require('../eejs');
-const _analyzeLine = require('./ExportHelper')._analyzeLine;
-const _encodeWhitespace = require('./ExportHelper')._encodeWhitespace;
-import padutils from "../../static/js/pad_utils";
-import {StringIterator} from "../../static/js/StringIterator";
-import {StringAssembler} from "../../static/js/StringAssembler";
+import {deserializeOps, splitAttributionLines, subattribution} from '../../static/js/Changeset.js';
+import * as attributes from '../../static/js/attributes.js';
+import * as padManager from '../db/PadManager.js';
+import _ from 'underscore';
+import Security from '../../static/js/security.js';
+import hooks from '../../static/js/pluginfw/hooks.js';
+import eejs from '../eejs/index.js';
+import { _analyzeLine, _encodeWhitespace } from './ExportHelper.js';
+import padutils from "../../static/js/pad_utils.js";
+import {StringIterator} from "../../static/js/StringIterator.js";
+import {StringAssembler} from "../../static/js/StringAssembler.js";
 
-const getPadHTML = async (pad: PadType, revNum: string) => {
+const getPadHTML = async (pad: PadType, revNum: string|number|undefined) => {
   let atext = pad.atext;
 
   // fetch revision atext
@@ -43,7 +42,7 @@ const getPadHTML = async (pad: PadType, revNum: string) => {
   return await getHTMLFromAtext(pad, atext);
 };
 
-const getHTMLFromAtext = async (pad:PadType, atext: AText, authorColors?: string[]) => {
+const getHTMLFromAtext = async (pad:PadType, atext: AText, authorColors?: string[]|MapArrayType<string>) => {
   const apool = pad.apool();
   const textLines = atext.text.slice(0, -1).split('\n');
   const attribLines = splitAttributionLines(atext.attribs, atext.text);
@@ -92,7 +91,7 @@ const getHTMLFromAtext = async (pad:PadType, atext: AText, authorColors?: string
         const newLength = props.push(propName);
         anumMap[a] = newLength - 1;
 
-        css += `.${propName} {background-color: ${authorColors[attr[1]]}}\n`;
+        css += `.${propName} {background-color: ${(authorColors as any)[attr[1]]}}\n`;
       } else if (attr[0] === 'removed') {
         const propName = 'removed';
         const newLength = props.push(propName);
@@ -125,7 +124,7 @@ const getHTMLFromAtext = async (pad:PadType, atext: AText, authorColors?: string
     }
   });
 
-  const getLineHTML = (text: string, attribs: string[]) => {
+  const getLineHTML = (text: string, attribs: string[]|string) => {
     // Use order of tags (b/i/u) as order of nesting, for simplicity
     // and decent nesting.  For example,
     // <b>Just bold<b> <b><i>Bold and italics</i></b> <i>Just italics</i>
@@ -314,7 +313,7 @@ const getHTMLFromAtext = async (pad:PadType, atext: AText, authorColors?: string
   for (let i = 0; i < textLines.length; i++) {
     let context;
     const line = _analyzeLine(textLines[i], attribLines[i], apool);
-    const lineContent = getLineHTML(line.text, line.aline);
+    const lineContent = getLineHTML(line.text as string, line.aline as string);
     // If we are inside a list
     if (line.listLevel) {
       context = {
@@ -342,14 +341,14 @@ const getHTMLFromAtext = async (pad:PadType, atext: AText, authorColors?: string
         if (!exists) {
           let prevLevel = 0;
           if (prevLine && prevLine.listLevel) {
-            prevLevel = prevLine.listLevel;
+            prevLevel = prevLine.listLevel as number;
           }
           if (prevLine && line.listTypeName !== prevLine.listTypeName) {
             prevLevel = 0;
           }
 
-          for (let diff = prevLevel; diff < line.listLevel; diff++) {
-            openLists.push({level: diff, type: line.listTypeName});
+          for (let diff = prevLevel; diff < (line.listLevel as number); diff++) {
+            openLists.push({level: diff, type: line.listTypeName as string});
             const prevPiece = pieces[pieces.length - 1];
 
             if (prevPiece.indexOf('<ul') === 0 ||
@@ -379,7 +378,7 @@ const getHTMLFromAtext = async (pad:PadType, atext: AText, authorColors?: string
                  // pieces.push("</li>");
 
               */
-              if ((nextLine.listTypeName === 'number') && (nextLine.text === '')) {
+              if ((nextLine!.listTypeName === 'number') && (nextLine!.text === '')) {
                 // is the listTypeName check needed here?  null text might be completely fine!
                 // TODO Check against Uls
                 // don't do anything because the next item is a nested ol openener so
@@ -454,7 +453,7 @@ const getHTMLFromAtext = async (pad:PadType, atext: AText, authorColors?: string
           (line.listTypeName !== nextLine.listTypeName)) {
         let nextLevel = 0;
         if (nextLine && nextLine.listLevel) {
-          nextLevel = nextLine.listLevel;
+          nextLevel = nextLine.listLevel as number;
         }
         // The actual depth the next line lives at (ignoring type changes)
         const actualNextLevel = (nextLine && nextLine.listLevel) ? nextLine.listLevel : 0;
@@ -509,7 +508,7 @@ const getHTMLFromAtext = async (pad:PadType, atext: AText, authorColors?: string
   return pieces.join('');
 };
 
-exports.getPadHTMLDocument = async (padId: string, revNum: string, readOnlyId: number) => {
+export const getPadHTMLDocument = async (padId: string, revNum: string|number|undefined, readOnlyId?: string|number|null) => {
   const pad = await padManager.getPad(padId);
 
   // Include some Styles into the Head for Export
@@ -587,5 +586,4 @@ const _processSpaces = (s: string) => {
   return parts.join('');
 };
 
-exports.getPadHTML = getPadHTML;
-exports.getHTMLFromAtext = getHTMLFromAtext;
+export { getPadHTML, getHTMLFromAtext };

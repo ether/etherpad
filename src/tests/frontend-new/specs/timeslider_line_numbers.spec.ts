@@ -1,6 +1,6 @@
 import {expect, test} from "@playwright/test";
-import {clearPadContent, goToNewPad, writeToPad} from "../helper/padHelper";
-import {showSettings} from "../helper/settingsHelper";
+import {clearPadContent, goToNewPad, writeToPad} from "../helper/padHelper.js";
+import {showSettings} from "../helper/settingsHelper.js";
 
 test.describe('timeslider line numbers', function () {
   test.beforeEach(async ({context}) => {

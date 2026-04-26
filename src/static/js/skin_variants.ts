@@ -78,8 +78,11 @@ if (window.location.hash.toLowerCase() === '#skinvariantsbuilder') {
   updateSkinVariantsClasses(getNewClasses());
 }
 
-exports.isDarkMode = isDarkMode;
-exports.setDarkModeInLocalStorage = setDarkModeInLocalStorage
-exports.isWhiteModeEnabledInLocalStorage = isWhiteModeEnabledInLocalStorage
-exports.isDarkModeEnabledInLocalStorage = isDarkModeEnabledInLocalStorage
-exports.updateSkinVariantsClasses = updateSkinVariantsClasses;
+export {isDarkMode, setDarkModeInLocalStorage, isWhiteModeEnabledInLocalStorage, isDarkModeEnabledInLocalStorage, updateSkinVariantsClasses};
+export default {
+  isDarkMode,
+  setDarkModeInLocalStorage,
+  isWhiteModeEnabledInLocalStorage,
+  isDarkModeEnabledInLocalStorage,
+  updateSkinVariantsClasses,
+};

@@ -3,23 +3,23 @@
 import log4js from "log4js";
 
 import axios, {AxiosResponse} from "axios";
-import {PackageData, PackageInfo} from "../../../node/types/PackageInfo";
-import {MapArrayType} from "../../../node/types/MapType";
+import {PackageData, PackageInfo} from "../../../node/types/PackageInfo.js";
+import {MapArrayType} from "../../../node/types/MapType.js";
 
 import path from "path";
 
 import {promises as fs} from "fs";
 
-const plugins = require('./plugins');
-const hooks = require('./hooks');
-const runCmd = require('../../../node/utils/run_cmd');
+import plugins from './plugins.js';
+import hooks from './hooks.js';
+import runCmd from '../../../node/utils/run_cmd.js';
 import  settings, {
   getEpVersion,
   reloadSettings
-} from '../../../node/utils/Settings';
-import {LinkInstaller} from "./LinkInstaller";
+} from '../../../node/utils/Settings.js';
+import {LinkInstaller} from "./LinkInstaller.js";
 
-import {findEtherpadRoot} from '../../../node/utils/AbsolutePaths';
+import {findEtherpadRoot} from '../../../node/utils/AbsolutePaths.js';
 const logger = log4js.getLogger('plugins');
 
 export const pluginInstallPath = path.join(settings.root, 'src','plugin_packages');
@@ -62,7 +62,7 @@ const migratePluginsFromNodeModules = async () => {
   //     that are not included in `package.json` (which is expected to not exist).
   const cmd = ['pnpm', 'ls', '--long', '--json', '--depth=0', '--no-production'];
   const [{dependencies = {}}] = JSON.parse(await runCmd(cmd,
-      {stdio: [null, 'string']}));
+      {stdio: [null as any, 'string']}) as any);
 
   await Promise.all(Object.entries(dependencies)
       .filter(([pkg, info]) => pkg.startsWith(plugins.prefix) && pkg !== 'ep_etherpad-lite')

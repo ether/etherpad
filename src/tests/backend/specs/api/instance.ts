@@ -1,11 +1,17 @@
 'use strict';
 
+import {fileURLToPath} from 'node:url';
+import {dirname} from 'node:path';
+
 /*
  * Tests for the instance-level APIs
  *
  * Section "GLOBAL FUNCTIONS" in src/node/db/API.js
  */
-const common = require('../../common');
+import * as common from '../../common.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 let agent:any;
 const apiVersion = '1.2.14';

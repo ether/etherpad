@@ -1,14 +1,19 @@
 'use strict';
 
-import {MapArrayType} from "../../../node/types/MapType";
-import {PluginDef} from "../../../node/types/PartType";
+import {fileURLToPath} from 'node:url';
+import {dirname} from 'node:path';
+import {MapArrayType} from "../../../node/types/MapType.js";
+import {PluginDef} from "../../../node/types/PartType.js";
 
-import ChatMessage from '../../../static/js/ChatMessage';
-const {Pad} = require('../../../node/db/Pad');
-const assert = require('assert').strict;
-const common = require('../common');
-const padManager = require('../../../node/db/PadManager');
-const pluginDefs = require('../../../static/js/pluginfw/plugin_defs');
+import ChatMessage from '../../../static/js/ChatMessage.js';
+import {Pad} from '../../../node/db/Pad.js';
+import assert from 'assert';
+import * as common from '../common.js';
+import * as padManager from '../../../node/db/PadManager.js';
+import pluginDefs from '../../../static/js/pluginfw/plugin_defs.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const logger = common.logger;
 
@@ -98,6 +103,7 @@ describe(__filename, function () {
     });
 
     it('message', async function () {
+      const testTitle = 'message';
       const start = Date.now();
       await Promise.all([
         checkHook('chatNewMessage', ({message}) => {
@@ -106,37 +112,40 @@ describe(__filename, function () {
           // @ts-ignore
           assert.equal(message!.authorId, authorId);
           // @ts-ignore
-          assert.equal(message!.text, this.test!.title);
+          assert.equal(message!.text, testTitle);
           // @ts-ignore
           assert(message!.time >= start);
           // @ts-ignore
           assert(message!.time <= Date.now());
         }),
-        sendChat(socket, {text: this.test!.title}),
+        sendChat(socket, {text: testTitle}),
       ]);
     });
 
     it('pad', async function () {
+      const testTitle = 'pad';
       await Promise.all([
         checkHook('chatNewMessage', ({pad}) => {
           assert(pad != null);
           assert(pad instanceof Pad);
           assert.equal(pad.id, padId);
         }),
-        sendChat(socket, {text: this.test!.title}),
+        sendChat(socket, {text: testTitle}),
       ]);
     });
 
     it('padId', async function () {
+      const testTitle = 'padId';
       await Promise.all([
         checkHook('chatNewMessage', (context) => {
           assert.equal(context.padId, padId);
         }),
-        sendChat(socket, {text: this.test!.title}),
+        sendChat(socket, {text: testTitle}),
       ]);
     });
 
     it('mutations propagate', async function () {
+      const testTitle = 'mutations propagate';
 
       type Message = {
         type: string,
@@ -153,8 +162,8 @@ describe(__filename, function () {
         socket.on('message', handler);
       });
 
-      const modifiedText = `${this.test!.title} <added changes>`;
-      const customMetadata = {foo: this.test!.title};
+      const modifiedText = `${testTitle} <added changes>`;
+      const customMetadata = {foo: testTitle};
       await Promise.all([
         checkHook('chatNewMessage', ({message}) => {
           // @ts-ignore
@@ -168,7 +177,7 @@ describe(__filename, function () {
           assert.equal(message.text, modifiedText);
           assert.deepEqual(message.customMetadata, customMetadata);
         })(),
-        sendChat(socket, {text: this.test!.title}),
+        sendChat(socket, {text: testTitle}),
       ]);
       // Simulate fetch of historical chat messages when a pad is first loaded.
       await Promise.all([

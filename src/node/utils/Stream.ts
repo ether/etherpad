@@ -136,4 +136,4 @@ class Stream {
   [Symbol.iterator]() { return this._iter; }
 }
 
-module.exports = Stream;
+export default Stream;

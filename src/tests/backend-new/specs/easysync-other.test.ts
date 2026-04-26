@@ -1,13 +1,13 @@
 'use strict';
 
-import {applyToAttribution, applyToText, checkRep, deserializeOps, exportedForTestingOnly, filterAttribNumbers, joinAttributionLines, makeAttribsString, makeSplice, moveOpsToNewPool, opAttributeValue, splitAttributionLines} from '../../../static/js/Changeset';
-import AttributePool from '../../../static/js/AttributePool';
-import {randomMultiline, poolOrArray} from '../easysync-helper';
-import padutils from '../../../static/js/pad_utils';
+import {applyToAttribution, applyToText, checkRep, deserializeOps, exportedForTestingOnly, filterAttribNumbers, joinAttributionLines, makeAttribsString, makeSplice, moveOpsToNewPool, opAttributeValue, splitAttributionLines} from '../../../static/js/Changeset.js';
+import AttributePool from '../../../static/js/AttributePool.js';
+import {randomMultiline, poolOrArray} from '../easysync-helper.js';
+import padutils from '../../../static/js/pad_utils.js';
 import {describe, it, expect} from 'vitest'
-import Op from "../../../static/js/Op";
-import {MergingOpAssembler} from "../../../static/js/MergingOpAssembler";
-import {Attribute} from "../../../static/js/types/Attribute";
+import Op from "../../../static/js/Op.js";
+import {MergingOpAssembler} from "../../../static/js/MergingOpAssembler.js";
+import {Attribute} from "../../../static/js/types/Attribute.js";
 
 
 describe('easysync-other', function () {

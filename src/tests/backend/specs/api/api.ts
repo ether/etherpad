@@ -8,9 +8,13 @@
  * and openapi definitions.
  */
 
-const common = require('../../common');
-const validateOpenAPI = require('openapi-schema-validation').validate;
-import settings from '../../../../node/utils/Settings';
+import * as common from '../../common.js';
+import openApiSchemaValidation from 'openapi-schema-validation';
+import settings from '../../../../node/utils/Settings.js';
+import {fileURLToPath} from 'node:url';
+
+const validateOpenAPI = openApiSchemaValidation.validate;
+const __filename = fileURLToPath(import.meta.url);
 
 let agent: any;
 let apiVersion = 1;
@@ -43,7 +47,6 @@ describe(__filename, function () {
   });
 
   it('can obtain valid openapi definition document', async function () {
-    this.timeout(15000);
     await agent.get('/api/openapi.json')
         .expect(200)
         .expect((res:any) => {
@@ -102,7 +105,6 @@ describe(__filename, function () {
     });
 
     it('/api/openapi.json exposes apiKey security in apikey mode', async function () {
-      this.timeout(15000);
       const res = await agent.get('/api/openapi.json').expect(200);
       const schemes = res.body.components.securitySchemes;
       const hasApiKey = Object.values(schemes).some((s: any) => s.type === 'apiKey');

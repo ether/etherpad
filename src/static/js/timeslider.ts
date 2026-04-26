@@ -25,15 +25,16 @@
 
 // These jQuery things should create local references, but for now `require()`
 // assigns to the global `$` and augments it with plugins.
-require('./vendors/jquery');
+import './vendors/jquery.js';
 
-import {randomString, Cookies} from "./pad_utils";
-const hooks = require('./pluginfw/hooks');
-import padutils from './pad_utils'
-const socketio = require('./socketio');
-import html10n from '../js/vendors/html10n'
+import {randomString, Cookies} from "./pad_utils.js";
+import hooks from './pluginfw/hooks.js';
+import padutils from './pad_utils.js'
+import socketio from './socketio.js';
+import html10n from '../js/vendors/html10n.js'
 let token, padId, exportLinks, socket, changesetLoader, BroadcastSlider;
 let cp = '';
+let baseURL = '';
 const playbackSpeedCookie = 'timesliderPlaybackSpeed';
 
 const getPrefsCookieName = () => `${cp}${window.location.protocol === 'https:' ? 'prefs' : 'prefsHttp'}`;
@@ -88,7 +89,7 @@ const init = () => {
       Cookies.set(`${cp}token`, token, {expires: 60});
     }
 
-    socket = socketio.connect(exports.baseURL, '/', {query: {padId}});
+    socket = socketio.connect(baseURL, '/', {query: {padId}});
 
     // send the ready message once we're connected
     socket.on('connect', () => {
@@ -120,8 +121,8 @@ const init = () => {
       window.location.reload();
     });
 
-    exports.socket = socket; // make the socket available
-    exports.BroadcastSlider = BroadcastSlider; // Make the slider available
+    window.socket = socket; // make the socket available
+    window.BroadcastSlider = BroadcastSlider; // Make the slider available
 
     hooks.aCallAll('postTimesliderInit');
   });
@@ -141,7 +142,7 @@ const sendSocketMsg = (type, data) => {
 
 const fireWhenAllScriptsAreLoaded = [];
 
-const handleClientVars = (message) => {
+const handleClientVars = async (message) => {
   // save the client Vars
   window.clientVars = message.data;
   cp = (window as any).clientVars?.cookiePrefix || '';
@@ -160,16 +161,14 @@ const handleClientVars = (message) => {
     })
   }
 
-  // load all script that doesn't work without the clientVars
-  BroadcastSlider = require('./broadcast_slider')
-      .loadBroadcastSliderJS(fireWhenAllScriptsAreLoaded);
+    // load all script that doesn't work without the clientVars
+    BroadcastSlider = (await import('./broadcast_slider.js')).loadBroadcastSliderJS(fireWhenAllScriptsAreLoaded);
 
-  require('./broadcast_revisions').loadBroadcastRevisionsJS();
-  changesetLoader = require('./broadcast')
-      .loadBroadcastJS(socket, sendSocketMsg, fireWhenAllScriptsAreLoaded, BroadcastSlider);
+    (await import('./broadcast_revisions.js')).loadBroadcastRevisionsJS();
+    changesetLoader = (await import('./broadcast.js')).loadBroadcastJS(socket, sendSocketMsg, fireWhenAllScriptsAreLoaded, BroadcastSlider);
 
-  // initialize export ui
-  require('./pad_impexp').padimpexp.init();
+    // initialize export ui
+    (await import('./pad_impexp.js')).padimpexp.init();
 
   // Create a base URI used for timeslider exports
   const baseURI = document.location.pathname;
@@ -222,5 +221,7 @@ const handleClientVars = (message) => {
   });
 };
 
-exports.baseURL = '';
-exports.init = init;
+export const setBaseURL = (url) => {
+  baseURL = url;
+};
+export {init};

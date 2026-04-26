@@ -21,6 +21,12 @@
 import log4js from 'log4js';
 import path from 'path';
 import _ from 'underscore';
+import { fileURLToPath } from 'node:url';
+import { dirname } from 'node:path';
+import findRoot from 'find-root';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const absPathLogger = log4js.getLogger('AbsolutePaths');
 
@@ -79,7 +85,6 @@ export const findEtherpadRoot = () => {
     return etherpadRoot;
   }
 
-  const findRoot = require('find-root');
   const foundRoot = findRoot(__dirname);
   const splitFoundRoot = foundRoot.split(path.sep);
 

@@ -1,9 +1,9 @@
-import * as absolutePaths from '../utils/AbsolutePaths';
+import * as absolutePaths from '../utils/AbsolutePaths.js';
 import fs from 'fs';
 import log4js from 'log4js';
-import randomString from '../utils/randomstring';
-import {argv} from '../utils/Cli'
-import settings from '../utils/Settings';
+import randomString from '../utils/randomstring.js';
+import {argv} from '../utils/Cli.js'
+import settings from '../utils/Settings.js';
 
 const apiHandlerLogger = log4js.getLogger('APIHandler');
 

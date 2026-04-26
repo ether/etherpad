@@ -1,14 +1,14 @@
-import {ArgsExpressType} from "../types/ArgsExpressType";
-import {MapArrayType} from "../types/MapType";
+import type {ArgsExpressType} from "../types/ArgsExpressType.js";
+import type {MapArrayType} from "../types/MapType.js";
 import {IncomingForm} from "formidable";
-import {ErrorCaused} from "../types/ErrorCaused";
+import type {ErrorCaused} from "../types/ErrorCaused.js";
 import createHTTPError from "http-errors";
 
-const apiHandler = require('./APIHandler')
+import * as apiHandler from './APIHandler.js';
 import {serve, setup} from 'swagger-ui-express'
 import express from "express";
 
-import settings from '../utils/Settings';
+import settings from '../utils/Settings.js';
 
 
 type RestAPIMapping = {

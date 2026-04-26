@@ -1,3 +1,10 @@
+# 2.8.0
+
+### Breaking changes for plugin authors
+
+- Migrated the Etherpad backend (everything under `src/node/` and the server-side parts of `src/static/js/pluginfw/`) from CommonJS to ECMAScript modules. **Existing CommonJS plugins continue to load unchanged** — the plugin loader now uses Node's `createRequire` to keep `require()` working synchronously against CJS plugin entry files. ESM plugins are also supported (use `"type": "module"` or `.mjs`, export hooks with `export const`). One contract change: the accessor-property shim that exposed `Settings` top-level fields directly on the `require()` result has been removed (it was dead code under ESM). Plugins reading core settings via `require('ep_etherpad-lite/node/utils/Settings').toolbar` must now use `import settings from '...'` (ESM) or `require('...').default.toolbar` (CJS via the bridge). See `doc/plugins.md` for the full updated contract.
+- Replaced mocha with vitest as the backend test runner. `pnpm test` now runs vitest. Plugin authors with backend test suites that ran under the core mocha runner via `../node_modules/ep_*/static/tests/backend/specs/**` should expect to migrate their tests to vitest.
+
 # 2.7.2
 
 ### Notable enhancements and fixes

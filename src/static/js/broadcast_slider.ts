@@ -24,9 +24,9 @@
 
 // These parameters were global, now they are injected. A reference to the
 // Timeslider controller would probably be more appropriate.
-const _ = require('./underscore');
-const padmodals = require('./pad_modals').padmodals;
-const colorutils = require('./colorutils').colorutils;
+import _ from './underscore.js';
+import {padmodals} from './pad_modals.js';
+import {colorutils} from './colorutils.js';
 import html10n from './vendors/html10n';
 
 const loadBroadcastSliderJS = (fireWhenAllScriptsAreLoaded) => {
@@ -373,4 +373,4 @@ const loadBroadcastSliderJS = (fireWhenAllScriptsAreLoaded) => {
   return BroadcastSlider;
 };
 
-exports.loadBroadcastSliderJS = loadBroadcastSliderJS;
+export {loadBroadcastSliderJS};

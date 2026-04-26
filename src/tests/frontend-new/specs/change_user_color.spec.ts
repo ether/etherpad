@@ -1,5 +1,5 @@
 import {expect, test} from "@playwright/test";
-import {goToNewPad, sendChatMessage, showChat} from "../helper/padHelper";
+import {goToNewPad, sendChatMessage, showChat} from "../helper/padHelper.js";
 
 test.beforeEach(async ({page}) => {
   await goToNewPad(page);

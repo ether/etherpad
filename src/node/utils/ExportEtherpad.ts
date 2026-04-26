@@ -15,13 +15,13 @@
  * limitations under the License.
  */
 
-const Stream = require('./Stream');
-const assert = require('assert').strict;
-const authorManager = require('../db/AuthorManager');
-const hooks = require('../../static/js/pluginfw/hooks');
-const padManager = require('../db/PadManager');
+import Stream from './Stream.js';
+import { strict as assert } from 'assert';
+import * as authorManager from '../db/AuthorManager.js';
+import hooks from '../../static/js/pluginfw/hooks.js';
+import * as padManager from '../db/PadManager.js';
 
-exports.getPadRaw = async (padId:string, readOnlyId:string, revNum?: number) => {
+export const getPadRaw = async (padId:string, readOnlyId:string|null|undefined, revNum?: number) => {
   const dstPfx = `pad:${readOnlyId || padId}`;
   const [pad, customPrefixes] = await Promise.all([
     padManager.getPad(padId),

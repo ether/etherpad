@@ -1,14 +1,14 @@
 'use strict';
 
-import {ErrorExtended, RunCMDOptions, RunCMDPromise} from "../types/RunCMDOptions";
+import {ErrorExtended, RunCMDOptions, RunCMDPromise} from "../types/RunCMDOptions.js";
 import {ChildProcess} from "node:child_process";
-import {PromiseWithStd} from "../types/PromiseWithStd";
+import {PromiseWithStd} from "../types/PromiseWithStd.js";
 import {Readable} from "node:stream";
 
 import spawn from 'cross-spawn';
 import log4js from 'log4js';
 import path from 'path';
-import settings from './Settings';
+import settings from './Settings.js';
 
 const logger = log4js.getLogger('runCmd');
 
@@ -74,7 +74,7 @@ const logLines = (readable: undefined | Readable | null, logLineFn: (arg0: (stri
  *   - `stderr`: Similar to `stdout` but for stderr.
  *   - `child`: The ChildProcess object.
  */
-module.exports = exports = (args: string[], opts:RunCMDOptions = {}) => {
+const runCmd = (args: string[], opts:RunCMDOptions = {}) => {
   logger.debug(`Executing command: ${args.join(' ')}`);
 
   opts = {cwd: settings.root, ...opts};
@@ -161,3 +161,5 @@ module.exports = exports = (args: string[], opts:RunCMDOptions = {}) => {
   });
   return p;
 };
+
+export default runCmd;

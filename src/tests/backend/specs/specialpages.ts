@@ -1,15 +1,19 @@
 'use strict';
 
+import {fileURLToPath} from 'node:url';
+import {dirname} from 'node:path';
 import {strict as assert} from 'assert';
-import {MapArrayType} from "../../../node/types/MapType";
+import {MapArrayType} from "../../../node/types/MapType.js";
 
-const common = require('../common');
-import settings from '../../../node/utils/Settings';
+import * as common from '../common.js';
+import settings from '../../../node/utils/Settings.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 
 
 describe(__filename, function () {
-  this.timeout(30000);
   let agent:any;
   const backups:MapArrayType<any> = {};
   before(async function () { agent = await common.init(); });

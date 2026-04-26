@@ -19,7 +19,7 @@
  * limitations under the License.
  */
 
-const semver = require('semver');
+import semver from 'semver';
 
 /**
  * Quits if Etherpad is not running on a given minimum Node version

@@ -1,26 +1,26 @@
 'use strict';
 
-import {PadAuthor, PadType} from "../types/PadType";
-import {MapArrayType} from "../types/MapType";
+import {PadAuthor, PadType} from "../types/PadType.js";
+import {MapArrayType} from "../types/MapType.js";
 
-import AttributeMap from '../../static/js/AttributeMap';
-import {applyToAText, checkRep, compose, deserializeOps, pack, splitAttributionLines, splitTextLines, unpack} from '../../static/js/Changeset';
-import {Builder} from "../../static/js/Builder";
-import {OpAssembler} from "../../static/js/OpAssembler";
-import {numToString} from "../../static/js/ChangesetUtils";
-import Op from "../../static/js/Op";
-import {StringAssembler} from "../../static/js/StringAssembler";
-const attributes = require('../../static/js/attributes');
-const exportHtml = require('./ExportHtml');
+import AttributeMap from '../../static/js/AttributeMap.js';
+import {applyToAText, checkRep, compose, deserializeOps, pack, splitAttributionLines, splitTextLines, unpack} from '../../static/js/Changeset.js';
+import {Builder} from "../../static/js/Builder.js";
+import {OpAssembler} from "../../static/js/OpAssembler.js";
+import {numToString} from "../../static/js/ChangesetUtils.js";
+import Op from "../../static/js/Op.js";
+import {StringAssembler} from "../../static/js/StringAssembler.js";
+import * as attributes from '../../static/js/attributes.js';
+import * as exportHtml from './ExportHtml.js';
 
 
 class PadDiff {
   private readonly _pad: PadType;
-    private readonly _fromRev: string;
-    private readonly _toRev: string;
+    private readonly _fromRev: string|number;
+    private readonly _toRev: string|number;
     private _html: any;
     public _authors: any[];
-  constructor(pad: PadType, fromRev:string, toRev:string) {
+  constructor(pad: PadType, fromRev:string|number, toRev:string|number) {
     // check parameters
     if (!pad || !pad.id || !pad.atext || !pad.pool) {
       throw new Error('Invalid pad');
@@ -135,14 +135,14 @@ class PadDiff {
 
     let superChangeset = null;
 
-    for (let rev = this._fromRev + 1; rev <= this._toRev; rev += bulkSize) {
+    for (let rev = Number(this._fromRev) + 1; rev <= Number(this._toRev); rev += bulkSize) {
       // get the bulk
       const {changesets, authors} = await this._getChangesetsInBulk(rev, bulkSize);
 
       const addedAuthors = [];
 
       // run through all changesets
-      for (let i = 0; i < changesets.length && (rev + i) <= this._toRev; ++i) {
+      for (let i = 0; i < changesets.length && (rev + i) <= Number(this._toRev); ++i) {
         let changeset = changesets[i];
 
         // skip clearAuthorship Changesets
@@ -456,4 +456,4 @@ class PadDiff {
 
 
 // export the constructor
-module.exports = PadDiff;
+export default PadDiff;

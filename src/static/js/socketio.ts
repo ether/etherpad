@@ -42,8 +42,11 @@ const connect = (etherpadBaseUrl, namespace = '/', options = {}) => {
   return socket;
 };
 
-if (typeof exports === 'object') {
-  exports.connect = connect;
-} else {
-  window.socketio = {connect};
+const socketio = {connect};
+
+if (typeof window !== 'undefined') {
+  window.socketio = socketio;
 }
+
+export {connect};
+export default socketio;

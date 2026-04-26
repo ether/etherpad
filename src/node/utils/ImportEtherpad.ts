@@ -1,6 +1,6 @@
 'use strict';
 
-import {APool} from "../types/PadType";
+import {APool} from "../types/PadType.js";
 
 /**
  * 2014 John McLear (Etherpad Foundation / McLear Ltd)
@@ -18,19 +18,19 @@ import {APool} from "../types/PadType";
  * limitations under the License.
  */
 
-import AttributePool from '../../static/js/AttributePool';
-const {Pad} = require('../db/Pad');
-const Stream = require('./Stream');
-const authorManager = require('../db/AuthorManager');
-const db = require('../db/DB');
-const hooks = require('../../static/js/pluginfw/hooks');
+import AttributePool from '../../static/js/AttributePool.js';
+import { Pad } from '../db/Pad.js';
+import Stream from './Stream.js';
+import * as authorManager from '../db/AuthorManager.js';
+import db from '../db/DB.js';
+import hooks from '../../static/js/pluginfw/hooks.js';
 import log4js from 'log4js';
-const supportedElems = require('../../static/js/contentcollector').supportedElems;
+import { supportedElems } from '../../static/js/contentcollector.js';
 import {Database} from 'ueberdb2';
 
 const logger = log4js.getLogger('ImportEtherpad');
 
-exports.setPadRaw = async (padId: string, r: string, authorId = '') => {
+export const setPadRaw = async (padId: string, r: string, authorId = '') => {
   const records = JSON.parse(r);
 
   // get supported block Elements from plugins, we will use this later.

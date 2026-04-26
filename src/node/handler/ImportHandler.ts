@@ -21,17 +21,18 @@
  * limitations under the License.
  */
 
-const padManager = require('../db/PadManager');
-const padMessageHandler = require('./PadMessageHandler');
+import * as padManager from '../db/PadManager.js';
+import padMessageHandler from './PadMessageHandler.js';
 import {promises as fs} from 'fs';
 import path from 'path';
-import settings from '../utils/Settings';
-const {Formidable} = require('formidable');
+import settings from '../utils/Settings.js';
+import { Formidable } from 'formidable';
 import os from 'os';
-const importHtml = require('../utils/ImportHtml');
-const importEtherpad = require('../utils/ImportEtherpad');
+import * as importHtml from '../utils/ImportHtml.js';
+import * as importEtherpad from '../utils/ImportEtherpad.js';
 import log4js from 'log4js';
-const hooks = require('../../static/js/pluginfw/hooks');
+import hooks from '../../static/js/pluginfw/hooks.js';
+import * as converterModule from '../utils/LibreOffice.js';
 
 const logger = log4js.getLogger('ImportHandler');
 
@@ -56,12 +57,12 @@ const rm = async (path: string) => {
   }
 };
 
-let converter:any = null;
+let converter: typeof converterModule | null = null;
 let exportExtension = 'htm';
 
 // load soffice only if it is enabled
 if (settings.soffice != null) {
-  converter = require('../utils/LibreOffice');
+  converter = converterModule;
   exportExtension = 'html';
 }
 
@@ -74,7 +75,7 @@ const tmpDirectory = os.tmpdir();
  * @param {String} padId the pad id to export
  * @param {String} authorId the author id to use for the import
  */
-const doImport = async (req:any, res:any, padId:string, authorId:string) => {
+const performImport = async (req:any, res:any, padId:string, authorId:string) => {
   // pipe to a file
   // convert file to html via soffice
   // set html in the pad
@@ -96,7 +97,7 @@ const doImport = async (req:any, res:any, padId:string, authorId:string) => {
     [fields, files] = await form.parse(req);
   } catch (err:any) {
     logger.warn(`Import failed due to form error: ${err.stack || err}`);
-    if (err.code === Formidable.formidableErrors.biggerThanMaxFileSize) {
+    if (err.code === (Formidable as any).formidableErrors.biggerThanMaxFileSize) {
       throw new ImportError('maxFileSize');
     }
     throw new ImportError('uploadFailed');
@@ -110,7 +111,7 @@ const doImport = async (req:any, res:any, padId:string, authorId:string) => {
 
   // ensure this is a file ending we know, else we change the file ending to .txt
   // this allows us to accept source code files like .c or .java
-  const fileEnding = path.extname(files.file[0].originalFilename).toLowerCase();
+  const fileEnding = path.extname(files.file[0].originalFilename || '').toLowerCase();
   const knownFileEndings =
     ['.txt', '.doc', '.docx', '.pdf', '.odt', '.html', '.htm', '.etherpad', '.rtf'];
   const fileEndingUnknown = (knownFileEndings.indexOf(fileEnding) < 0);
@@ -164,7 +165,7 @@ const doImport = async (req:any, res:any, padId:string, authorId:string) => {
       await fs.rename(srcFile, destFile);
     } else {
       try {
-        await converter.convertFile(srcFile, destFile, exportExtension);
+        await converter!.convertFile(srcFile, destFile, exportExtension);
       } catch (err:any) {
         logger.warn(`Converting Error: ${err.stack || err}`);
         throw new ImportError('convertFailed');
@@ -189,7 +190,7 @@ const doImport = async (req:any, res:any, padId:string, authorId:string) => {
   let pad = await padManager.getPad(padId, '\n', authorId);
 
   // read the text
-  let text;
+  let text: string = '';
 
   if (!directDatabaseAccess) {
     text = await fs.readFile(destFile, 'utf8');
@@ -241,13 +242,13 @@ const doImport = async (req:any, res:any, padId:string, authorId:string) => {
  * @param {String} authorId the author id to use for the import
  * @return {Promise<void>} a promise
  */
-exports.doImport = async (req:any, res:any, padId:string, authorId:string = '') => {
+export const doImport = async (req:any, res:any, padId:string, authorId:string = '') => {
   let httpStatus = 200;
   let code = 0;
   let message = 'ok';
   let directDatabaseAccess;
   try {
-    directDatabaseAccess = await doImport(req, res, padId, authorId);
+    directDatabaseAccess = await performImport(req, res, padId, authorId);
   } catch (err:any) {
     const known = err instanceof ImportError && err.status;
     if (!known) logger.error(`Internal error during import: ${err.stack || err}`);

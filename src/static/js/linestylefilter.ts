@@ -31,13 +31,13 @@
 // requires: plugins
 // requires: undefined
 
-import {deserializeOps} from './Changeset';
-import attributes from './attributes';
-const hooks = require('./pluginfw/hooks');
+import {deserializeOps} from './Changeset.js';
+import attributes from './attributes.js';
+import hooks from './pluginfw/hooks.js';
 const linestylefilter = {};
-const AttributeManager = require('./AttributeManager');
-import padutils from './pad_utils'
-import Op from "./Op";
+import AttributeManager from './AttributeManager.js';
+import padutils from './pad_utils.js'
+import Op from "./Op.js";
 
 linestylefilter.ATTRIB_CLASSES = {
   bold: 'tag:b',
@@ -47,7 +47,7 @@ linestylefilter.ATTRIB_CLASSES = {
 };
 
 const lineAttributeMarker = 'lineAttribMarker';
-exports.lineAttributeMarker = lineAttributeMarker;
+export {lineAttributeMarker};
 
 linestylefilter.getAuthorClassName = (author) => `author-${author.replace(/[^a-y0-9]/g, (c) => {
   if (c === '.') return '-';
@@ -290,4 +290,4 @@ linestylefilter.populateDomLine = (textLine, aline, apool, domLineObj) => {
   func(text, '');
 };
 
-exports.linestylefilter = linestylefilter;
+export {linestylefilter};

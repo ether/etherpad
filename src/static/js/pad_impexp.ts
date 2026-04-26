@@ -184,4 +184,4 @@ const padimpexp = (() => {
   return self;
 })();
 
-exports.padimpexp = padimpexp;
+export {padimpexp};

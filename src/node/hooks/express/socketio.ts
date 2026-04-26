@@ -1,16 +1,16 @@
 'use strict';
 
-import {ArgsExpressType} from "../../types/ArgsExpressType";
+import type {ArgsExpressType} from "../../types/ArgsExpressType.js";
 
 import events from 'events';
-const express = require('../express');
+import * as express from '../express.js';
 import log4js from 'log4js';
-const proxyaddr = require('proxy-addr');
-import settings from '../../utils/Settings';
+import proxyaddr from 'proxy-addr';
+import settings from '../../utils/Settings.js';
 import {Server, Socket} from 'socket.io'
-const socketIORouter = require('../../handler/SocketIORouter');
-const hooks = require('../../../static/js/pluginfw/hooks');
-const padMessageHandler = require('../../handler/PadMessageHandler');
+import * as socketIORouter from '../../handler/SocketIORouter.js';
+import hooks from '../../../static/js/pluginfw/hooks.js';
+import padMessageHandler from '../../handler/PadMessageHandler.js';
 
 let io:any;
 const logger = log4js.getLogger('socket.io');

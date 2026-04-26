@@ -1,10 +1,10 @@
 'use strict';
 
-import AttributeMap from '../../../static/js/AttributeMap';
-import AttributePool from '../../../static/js/AttributePool';
-import attributes from '../../../static/js/attributes';
+import AttributeMap from '../../../static/js/AttributeMap.js';
+import AttributePool from '../../../static/js/AttributePool.js';
+import attributes from '../../../static/js/attributes.js';
 import {expect, describe, it, beforeEach} from 'vitest'
-import {Attribute} from "../../../static/js/types/Attribute";
+import {Attribute} from "../../../static/js/types/Attribute.js";
 
 describe('AttributeMap', function () {
   const attribs: Attribute[] = [

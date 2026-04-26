@@ -2,13 +2,13 @@
 
 import {strict as assert} from "assert";
 import log4js from 'log4js';
-import {SocketClientRequest} from "../../types/SocketClientRequest";
-import {WebAccessTypes} from "../../types/WebAccessTypes";
-import {SettingsUser} from "../../types/SettingsUser";
+import {SocketClientRequest} from "../../types/SocketClientRequest.js";
+import {WebAccessTypes} from "../../types/WebAccessTypes.js";
+import {SettingsUser} from "../../types/SettingsUser.js";
 const httpLogger = log4js.getLogger('http');
-import settings from '../../utils/Settings';
-const hooks = require('../../../static/js/pluginfw/hooks');
-import readOnlyManager from '../../db/ReadOnlyManager';
+import settings from '../../utils/Settings.js';
+import hooks from '../../../static/js/pluginfw/hooks.js';
+import readOnlyManager from '../../db/ReadOnlyManager.js';
 
 hooks.deprecationNotices.authFailure = 'use the authnFailure and authzFailure hooks instead';
 
@@ -21,7 +21,7 @@ const aCallFirst0 =
     // @ts-ignore
     async (hookName: string, context:any, pred = null) => (await aCallFirst(hookName, context, pred))[0];
 
-exports.normalizeAuthzLevel = (level: string|boolean) => {
+export const normalizeAuthzLevel = (level: string|boolean) => {
   if (!level) return false;
   switch (level) {
     case true:
@@ -36,18 +36,19 @@ exports.normalizeAuthzLevel = (level: string|boolean) => {
   return false;
 };
 
-exports.userCanModify = (padId: string, req: SocketClientRequest) => {
+export const userCanModify = (padId: string, req: SocketClientRequest) => {
   if (readOnlyManager.isReadOnlyId(padId)) return false;
   if (!settings.requireAuthentication) return true;
   const {session: {user} = {}} = req;
   if (!user || user.readOnly) return false;
   assert(user.padAuthorizations); // This is populated even if !settings.requireAuthorization.
-  const level = exports.normalizeAuthzLevel(user.padAuthorizations[padId]);
+  const level = normalizeAuthzLevel(user.padAuthorizations[padId]);
   return level && level !== 'readOnly';
 };
 
 // Exported so that tests can set this to 0 to avoid unnecessary test slowness.
-exports.authnFailureDelayMs = 1000;
+export let authnFailureDelayMs = 1000;
+export const setAuthnFailureDelayMs = (v: number) => { authnFailureDelayMs = v; };
 
 const staticResources = [
   /^\/padbootstrap-[a-zA-Z0-9]+\.min\.js$/,
@@ -106,7 +107,7 @@ const checkAccess = async (req:any, res:any, next: Function) => {
   // authentication is checked and once after (if settings.requireAuthorization is true).
   const authorize = async () => {
     const grant = async (level: string|false) => {
-      level = exports.normalizeAuthzLevel(level);
+      level = normalizeAuthzLevel(level);
       if (!level) return false;
       const user = req.session.user;
       if (user == null) return true; // This will happen if authentication is not required.
@@ -186,7 +187,7 @@ const checkAccess = async (req:any, res:any, next: Function) => {
         res.header('WWW-Authenticate', 'Basic realm="Protected Area"');
       }
       // Delay the error response for 1s to slow down brute force attacks.
-      await new Promise((resolve) => setTimeout(resolve, exports.authnFailureDelayMs));
+      await new Promise((resolve) => setTimeout(resolve, authnFailureDelayMs));
       res.status(401).send('Authentication Required');
       return;
     }
@@ -230,6 +231,7 @@ const checkAccess = async (req:any, res:any, next: Function) => {
  * Express middleware to authenticate the user and check authorization. Must be installed after the
  * express-session middleware.
  */
-exports.checkAccess = (req:any, res:any, next:Function) => {
+export const checkAccessMiddleware = (req:any, res:any, next:Function) => {
   checkAccess(req, res, next).catch((err) => next(err || new Error(err)));
 };
+export { checkAccessMiddleware as checkAccess };

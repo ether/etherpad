@@ -1,5 +1,5 @@
-import Op from "./Op";
-import {clearOp, copyOp, deserializeOps} from "./Changeset";
+import Op from "./Op.js";
+import {clearOp, copyOp, deserializeOps} from "./Changeset.js";
 
 /**
  * Iterator over a changeset's operations.

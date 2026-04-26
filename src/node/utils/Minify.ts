@@ -24,13 +24,13 @@
 import {TransformResult} from "esbuild";
 import mime from 'mime-types';
 import log4js from 'log4js';
-import {compressCSS, compressJS} from './MinifyWorker'
+import {compressCSS, compressJS} from './MinifyWorker.js';
 
-import settings from './Settings';
+import settings from './Settings.js';
 import {promises as fs} from 'fs';
 import path from 'node:path';
-const plugins = require('../../static/js/pluginfw/plugin_defs');
-import sanitizePathname from './sanitizePathname';
+import plugins from '../../static/js/pluginfw/plugin_defs.js';
+import sanitizePathname from './sanitizePathname.js';
 const logger = log4js.getLogger('Minify');
 
 const ROOT_DIR = path.join(settings.root, 'src/static/');

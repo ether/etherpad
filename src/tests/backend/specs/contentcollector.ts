@@ -1,5 +1,8 @@
 'use strict';
 
+import {fileURLToPath} from 'node:url';
+import {dirname} from 'node:path';
+
 /*
  * While importexport tests target the `setHTML` API endpoint, which is nearly identical to what
  * happens when a user manually imports a document via the UI, the contentcollector tests here don't
@@ -9,15 +12,18 @@
  * If you add tests here, please also add them to importexport.js
  */
 
-import {APool} from "../../../node/types/PadType";
+import {APool} from "../../../node/types/PadType.js";
 
-import AttributePool from '../../../static/js/AttributePool';
-const Changeset = require('../../../static/js/Changeset');
-const assert = require('assert').strict;
-import attributes from '../../../static/js/attributes';
-const contentcollector = require('../../../static/js/contentcollector');
+import AttributePool from '../../../static/js/AttributePool.js';
+import * as Changeset from '../../../static/js/Changeset.js';
+import assert from 'assert';
+import * as attributes from '../../../static/js/attributes.js';
+import * as contentcollector from '../../../static/js/contentcollector.js';
 import jsdom from 'jsdom';
-import {Attribute} from "../../../static/js/types/Attribute";
+import {Attribute} from "../../../static/js/types/Attribute.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // All test case `wantAlines` values must only refer to attributes in this list so that the
 // attribute numbers do not change due to changes in pool insertion order.
@@ -373,7 +379,8 @@ pre
 
 describe(__filename, function () {
   for (const tc of testCases) {
-    describe(tc.description, function () {
+    const describeFn = tc.disabled ? describe.skip : describe;
+    describeFn(tc.description, function () {
       let apool: AttributePool;
       let result: {
         lines: string[],
@@ -381,7 +388,6 @@ describe(__filename, function () {
       };
 
       before(async function () {
-        if (tc.disabled) return this.skip();
         const {window: {document}} = new jsdom.JSDOM(tc.html);
         apool = new AttributePool();
         // To reduce test fragility, the attribute pool is seeded with `knownAttribs`, and all

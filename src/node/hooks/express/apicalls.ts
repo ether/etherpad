@@ -2,11 +2,12 @@
 
 import express from "express";
 
-const log4js = require('log4js');
+import log4js from 'log4js';
+import { Formidable } from 'formidable';
+import * as apiHandler from '../../handler/APIHandler.js';
+import util from 'util';
+
 const clientLogger = log4js.getLogger('client');
-const {Formidable} = require('formidable');
-const apiHandler = require('../../handler/APIHandler');
-const util = require('util');
 
 
 function objectAsString(obj: any): string {
@@ -23,7 +24,7 @@ function objectAsString(obj: any): string {
   return output;
 }
 
-exports.expressPreSession = async (hookName:string, {app}:any) => {
+export const expressPreSession = async (hookName:string, {app}:any) => {
   app.use(express.json());
   // The Etherpad client side sends information about how a disconnect happened
   app.post('/ep/pad/connection-diagnostic-info', async (req:any, res:any) => {
@@ -48,7 +49,7 @@ exports.expressPreSession = async (hookName:string, {app}:any) => {
   // The Etherpad client side sends information about client side javscript errors
   app.post('/jserror', (req:any, res:any, next:Function) => {
     (async () => {
-      const data = JSON.parse(await parseJserrorForm(req));
+      const data = JSON.parse(await parseJserrorForm(req) as any);
       clientLogger.warn(`${data.msg} --`, {
         [util.inspect.custom]: (depth: number, options:any) => {
           // Depth is forced to infinity to ensure that all of the provided data is logged.

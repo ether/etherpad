@@ -23,15 +23,15 @@
  * limitations under the License.
  */
 
-const makeCSSManager = require('./cssmanager').makeCSSManager;
-const domline = require('./domline').domline;
-import AttribPool from './AttributePool';
-import {compose, deserializeOps, inverse, isIdentity, moveOpsToNewPool, mutateAttributionLines, mutateTextLines, splitAttributionLines, splitTextLines, unpack} from './Changeset';
-const attributes = require('./attributes');
-const linestylefilter = require('./linestylefilter').linestylefilter;
-const colorutils = require('./colorutils').colorutils;
-const _ = require('./underscore');
-const hooks = require('./pluginfw/hooks');
+import {makeCSSManager} from './cssmanager.js';
+import {domline} from './domline.js';
+import AttribPool from './AttributePool.js';
+import {compose, deserializeOps, inverse, isIdentity, moveOpsToNewPool, mutateAttributionLines, mutateTextLines, splitAttributionLines, splitTextLines, unpack} from './Changeset.js';
+import attributes from './attributes.js';
+import {linestylefilter} from './linestylefilter.js';
+import {colorutils} from './colorutils.js';
+import _ from './underscore.js';
+import hooks from './pluginfw/hooks.js';
 
 import html10n from './vendors/html10n';
 
@@ -574,4 +574,4 @@ const loadBroadcastJS = (socket, sendSocketMsg, fireWhenAllScriptsAreLoaded, Bro
   return changesetLoader;
 };
 
-exports.loadBroadcastJS = loadBroadcastJS;
+export {loadBroadcastJS};

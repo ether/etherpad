@@ -1,5 +1,5 @@
 import {expect, test} from "@playwright/test";
-import {appendQueryParams, goToNewPad} from "../helper/padHelper";
+import {appendQueryParams, goToNewPad} from "../helper/padHelper.js";
 
 test.beforeEach(async ({page, browser}) => {
   const context = await browser.newContext();

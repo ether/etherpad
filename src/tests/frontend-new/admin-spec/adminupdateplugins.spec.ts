@@ -1,5 +1,5 @@
 import {expect, test} from "@playwright/test";
-import {loginToAdmin} from "../helper/adminhelper";
+import {loginToAdmin} from "../helper/adminhelper.js";
 
 // Install/uninstall mutates global server state (installed plugin set) that
 // all admin tests observe. Run these serially so one test's install can't

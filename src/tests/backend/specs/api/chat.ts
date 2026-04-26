@@ -1,10 +1,13 @@
 'use strict';
 
-import {generateJWTToken} from "../../common";
+import {generateJWTToken} from "../../common.js";
 
-const common = require('../../common');
+import * as common from '../../common.js';
 
 import {strict as assert} from "assert";
+import {fileURLToPath} from 'node:url';
+
+const __filename = fileURLToPath(import.meta.url);
 
 let agent:any;
 let apiVersion = 1;
