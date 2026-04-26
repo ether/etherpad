@@ -66,13 +66,15 @@
      desired visual order (minus on the left, sticky on the right). */
 #titlebar {
   font-weight: bold;
-  padding: 5px;
+  /* Equal horizontal padding so CHAT on the left and the sticky button on
+     the right sit the same distance from the title-bar edges. */
+  padding: 5px 9px;
   display: flex;
   align-items: center;
   gap: 8px;
 }
 #titlebar #titlelabel {
-  margin: 0 0 0 4px;
+  margin: 0;
   font-size: 1.4rem;
   flex: 1;
 }
