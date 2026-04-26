@@ -3,11 +3,11 @@
     /* Visit https://aka.ms/tsconfig to read more about this file */
     "moduleDetection": "force",
     "lib": ["ES2023", "DOM"],
-    "types": ["node", "jquery"],
     /* Language and Environment */
     "target": "es6",                                  /* Set the JavaScript language version for emitted JavaScript and include compatible library declarations. */
     /* Modules */
-    "module": "CommonJS",                                /* Specify what module code is generated. */
+    "module": "NodeNext",                                /* Specify what module code is generated. */
+    "moduleResolution": "NodeNext",                      /* Specify how TypeScript resolves modules. */
     "esModuleInterop": true,                             /* Emit additional JavaScript to ease support for importing CommonJS modules. This enables 'allowSyntheticDefaultImports' for type compatibility. */
     "forceConsistentCasingInFileNames": true,            /* Ensure that casing is correct in imports. */
     /* Type Checking */
@@ -16,5 +16,6 @@
     "skipLibCheck": true                                 /* Skip type checking all .d.ts files. */,
     "resolveJsonModule": true,
     "types": ["node", "jquery", "mocha"]
-  }
+  },
+  "exclude": ["../plugin_packages", "node_modules"]
 }
