@@ -142,9 +142,9 @@
   },
   "scripts": {
     "lint": "eslint .",
-    "test": "cross-env NODE_ENV=production vitest run --pool=forks --no-file-parallelism --no-isolate",
-    "test-utils": "cross-env NODE_ENV=production vitest run tests/backend/specs --testTimeout 5000 --pool=forks --no-file-parallelism --no-isolate",
-    "test-container": "cross-env NODE_ENV=production vitest run tests/container/specs/api --pool=forks --no-file-parallelism --no-isolate",
+    "test": "cross-env NODE_ENV=production vitest run",
+    "test-utils": "cross-env NODE_ENV=production vitest run tests/backend/specs --testTimeout 5000",
+    "test-container": "cross-env NODE_ENV=production vitest run tests/container/specs/api",
     "dev": "cross-env NODE_ENV=development  node --import tsx node/server.ts",
     "prod": "cross-env NODE_ENV=production node --import tsx node/server.ts",
     "ts-check": "tsc --noEmit",
