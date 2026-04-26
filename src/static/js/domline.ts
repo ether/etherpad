@@ -23,10 +23,10 @@
 // requires: plugins
 // requires: undefined
 
-const Security = require('./security');
-const hooks = require('./pluginfw/hooks');
-const _ = require('./underscore');
-const lineAttributeMarker = require('./linestylefilter').lineAttributeMarker;
+import Security from './security.js';
+import hooks from './pluginfw/hooks.js';
+import _ from './underscore.js';
+import {lineAttributeMarker} from './linestylefilter.js';
 const noop = () => {};
 
 
@@ -280,4 +280,4 @@ domline.processSpaces = (s, doesWrap) => {
   return parts.join('');
 };
 
-exports.domline = domline;
+export {domline};
