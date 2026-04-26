@@ -62,16 +62,14 @@
 #titlebar {
   font-weight: bold;
   padding: 5px;
-  /* Lay the label and corner controls on a single row and bottom-align
-     them. The controls were previously `float: right` `<a>` tags, so the
-     small minus/block glyphs sat at the *baseline* of the line and looked
-     anchored to the bottom of the title bar. After #7584 turned them into
-     `<button>`s the floats survived but the buttons render at the top of
-     the line (button content is centered in its own box, and the box is
-     only as tall as the glyph), leaving the controls floating above the
-     title text. Fixes #7590. */
+  /* Lay the label and corner controls on a single row. Replaces the prior
+     `float: right` layout so we can place each control on its own cross-
+     axis position (titlesticky at the top, titlecross at the bottom of
+     the title bar). After #7584 turned the corner controls from inline
+     `<a>` glyphs into `<button>`s, the float layout left them stacked at
+     the top of the line and the minus glyph no longer sat near the title
+     baseline. Fixes #7590. */
   display: flex;
-  align-items: flex-end;
   gap: 6px;
 }
 #titlebar #titlelabel {
@@ -80,6 +78,8 @@
   /* Take the remaining row width so the corner buttons are pushed to the
      right edge (replaces the prior float-right layout). */
   flex: 1;
+  /* Don't stretch the heading vertically; let it sit on its own baseline. */
+  align-self: center;
 }
 #titlebar .stick-to-screen-btn,
 #titlebar .hide-reduce-btn {
@@ -97,9 +97,12 @@
 /* Preserve the historical visual order [titlesticky] [titlecross] — when
    both controls were `float: right`, source order was reversed visually,
    so titlesticky sat to the left of titlecross. Restore that with `order`
-   so we don't have to renumber the markup. */
-#titlebar .stick-to-screen-btn { order: 1; }
-#titlebar .hide-reduce-btn { order: 2; }
+   so we don't have to renumber the markup. The cross-axis position differs
+   per control: titlesticky stays where it always sat (top of the bar),
+   titlecross drops to the bottom so its `−` glyph sits on the title's
+   baseline rather than floating above it. */
+#titlebar .stick-to-screen-btn { order: 1; align-self: flex-start; }
+#titlebar .hide-reduce-btn { order: 2; align-self: flex-end; }
 #titlebar .stick-to-screen-btn {
   font-size: 10px;
   padding-top: 2px;
