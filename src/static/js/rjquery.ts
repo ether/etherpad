@@ -1,6 +1,8 @@
 // @ts-nocheck
 'use strict';
 // Provides a require'able version of jQuery without leaking $ and jQuery;
-window.$ = require('./vendors/jquery');
+import $ from './vendors/jquery.js';
+window.$ = $;
 const jq = window.$.noConflict(true);
-exports.jQuery = exports.$ = jq;
+
+export {jq as jQuery, jq as $};

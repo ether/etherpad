@@ -25,13 +25,13 @@
 
 // These jQuery things should create local references, but for now `require()`
 // assigns to the global `$` and augments it with plugins.
-require('./vendors/jquery');
+import './vendors/jquery.js';
 
-import {randomString, Cookies} from "./pad_utils";
-const hooks = require('./pluginfw/hooks');
-import padutils from './pad_utils'
-const socketio = require('./socketio');
-import html10n from '../js/vendors/html10n'
+import {randomString, Cookies} from "./pad_utils.js";
+import hooks from './pluginfw/hooks.js';
+import padutils from './pad_utils.js'
+import socketio from './socketio.js';
+import html10n from '../js/vendors/html10n.js'
 let token, padId, exportLinks, socket, changesetLoader, BroadcastSlider;
 let cp = '';
 const playbackSpeedCookie = 'timesliderPlaybackSpeed';
@@ -222,5 +222,5 @@ const handleClientVars = (message) => {
   });
 };
 
-exports.baseURL = '';
-exports.init = init;
+export const baseURL = '';
+export {init};

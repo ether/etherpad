@@ -1,4 +1,6 @@
 // @ts-nocheck
 'use strict';
 
-module.exports = require('underscore');
+import _ from 'underscore';
+
+export default _;
