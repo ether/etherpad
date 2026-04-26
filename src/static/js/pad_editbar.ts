@@ -159,6 +159,21 @@ exports.padeditbar = new class {
       this._bodyKeyEvent(evt);
     });
 
+    // After any toolbar-select change (e.g. ep_headings style picker,
+    // ep_font_size), return keyboard focus to the pad editor so the caret
+    // is back at its previous location. Plugin-provided <select> elements
+    // aren't always wired through Button.bind (which requires data-key on
+    // the wrapping <li>); covering them at the #editbar level means every
+    // toolbar dropdown restores focus consistently. setTimeout(0) defers
+    // the focus call until plugin change handlers (bound on the same
+    // event) have finished, so their ace.callWithAce work is done before
+    // we return focus. Fixes #7589.
+    $('#editbar').on('change', 'select', () => {
+      setTimeout(() => {
+        if (padeditor.ace) padeditor.ace.focus();
+      }, 0);
+    });
+
     $('.show-more-icon-btn').on('click', () => {
       const expanded = $('.toolbar').toggleClass('full-icons').hasClass('full-icons');
       $('.show-more-icon-btn').attr('aria-expanded', String(expanded));
