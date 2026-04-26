@@ -99,7 +99,7 @@ class Button {
     }
 
     public static load(btnName: string) {
-        const button = module.exports.availableButtons[btnName];
+        const button = toolbar.availableButtons[btnName];
         try {
             if (button.constructor === Button || button.constructor === SelectButton) {
                 return button;
@@ -189,7 +189,7 @@ class Separator {
     }
 }
 
-module.exports = {
+const toolbar = {
     availableButtons: {
         bold: defaultButtonAttributes('bold'),
         italic: defaultButtonAttributes('italic'),
@@ -308,3 +308,5 @@ module.exports = {
         return groups.join(this.separator());
     },
 };
+
+export default toolbar;

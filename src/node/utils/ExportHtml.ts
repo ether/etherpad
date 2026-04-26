@@ -1,6 +1,6 @@
 'use strict';
-import {AText, PadType} from "../types/PadType";
-import {MapArrayType} from "../types/MapType";
+import {AText, PadType} from "../types/PadType.js";
+import {MapArrayType} from "../types/MapType.js";
 
 /**
  * Copyright 2009 Google Inc.
@@ -18,18 +18,17 @@ import {MapArrayType} from "../types/MapType";
  * limitations under the License.
  */
 
-import {deserializeOps, splitAttributionLines, subattribution} from '../../static/js/Changeset';
-const attributes = require('../../static/js/attributes');
-const padManager = require('../db/PadManager');
-const _ = require('underscore');
-const Security = require('../../static/js/security');
-const hooks = require('../../static/js/pluginfw/hooks');
-const eejs = require('../eejs');
-const _analyzeLine = require('./ExportHelper')._analyzeLine;
-const _encodeWhitespace = require('./ExportHelper')._encodeWhitespace;
-import padutils from "../../static/js/pad_utils";
-import {StringIterator} from "../../static/js/StringIterator";
-import {StringAssembler} from "../../static/js/StringAssembler";
+import {deserializeOps, splitAttributionLines, subattribution} from '../../static/js/Changeset.js';
+import * as attributes from '../../static/js/attributes.js';
+import padManager from '../db/PadManager.js';
+import _ from 'underscore';
+import Security from '../../static/js/security.js';
+import hooks from '../../static/js/pluginfw/hooks.js';
+import eejs from '../eejs/index.js';
+import { _analyzeLine, _encodeWhitespace } from './ExportHelper.js';
+import padutils from "../../static/js/pad_utils.js";
+import {StringIterator} from "../../static/js/StringIterator.js";
+import {StringAssembler} from "../../static/js/StringAssembler.js";
 
 const getPadHTML = async (pad: PadType, revNum: string) => {
   let atext = pad.atext;
@@ -509,7 +508,7 @@ const getHTMLFromAtext = async (pad:PadType, atext: AText, authorColors?: string
   return pieces.join('');
 };
 
-exports.getPadHTMLDocument = async (padId: string, revNum: string, readOnlyId: number) => {
+export const getPadHTMLDocument = async (padId: string, revNum: string, readOnlyId: number) => {
   const pad = await padManager.getPad(padId);
 
   // Include some Styles into the Head for Export
@@ -587,5 +586,4 @@ const _processSpaces = (s: string) => {
   return parts.join('');
 };
 
-exports.getPadHTML = getPadHTML;
-exports.getHTMLFromAtext = getHTMLFromAtext;
+export { getPadHTML, getHTMLFromAtext };
