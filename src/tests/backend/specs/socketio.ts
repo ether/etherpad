@@ -10,7 +10,7 @@ import * as padManager from '../../../node/db/PadManager.js';
 import pluginDefs from '../../../static/js/pluginfw/plugin_defs.js';
 import readOnlyManager from '../../../node/db/ReadOnlyManager.js';
 import settings from '../../../node/utils/Settings.js';
-import socketIoRouter from '../../../node/handler/SocketIORouter.js';
+import * as socketIoRouter from '../../../node/handler/SocketIORouter.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -338,22 +338,32 @@ describe(__filename, function () {
       handleMessage(socket:any, message:string) {}
     };
 
+    // Each test below uses a unique component name so handlers do not bleed
+    // across tests. We track the names per-test for cleanup in afterEach.
+    let componentNames: string[] = [];
+    const registerComponent = (name: string, mod: any) => {
+      componentNames.push(name);
+      socketIoRouter.addComponent(name, mod);
+    };
+
     afterEach(async function () {
-      socketIoRouter.deleteComponent(this.test!.fullTitle());
-      socketIoRouter.deleteComponent(`${this.test!.fullTitle()} #2`);
+      for (const name of componentNames) socketIoRouter.deleteComponent(name);
+      componentNames = [];
     });
 
     it('setSocketIO', async function () {
+      const moduleName = 'SocketIORouter.js setSocketIO';
       let ioServer;
-      socketIoRouter.addComponent(this.test!.fullTitle(), new class extends Module {
+      registerComponent(moduleName, new class extends Module {
         setSocketIO(io:any) { ioServer = io; }
       }());
       assert(ioServer != null);
     });
 
     it('handleConnect', async function () {
+      const moduleName = 'SocketIORouter.js handleConnect';
       let serverSocket;
-      socketIoRouter.addComponent(this.test!.fullTitle(), new class extends Module {
+      registerComponent(moduleName, new class extends Module {
         handleConnect(socket:any) { serverSocket = socket; }
       }());
       socket = await common.connect();
@@ -361,11 +371,12 @@ describe(__filename, function () {
     });
 
     it('handleDisconnect', async function () {
+      const moduleName = 'SocketIORouter.js handleDisconnect';
       let resolveConnected:  (value: void | PromiseLike<void>) => void ;
       const connected = new Promise((resolve) => resolveConnected = resolve);
       let resolveDisconnected: (value: void | PromiseLike<void>) => void ;
       const disconnected = new Promise<void>((resolve) => resolveDisconnected = resolve);
-      socketIoRouter.addComponent(this.test!.fullTitle(), new class extends Module {
+      registerComponent(moduleName, new class extends Module {
         private _socket: any;
         handleConnect(socket:any) {
           this._socket = socket;
@@ -387,18 +398,19 @@ describe(__filename, function () {
     });
 
     it('handleMessage (success)', async function () {
+      const moduleName = 'SocketIORouter.js handleMessage (success)';
       let serverSocket:any;
       const want = {
-        component: this.test!.fullTitle(),
+        component: moduleName,
         foo: {bar: 'asdf'},
       };
       let rx:Function;
       const got = new Promise((resolve) => { rx = resolve; });
-      socketIoRouter.addComponent(this.test!.fullTitle(), new class extends Module {
+      registerComponent(moduleName, new class extends Module {
         handleConnect(socket:any) { serverSocket = socket; }
         handleMessage(socket:any, message:string) { assert.equal(socket, serverSocket); rx(message); }
       }());
-      socketIoRouter.addComponent(`${this.test!.fullTitle()} #2`, new class extends Module {
+      registerComponent(`${moduleName} #2`, new class extends Module {
         handleMessage(socket:any, message:any) { assert.fail('wrong handler called'); }
       }());
       socket = await common.connect();
@@ -418,24 +430,26 @@ describe(__filename, function () {
     });
 
     it('handleMessage with ack (success)', async function () {
+      const moduleName = 'SocketIORouter.js handleMessage with ack (success)';
       const want = 'value';
-      socketIoRouter.addComponent(this.test!.fullTitle(), new class extends Module {
+      registerComponent(moduleName, new class extends Module {
         handleMessage(socket:any, msg:any) { return want; }
       }());
       socket = await common.connect();
-      const got = await tx(socket, {component: this.test!.fullTitle()});
+      const got = await tx(socket, {component: moduleName});
       assert.equal(got, want);
     });
 
     it('handleMessage with ack (error)', async function () {
+      const moduleName = 'SocketIORouter.js handleMessage with ack (error)';
       const InjectedError = class extends Error {
         constructor() { super('injected test error'); this.name = 'InjectedError'; }
       };
-      socketIoRouter.addComponent(this.test!.fullTitle(), new class extends Module {
+      registerComponent(moduleName, new class extends Module {
         handleMessage(socket:any, msg:any) { throw new InjectedError(); }
       }());
       socket = await common.connect();
-      await assert.rejects(tx(socket, {component: this.test!.fullTitle()}), new InjectedError());
+      await assert.rejects(tx(socket, {component: moduleName}), new InjectedError());
     });
   });
 });

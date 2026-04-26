@@ -15,10 +15,10 @@ import {dirname} from 'node:path';
 import {APool} from "../../../node/types/PadType";
 
 import AttributePool from '../../../static/js/AttributePool.js';
-import Changeset from '../../../static/js/Changeset.js';
+import * as Changeset from '../../../static/js/Changeset.js';
 import assert from 'assert';
-import attributes from '../../../static/js/attributes.js';
-import contentcollector from '../../../static/js/contentcollector.js';
+import * as attributes from '../../../static/js/attributes.js';
+import * as contentcollector from '../../../static/js/contentcollector.js';
 import jsdom from 'jsdom';
 import {Attribute} from "../../../static/js/types/Attribute";
 
@@ -379,7 +379,8 @@ pre
 
 describe(__filename, function () {
   for (const tc of testCases) {
-    describe(tc.description, function () {
+    const describeFn = tc.disabled ? describe.skip : describe;
+    describeFn(tc.description, function () {
       let apool: AttributePool;
       let result: {
         lines: string[],
@@ -387,7 +388,6 @@ describe(__filename, function () {
       };
 
       before(async function () {
-        if (tc.disabled) return this.skip();
         const {window: {document}} = new jsdom.JSDOM(tc.html);
         apool = new AttributePool();
         // To reduce test fragility, the attribute pool is seeded with `knownAttribs`, and all

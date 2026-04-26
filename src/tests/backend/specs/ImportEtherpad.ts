@@ -4,6 +4,7 @@ import {MapArrayType} from "../../../node/types/MapType.js";
 
 import {strict as assert} from 'assert';
 import * as authorManager from '../../../node/db/AuthorManager.js';
+import * as common from '../common.js';
 import db from '../../../node/db/DB.js';
 import * as importEtherpad from '../../../node/utils/ImportEtherpad.js';
 import * as padManager from '../../../node/db/PadManager.js';
@@ -15,6 +16,8 @@ const __filename = fileURLToPath(import.meta.url);
 
 describe(__filename, function () {
   let padId: string;
+
+  before(async function () { await common.init(); });
 
   const makeAuthorId = () => `a.${randomString(16)}`;
 
