@@ -1,10 +1,15 @@
 'use strict';
 
+import {fileURLToPath} from 'node:url';
+import {dirname} from 'node:path';
 import {strict as assert} from 'assert';
 import {MapArrayType} from "../../../node/types/MapType";
 
-const common = require('../common');
-import settings from '../../../node/utils/Settings';
+import common from '../common.js';
+import settings from '../../../node/utils/Settings.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 
 

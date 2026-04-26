@@ -1,10 +1,17 @@
 'use strict';
 
+import {fileURLToPath} from 'node:url';
+import {dirname} from 'node:path';
 import {strict as assert} from 'assert';
-const hooks = require('../../../static/js/pluginfw/hooks');
-const plugins = require('../../../static/js/pluginfw/plugin_defs');
+import hooks from '../../../static/js/pluginfw/hooks.js';
+import pluginDefs from '../../../static/js/pluginfw/plugin_defs.js';
 import sinon from 'sinon';
 import {MapArrayType} from "../../../node/types/MapType";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+const plugins = pluginDefs;
 
 
 interface ExtendedConsole extends Console {

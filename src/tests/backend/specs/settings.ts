@@ -1,9 +1,14 @@
 'use strict';
 
-const assert = require('assert').strict;
-import {exportedForTestingOnly} from '../../../node/utils/Settings'
+import {fileURLToPath} from 'node:url';
+import {dirname} from 'node:path';
+import assert from 'assert';
+import {exportedForTestingOnly} from '../../../node/utils/Settings.js'
 import path from 'path';
 import process from 'process';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 describe(__filename, function () {
   describe('parseSettings', function () {

@@ -1,14 +1,21 @@
 'use strict';
 
+import {fileURLToPath} from 'node:url';
+import {dirname} from 'node:path';
 import {MapArrayType} from "../../../node/types/MapType";
 
-const assert = require('assert').strict;
-const common = require('../common');
-const padManager = require('../../../node/db/PadManager');
-const plugins = require('../../../static/js/pluginfw/plugin_defs');
-import readOnlyManager from '../../../node/db/ReadOnlyManager';
-import settings from '../../../node/utils/Settings';
-const socketIoRouter = require('../../../node/handler/SocketIORouter');
+import assert from 'assert';
+import common from '../common.js';
+import padManager from '../../../node/db/PadManager.js';
+import pluginDefs from '../../../static/js/pluginfw/plugin_defs.js';
+import readOnlyManager from '../../../node/db/ReadOnlyManager.js';
+import settings from '../../../node/utils/Settings.js';
+import socketIoRouter from '../../../node/handler/SocketIORouter.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+const plugins = pluginDefs;
 
 describe(__filename, function () {
   this.timeout(30000);

@@ -1,8 +1,13 @@
 'use strict';
 
-const assert = require('assert').strict;
-const common = require('../common');
-const i18n = require('../../../node/hooks/i18n');
+import {fileURLToPath} from 'node:url';
+import {dirname} from 'node:path';
+import assert from 'assert';
+import common from '../common.js';
+import i18n from '../../../node/hooks/i18n.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 describe(__filename, function () {
   before(async function () {
