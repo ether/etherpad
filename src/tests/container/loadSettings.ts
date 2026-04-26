@@ -12,10 +12,15 @@
  *          back to a default)
  */
 
-const fs = require('fs');
-const jsonminify = require('jsonminify');
+import fs from 'fs';
+import jsonminify from 'jsonminify';
+import { fileURLToPath } from 'node:url';
+import { dirname } from 'node:path';
 
-function loadSettings() {
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+export function loadSettings(): any {
   let settingsStr = fs.readFileSync(`${__dirname}/../../../settings.json.docker`).toString();
   // try to parse the settings
   try {
@@ -33,5 +38,3 @@ function loadSettings() {
     console.error('whoops something is bad with settings');
   }
 }
-
-exports.loadSettings = loadSettings;

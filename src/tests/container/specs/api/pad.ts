@@ -5,9 +5,11 @@
  * TODO: unify those two files, and merge in a single one.
  */
 
-const settings = require('../../loadSettings').loadSettings();
-const supertest = require('supertest');
+import { describe, it } from 'vitest';
+import supertest from 'supertest';
+import { loadSettings } from '../../loadSettings.js';
 
+const settings = loadSettings();
 const api = supertest(`http://${settings.ip}:${settings.port}`);
 const apiVersion = 1;
 
