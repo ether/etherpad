@@ -17,9 +17,9 @@
  * limitations under the License.
  */
 
-import padutils from './pad_utils'
-const hooks = require('./pluginfw/hooks');
-import html10n from './vendors/html10n';
+import padutils from './pad_utils.js'
+import hooks from './pluginfw/hooks.js';
+import html10n from './vendors/html10n.js';
 let myUserInfo = {};
 
 let colorPickerOpen = false;
@@ -619,4 +619,4 @@ const showColorPicker = () => {
   }
 };
 
-exports.paduserlist = paduserlist;
+export {paduserlist};

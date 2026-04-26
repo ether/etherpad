@@ -23,8 +23,8 @@
  * limitations under the License.
  */
 
-const padeditbar = require('./pad_editbar').padeditbar;
-const automaticReconnect = require('./pad_automatic_reconnect');
+import {padeditbar} from './pad_editbar.js';
+import automaticReconnect from './pad_automatic_reconnect.js';
 
 const padmodals = (() => {
   let pad = undefined;
@@ -53,4 +53,4 @@ const padmodals = (() => {
   return self;
 })();
 
-exports.padmodals = padmodals;
+export {padmodals};
