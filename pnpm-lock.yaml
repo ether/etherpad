@@ -115,9 +115,6 @@ importers:
       vite-plugin-babel:
         specifier: ^1.6.0
         version: 1.6.0(@babel/core@7.29.0)(rolldown-vite@7.2.10(@types/node@25.6.0)(tsx@4.21.0))
-      vite-plugin-static-copy:
-        specifier: ^4.1.0
-        version: 4.1.0(rolldown-vite@7.2.10(@types/node@25.6.0)(tsx@4.21.0))
       zustand:
         specifier: ^5.0.12
         version: 5.0.12(@types/react@19.2.14)(react@19.2.5)(use-sync-external-store@1.6.0(react@19.2.5))
@@ -5450,12 +5447,6 @@ packages:
     resolution: {integrity: sha512-VtYA4FSmQREA2oaZ7+jfLS/fBk1/xZMUR94YZzB5s6U9WyptbvThUD1HSSv7oNDU28jGuHmdBZ1wTVGNIoChoQ==}
     peerDependencies:
       '@babel/core': ^7.0.0
-      vite: '>=7.3.2'
-
-  vite-plugin-static-copy@4.1.0:
-    resolution: {integrity: sha512-9XOarNV7LgP0KBB7AApxdgFikLXx3daZdqjC3AevYsL6MrUH62zphonLUs2a6LZc1HN1GY+vQdheZ8VVJb6dQQ==}
-    engines: {node: ^22.0.0 || >=24.0.0}
-    peerDependencies:
       vite: '>=7.3.2'
 
   vite@8.0.8:
@@ -10999,14 +10990,6 @@ snapshots:
   vite-plugin-babel@1.6.0(@babel/core@7.29.0)(rolldown-vite@7.2.10(@types/node@25.6.0)(tsx@4.21.0)):
     dependencies:
       '@babel/core': 7.29.0
-      vite: rolldown-vite@7.2.10(@types/node@25.6.0)(tsx@4.21.0)
-
-  vite-plugin-static-copy@4.1.0(rolldown-vite@7.2.10(@types/node@25.6.0)(tsx@4.21.0)):
-    dependencies:
-      chokidar: 3.6.0
-      p-map: 7.0.4
-      picocolors: 1.1.1
-      tinyglobby: 0.2.16
       vite: rolldown-vite@7.2.10(@types/node@25.6.0)(tsx@4.21.0)
 
   vite@8.0.8(@types/node@25.6.0)(esbuild@0.28.0)(tsx@4.21.0):
