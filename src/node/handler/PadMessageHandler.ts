@@ -19,37 +19,37 @@
  * limitations under the License.
  */
 
-import {MapArrayType} from "../types/MapType";
+import {MapArrayType} from "../types/MapType.js";
 
-import AttributeMap from '../../static/js/AttributeMap';
-const padManager = require('../db/PadManager');
-import {checkRep, cloneAText, compose, deserializeOps, follow, identity, inverse, makeAText, makeSplice, moveOpsToNewPool, mutateAttributionLines, mutateTextLines, oldLen, prepareForWire, splitAttributionLines, splitTextLines, unpack} from '../../static/js/Changeset';
-import ChatMessage from '../../static/js/ChatMessage';
-import AttributePool from '../../static/js/AttributePool';
-const AttributeManager = require('../../static/js/AttributeManager');
-const authorManager = require('../db/AuthorManager');
-import padutils from '../../static/js/pad_utils';
-import readOnlyManager from '../db/ReadOnlyManager';
+import AttributeMap from '../../static/js/AttributeMap.js';
+import * as padManager from '../db/PadManager.js';
+import {checkRep, cloneAText, compose, deserializeOps, follow, identity, inverse, makeAText, makeSplice, moveOpsToNewPool, mutateAttributionLines, mutateTextLines, oldLen, prepareForWire, splitAttributionLines, splitTextLines, unpack} from '../../static/js/Changeset.js';
+import ChatMessage from '../../static/js/ChatMessage.js';
+import AttributePool from '../../static/js/AttributePool.js';
+import AttributeManager from '../../static/js/AttributeManager.js';
+import * as authorManager from '../db/AuthorManager.js';
+import padutils from '../../static/js/pad_utils.js';
+import readOnlyManager from '../db/ReadOnlyManager.js';
 import settings, {
   exportAvailable,
   sofficeAvailable
-} from '../utils/Settings';
-const securityManager = require('../db/SecurityManager');
-const plugins = require('../../static/js/pluginfw/plugin_defs');
+} from '../utils/Settings.js';
+import * as securityManager from '../db/SecurityManager.js';
+import plugins from '../../static/js/pluginfw/plugin_defs.js';
 import log4js from 'log4js';
 const messageLogger = log4js.getLogger('message');
 const accessLogger = log4js.getLogger('access');
-const hooks = require('../../static/js/pluginfw/hooks');
-const stats = require('../stats')
-const assert = require('assert').strict;
+import hooks from '../../static/js/pluginfw/hooks.js';
+import stats from '../stats.js';
+import { strict as assert } from 'assert';
 import {RateLimiterMemory} from 'rate-limiter-flexible';
-import {ChangesetRequest, PadUserInfo, SocketClientRequest} from "../types/SocketClientRequest";
-import {APool, AText, PadAuthor, PadType} from "../types/PadType";
-import {ChangeSet} from "../types/ChangeSet";
-import {ChatMessageMessage, ClientReadyMessage, ClientSaveRevisionMessage, ClientSuggestUserName, ClientUserChangesMessage, ClientVarMessage, CustomMessage, PadDeleteMessage, PadOptionsMessage, UserNewInfoMessage} from "../../static/js/types/SocketIOMessage";
-import {Builder} from "../../static/js/Builder";
-const webaccess = require('../hooks/express/webaccess');
-const { checkValidRev } = require('../utils/checkValidRev');
+import {ChangesetRequest, PadUserInfo, SocketClientRequest} from "../types/SocketClientRequest.js";
+import {APool, AText, PadAuthor, PadType} from "../types/PadType.js";
+import {ChangeSet} from "../types/ChangeSet.js";
+import {ChatMessageMessage, ClientReadyMessage, ClientSaveRevisionMessage, ClientSuggestUserName, ClientUserChangesMessage, ClientVarMessage, CustomMessage, PadDeleteMessage, PadOptionsMessage, UserNewInfoMessage} from "../../static/js/types/SocketIOMessage.js";
+import {Builder} from "../../static/js/Builder.js";
+import * as webaccess from '../hooks/express/webaccess.js';
+import { checkValidRev } from '../utils/checkValidRev.js';
 
 let rateLimiter:any;
 let socketio: any = null;
@@ -65,7 +65,7 @@ const addContextToError = (err:any, pfx:string) => {
   return err;
 };
 
-exports.socketio = () => {
+export const socketio = () => {
   // The rate limiter is created in this hook so that restarting the server resets the limiter. The
   // settings.commitRateLimiting object is passed directly to the rate limiter so that the limits
   // can be dynamically changed during runtime by modifying its properties.
@@ -90,16 +90,13 @@ exports.socketio = () => {
  *       - readonly: Whether the client has read-only access (true) or read/write access (false).
  *       - rev: The last revision that was sent to the client.
  */
-const sessioninfos:MapArrayType<any> = {};
-exports.sessioninfos = sessioninfos;
+export const sessioninfos:MapArrayType<any> = {};
 
-function getTotalActiveUsers() {
-  return socketio ? socketio.engine.clientsCount : 0;
+export function getTotalActiveUsers() {
+  return socketio ? (socketio as any).engine.clientsCount : 0;
 }
 
-exports.getTotalActiveUsers = getTotalActiveUsers;
-
-function getActivePadCountFromSessionInfos() {
+export function getActivePadCountFromSessionInfos() {
   const padIds = new Set();
   for (const {padId} of Object.values(sessioninfos)) {
     if (!padId) continue;
@@ -107,7 +104,6 @@ function getActivePadCountFromSessionInfos() {
   }
   return padIds.size;
 }
-exports.getActivePadCountFromSessionInfos = getActivePadCountFromSessionInfos;
 
 /**
  * Build a sanitized copy of the plugins registry suitable for sending to the
@@ -135,7 +131,7 @@ const sanitizePluginsForWire = (
   }
   return out;
 };
-exports.sanitizePluginsForWire = sanitizePluginsForWire;
+export { sanitizePluginsForWire };
 
 stats.gauge('totalUsers', () => getTotalActiveUsers());
 stats.gauge('activePads', () => {
@@ -187,7 +183,7 @@ const padChannels = new Channels((ch, {socket, message}) => handleUserChanges(so
  * This Method is called by server.ts to tell the message handler on which socket it should send
  * @param socket_io The Socket
  */
-exports.setSocketIO = (socket_io:any) => {
+export const setSocketIO = (socket_io:any) => {
   socketio = socket_io;
 };
 
@@ -195,7 +191,7 @@ exports.setSocketIO = (socket_io:any) => {
  * Handles the connection of a new user
  * @param socket the socket.io Socket object for the new connection from the client
  */
-exports.handleConnect = (socket:any) => {
+export const handleConnect = (socket:any) => {
   stats.meter('connects').mark();
 
   // Initialize sessioninfos for this new session
@@ -205,7 +201,7 @@ exports.handleConnect = (socket:any) => {
 /**
  * Kicks all sessions from a pad
  */
-exports.kickSessionsFromPad = (padID: string) => {
+export const kickSessionsFromPad = (padID: string) => {
 
   if(socketio.sockets == null) return;
 
@@ -220,7 +216,7 @@ exports.kickSessionsFromPad = (padID: string) => {
  * Handles the disconnection of a user
  * @param socket the socket.io Socket object for the client
  */
-exports.handleDisconnect = async (socket:any) => {
+export const handleDisconnect = async (socket:any) => {
   stats.meter('disconnects').mark();
   const session = sessioninfos[socket.id];
   delete sessioninfos[socket.id];
@@ -332,7 +328,7 @@ const handlePadOptionsMessage = async (
  * @param socket the socket.io Socket object for the client
  * @param message the message from the client
  */
-exports.handleMessage = async (socket:any, message: ClientVarMessage) => {
+export const handleMessage = async (socket:any, message: ClientVarMessage) => {
   const env = process.env.NODE_ENV || 'development';
 
   if (env === 'production') {
@@ -521,7 +517,7 @@ const handleSaveRevisionMessage = async (socket:any, message: ClientSaveRevision
  * @param msg {Object} the message we're sending
  * @param sessionID {string} the socketIO session to which we're sending this message
  */
-exports.handleCustomObjectMessage = (msg: CustomMessage, sessionID: string) => {
+export const handleCustomObjectMessage = (msg: CustomMessage, sessionID: string) => {
   if (msg.data.type === 'CUSTOM') {
     if (sessionID) {
       // a sessionID is targeted: directly to this sessionID
@@ -539,7 +535,7 @@ exports.handleCustomObjectMessage = (msg: CustomMessage, sessionID: string) => {
  * @param padID {Pad} the pad to which we're sending this message
  * @param msgString {String} the message we're sending
  */
-exports.handleCustomMessage = (padID: string, msgString:string) => {
+export const handleCustomMessage = (padID: string, msgString:string) => {
   const time = Date.now();
   const msg = {
     type: 'COLLABROOM',
@@ -562,7 +558,7 @@ const handleChatMessage = async (socket:any, message: ChatMessageMessage) => {
   // Don't trust the user-supplied values.
   chatMessage.time = Date.now();
   chatMessage.authorId = authorId;
-  await exports.sendChatMessageToPadClients(chatMessage, padId);
+  await sendChatMessageToPadClients(chatMessage, padId);
 };
 
 /**
@@ -576,7 +572,7 @@ const handleChatMessage = async (socket:any, message: ChatMessageMessage) => {
  * @param {string} [padId] - The destination pad ID. Deprecated; pass a chat message
  *     object as the first argument and the destination pad ID as the second argument instead.
  */
-exports.sendChatMessageToPadClients = async (mt: ChatMessage|number, puId: string, text:string|null = null, padId:string|null = null) => {
+export const sendChatMessageToPadClients = async (mt: ChatMessage|number, puId: string, text:string|null = null, padId:string|null = null) => {
   const message = mt instanceof ChatMessage ? mt : new ChatMessage(text, puId, mt);
   padId = mt instanceof ChatMessage ? puId : padId;
   const pad = await padManager.getPad(padId, null, message.authorId);
@@ -812,7 +808,7 @@ const handleUserChanges = async (socket:any, message: {
     socket.emit('message', {type: 'COLLABROOM', data: {type: 'ACCEPT_COMMIT', newRev}});
     thisSession.rev = newRev;
     if (newRev !== r) thisSession.time = await pad.getRevisionDate(newRev);
-    await exports.updatePadClients(pad);
+    await updatePadClients(pad);
   } catch (err:any) {
     socket.emit('message', {disconnect: 'badChangeset'});
     stats.meter('failedChangesets').mark();
@@ -823,7 +819,7 @@ const handleUserChanges = async (socket:any, message: {
   }
 };
 
-exports.updatePadClients = async (pad: PadType) => {
+export const updatePadClients = async (pad: PadType) => {
   // skip this if no-one is on this pad
   const roomSockets = _getRoomSockets(pad.id);
   if (roomSockets.length === 0) return;
@@ -1203,7 +1199,7 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
     // Flush any revisions that may have been appended while we were awaiting the
     // clientVars hook (before socket.join).  Those revisions were broadcast to
     // existing room members but this socket hadn't joined yet so it missed them.
-    await exports.updatePadClients(pad);
+    await updatePadClients(pad);
   }
 
   // Notify other users about this new user.
@@ -1325,7 +1321,7 @@ const getChangesetInfo = async (pad: PadType, startNum: number, endNum:number, g
     getPadLines(pad, startNum - 1),
     // Get all needed composite Changesets.
     ...compositesChangesetNeeded.map(async (item) => {
-      const changeset = await exports.composePadChangesets(pad, item.start, item.end);
+      const changeset = await composePadChangesets(pad, item.start, item.end);
       composedChangesets[`${item.start}/${item.end}`] = changeset;
     }),
     // Get all needed revision Dates.
@@ -1391,7 +1387,7 @@ const getPadLines = async (pad: PadType, revNum: number) => {
  * Tries to rebuild the composePadChangeset function of the original Etherpad
  * https://github.com/ether/pad/blob/master/etherpad/src/etherpad/control/pad/pad_changeset_control.js#L241
  */
-exports.composePadChangesets = async (pad: PadType, startNum: number, endNum: number) => {
+export const composePadChangesets = async (pad: PadType, startNum: number, endNum: number) => {
   // fetch all changesets we need
   const headNum = pad.getHeadRevisionNumber();
   endNum = Math.min(endNum, headNum + 1);
@@ -1446,14 +1442,14 @@ const _getRoomSockets = (padID: string) => {
 /**
  * Get the number of users in a pad
  */
-exports.padUsersCount = (padID:string) => ({
+export const padUsersCount = (padID:string) => ({
   padUsersCount: _getRoomSockets(padID).length,
 });
 
 /**
  * Get the list of users in a pad
  */
-exports.padUsers = async (padID: string) => {
+export const padUsers = async (padID: string) => {
   const padUsers:PadAuthor[] = [];
 
   // iterate over all clients (in parallel)
@@ -1473,4 +1469,25 @@ exports.padUsers = async (padID: string) => {
   return {padUsers};
 };
 
-exports.sessioninfos = sessioninfos;
+// Default export so existing `import padMessageHandler from '...'` callers
+// keep working without each having to flip to namespace imports.
+export default {
+  socketio,
+  sessioninfos,
+  getTotalActiveUsers,
+  getActivePadCountFromSessionInfos,
+  sanitizePluginsForWire,
+  setSocketIO,
+  handleConnect,
+  kickSessionsFromPad,
+  handleDisconnect,
+  handleMessage,
+  handleCustomObjectMessage,
+  handleCustomMessage,
+  sendChatMessageToPadClients,
+  updatePadClients,
+  composePadChangesets,
+  padUsersCount,
+  padUsers,
+};
+

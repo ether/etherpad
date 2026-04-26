@@ -20,15 +20,16 @@
  * limitations under the License.
  */
 
-const exporthtml = require('../utils/ExportHtml');
-const exporttxt = require('../utils/ExportTxt');
-const exportEtherpad = require('../utils/ExportEtherpad');
+import * as exporthtml from '../utils/ExportHtml.js';
+import * as exporttxt from '../utils/ExportTxt.js';
+import * as exportEtherpad from '../utils/ExportEtherpad.js';
 import fs from 'fs';
-import settings from '../utils/Settings';
+import settings from '../utils/Settings.js';
 import os from 'os';
-const hooks = require('../../static/js/pluginfw/hooks');
+import hooks from '../../static/js/pluginfw/hooks.js';
 import util from 'util';
-const { checkValidRev } = require('../utils/checkValidRev');
+import { checkValidRev } from '../utils/checkValidRev.js';
+import * as converterModule from '../utils/LibreOffice.js';
 
 const fsp_writeFile = util.promisify(fs.writeFile);
 const fsp_unlink = util.promisify(fs.unlink);
@@ -43,7 +44,7 @@ const tempDirectory = os.tmpdir();
  * @param {String} readOnlyId the read only id of the pad to export
  * @param {String} type the type to export
  */
-exports.doExport = async (req: any, res: any, padId: string, readOnlyId: string, type:string) => {
+export const doExport = async (req: any, res: any, padId: string, readOnlyId: string, type:string) => {
   // avoid naming the read-only file as the original pad's id
   let fileName = readOnlyId ? readOnlyId : padId;
 
@@ -106,8 +107,7 @@ exports.doExport = async (req: any, res: any, padId: string, readOnlyId: string,
     if (result.length > 0) {
       // console.log("export handled by plugin", destFile);
     } else {
-      const converter = require('../utils/LibreOffice');
-      await converter.convertFile(srcFile, destFile, type);
+      await converterModule.convertFile(srcFile, destFile, type);
     }
 
     // send the file

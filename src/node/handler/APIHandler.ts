@@ -19,16 +19,16 @@
  * limitations under the License.
  */
 
-import {MapArrayType} from "../types/MapType";
+import {MapArrayType} from "../types/MapType.js";
 import { jwtDecode } from "jwt-decode";
-const api = require('../db/API');
-const padManager = require('../db/PadManager');
-import settings from '../utils/Settings';
+import * as api from '../db/API.js';
+import * as padManager from '../db/PadManager.js';
+import settings from '../utils/Settings.js';
 import createHTTPError from 'http-errors';
 import {Http2ServerRequest} from "node:http2";
-import {publicKeyExported} from "../security/OAuth2Provider";
+import {publicKeyExported} from "../security/OAuth2Provider.js";
 import {jwtVerify} from "jose";
-import {APIFields, apikey} from './APIKeyHandler'
+import {APIFields, apikey} from './APIKeyHandler.js'
 // a list of all functions
 const version:MapArrayType<any> = {};
 
@@ -144,10 +144,10 @@ version['1.3.0'] = {
 
 
 // set the latest available API version here
-exports.latestApiVersion = '1.3.0';
+export const latestApiVersion = '1.3.0';
 
 // exports the versions so it can be used by the new Swagger endpoint
-exports.version = version;
+export { version };
 
 
 
@@ -158,7 +158,7 @@ exports.version = version;
  * @param fields the params of the called function
  * @param req express request object
  */
-exports.handle = async function (apiVersion: string, functionName: string, fields: APIFields,
+export const handle = async function (apiVersion: string, functionName: string, fields: APIFields,
                                  req: Http2ServerRequest) {
   // say goodbye if this is an unknown API version
   if (!(apiVersion in version)) {
@@ -215,5 +215,5 @@ exports.handle = async function (apiVersion: string, functionName: string, field
   const functionParams = version[apiVersion][functionName].map((field) => fields[field]);
 
   // call the api function
-  return api[functionName].apply(this, functionParams);
+  return (api as any)[functionName].apply(this, functionParams);
 };

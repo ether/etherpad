@@ -20,11 +20,11 @@
  * limitations under the License.
  */
 
-import {MapArrayType} from "../types/MapType";
-import {SocketModule} from "../types/SocketModule";
+import {MapArrayType} from "../types/MapType.js";
+import {SocketModule} from "../types/SocketModule.js";
 import log4js from 'log4js';
-import settings from '../utils/Settings';
-const stats = require('../../node/stats')
+import settings from '../utils/Settings.js';
+import stats from '../stats.js';
 
 const logger = log4js.getLogger('socket.io');
 
@@ -41,8 +41,8 @@ let io:any;
  * @param {string} moduleName
  * @param {Module} module
  */
-exports.addComponent = (moduleName: string, module: SocketModule) => {
-  if (module == null) return exports.deleteComponent(moduleName);
+export const addComponent = (moduleName: string, module: SocketModule) => {
+  if (module == null) return deleteComponent(moduleName);
   components[moduleName] = module;
   module.setSocketIO(io);
 };
@@ -51,13 +51,13 @@ exports.addComponent = (moduleName: string, module: SocketModule) => {
  * removes a component
  * @param {Module} moduleName
  */
-exports.deleteComponent = (moduleName: string) => { delete components[moduleName]; };
+export const deleteComponent = (moduleName: string) => { delete components[moduleName]; };
 
 /**
  * sets the socket.io and adds event functions for routing
  * @param {Object} _io the socket.io instance
  */
-exports.setSocketIO = (_io:any) => {
+export const setSocketIO = (_io:any) => {
   io = _io;
 
   io.sockets.on('connection', (socket:any) => {
