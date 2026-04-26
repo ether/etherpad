@@ -47,10 +47,18 @@ const dbModule: any = {
       }
     }
     for (const fn of ['get', 'set', 'findKeys', 'getSub', 'setSub', 'remove']) {
-      const f = dbModule.db[fn].bind(dbModule.db);
-      dbModule[fn] = async (...args: string[]) => await f(...args);
-      Object.setPrototypeOf(dbModule[fn], Object.getPrototypeOf(f));
-      Object.defineProperties(dbModule[fn], Object.getOwnPropertyDescriptors(f));
+      dbModule[fn] = async (...args: string[]) => {
+        // During shutdown, background timers (for example session cleanup) can still
+        // attempt DB access for a short period. Avoid crashing the process in that
+        // window if the DB has already been closed.
+        if (dbModule.db == null) {
+          if (fn === 'get' || fn === 'getSub') return null;
+          if (fn === 'findKeys') return [];
+          return;
+        }
+        const f = dbModule.db[fn];
+        return await f.call(dbModule.db, ...args);
+      };
     }
   },
   shutdown: async (_hookName: string, _context: any) => {
