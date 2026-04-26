@@ -203,12 +203,9 @@ describe(__filename, function () {
       }
     });
 
-    describe('Import/Export tests requiring LibreOffice', function () {
-      before(async function () {
-        if (!settings.soffice || settings.soffice.indexOf('/') === -1) {
-          this.skip();
-        }
-      });
+    const sofficeAvailable = settings.soffice && settings.soffice.indexOf('/') !== -1;
+    const describeSoffice = sofficeAvailable ? describe : describe.skip;
+    describeSoffice('Import/Export tests requiring LibreOffice', function () {
 
       // For some reason word import does not work in testing..
       // TODO: fix support for .doc files..
