@@ -1,22 +1,22 @@
 // @ts-nocheck
 'use strict';
 
-const pluginDefs = require('./plugin_defs');
+import pluginDefs from './plugin_defs.js';
 
 // Maps the name of a server-side hook to a string explaining the deprecation
 // (e.g., 'use the foo hook instead').
 //
 // If you want to deprecate the fooBar hook, do the following:
 //
-//     const hooks = require('ep_etherpad-lite/static/js/pluginfw/hooks');
+//     import hooks from 'ep_etherpad-lite/static/js/pluginfw/hooks.js';
 //     hooks.deprecationNotices.fooBar = 'use the newSpiffy hook instead';
 //
-exports.deprecationNotices = {};
+export const deprecationNotices: Record<string, string> = {};
 
 const deprecationWarned = {};
 
 const checkDeprecation = (hook) => {
-  const notice = exports.deprecationNotices[hook.hook_name];
+  const notice = deprecationNotices[hook.hook_name];
   if (notice == null) return;
   if (deprecationWarned[hook.hook_fn_name]) return;
   console.warn(`${hook.hook_name} hook used by the ${hook.part.plugin} plugin ` +
@@ -190,7 +190,7 @@ const callHookFnSync = (hook, context) => {
 //     1. Collect all values returned by the hook functions into an array.
 //     2. Convert each `undefined` entry into `[]`.
 //     3. Flatten one level.
-exports.callAll = (hookName, context) => {
+export const callAll = (hookName, context) => {
   if (context == null) context = {};
   const hooks = pluginDefs.hooks[hookName] || [];
   return flatten1(hooks.map((hook) => normalizeValue(callHookFnSync(hook, context))));
@@ -343,8 +343,8 @@ const callHookFnAsync = async (hook, context) => {
 //     2. Convert each `undefined` entry into `[]`.
 //     3. Flatten one level.
 //   If cb is non-null, this function resolves to the value returned by cb.
-exports.aCallAll = async (hookName, context, cb = null) => {
-  if (cb != null) return await attachCallback(exports.aCallAll(hookName, context), cb);
+export const aCallAll = async (hookName, context, cb = null) => {
+  if (cb != null) return await attachCallback(aCallAll(hookName, context), cb);
   if (context == null) context = {};
   const hooks = pluginDefs.hooks[hookName] || [];
   const results = await Promise.all(
@@ -355,7 +355,7 @@ exports.aCallAll = async (hookName, context, cb = null) => {
 // Like `aCallAll()` except the hook functions are called one at a time instead of concurrently.
 // Only use this function if the hook functions must be called one at a time, otherwise use
 // `aCallAll()`.
-exports.callAllSerial = async (hookName, context) => {
+export const callAllSerial = async (hookName, context) => {
   if (context == null) context = {};
   const hooks = pluginDefs.hooks[hookName] || [];
   const results = [];
@@ -368,7 +368,7 @@ exports.callAllSerial = async (hookName, context) => {
 // DEPRECATED: Use `aCallFirst()` instead.
 //
 // Like `aCallFirst()`, but synchronous. Hook functions must provide their values synchronously.
-exports.callFirst = (hookName, context) => {
+export const callFirst = (hookName, context) => {
   if (context == null) context = {};
   const predicate = (val) => val.length;
   const hooks = pluginDefs.hooks[hookName] || [];
@@ -400,9 +400,9 @@ exports.callFirst = (hookName, context) => {
 //   If cb is nullish, resolves to an array that is either the normalized value that satisfied the
 //   predicate or empty if the predicate was never satisfied. If cb is non-nullish, resolves to the
 //   value returned from cb().
-exports.aCallFirst = async (hookName, context, cb = null, predicate = null) => {
+export const aCallFirst = async (hookName, context, cb = null, predicate = null) => {
   if (cb != null) {
-    return await attachCallback(exports.aCallFirst(hookName, context, null, predicate), cb);
+    return await attachCallback(aCallFirst(hookName, context, null, predicate), cb);
   }
   if (context == null) context = {};
   if (predicate == null) predicate = (val) => val.length;
@@ -414,8 +414,18 @@ exports.aCallFirst = async (hookName, context, cb = null, predicate = null) => {
   return [];
 };
 
-exports.exportedForTestingOnly = {
+export const exportedForTestingOnly = {
   callHookFnAsync,
   callHookFnSync,
   deprecationWarned,
+};
+
+export default {
+  deprecationNotices,
+  callAll,
+  aCallAll,
+  callAllSerial,
+  callFirst,
+  aCallFirst,
+  exportedForTestingOnly,
 };

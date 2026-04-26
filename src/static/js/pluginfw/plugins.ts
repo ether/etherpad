@@ -1,17 +1,23 @@
 // @ts-nocheck
 'use strict';
 
-const fs = require('fs').promises;
-const hooks = require('./hooks');
-const log4js = require('log4js');
-const path = require('path');
-const runCmd = require('../../../node/utils/run_cmd');
-const tsort = require('./tsort');
-const pluginUtils = require('./shared');
-const defs = require('./plugin_defs');
+import {createRequire} from 'node:module';
+import {promises as fs} from 'fs';
+import log4js from 'log4js';
+import path from 'path';
+import runCmd from '../../../node/utils/run_cmd.js';
+import tsort from './tsort.js';
+import pluginUtils from './shared.js';
+import defs from './plugin_defs.js';
+import hooks from './hooks.js';
 import settings, {
   getEpVersion,
-} from '../../../node/utils/Settings';
+} from '../../../node/utils/Settings.js';
+
+// `installer.ts` is loaded lazily inside `getPackages()` to avoid an import cycle. Use a
+// `createRequire`-backed `require` so the existing CommonJS-style lazy access keeps working in
+// ESM.
+const requireFromHere = createRequire(import.meta.url);
 
 const logger = log4js.getLogger('plugins');
 
@@ -26,19 +32,19 @@ const logger = log4js.getLogger('plugins');
   }
 })();
 
-exports.prefix = 'ep_';
+export const prefix = 'ep_';
 
-exports.formatPlugins = () => Object.keys(defs.plugins).join(', ');
+export const formatPlugins = () => Object.keys(defs.plugins).join(', ');
 
-exports.getPlugins = () => Object.keys(defs.plugins);
+export const getPlugins = () => Object.keys(defs.plugins);
 
-exports.formatParts = () => defs.parts.map((part) => part.full_name).join('\n');
+export const formatParts = () => defs.parts.map((part) => part.full_name).join('\n');
 
-exports.getParts = () => defs.parts.map((part) => part.full_name);
+export const getParts = () => defs.parts.map((part) => part.full_name);
 
 const sortHooks = (hookSetName, hooks) => {
   for (const [pluginName, def] of Object.entries(defs.plugins)) {
-    for (const part of def.parts) {
+    for (const part of (def as any).parts) {
       for (const [hookName, hookFnName] of Object.entries(part[hookSetName] || {})) {
         let hookEntry = hooks.get(hookName);
         if (!hookEntry) {
@@ -57,13 +63,13 @@ const sortHooks = (hookSetName, hooks) => {
 };
 
 
-exports.getHooks = (hookSetName) => {
+export const getHooks = (hookSetName) => {
   const hooks = new Map();
   sortHooks(hookSetName, hooks);
   return hooks;
 };
 
-exports.formatHooks = (hookSetName, html) => {
+export const formatHooks = (hookSetName, html) => {
   let hooks = new Map();
   sortHooks(hookSetName, hooks);
   const lines = [];
@@ -91,7 +97,7 @@ exports.formatHooks = (hookSetName, html) => {
   return lines.join('\n');
 };
 
-exports.pathNormalization = (part, hookFnName, hookName) => {
+export const pathNormalization = (part, hookFnName, hookName) => {
   const tmp = hookFnName.split(':'); // hookFnName might be something like 'C:\\foo.js:myFunc'.
   // If there is a single colon assume it's 'filename:funcname' not 'C:\\filename'.
   const functionName = (tmp.length > 1 ? tmp.pop() : null) || hookName;
@@ -101,8 +107,8 @@ exports.pathNormalization = (part, hookFnName, hookName) => {
   return `${fileName}:${functionName}`;
 };
 
-exports.update = async () => {
-  const packages = await exports.getPackages();
+export const update = async () => {
+  const packages = await getPackages();
   const parts = {}; // Key is full name. sortParts converts this into a topologically sorted array.
   const plugins = {};
 
@@ -115,7 +121,7 @@ exports.update = async () => {
 
   defs.plugins = plugins;
   defs.parts = sortParts(parts);
-  defs.hooks = pluginUtils.extractHooks(defs.parts, 'hooks', exports.pathNormalization);
+  defs.hooks = pluginUtils.extractHooks(defs.parts, 'hooks', pathNormalization);
   defs.loaded = true;
   await Promise.all(Object.keys(defs.plugins).map(async (p) => {
     const logger = log4js.getLogger(`plugin:${p}`);
@@ -123,13 +129,15 @@ exports.update = async () => {
   }));
 };
 
-exports.getPackages = async () => {
-  const {linkInstaller} = require("./installer");
+export const getPackages = async () => {
+  // Lazily resolved via `createRequire` to avoid a circular ESM import between
+  // `plugins.ts` and `installer.ts`.
+  const {linkInstaller} = requireFromHere('./installer');
   const plugins = await linkInstaller.listPlugins();
   const newDependencies = {};
 
   for (const plugin of plugins) {
-    if (!plugin.name.startsWith(exports.prefix)) {
+    if (!plugin.name.startsWith(prefix)) {
       continue;
     }
     plugin.path = plugin.realPath = plugin.location;
@@ -151,7 +159,7 @@ const loadPlugin = async (packages, pluginName, plugins, parts) => {
   try {
     const data = await fs.readFile(pluginPath);
     try {
-      const plugin = JSON.parse(data);
+      const plugin = JSON.parse(data as any);
       plugin.package = packages[pluginName];
       plugins[pluginName] = plugin;
       for (const part of plugin.parts) {
@@ -187,3 +195,16 @@ const partsToParentChildList = (parts) => {
 const sortParts = (parts) => tsort(partsToParentChildList(parts))
     .filter((name) => parts[name] !== undefined)
     .map((name) => parts[name]);
+
+export default {
+  prefix,
+  formatPlugins,
+  getPlugins,
+  formatParts,
+  getParts,
+  getHooks,
+  formatHooks,
+  pathNormalization,
+  update,
+  getPackages,
+};

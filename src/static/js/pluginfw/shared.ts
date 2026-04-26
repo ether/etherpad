@@ -1,7 +1,13 @@
 // @ts-nocheck
 'use strict';
 
-const defs = require('./plugin_defs');
+import {createRequire} from 'node:module';
+import defs from './plugin_defs.js';
+
+// `createRequire` gives us a synchronous CommonJS-style `require` even though this file is now
+// ESM. This is needed to keep the existing plugin contract (CJS plugins via `module.exports`)
+// working when `loadFn` loads a plugin entry path at runtime. See `doc/plugins.md`.
+const requireFromHere = createRequire(import.meta.url);
 
 const disabledHookReasons = {
   hooks: {
@@ -27,7 +33,7 @@ const loadFn = (path, hookName, modules) => {
 
   let fn
   if (modules === undefined || !("get" in modules)) {
-    fn = require(/* webpackIgnore: true */ path);
+    fn = requireFromHere(/* webpackIgnore: true */ path);
   } else {
     fn = modules.get(path);
   }
@@ -40,7 +46,7 @@ const loadFn = (path, hookName, modules) => {
   return fn;
 };
 
-const extractHooks = (parts, hookSetName, normalizer, modules) => {
+export const extractHooks = (parts, hookSetName, normalizer, modules) => {
   const hooks = {};
   for (const part of parts) {
     for (const [hookName, regHookFnName] of Object.entries(part[hookSetName] || {})) {
@@ -81,8 +87,6 @@ const extractHooks = (parts, hookSetName, normalizer, modules) => {
   return hooks;
 };
 
-exports.extractHooks = extractHooks;
-
 /*
  * Returns an array containing the names of the installed client-side plugins
  *
@@ -95,9 +99,14 @@ exports.extractHooks = extractHooks;
  *   No plugins:   []
  *   Some plugins: [ 'ep_adminpads', 'ep_add_buttons', 'ep_activepads' ]
  */
-exports.clientPluginNames = () => {
+export const clientPluginNames = () => {
   const clientPluginNames = defs.parts
       .filter((part) => Object.prototype.hasOwnProperty.call(part, 'client_hooks'))
       .map((part) => `plugin-${part.plugin}`);
   return [...new Set(clientPluginNames)];
+};
+
+export default {
+  extractHooks,
+  clientPluginNames,
 };
