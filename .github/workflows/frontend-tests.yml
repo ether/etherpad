@@ -137,3 +137,162 @@ jobs:
           name: playwright-report-firefox
           path: src/playwright-report/
           retention-days: 30
+
+  # Frontend tests with the same /ether plugin set that backend-tests.yml
+  # exercises, so a core change that breaks plugin UX is caught in PR CI
+  # rather than after release. Re-introduces coverage that was lost when
+  # the workflows were nuked & rebuilt in 2023 (commit cc80db2d3) and the
+  # backend equivalent was restored without the frontend half.
+  playwright-chrome-with-plugins:
+    env:
+      PNPM_HOME: ~/.pnpm-store
+    name: Playwright Chrome with plugins
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+      - uses: actions/cache@v5
+        name: Cache pnpm store
+        with:
+          path: ${{ env.PNPM_HOME }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+      - uses: actions/cache@v5
+        name: Cache Playwright browsers
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('src/package.json', 'pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-
+      - uses: pnpm/action-setup@v6
+        name: Install pnpm
+        with:
+          version: 10.33.2
+          run_install: false
+      - name: Install all dependencies and symlink for ep_etherpad-lite
+        run: pnpm install --frozen-lockfile
+      - name: Install Etherpad plugins
+        # Same plugin set as backend-tests.yml's withpluginsLinux job.
+        run: >
+          pnpm add -w
+          ep_align
+          ep_author_hover
+          ep_cursortrace
+          ep_font_size
+          ep_headings2
+          ep_markdown
+          ep_readonly_guest
+          ep_set_title_on_pad
+          ep_spellcheck
+          ep_subscript_and_superscript
+          ep_table_of_contents
+      - name: Create settings.json
+        run: cp ./src/tests/settings.json settings.json
+      - name: Run the frontend tests
+        shell: bash
+        run: |
+          pnpm run prod > /tmp/etherpad-server.log 2>&1 &
+          connected=false
+          can_connect() {
+          curl -sSfo /dev/null http://localhost:9001/ || return 1
+          connected=true
+          }
+          now() { date +%s; }
+          start=$(now)
+          while [ $(($(now) - $start)) -le 15 ] && ! can_connect; do
+          sleep 1
+          done
+          cd src
+          pnpm exec playwright install chromium  --with-deps
+          pnpm run test-ui --project=chromium
+      - name: Upload server log on failure
+        uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: server-log-chrome-with-plugins
+          path: /tmp/etherpad-server.log
+          retention-days: 7
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: playwright-report-chrome-with-plugins
+          path: src/playwright-report/
+          retention-days: 30
+
+  playwright-firefox-with-plugins:
+    env:
+      PNPM_HOME: ~/.pnpm-store
+    name: Playwright Firefox with plugins
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+      - uses: actions/cache@v5
+        name: Cache pnpm store
+        with:
+          path: ${{ env.PNPM_HOME }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+      - uses: actions/cache@v5
+        name: Cache Playwright browsers
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('src/package.json', 'pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-
+      - uses: pnpm/action-setup@v6
+        name: Install pnpm
+        with:
+          version: 10.33.2
+          run_install: false
+      - name: Install all dependencies and symlink for ep_etherpad-lite
+        run: pnpm install --frozen-lockfile
+      - name: Install Etherpad plugins
+        # Same plugin set as backend-tests.yml's withpluginsLinux job.
+        run: >
+          pnpm add -w
+          ep_align
+          ep_author_hover
+          ep_cursortrace
+          ep_font_size
+          ep_headings2
+          ep_markdown
+          ep_readonly_guest
+          ep_set_title_on_pad
+          ep_spellcheck
+          ep_subscript_and_superscript
+          ep_table_of_contents
+      - name: Create settings.json
+        run: cp ./src/tests/settings.json settings.json
+      - name: Run the frontend tests
+        shell: bash
+        run: |
+          pnpm run prod > /tmp/etherpad-server.log 2>&1 &
+          connected=false
+          can_connect() {
+          curl -sSfo /dev/null http://localhost:9001/ || return 1
+          connected=true
+          }
+          now() { date +%s; }
+          start=$(now)
+          while [ $(($(now) - $start)) -le 15 ] && ! can_connect; do
+          sleep 1
+          done
+          cd src
+          pnpm exec playwright install firefox  --with-deps
+          pnpm run test-ui --project=firefox
+      - name: Upload server log on failure
+        uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: server-log-firefox-with-plugins
+          path: /tmp/etherpad-server.log
+          retention-days: 7
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: playwright-report-firefox-with-plugins
+          path: src/playwright-report/
+          retention-days: 30
