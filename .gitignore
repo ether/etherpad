@@ -27,3 +27,8 @@ plugin_packages
 playwright-report
 state.json
 /src/static/oidc
+
+# Build artefacts produced by packaging/test-local.sh and the deb-package CI workflow.
+/staging/
+/dist/
+/packaging/etc/
