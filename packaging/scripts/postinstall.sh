@@ -71,11 +71,13 @@ EOF
     NODE_MODULES_DIR="${APP_DIR}/src/node_modules"
 
     mkdir -p "${PLUGIN_PKG_LIVE}"
-    chown -R etherpad:etherpad "${PLUGIN_PKG_LIVE}"
     if [ -e "${PLUGIN_PKG_LINK}" ] && [ ! -L "${PLUGIN_PKG_LINK}" ]; then
       cp -a "${PLUGIN_PKG_LINK}/." "${PLUGIN_PKG_LIVE}/" 2>/dev/null || true
       rm -rf "${PLUGIN_PKG_LINK}"
     fi
+    # chown after the cp -- cp -a preserves the (root) ownership of the
+    # staged source files and would re-root anything we chowned earlier.
+    chown -R etherpad:etherpad "${PLUGIN_PKG_LIVE}"
     ln -sfn "${PLUGIN_PKG_LIVE}" "${PLUGIN_PKG_LINK}"
 
     # node_modules is bundled (root-owned contents); the directory itself

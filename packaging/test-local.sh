@@ -30,6 +30,10 @@ for arg in "$@"; do
   esac
 done
 
+echo "==> Refreshing dependencies (matches CI)"
+# CI=1 makes pnpm non-interactive (so it doesn't prompt on a clean reinstall).
+CI=1 pnpm install --frozen-lockfile
+
 echo "==> Building staging tree"
 rm -rf staging dist packaging/etc
 mkdir -p staging/opt/etherpad packaging/etc dist
@@ -148,8 +152,8 @@ if [ -z "${NO_SYSTEMD}" ]; then
   docker exec "${CONTAINER_NAME}" systemctl start etherpad
 else
   echo "==> Starting etherpad manually (no systemd in container)"
-  docker exec -d "${CONTAINER_NAME}" sudo -u etherpad bash -c \
-    'cd /opt/etherpad && NODE_ENV=production /usr/bin/etherpad >/tmp/etherpad.log 2>&1'
+  docker exec -d "${CONTAINER_NAME}" runuser -u etherpad -- \
+    bash -c 'cd /opt/etherpad && NODE_ENV=production /usr/bin/etherpad >/tmp/etherpad.log 2>&1'
 fi
 
 echo "==> Waiting for /health"
