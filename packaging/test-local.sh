@@ -20,10 +20,12 @@ SYSTEMD_IMAGE="${SYSTEMD_IMAGE:-jrei/systemd-ubuntu:24.04}"
 CONTAINER_NAME="${CONTAINER_NAME:-etherpad-deb-test}"
 
 MODE=smoke
+NO_SYSTEMD=
 for arg in "$@"; do
   case "$arg" in
-    --shell)      MODE=shell ;;
-    --build-only) MODE=build ;;
+    --shell)        MODE=shell ;;
+    --build-only)   MODE=build ;;
+    --no-systemd)   NO_SYSTEMD=1 ;;
     *) echo "unknown arg: $arg" >&2; exit 2 ;;
   esac
 done
@@ -52,27 +54,51 @@ if [ "${MODE}" = "build" ]; then
   exit 0
 fi
 
-echo "==> Launching systemd container (${SYSTEMD_IMAGE})"
 docker rm -f "${CONTAINER_NAME}" >/dev/null 2>&1 || true
-docker run -d --name "${CONTAINER_NAME}" \
-  --privileged \
-  --tmpfs /tmp --tmpfs /run --tmpfs /run/lock \
-  -v /sys/fs/cgroup:/sys/fs/cgroup:rw \
-  -v "${REPO_ROOT}/dist":/dist:ro \
-  -p 9001:9001 \
-  "${SYSTEMD_IMAGE}" >/dev/null
-
-# Cleanup unless --shell was requested.
 trap '[ "${MODE}" = shell ] || docker rm -f "${CONTAINER_NAME}" >/dev/null 2>&1 || true' EXIT
 
-echo "==> Waiting for systemd in container to be ready"
-for i in $(seq 1 20); do
-  if docker exec "${CONTAINER_NAME}" systemctl is-system-running --wait >/dev/null 2>&1 \
-     || docker exec "${CONTAINER_NAME}" systemctl list-units --type=target >/dev/null 2>&1; then
-    break
+if [ -z "${NO_SYSTEMD}" ]; then
+  echo "==> Launching systemd container (${SYSTEMD_IMAGE})"
+  # systemd-in-docker on cgroups v2 needs: --privileged, --cgroupns=host,
+  # rw mount of /sys/fs/cgroup, and tmpfs for /run + /run/lock.
+  if ! docker run -d --name "${CONTAINER_NAME}" \
+        --privileged --cgroupns=host \
+        --tmpfs /tmp --tmpfs /run --tmpfs /run/lock \
+        -v /sys/fs/cgroup:/sys/fs/cgroup:rw \
+        -v "${REPO_ROOT}/dist":/dist:ro \
+        -p 9001:9001 \
+        "${SYSTEMD_IMAGE}" >/dev/null; then
+    echo "!! docker run failed; rerun with --no-systemd to skip the systemd path."
+    exit 1
   fi
-  sleep 1
-done
+
+  echo "==> Waiting for systemd in container to be ready"
+  ready=
+  for i in $(seq 1 30); do
+    state="$(docker inspect -f '{{.State.Status}}' "${CONTAINER_NAME}" 2>/dev/null || echo missing)"
+    if [ "${state}" != "running" ]; then
+      echo "!! container exited (state=${state}). Last logs:"
+      docker logs "${CONTAINER_NAME}" 2>&1 | tail -50 || true
+      echo
+      echo "!! Tip: rerun with --no-systemd to skip the systemd-in-Docker"
+      echo "   step and validate everything else (postinstall, wrapper,"
+      echo "   plugin paths, /health under a manual launch)."
+      exit 1
+    fi
+    if docker exec "${CONTAINER_NAME}" systemctl list-units --type=target >/dev/null 2>&1; then
+      ready=1; break
+    fi
+    sleep 1
+  done
+  [ -n "${ready}" ] || { echo "!! systemd never came up"; docker logs "${CONTAINER_NAME}" 2>&1 | tail -50; exit 1; }
+else
+  echo "==> Launching plain Ubuntu container (--no-systemd)"
+  docker run -d --name "${CONTAINER_NAME}" \
+    --tmpfs /tmp --tmpfs /run \
+    -v "${REPO_ROOT}/dist":/dist:ro \
+    -p 9001:9001 \
+    ubuntu:24.04 sleep infinity >/dev/null
+fi
 
 echo "==> Installing nodejs + the .deb inside the container"
 docker exec "${CONTAINER_NAME}" bash -lc '
@@ -104,8 +130,14 @@ docker exec "${CONTAINER_NAME}" bash -lc '
   id etherpad
 '
 
-echo "==> Starting etherpad.service"
-docker exec "${CONTAINER_NAME}" systemctl start etherpad
+if [ -z "${NO_SYSTEMD}" ]; then
+  echo "==> Starting etherpad.service"
+  docker exec "${CONTAINER_NAME}" systemctl start etherpad
+else
+  echo "==> Starting etherpad manually (no systemd in container)"
+  docker exec -d "${CONTAINER_NAME}" sudo -u etherpad bash -c \
+    'cd /opt/etherpad && NODE_ENV=production /usr/bin/etherpad >/tmp/etherpad.log 2>&1'
+fi
 
 echo "==> Waiting for /health"
 ok=
@@ -117,8 +149,12 @@ for i in $(seq 1 30); do
 done
 
 if [ -z "${ok}" ]; then
-  echo "!! /health never responded — dumping journal:"
-  docker exec "${CONTAINER_NAME}" journalctl -u etherpad --no-pager -n 200 || true
+  echo "!! /health never responded — dumping logs:"
+  if [ -z "${NO_SYSTEMD}" ]; then
+    docker exec "${CONTAINER_NAME}" journalctl -u etherpad --no-pager -n 200 || true
+  else
+    docker exec "${CONTAINER_NAME}" tail -n 200 /tmp/etherpad.log || true
+  fi
   exit 1
 fi
 
@@ -137,7 +173,11 @@ if [ "${MODE}" = "shell" ]; then
 fi
 
 echo "==> Purging the package"
-docker exec "${CONTAINER_NAME}" systemctl stop etherpad
+if [ -z "${NO_SYSTEMD}" ]; then
+  docker exec "${CONTAINER_NAME}" systemctl stop etherpad
+else
+  docker exec "${CONTAINER_NAME}" pkill -f 'node.*server.ts' || true
+fi
 docker exec "${CONTAINER_NAME}" dpkg --purge etherpad
 docker exec "${CONTAINER_NAME}" bash -c '! id etherpad 2>/dev/null'
 
