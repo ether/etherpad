@@ -55,17 +55,6 @@ jobs:
         with:
           ref: ${{ inputs.ref || github.ref }}
 
-      - name: Resolve version
-        id: v
-        run: |
-          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
-            VERSION="${GITHUB_REF_NAME#v}"
-          else
-            VERSION="$(node -p "require('./package.json').version")"
-          fi
-          echo "version=${VERSION}" >>"$GITHUB_OUTPUT"
-          echo "Packaging version: ${VERSION}"
-
       - uses: pnpm/action-setup@v6
         with:
           version: 10
@@ -75,6 +64,19 @@ jobs:
         with:
           node-version: '24'
           cache: pnpm
+
+      - name: Resolve version
+        id: v
+        # Runs after setup-node so `node` is guaranteed available on
+        # any runner image (some don't ship it preinstalled).
+        run: |
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          else
+            VERSION="$(node -p "require('./package.json').version")"
+          fi
+          echo "version=${VERSION}" >>"$GITHUB_OUTPUT"
+          echo "Packaging version: ${VERSION}"
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -134,11 +136,17 @@ jobs:
         if: matrix.arch == 'amd64'
         run: |
           set -eux
-          # Ubuntu's default apt nodejs is 18 — too old for our `Depends:
-          # nodejs (>= 20)`. Use NodeSource (current LTS) so dpkg's dep
-          # check passes and apt-get install -f doesn't remove the
-          # package on us.
-          curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
+          # Ubuntu's default apt nodejs is 18 — too old for our
+          # `Depends: nodejs (>= 20)`. Add NodeSource's apt repo
+          # explicitly (key + sources.list) instead of `curl | sudo bash`
+          # so we don't execute network-fetched code as root.
+          NODE_MAJOR=24
+          KEYRING=/usr/share/keyrings/nodesource.gpg
+          curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
+            | sudo gpg --dearmor -o "${KEYRING}"
+          echo "deb [signed-by=${KEYRING}] https://deb.nodesource.com/node_${NODE_MAJOR}.x nodistro main" \
+            | sudo tee /etc/apt/sources.list.d/nodesource.list
+          sudo apt-get update
           sudo apt-get install -y nodejs
           sudo dpkg -i dist/*.deb || sudo apt-get install -f -y
           # /etc/etherpad is mode 0750 root:etherpad on purpose (DB creds

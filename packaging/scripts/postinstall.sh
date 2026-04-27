@@ -29,8 +29,12 @@ case "$1" in
         -e 's|"dbType": "dirty"|"dbType": "sqlite"|' \
         -e 's|"filename": "var/dirty.db"|"filename": "/var/lib/etherpad/etherpad.db"|' \
         "${ACTIVE_SETTINGS}"
-      chown root:etherpad "${ACTIVE_SETTINGS}"
-      chmod 0640 "${ACTIVE_SETTINGS}"
+      # Owned by the etherpad service user with group=etherpad mode 0660
+      # so the admin /admin/settings UI can save changes back to disk
+      # while still keeping the file unreadable by other users (DB
+      # creds live here).
+      chown etherpad:etherpad "${ACTIVE_SETTINGS}"
+      chmod 0660 "${ACTIVE_SETTINGS}"
     fi
 
     # Etherpad reads settings.json from CWD (/opt/etherpad). Expose
