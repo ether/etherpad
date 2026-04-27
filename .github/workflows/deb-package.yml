@@ -141,26 +141,22 @@ jobs:
           curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
           sudo apt-get install -y nodejs
           sudo dpkg -i dist/*.deb || sudo apt-get install -f -y
-          test -x /usr/bin/etherpad
-          test -f /etc/etherpad/settings.json
-          test -L /opt/etherpad/settings.json
-          # /opt/etherpad/var must redirect to /var/lib/etherpad so
-          # ProtectSystem=strict doesn't block runtime writes.
-          test -L /opt/etherpad/var
-          [ "$(readlink /opt/etherpad/var)" = "/var/lib/etherpad/var" ]
-          # Plugin install paths must be writable by the etherpad user.
-          test -L /opt/etherpad/src/plugin_packages
-          [ "$(readlink /opt/etherpad/src/plugin_packages)" = "/var/lib/etherpad/plugin_packages" ]
-          test -d /var/lib/etherpad/plugin_packages
-          [ "$(stat -c '%U' /var/lib/etherpad/plugin_packages)" = "etherpad" ]
+          # /etc/etherpad is mode 0750 root:etherpad on purpose (DB creds
+          # live here) so the runner user can't read into it. Each check
+          # that crosses /etc/etherpad or /var/lib/etherpad runs under sudo.
+          sudo test -x /usr/bin/etherpad
+          sudo test -f /etc/etherpad/settings.json
+          sudo test -L /opt/etherpad/settings.json
+          sudo test -L /opt/etherpad/var
+          [ "$(sudo readlink /opt/etherpad/var)" = "/var/lib/etherpad/var" ]
+          sudo test -L /opt/etherpad/src/plugin_packages
+          [ "$(sudo readlink /opt/etherpad/src/plugin_packages)" = "/var/lib/etherpad/plugin_packages" ]
+          sudo test -d /var/lib/etherpad/plugin_packages
+          [ "$(sudo stat -c '%U' /var/lib/etherpad/plugin_packages)" = "etherpad" ]
           [ "$(stat -c '%G' /opt/etherpad/src/node_modules)" = "etherpad" ]
-          # installed_plugins.json must be seeded so checkForMigration()
-          # doesn't spawn `pnpm ls` (pnpm is not a runtime dep).
-          test -f /var/lib/etherpad/var/installed_plugins.json
-          grep -q '"ep_etherpad-lite"' /var/lib/etherpad/var/installed_plugins.json
-          # Confirm the postinstall actually rewrote the template to sqlite
-          # — shipping the dev-only "dirty" default would defeat the point.
-          grep -q '"dbType": "sqlite"' /etc/etherpad/settings.json
+          sudo test -f /var/lib/etherpad/var/installed_plugins.json
+          sudo grep -q '"ep_etherpad-lite"' /var/lib/etherpad/var/installed_plugins.json
+          sudo grep -q '"dbType": "sqlite"' /etc/etherpad/settings.json
           id etherpad
           systemctl cat etherpad.service
           sudo systemctl start etherpad
