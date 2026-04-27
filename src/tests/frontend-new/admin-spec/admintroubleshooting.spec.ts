@@ -14,7 +14,8 @@ test('Shows troubleshooting page manager', async ({page}) => {
   await page.goto('http://localhost:9001/admin/help')
   await page.waitForSelector('.menu')
   const menu =  page.locator('.menu');
-  await expect(menu.locator('li')).toHaveCount(5);
+  // Sidebar nav: plugins, settings, help, pads, shout, update.
+  await expect(menu.locator('li')).toHaveCount(6);
 })
 
 test('Shows a version number', async function ({page}) {

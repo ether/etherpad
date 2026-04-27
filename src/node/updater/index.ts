@@ -13,6 +13,8 @@ const logger = log4js.getLogger('updater');
 
 let detectedMethod: Exclude<InstallMethod, 'auto'> = 'managed';
 let timer: NodeJS.Timeout | null = null;
+let initialTimer: NodeJS.Timeout | null = null;
+let checkInFlight = false;
 let inMemoryState: UpdateState | null = null;
 
 export const stateFilePath = () => path.join(settings.root, 'var', 'update-state.json');
@@ -35,6 +37,10 @@ const sendEmailViaSmtp = async (to: string, subject: string, body: string): Prom
 
 const performCheck = async (): Promise<void> => {
   if (settings.updates.tier === 'off') return;
+  // Coalesce overlapping ticks. performCheck mutates shared in-memory state and writes
+  // it to disk; concurrent runs would race on saveState() and could double-send emails.
+  if (checkInFlight) return;
+  checkInFlight = true;
   const state = await getCurrentState();
   try {
     const result = await checkLatestRelease({
@@ -94,15 +100,19 @@ const performCheck = async (): Promise<void> => {
     await saveState(stateFilePath(), state);
   } catch (err) {
     logger.warn(`Updater check failed: ${(err as Error).message}`);
+  } finally {
+    checkInFlight = false;
   }
 };
 
 const startPolling = (): void => {
   const intervalMs = Math.max(1, settings.updates.checkIntervalHours) * 60 * 60 * 1000;
   if (timer) clearInterval(timer);
+  if (initialTimer) clearTimeout(initialTimer);
   timer = setInterval(() => { void performCheck(); }, intervalMs);
-  // Run an immediate first check, but don't block boot.
-  setTimeout(() => { void performCheck(); }, 5000);
+  // Run an immediate first check, but don't block boot. Track the handle so shutdown()
+  // can cancel it before it fires.
+  initialTimer = setTimeout(() => { initialTimer = null; void performCheck(); }, 5000);
 };
 
 /** Hook entry point — called by ep.json on createServer. */
@@ -118,6 +128,7 @@ export const expressCreateServer = async (): Promise<void> => {
 /** Shutdown hook. */
 export const shutdown = async (): Promise<void> => {
   if (timer) { clearInterval(timer); timer = null; }
+  if (initialTimer) { clearTimeout(initialTimer); initialTimer = null; }
 };
 
 /** Exposed for tests / route handlers. */

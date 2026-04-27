@@ -16,7 +16,8 @@ In `settings.json`:
     "channel": "stable",
     "installMethod": "auto",
     "checkIntervalHours": 6,
-    "githubRepo": "ether/etherpad"
+    "githubRepo": "ether/etherpad",
+    "requireAdminForStatus": false
   },
   "adminEmail": null
 }
@@ -30,6 +31,7 @@ In `settings.json`:
 | `updates.installMethod` | `"auto"` | One of `"auto"`, `"git"`, `"docker"`, `"npm"`, `"managed"`. Auto-detects via filesystem heuristics. Set explicitly to override. |
 | `updates.checkIntervalHours` | `6` | How often to poll GitHub Releases. |
 | `updates.githubRepo` | `"ether/etherpad"` | Override for forks. |
+| `updates.requireAdminForStatus` | `false` | Lock the `/admin/update/status` endpoint to authenticated admin sessions. Default `false` matches existing Etherpad behavior — `/health` already exposes `releaseId` publicly, and changelog data comes from a public GitHub release. Set `true` to hide the full update payload from non-admins without disabling the updater (`tier: "off"` is the heavier opt-out that removes the endpoints entirely). |
 | `adminEmail` | `null` | Top-level. Contact for admin notifications. Setting it enables the email nudges below. |
 
 ## What "outdated" means

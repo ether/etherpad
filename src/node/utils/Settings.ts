@@ -306,6 +306,7 @@ export type SettingsType = {
     installMethod: 'auto' | 'git' | 'docker' | 'npm' | 'managed',
     checkIntervalHours: number,
     githubRepo: string,
+    requireAdminForStatus: boolean,
   },
   adminEmail: string | null,
   getPublicSettings: () => Pick<SettingsType, "title" | "skinVariants"|"randomVersionString"|"skinName"|"toolbar"| "exposeVersion"| "gitVersion" | "enablePadWideSettings">,
@@ -451,6 +452,11 @@ const settings: SettingsType = {
     installMethod: 'auto',
     checkIntervalHours: 6,
     githubRepo: 'ether/etherpad',
+    // The /admin/update/status endpoint returns full info including currentVersion.
+    // Default false matches existing behavior: the version is already exposed via /health.
+    // Set true to require an authenticated admin session for the endpoint without
+    // disabling the updater itself.
+    requireAdminForStatus: false,
   },
   /**
    * Contact address for admin notifications (updates, future security advisories).
