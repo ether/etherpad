@@ -60,7 +60,7 @@
     "mime-types": "^3.0.2",
     "mongodb": "^7.1.1",
     "mssql": "^12.5.0",
-    "mysql2": "^3.22.2",
+    "mysql2": "^3.22.3",
     "nano": "^11.0.5",
     "oidc-provider": "9.8.2",
     "openapi-backend": "^5.16.1",
