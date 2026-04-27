@@ -134,7 +134,11 @@ jobs:
         if: matrix.arch == 'amd64'
         run: |
           set -eux
-          sudo apt-get update
+          # Ubuntu's default apt nodejs is 18 — too old for our `Depends:
+          # nodejs (>= 20)`. Use NodeSource (current LTS) so dpkg's dep
+          # check passes and apt-get install -f doesn't remove the
+          # package on us.
+          curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
           sudo apt-get install -y nodejs
           sudo dpkg -i dist/*.deb || sudo apt-get install -f -y
           test -x /usr/bin/etherpad
