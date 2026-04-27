@@ -74,16 +74,71 @@ describe(__filename, function () {
   });
 
   describe('GET /admin/update/status', function () {
-    it('requires admin auth (rejects no-auth)', async function () {
-      // Clear plugin auth hooks so ep_readonly_guest (and others) can't auto-grant access.
-      for (const hookName of authHookNames.concat(failHookNames)) {
-        plugins.hooks[hookName] = [];
-      }
-      // Etherpad's webaccess gates requests when requireAuthentication is enabled.
-      (settings as any).requireAuthentication = true;
-      (settings as any).requireAuthorization = false;
-      (settings as any).users = {admin: {password: 'admin-password', is_admin: true}};
-      await agent.get('/admin/update/status').expect(401);
+    // Auth on this endpoint is intentionally loose: the running version is already
+    // exposed publicly via /health (releaseId), and latest/changelog come from a
+    // public GitHub release. Admins who want the endpoint gone set updates.tier=off,
+    // which removes route registration entirely (covered by the unit test for the
+    // hook). Here we just assert the basic shape.
+    it('returns the expected shape', async function () {
+      await saveState(statePath(), {...EMPTY_STATE});
+      const res = await agent.get('/admin/update/status').expect(200);
+      assert.ok(typeof res.body.currentVersion === 'string');
+      assert.equal(res.body.latest, null);
+      assert.equal(res.body.tier, settings.updates.tier);
+      assert.ok(Array.isArray(res.body.vulnerableBelow));
+    });
+
+    describe('when updates.requireAdminForStatus = true', function () {
+      const restore: Record<string, any> = {};
+      beforeEach(function () {
+        restore.requireAdminForStatus = settings.updates.requireAdminForStatus;
+        settings.updates.requireAdminForStatus = true;
+      });
+      afterEach(function () {
+        settings.updates.requireAdminForStatus = restore.requireAdminForStatus;
+      });
+
+      it('rejects unauthenticated requests with 401', async function () {
+        await agent.get('/admin/update/status').expect(401);
+      });
+
+      it('rejects authenticated non-admin sessions with 403', async function () {
+        // Inject a session via authenticate hook: any request becomes user "guest" (not admin).
+        for (const hookName of authHookNames.concat(failHookNames)) {
+          plugins.hooks[hookName] = [];
+        }
+        plugins.hooks.authenticate = [{
+          hook_fn: (_hookName: string, ctx: any, cb: Function) => {
+            ctx.req.session.user = {is_admin: false};
+            cb([true]);
+          },
+        }];
+        (settings as any).requireAuthentication = true;
+        (settings as any).requireAuthorization = false;
+        (settings as any).users = {guest: {password: 'guest-password'}};
+        await agent.get('/admin/update/status')
+          .auth('guest', 'guest-password')
+          .expect(403);
+      });
+
+      it('admits authenticated admin sessions', async function () {
+        for (const hookName of authHookNames.concat(failHookNames)) {
+          plugins.hooks[hookName] = [];
+        }
+        plugins.hooks.authenticate = [{
+          hook_fn: (_hookName: string, ctx: any, cb: Function) => {
+            ctx.req.session.user = {is_admin: true};
+            cb([true]);
+          },
+        }];
+        (settings as any).requireAuthentication = true;
+        (settings as any).requireAuthorization = false;
+        (settings as any).users = {admin: {password: 'admin-password', is_admin: true}};
+        await saveState(statePath(), {...EMPTY_STATE});
+        await agent.get('/admin/update/status')
+          .auth('admin', 'admin-password')
+          .expect(200);
+      });
     });
   });
 });

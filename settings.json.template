@@ -186,7 +186,13 @@
     "channel": "stable",
     "installMethod": "auto",
     "checkIntervalHours": 6,
-    "githubRepo": "ether/etherpad"
+    "githubRepo": "ether/etherpad",
+    /*
+     * Lock /admin/update/status to authenticated admins. Default false keeps the
+     * endpoint open (the version is already public via /health). Set true to hide
+     * full update detail from non-admins without turning the updater off.
+     */
+    "requireAdminForStatus": false
   },
 
   /*

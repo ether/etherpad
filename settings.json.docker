@@ -196,7 +196,8 @@
     "channel": "stable",
     "installMethod": "docker",
     "checkIntervalHours": 6,
-    "githubRepo": "ether/etherpad"
+    "githubRepo": "ether/etherpad",
+    "requireAdminForStatus": false
   },
 
   /*
