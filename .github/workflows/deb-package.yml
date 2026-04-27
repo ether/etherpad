@@ -1,0 +1,228 @@
+name: Debian package
+on:
+  push:
+    tags:
+      # Actions tag filters are globs, not regex. Mirrors handleRelease.yml.
+      - 'v*.*.*'
+      - 'v*.*.*-*'
+    branches: [develop]
+    paths:
+      - 'packaging/**'
+      - '.github/workflows/deb-package.yml'
+      - 'src/package.json'
+      - 'pnpm-lock.yaml'
+      - 'src/node/server.ts'
+      - 'src/node/utils/run_cmd.ts'
+      - 'src/static/js/pluginfw/**'
+      - 'settings.json.template'
+  pull_request:
+    paths:
+      - 'packaging/**'
+      - '.github/workflows/deb-package.yml'
+      - 'src/package.json'
+      - 'pnpm-lock.yaml'
+      - 'src/node/server.ts'
+      - 'src/node/utils/run_cmd.ts'
+      - 'src/static/js/pluginfw/**'
+      - 'settings.json.template'
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Git ref to package (defaults to current)'
+        required: false
+
+# Default to read-only for the workflow; the release job opts in to
+# `contents: write` for itself only. Build jobs (which run on every PR)
+# don't need write and shouldn't have it.
+permissions:
+  contents: read
+
+env:
+  NFPM_VERSION: v2.43.0
+
+jobs:
+  build:
+    name: Build .deb (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-latest
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: pnpm
+
+      - name: Resolve version
+        id: v
+        # Runs after setup-node so `node` is guaranteed available on
+        # any runner image (some don't ship it preinstalled).
+        run: |
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          else
+            VERSION="$(node -p "require('./package.json').version")"
+          fi
+          echo "version=${VERSION}" >>"$GITHUB_OUTPUT"
+          echo "Packaging version: ${VERSION}"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build UI + admin
+        run: pnpm run build:etherpad
+
+      - name: Install nfpm
+        run: |
+          set -euo pipefail
+          NFPM_ARCH=amd64
+          [ "${{ matrix.arch }}" = "arm64" ] && NFPM_ARCH=arm64
+          NFPM_DEB="nfpm_${NFPM_VERSION#v}_${NFPM_ARCH}.deb"
+          BASE="https://github.com/goreleaser/nfpm/releases/download/${NFPM_VERSION}"
+          curl -fsSL -o "/tmp/${NFPM_DEB}" "${BASE}/${NFPM_DEB}"
+          curl -fsSL -o /tmp/nfpm-checksums.txt "${BASE}/checksums.txt"
+          # Verify upstream artifact before sudo dpkg -i (defense in depth
+          # against a tampered release asset).
+          ( cd /tmp && grep " ${NFPM_DEB}\$" nfpm-checksums.txt | sha256sum -c - )
+          sudo dpkg -i "/tmp/${NFPM_DEB}"
+
+      - name: Stage tree for packaging
+        run: |
+          set -eux
+          STAGE=staging/opt/etherpad
+          mkdir -p "${STAGE}"
+
+          # Production footprint = src/ + bin/ + node_modules/ + metadata.
+          cp -a src bin package.json pnpm-workspace.yaml README.md LICENSE \
+                node_modules "${STAGE}/"
+
+          # Make pnpm-workspace.yaml production-only (same trick Dockerfile uses).
+          printf 'packages:\n  - src\n  - bin\n' > "${STAGE}/pnpm-workspace.yaml"
+
+          mkdir -p packaging/etc
+          cp settings.json.template packaging/etc/settings.json.dist
+
+          # Purge test fixtures and dev caches from node_modules to shrink size.
+          find "${STAGE}/node_modules" -type d \
+               \( -name test -o -name tests -o -name '__tests__' \
+                  -o -name example -o -name examples -o -name docs \) \
+               -prune -exec rm -rf {} + 2>/dev/null || true
+          find "${STAGE}/node_modules" -type f \
+               \( -name '*.md' -o -name '*.ts.map' -o -name '*.map' \
+                  -o -name 'CHANGELOG*' -o -name 'HISTORY*' \) \
+               -delete 2>/dev/null || true
+
+      - name: Build .deb
+        env:
+          VERSION: ${{ steps.v.outputs.version }}
+          ARCH: ${{ matrix.arch }}
+        run: |
+          mkdir -p dist
+          nfpm package --packager deb -f packaging/nfpm.yaml --target dist/
+
+      - name: Smoke-test the package (amd64 only)
+        if: matrix.arch == 'amd64'
+        run: |
+          set -eux
+          # Ubuntu's default apt nodejs is 18 — too old for our
+          # `Depends: nodejs (>= 20)`. Add NodeSource's apt repo
+          # explicitly (key + sources.list) instead of `curl | sudo bash`
+          # so we don't execute network-fetched code as root.
+          NODE_MAJOR=24
+          KEYRING=/usr/share/keyrings/nodesource.gpg
+          curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
+            | sudo gpg --dearmor -o "${KEYRING}"
+          echo "deb [signed-by=${KEYRING}] https://deb.nodesource.com/node_${NODE_MAJOR}.x nodistro main" \
+            | sudo tee /etc/apt/sources.list.d/nodesource.list
+          sudo apt-get update
+          sudo apt-get install -y nodejs
+          sudo dpkg -i dist/*.deb || sudo apt-get install -f -y
+          # /etc/etherpad is mode 0750 root:etherpad on purpose (DB creds
+          # live here) so the runner user can't read into it. Each check
+          # that crosses /etc/etherpad or /var/lib/etherpad runs under sudo.
+          sudo test -x /usr/bin/etherpad
+          sudo test -f /etc/etherpad/settings.json
+          sudo test -L /opt/etherpad/settings.json
+          sudo test -L /opt/etherpad/var
+          [ "$(sudo readlink /opt/etherpad/var)" = "/var/lib/etherpad/var" ]
+          sudo test -L /opt/etherpad/src/plugin_packages
+          [ "$(sudo readlink /opt/etherpad/src/plugin_packages)" = "/var/lib/etherpad/plugin_packages" ]
+          sudo test -d /var/lib/etherpad/plugin_packages
+          [ "$(sudo stat -c '%U' /var/lib/etherpad/plugin_packages)" = "etherpad" ]
+          [ "$(stat -c '%G' /opt/etherpad/src/node_modules)" = "etherpad" ]
+          sudo test -f /var/lib/etherpad/var/installed_plugins.json
+          sudo grep -q '"ep_etherpad-lite"' /var/lib/etherpad/var/installed_plugins.json
+          sudo grep -q '"dbType": "sqlite"' /etc/etherpad/settings.json
+          id etherpad
+          systemctl cat etherpad.service
+          sudo systemctl start etherpad
+          ok=
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:9001/health; then
+              ok=1
+              break
+            fi
+            sleep 2
+          done
+          if [ -z "${ok}" ]; then
+            # Attach logs so the failing run is diagnosable.
+            sudo journalctl -u etherpad --no-pager -n 200 || true
+            exit 1
+          fi
+          sudo systemctl stop etherpad
+          sudo dpkg --purge etherpad
+          ! id etherpad 2>/dev/null
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: etherpad-${{ steps.v.outputs.version }}-${{ matrix.arch }}-deb
+          path: dist/*.deb
+          if-no-files-found: error
+
+  release:
+    name: Attach to GitHub Release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          pattern: etherpad-*-deb
+          merge-multiple: true
+      - name: Create stable "latest" aliases
+        run: |
+          set -euo pipefail
+          # Publish stable filenames alongside the versioned ones so users
+          # can curl https://github.com/.../releases/latest/download/etherpad-latest_amd64.deb
+          # without knowing the version.
+          for f in dist/etherpad_*_amd64.deb; do
+            [ -e "$f" ] && cp "$f" dist/etherpad-latest_amd64.deb
+          done
+          for f in dist/etherpad_*_arm64.deb; do
+            [ -e "$f" ] && cp "$f" dist/etherpad-latest_arm64.deb
+          done
+          ls -la dist/
+      - name: Attach .deb files to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.deb
+          fail_on_unmatched_files: true

@@ -146,6 +146,18 @@ module.exports = exports = (args: string[], opts:RunCMDOptions = {}) => {
     }
   }
 
+  // Without this, a spawn failure (e.g. ENOENT for a missing binary) is
+  // emitted as an 'error' event with no listener, which Node.js treats as
+  // an uncaught exception that bypasses any try/catch around the awaited
+  // promise and kills the process. Reject the promise instead so callers
+  // can handle it.
+  proc.on('error', (err) => {
+    procFailedErr.message = `Failed to spawn ${args[0]}: ${(err as Error).message}`;
+    procFailedErr.code = (err as any).code;
+    logger.debug(procFailedErr.stack);
+    px.reject(procFailedErr);
+  });
+
   proc.on('exit', async (code, signal) => {
     const [, stdout] = await Promise.all(stdioStringPromises);
     if (code !== 0) {

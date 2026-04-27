@@ -1,0 +1,19 @@
+#!/bin/sh
+# /usr/bin/etherpad - thin wrapper that runs Etherpad in production mode.
+# Invoked by the etherpad.service systemd unit.
+set -e
+
+APP_DIR="${ETHERPAD_DIR:-/opt/etherpad}"
+cd "${APP_DIR}"
+
+: "${NODE_ENV:=production}"
+export NODE_ENV
+export ETHERPAD_PRODUCTION=true
+
+# Run the server through tsx's CommonJS hook — Etherpad's prod entrypoint
+# (src/node/server.ts) uses `exports.start = ...`, which fails under the
+# ESM loader. Mirrors the `prod` script in src/package.json.
+exec node \
+    --require "${APP_DIR}/src/node_modules/tsx/dist/cjs/index.cjs" \
+    "${APP_DIR}/src/node/server.ts" \
+    "$@"
