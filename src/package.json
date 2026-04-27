@@ -45,7 +45,7 @@
     "find-root": "1.1.0",
     "formidable": "^3.5.4",
     "http-errors": "^2.0.1",
-    "jose": "^6.2.2",
+    "jose": "^6.2.3",
     "js-cookie": "^3.0.5",
     "jsdom": "^29.0.2",
     "jsonminify": "0.4.2",
