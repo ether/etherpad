@@ -92,12 +92,25 @@ if [ -z "${NO_SYSTEMD}" ]; then
   done
   [ -n "${ready}" ] || { echo "!! systemd never came up"; docker logs "${CONTAINER_NAME}" 2>&1 | tail -50; exit 1; }
 else
-  echo "==> Launching plain Ubuntu container (--no-systemd)"
+  # Reuse whichever ubuntu-ish image is already on disk to avoid a
+  # registry round-trip (handy on flaky networks).
+  PLAIN_IMAGE="${PLAIN_IMAGE:-}"
+  if [ -z "${PLAIN_IMAGE}" ]; then
+    for candidate in ubuntu:24.04 "${SYSTEMD_IMAGE}" ubuntu:latest debian:stable; do
+      if docker image inspect "${candidate}" >/dev/null 2>&1; then
+        PLAIN_IMAGE="${candidate}"
+        break
+      fi
+    done
+    : "${PLAIN_IMAGE:=ubuntu:24.04}"
+  fi
+  echo "==> Launching plain container (--no-systemd, image=${PLAIN_IMAGE})"
   docker run -d --name "${CONTAINER_NAME}" \
+    --entrypoint /bin/sh \
     --tmpfs /tmp --tmpfs /run \
     -v "${REPO_ROOT}/dist":/dist:ro \
     -p 9001:9001 \
-    ubuntu:24.04 sleep infinity >/dev/null
+    "${PLAIN_IMAGE}" -c 'sleep infinity' >/dev/null
 fi
 
 echo "==> Installing nodejs + the .deb inside the container"
