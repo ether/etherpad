@@ -28,7 +28,7 @@ test.describe('bold button', ()=>{
   })
 
   test('makes text bold on keypress', async ({page}) => {
-    test.skip(!!process.env.WITH_PLUGINS, 'flaky in with-plugins suite — see #7611');
+    test.skip(process.env.WITH_PLUGINS === '1', 'flaky in with-plugins suite — see #7611');
     // get the inner iframe
     const innerFrame = await getPadBody(page);
 

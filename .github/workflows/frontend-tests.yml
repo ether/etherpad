@@ -51,11 +51,13 @@ jobs:
         run: |
           set -euo pipefail
           pnpm run prod > /tmp/etherpad-server.log 2>&1 &
-          # Loading 11 plugins makes startup noticeably slower than the
-          # without-plugins job; give it 90s and fail loudly if it
-          # doesn't come up rather than silently running tests against
-          # a half-started server.
-          can_connect() { curl -sSfo /dev/null http://localhost:9001/; }
+          # Generous 90s budget so a slow runner (or, in the with-plugins
+          # variant, plugin boot) doesn't lose the race against the test
+          # phase. Fail loudly on timeout rather than silently falling
+          # through to tests against a half-started server.
+          # --max-time bounds each probe so a stuck server can't make a
+          # single curl call eat the whole 90s budget.
+          can_connect() { curl --max-time 3 -sSfo /dev/null http://localhost:9001/; }
           for i in $(seq 1 90); do can_connect && break; sleep 1; done
           if ! can_connect; then
             echo "::error::Etherpad did not respond on :9001 within 90s"
@@ -115,11 +117,13 @@ jobs:
         run: |
           set -euo pipefail
           pnpm run prod > /tmp/etherpad-server.log 2>&1 &
-          # Loading 11 plugins makes startup noticeably slower than the
-          # without-plugins job; give it 90s and fail loudly if it
-          # doesn't come up rather than silently running tests against
-          # a half-started server.
-          can_connect() { curl -sSfo /dev/null http://localhost:9001/; }
+          # Generous 90s budget so a slow runner (or, in the with-plugins
+          # variant, plugin boot) doesn't lose the race against the test
+          # phase. Fail loudly on timeout rather than silently falling
+          # through to tests against a half-started server.
+          # --max-time bounds each probe so a stuck server can't make a
+          # single curl call eat the whole 90s budget.
+          can_connect() { curl --max-time 3 -sSfo /dev/null http://localhost:9001/; }
           for i in $(seq 1 90); do can_connect && break; sleep 1; done
           if ! can_connect; then
             echo "::error::Etherpad did not respond on :9001 within 90s"
@@ -200,11 +204,13 @@ jobs:
         run: |
           set -euo pipefail
           pnpm run prod > /tmp/etherpad-server.log 2>&1 &
-          # Loading 11 plugins makes startup noticeably slower than the
-          # without-plugins job; give it 90s and fail loudly if it
-          # doesn't come up rather than silently running tests against
-          # a half-started server.
-          can_connect() { curl -sSfo /dev/null http://localhost:9001/; }
+          # Generous 90s budget so a slow runner (or, in the with-plugins
+          # variant, plugin boot) doesn't lose the race against the test
+          # phase. Fail loudly on timeout rather than silently falling
+          # through to tests against a half-started server.
+          # --max-time bounds each probe so a stuck server can't make a
+          # single curl call eat the whole 90s budget.
+          can_connect() { curl --max-time 3 -sSfo /dev/null http://localhost:9001/; }
           for i in $(seq 1 90); do can_connect && break; sleep 1; done
           if ! can_connect; then
             echo "::error::Etherpad did not respond on :9001 within 90s"
