@@ -37,6 +37,7 @@ import path from 'node:path';
 import {argv} from './Cli'
 import jsonminify from 'jsonminify';
 import log4js from 'log4js';
+import {createHash} from 'node:crypto';
 import randomString from './randomstring';
 const suppressDisableMsg = ' -- To suppress these warning messages change ' +
     'suppressErrorsInPadText to true in your settings.json\n';
@@ -1077,18 +1078,38 @@ export const reloadSettings = () => {
     }
 
     /*
-     * At each start, Etherpad generates a random string and appends it as query
-     * parameter to the URLs of the static assets, in order to force their reload.
-     * Subsequent requests will be cached, as long as the server is not reloaded.
+     * Etherpad appends this token as a ?v= query parameter on static assets
+     * and as the content seed for the padbootstrap-<hash>.min.js bundles, so
+     * clients invalidate their cache when a release goes out.
      *
-     * For the rationale behind this choice, see
-     * https://github.com/ether/etherpad-lite/pull/3958
+     * Historically this was `randomString(4)`, regenerated on every boot. That
+     * broke horizontally-scaled deployments (multi-pod behind an ingress):
+     * every pod hashed the bootstrap bundle with its own seed, so an HTML
+     * response from pod A referenced `padbootstrap-ABCD.min.js` while pod B
+     * only served `padbootstrap-WXYZ.min.js`, producing 404s on any cross-pod
+     * request (issue #7213).
      *
-     * ACHTUNG: this may prevent caching HTTP proxies to work
-     * TODO: remove the "?v=randomstring" parameter, and replace with hashed filenames instead
+     * Derive the token deterministically from the Etherpad version and
+     * whatever git SHA is available. Pods that ship the same artifact now
+     * produce the same hash, and the token still rotates per release so
+     * caches invalidate correctly.
+     *
+     * Precedence: ETHERPAD_VERSION_STRING env var (explicit integrator
+     * override) > sha256(version + "|" + gitVersion) > package.json version.
+     *
+     * For the original cache-busting rationale, see PR #3958.
      */
-    settings.randomVersionString = randomString(4);
-    logger.info(`Random string used for versioning assets: ${settings.randomVersionString}`);
+    const explicit = process.env.ETHERPAD_VERSION_STRING;
+    if (explicit) {
+        settings.randomVersionString = explicit;
+    } else {
+        const pkgVersion = require('../../package.json').version as string;
+        settings.randomVersionString = createHash('sha256')
+            .update(`${pkgVersion}|${settings.gitVersion || ''}`)
+            .digest('hex')
+            .slice(0, 8);
+    }
+    logger.info(`String used for versioning assets: ${settings.randomVersionString}`);
 };
 
 export const exportedForTestingOnly = {
