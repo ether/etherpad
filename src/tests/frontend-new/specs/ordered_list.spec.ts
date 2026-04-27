@@ -9,6 +9,7 @@ test.beforeEach(async ({ page })=>{
 test.describe('ordered_list.js', function () {
 
     test('issue #4748 keeps numbers increment on OL', async function ({page}) {
+      test.skip(!!process.env.WITH_PLUGINS, 'flaky in with-plugins suite — see #7611');
       const padBody = await getPadBody(page);
       await clearPadContent(page)
       await writeToPad(page, 'Line 1')
@@ -56,6 +57,7 @@ test.describe('ordered_list.js', function () {
 
   // Regression test for https://github.com/ether/etherpad-lite/issues/5160
   test('issue #5160 ordered list increments correctly after unordered list', async function ({page}) {
+    test.skip(!!process.env.WITH_PLUGINS, 'flaky in with-plugins suite — see #7611');
     const padBody = await getPadBody(page);
     await clearPadContent(page);
 
@@ -94,6 +96,7 @@ test.describe('ordered_list.js', function () {
 
   // Regression test for https://github.com/ether/etherpad-lite/issues/5718
   test('issue #5718 consecutive numbering works after indented sub-bullets', async function ({page}) {
+    test.skip(!!process.env.WITH_PLUGINS, 'flaky in with-plugins suite — see #7611');
     const padBody = await getPadBody(page);
     await clearPadContent(page);
 

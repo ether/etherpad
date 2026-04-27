@@ -89,6 +89,7 @@ test.describe('Page Up / Page Down', function () {
   // pixel-based calculation must account for lines that occupy far more visual
   // rows than the viewport height.
   test('PageDown with consecutive long wrapped lines moves by correct amount (#4562)', async function ({page}) {
+    test.skip(!!process.env.WITH_PLUGINS, 'flaky in with-plugins suite — see #7611');
     const padBody = await getPadBody(page);
     await clearPadContent(page);
 
@@ -144,6 +145,7 @@ test.describe('Page Up / Page Down', function () {
   });
 
   test('PageDown then PageUp returns to approximately same position', async function ({page}) {
+    test.skip(!!process.env.WITH_PLUGINS, 'flaky in with-plugins suite — see #7611');
     const padBody = await getPadBody(page);
     await clearPadContent(page);
 

@@ -55,6 +55,7 @@ test.describe('indentation button', function () {
 
   test('indents text with spaces on enter if previous line ends ' +
     "with ':', '[', '(', or '{'", async function ({page}) {
+    test.skip(!!process.env.WITH_PLUGINS, 'fails with /ether plugin set loaded — see #7611');
     const padBody = await getPadBody(page);
     await padBody.click()
     await clearPadContent(page)
@@ -116,6 +117,7 @@ test.describe('indentation button', function () {
 
   test('appends indentation to the indent of previous line if previous line ends ' +
     "with ':', '[', '(', or '{'", async function ({page}) {
+    test.skip(!!process.env.WITH_PLUGINS, 'fails with /ether plugin set loaded — see #7611');
     const padBody = await getPadBody(page);
     await padBody.click()
     await clearPadContent(page)

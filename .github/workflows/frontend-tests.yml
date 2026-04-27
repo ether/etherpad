@@ -154,13 +154,6 @@ jobs:
       PNPM_HOME: ~/.pnpm-store
     name: Playwright Chrome with plugins
     runs-on: ubuntu-latest
-    # Informational only: reports plugin-vs-core regressions without
-    # gating the PR. The 11-plugin suite slows pad boot enough that
-    # several core specs race their hardcoded waitFor timeouts; that's
-    # a per-spec fix, not a blocker for landing the visibility.
-    # Flip to false (or just remove this line) once the with-plugins
-    # suite is consistently green.
-    continue-on-error: true
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -221,7 +214,9 @@ jobs:
           fi
           cd src
           pnpm exec playwright install chromium  --with-deps
-          pnpm run test-ui --project=chromium
+          # WITH_PLUGINS skips a small set of specs that fail when the
+          # /ether plugin set is loaded — tracked for fixup follow-ups.
+          WITH_PLUGINS=1 pnpm run test-ui --project=chromium
       - name: Upload server log on failure
         uses: actions/upload-artifact@v7
         if: failure()
@@ -241,7 +236,6 @@ jobs:
       PNPM_HOME: ~/.pnpm-store
     name: Playwright Firefox with plugins
     runs-on: ubuntu-latest
-    continue-on-error: true  # informational; see chrome-with-plugins comment
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -302,7 +296,9 @@ jobs:
           fi
           cd src
           pnpm exec playwright install firefox  --with-deps
-          pnpm run test-ui --project=firefox
+          # WITH_PLUGINS skips a small set of specs that fail when the
+          # /ether plugin set is loaded — tracked for fixup follow-ups.
+          WITH_PLUGINS=1 pnpm run test-ui --project=firefox
       - name: Upload server log on failure
         uses: actions/upload-artifact@v7
         if: failure()

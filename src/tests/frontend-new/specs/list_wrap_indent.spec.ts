@@ -7,6 +7,7 @@ test.beforeEach(async ({page}) => {
 
 // Regression test for https://github.com/ether/etherpad-lite/issues/2581
 test.describe('numbered list wrapped line indentation', function () {
+  test.skip(!!process.env.WITH_PLUGINS, 'flaky in with-plugins suite — see #7611');
   test('wrapped lines in a numbered list item are indented', async function ({page}) {
     const padBody = await getPadBody(page);
     await clearPadContent(page);

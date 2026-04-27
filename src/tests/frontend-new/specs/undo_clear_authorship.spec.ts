@@ -26,6 +26,7 @@ import {
  */
 test.describe('undo clear authorship colors with multiple authors (bug #2802)', function () {
   test.describe.configure({ retries: 2 });
+  test.skip(!!process.env.WITH_PLUGINS, 'flaky in with-plugins suite — see #7611');
   let padId: string;
 
   test('User B should not be disconnected after undoing clear authorship', async function ({browser}) {

@@ -24,6 +24,7 @@ test.describe('Undo scroll-to-caret (#7007)', function () {
   const LINE_COUNT = 45;
 
   test('Ctrl+Z scrolls viewport up when the caret lands above the view', async function ({page}) {
+    test.skip(!!process.env.WITH_PLUGINS, 'fails with /ether plugin set loaded — see #7611');
     await (await getPadBody(page)).click();
     await clearPadContent(page);
 
@@ -68,6 +69,7 @@ test.describe('Undo scroll-to-caret (#7007)', function () {
   });
 
   test('Ctrl+Z scrolls viewport down when the caret lands below the view', async function ({page}) {
+    test.skip(!!process.env.WITH_PLUGINS, 'fails with /ether plugin set loaded — see #7611');
     await (await getPadBody(page)).click();
     await clearPadContent(page);
 

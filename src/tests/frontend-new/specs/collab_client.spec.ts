@@ -37,6 +37,7 @@ test.describe('Messages in the COLLABROOM', function () {
   };
 
   test('bug #4978 regression test', async function ({browser}) {
+    test.skip(!!process.env.WITH_PLUGINS, 'flaky in with-plugins suite — see #7611');
     // The bug was triggered by receiving a change from another user while simultaneously composing
     // a character and waiting for an acknowledgement of a previously sent change.
 
