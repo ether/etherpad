@@ -60,7 +60,7 @@ case "$1" in
 EOF
     fi
 
-    chown -R etherpad:etherpad "${RUNTIME_VAR}"
+    chown -hR etherpad:etherpad "${RUNTIME_VAR}"
 
     # Plugin install paths. Etherpad's admin UI installs plugins into
     # ${root}/src/plugin_packages and creates symlinks under
@@ -77,7 +77,7 @@ EOF
     fi
     # chown after the cp -- cp -a preserves the (root) ownership of the
     # staged source files and would re-root anything we chowned earlier.
-    chown -R etherpad:etherpad "${PLUGIN_PKG_LIVE}"
+    chown -hR etherpad:etherpad "${PLUGIN_PKG_LIVE}"
     ln -sfn "${PLUGIN_PKG_LIVE}" "${PLUGIN_PKG_LINK}"
 
     # node_modules is bundled (root-owned contents); the directory itself

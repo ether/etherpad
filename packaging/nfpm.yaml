@@ -111,8 +111,12 @@ overrides:
   deb:
     depends:
       - nodejs (>= 20)
-      - adduser
       - ca-certificates
+    # adduser is needed by preinst (which creates the etherpad user
+    # before unpacking). Plain `dpkg -i` does not pre-fetch Depends, so
+    # we mark it Pre-Depends to guarantee it's available at preinst time.
+    predepends:
+      - adduser
   rpm:
     depends:
       - nodejs >= 20
