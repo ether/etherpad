@@ -42,12 +42,14 @@ cp -a src bin package.json pnpm-workspace.yaml README.md LICENSE node_modules \
 printf 'packages:\n  - src\n  - bin\n' > staging/opt/etherpad/pnpm-workspace.yaml
 cp settings.json.template packaging/etc/settings.json.dist
 
-echo "==> Building .deb via nfpm (in container)"
+echo "==> Building .deb via nfpm ${NFPM_VERSION} (in container)"
 VERSION="$(node -p 'require("./package.json").version')"
+# Pin to NFPM_VERSION so local builds match what CI produces. The
+# goreleaser/nfpm tag drops the leading "v".
 docker run --rm \
   -v "${REPO_ROOT}":/w -w /w \
   -e VERSION="${VERSION}" -e ARCH="${ARCH}" \
-  goreleaser/nfpm:latest \
+  "goreleaser/nfpm:${NFPM_VERSION#v}" \
   package --packager deb -f packaging/nfpm.yaml --target dist/
 
 DEB_FILE="$(ls dist/etherpad_*_${ARCH}.deb | head -1)"

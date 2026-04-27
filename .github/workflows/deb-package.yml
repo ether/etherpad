@@ -31,8 +31,11 @@ on:
         description: 'Git ref to package (defaults to current)'
         required: false
 
+# Default to read-only for the workflow; the release job opts in to
+# `contents: write` for itself only. Build jobs (which run on every PR)
+# don't need write and shouldn't have it.
 permissions:
-  contents: write    # attach release assets
+  contents: read
 
 env:
   NFPM_VERSION: v2.43.0
