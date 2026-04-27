@@ -2,8 +2,9 @@ name: Debian package
 on:
   push:
     tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+'
-      - 'v[0-9]+.[0-9]+.[0-9]+-*'
+      # Actions tag filters are globs, not regex. Mirrors handleRelease.yml.
+      - 'v*.*.*'
+      - 'v*.*.*-*'
   workflow_dispatch:
     inputs:
       ref:
@@ -123,6 +124,12 @@ jobs:
           # ProtectSystem=strict doesn't block runtime writes.
           test -L /opt/etherpad/var
           [ "$(readlink /opt/etherpad/var)" = "/var/lib/etherpad/var" ]
+          # Plugin install paths must be writable by the etherpad user.
+          test -L /opt/etherpad/src/plugin_packages
+          [ "$(readlink /opt/etherpad/src/plugin_packages)" = "/var/lib/etherpad/plugin_packages" ]
+          test -d /var/lib/etherpad/plugin_packages
+          [ "$(stat -c '%U' /var/lib/etherpad/plugin_packages)" = "etherpad" ]
+          [ "$(stat -c '%G' /opt/etherpad/src/node_modules)" = "etherpad" ]
           # installed_plugins.json must be seeded so checkForMigration()
           # doesn't spawn `pnpm ls` (pnpm is not a runtime dep).
           test -f /var/lib/etherpad/var/installed_plugins.json

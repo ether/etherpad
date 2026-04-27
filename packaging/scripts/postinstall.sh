@@ -62,6 +62,31 @@ EOF
 
     chown -R etherpad:etherpad "${RUNTIME_VAR}"
 
+    # Plugin install paths. Etherpad's admin UI installs plugins into
+    # ${root}/src/plugin_packages and creates symlinks under
+    # ${root}/src/node_modules. Both are under /opt and would EACCES
+    # under the etherpad user without these adjustments.
+    PLUGIN_PKG_LIVE=/var/lib/etherpad/plugin_packages
+    PLUGIN_PKG_LINK="${APP_DIR}/src/plugin_packages"
+    NODE_MODULES_DIR="${APP_DIR}/src/node_modules"
+
+    mkdir -p "${PLUGIN_PKG_LIVE}"
+    chown -R etherpad:etherpad "${PLUGIN_PKG_LIVE}"
+    if [ -e "${PLUGIN_PKG_LINK}" ] && [ ! -L "${PLUGIN_PKG_LINK}" ]; then
+      cp -a "${PLUGIN_PKG_LINK}/." "${PLUGIN_PKG_LIVE}/" 2>/dev/null || true
+      rm -rf "${PLUGIN_PKG_LINK}"
+    fi
+    ln -sfn "${PLUGIN_PKG_LIVE}" "${PLUGIN_PKG_LINK}"
+
+    # node_modules is bundled (root-owned contents); the directory itself
+    # must be group-writable by etherpad so plugin installs can create
+    # symlinks alongside the shipped packages. ReadWritePaths in the unit
+    # also exposes it as writable under ProtectSystem=strict.
+    if [ -d "${NODE_MODULES_DIR}" ]; then
+      chgrp etherpad "${NODE_MODULES_DIR}"
+      chmod 2775 "${NODE_MODULES_DIR}"
+    fi
+
     if [ -d /run/systemd/system ] && command -v systemctl >/dev/null 2>&1; then
       systemctl daemon-reload || true
       # Enable on first install; leave state alone on upgrade.

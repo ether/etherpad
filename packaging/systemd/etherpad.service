@@ -40,7 +40,11 @@ SystemCallArchitectures=native
 RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
 UMask=0027
 
-ReadWritePaths=/var/lib/etherpad /var/log/etherpad /etc/etherpad
+# /opt/etherpad/src/node_modules must be writable so the admin UI can
+# create symlinks for newly installed plugins alongside the bundled deps.
+# /opt/etherpad/src/plugin_packages is symlinked into /var/lib/etherpad
+# by postinstall, so it's already covered by the entry below.
+ReadWritePaths=/var/lib/etherpad /var/log/etherpad /etc/etherpad /opt/etherpad/src/node_modules
 
 LimitNOFILE=65536
 

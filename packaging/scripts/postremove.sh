@@ -10,6 +10,7 @@ case "$1" in
   remove)
     [ -L "${APP_DIR}/settings.json" ] && rm -f "${APP_DIR}/settings.json" || true
     [ -L "${APP_DIR}/var" ] && rm -f "${APP_DIR}/var" || true
+    [ -L "${APP_DIR}/src/plugin_packages" ] && rm -f "${APP_DIR}/src/plugin_packages" || true
     if [ -d /run/systemd/system ] && command -v systemctl >/dev/null 2>&1; then
       systemctl daemon-reload || true
     fi

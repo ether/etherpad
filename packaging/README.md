@@ -38,6 +38,21 @@ ARCH=amd64 \
     nfpm package --packager deb -f packaging/nfpm.yaml --target dist/
 ```
 
+## End-to-end test (Docker, no real systemd needed)
+
+`packaging/test-local.sh` builds the `.deb` and runs the same smoke
+test the CI workflow does, inside a throwaway systemd-enabled
+container:
+
+```sh
+packaging/test-local.sh                # build + smoke + purge
+packaging/test-local.sh --shell        # leave the container up so you can poke around
+packaging/test-local.sh --build-only   # just produce dist/*.deb
+```
+
+This is the fastest way to validate that the systemd hardening, plugin
+path symlinks, and tsx wrapper actually work together before pushing.
+
 ## Installing
 
 The release page publishes both versioned and stable filenames per arch:
