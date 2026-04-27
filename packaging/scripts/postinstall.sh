@@ -7,16 +7,18 @@ ETC_DIR=/etc/etherpad
 VAR_DIR=/var/lib/etherpad
 LOG_DIR=/var/log/etherpad
 APP_DIR=/opt/etherpad
+RUNTIME_VAR="${VAR_DIR}/var"
 DIST_SETTINGS=/usr/share/etherpad/settings.json.dist
 ACTIVE_SETTINGS="${ETC_DIR}/settings.json"
+INSTALLED_PLUGINS="${RUNTIME_VAR}/installed_plugins.json"
 
 case "$1" in
   configure)
-    mkdir -p "${ETC_DIR}" "${VAR_DIR}" "${LOG_DIR}"
+    mkdir -p "${ETC_DIR}" "${VAR_DIR}" "${LOG_DIR}" "${RUNTIME_VAR}"
     chown root:etherpad "${ETC_DIR}"
     chmod 0750 "${ETC_DIR}"
-    chown etherpad:etherpad "${VAR_DIR}" "${LOG_DIR}"
-    chmod 0750 "${VAR_DIR}" "${LOG_DIR}"
+    chown etherpad:etherpad "${VAR_DIR}" "${LOG_DIR}" "${RUNTIME_VAR}"
+    chmod 0750 "${VAR_DIR}" "${LOG_DIR}" "${RUNTIME_VAR}"
 
     if [ ! -e "${ACTIVE_SETTINGS}" ]; then
       cp "${DIST_SETTINGS}" "${ACTIVE_SETTINGS}"
@@ -35,9 +37,30 @@ case "$1" in
     # the /etc copy there via symlink.
     ln -sfn "${ACTIVE_SETTINGS}" "${APP_DIR}/settings.json"
 
-    if [ -d "${APP_DIR}/var" ]; then
-      chown -R etherpad:etherpad "${APP_DIR}/var" || true
+    # Redirect /opt/etherpad/var to a writable location under
+    # /var/lib/etherpad. Etherpad writes var/js, var/installed_plugins.json,
+    # etc. on startup; ProtectSystem=strict blocks /opt writes, and the
+    # symlink keeps ReadWritePaths=/var/lib/etherpad sufficient.
+    if [ -e "${APP_DIR}/var" ] && [ ! -L "${APP_DIR}/var" ]; then
+      # Migrate any payload from a previous install that wrote into /opt.
+      cp -a "${APP_DIR}/var/." "${RUNTIME_VAR}/" 2>/dev/null || true
+      rm -rf "${APP_DIR}/var"
     fi
+    ln -sfn "${RUNTIME_VAR}" "${APP_DIR}/var"
+
+    # Seed installed_plugins.json so checkForMigration() does not spawn
+    # `pnpm ls` on first boot. pnpm is not a package dependency, and the
+    # bundled node_modules already contains every shipped plugin.
+    if [ ! -e "${INSTALLED_PLUGINS}" ]; then
+      VERSION=$(node -p "require('${APP_DIR}/src/package.json').version" 2>/dev/null \
+                || node -p "require('${APP_DIR}/package.json').version" 2>/dev/null \
+                || echo "0.0.0")
+      cat >"${INSTALLED_PLUGINS}" <<EOF
+{"plugins":[{"name":"ep_etherpad-lite","version":"${VERSION}"}]}
+EOF
+    fi
+
+    chown -R etherpad:etherpad "${RUNTIME_VAR}"
 
     if [ -d /run/systemd/system ] && command -v systemctl >/dev/null 2>&1; then
       systemctl daemon-reload || true

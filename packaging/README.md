@@ -19,7 +19,7 @@ Built artefacts land in `./dist/`.
 
 ## Building locally
 
-Prereqs: Node 22, pnpm 10+, nfpm.
+Prereqs: Node 24 (current LTS; `engines.node` floor is 20), pnpm 10+, nfpm.
 
 ```sh
 pnpm install --frozen-lockfile
@@ -40,16 +40,27 @@ ARCH=amd64 \
 
 ## Installing
 
+The release page publishes both versioned and stable filenames per arch:
+
 ```sh
-sudo apt install ./dist/etherpad_2.6.1_amd64.deb
+# Stable URL — always points at the most recent release:
+curl -fsSL -o etherpad-latest_amd64.deb \
+  https://github.com/ether/etherpad/releases/latest/download/etherpad-latest_amd64.deb
+sudo apt install ./etherpad-latest_amd64.deb
+
+# Or pin to a specific version:
+sudo apt install ./dist/etherpad_<version>_amd64.deb
+
 sudo systemctl start etherpad
 curl http://localhost:9001/health
 ```
 
-`apt` will pull in `nodejs (>= 20)`; on Ubuntu 22.04 add NodeSource first:
+`apt` will pull in `nodejs (>= 20)` (matches Etherpad's `engines.node`).
+Recommended runtime is the current Node.js LTS (24); on distros without a
+new enough Node, add NodeSource first:
 
 ```sh
-curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
 ```
 
 ## Configuration

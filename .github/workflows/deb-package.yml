@@ -52,7 +52,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v6
         with:
-          node-version: '22'
+          node-version: '24'
           cache: pnpm
 
       - name: Install dependencies
@@ -63,12 +63,17 @@ jobs:
 
       - name: Install nfpm
         run: |
-          set -e
+          set -euo pipefail
           NFPM_ARCH=amd64
           [ "${{ matrix.arch }}" = "arm64" ] && NFPM_ARCH=arm64
-          curl -fsSL -o /tmp/nfpm.deb \
-            "https://github.com/goreleaser/nfpm/releases/download/${NFPM_VERSION}/nfpm_${NFPM_VERSION#v}_${NFPM_ARCH}.deb"
-          sudo dpkg -i /tmp/nfpm.deb
+          NFPM_DEB="nfpm_${NFPM_VERSION#v}_${NFPM_ARCH}.deb"
+          BASE="https://github.com/goreleaser/nfpm/releases/download/${NFPM_VERSION}"
+          curl -fsSL -o "/tmp/${NFPM_DEB}" "${BASE}/${NFPM_DEB}"
+          curl -fsSL -o /tmp/nfpm-checksums.txt "${BASE}/checksums.txt"
+          # Verify upstream artifact before sudo dpkg -i (defense in depth
+          # against a tampered release asset).
+          ( cd /tmp && grep " ${NFPM_DEB}\$" nfpm-checksums.txt | sha256sum -c - )
+          sudo dpkg -i "/tmp/${NFPM_DEB}"
 
       - name: Stage tree for packaging
         run: |
@@ -114,6 +119,14 @@ jobs:
           test -x /usr/bin/etherpad
           test -f /etc/etherpad/settings.json
           test -L /opt/etherpad/settings.json
+          # /opt/etherpad/var must redirect to /var/lib/etherpad so
+          # ProtectSystem=strict doesn't block runtime writes.
+          test -L /opt/etherpad/var
+          [ "$(readlink /opt/etherpad/var)" = "/var/lib/etherpad/var" ]
+          # installed_plugins.json must be seeded so checkForMigration()
+          # doesn't spawn `pnpm ls` (pnpm is not a runtime dep).
+          test -f /var/lib/etherpad/var/installed_plugins.json
+          grep -q '"ep_etherpad-lite"' /var/lib/etherpad/var/installed_plugins.json
           # Confirm the postinstall actually rewrote the template to sqlite
           # — shipping the dev-only "dirty" default would defeat the point.
           grep -q '"dbType": "sqlite"' /etc/etherpad/settings.json
@@ -157,6 +170,19 @@ jobs:
           path: dist
           pattern: etherpad-*-deb
           merge-multiple: true
+      - name: Create stable "latest" aliases
+        run: |
+          set -euo pipefail
+          # Publish stable filenames alongside the versioned ones so users
+          # can curl https://github.com/.../releases/latest/download/etherpad-latest_amd64.deb
+          # without knowing the version.
+          for f in dist/etherpad_*_amd64.deb; do
+            [ -e "$f" ] && cp "$f" dist/etherpad-latest_amd64.deb
+          done
+          for f in dist/etherpad_*_arm64.deb; do
+            [ -e "$f" ] && cp "$f" dist/etherpad-latest_arm64.deb
+          done
+          ls -la dist/
       - name: Attach .deb files to release
         uses: softprops/action-gh-release@v2
         with:
