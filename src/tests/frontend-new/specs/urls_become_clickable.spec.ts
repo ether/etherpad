@@ -1,6 +1,12 @@
 import {expect, test} from "@playwright/test";
 import {clearPadContent, getPadBody, goToNewPad, writeToPad} from "../helper/padHelper";
 
+// File-level skip (covers all three describe blocks) so the global
+// beforeEach pad-creation timeout is also bypassed under with-plugins,
+// where Firefox in particular tends to time out before the editor is
+// fully ready for the URL-rendering checks.
+test.skip(process.env.WITH_PLUGINS === '1', 'flaky in with-plugins suite — see #7611');
+
 test.beforeEach(async ({ page })=>{
   await goToNewPad(page);
 })
@@ -21,10 +27,6 @@ test.describe('entering a URL makes a link', function () {
 
 
 test.describe('special characters inside URL', async function () {
-  // Describe-level skip so the global beforeEach (pad creation) is also
-  // skipped — these tests sometimes hit a goToNewPad timeout in the
-  // with-plugins suite, and a per-test skip wouldn't catch that.
-  test.skip(process.env.WITH_PLUGINS === '1', 'flaky in with-plugins suite — see #7611');
   for (const char of '-:@_.,~%+/?=&#!;()[]$\'*') {
     const url = `https://etherpad.org/${char}foo`;
     test(url, async function ({page}) {

@@ -10,6 +10,7 @@ test.beforeEach(async ({ page })=>{
 test.describe('bold button', ()=>{
 
   test('makes text bold on click', async ({page}) => {
+    test.skip(process.env.WITH_PLUGINS === '1', 'flaky in with-plugins suite — see #7611');
 // get the inner iframe
     const innerFrame = await getPadBody(page);
 

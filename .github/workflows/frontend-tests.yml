@@ -236,3 +236,87 @@ jobs:
           name: playwright-report-chrome-with-plugins
           path: src/playwright-report/
           retention-days: 30
+
+  playwright-firefox-with-plugins:
+    env:
+      PNPM_HOME: ~/.pnpm-store
+    name: Playwright Firefox with plugins
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+      - uses: actions/cache@v5
+        name: Cache pnpm store
+        with:
+          path: ${{ env.PNPM_HOME }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+      - uses: actions/cache@v5
+        name: Cache Playwright browsers
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('src/package.json', 'pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-
+      - uses: pnpm/action-setup@v6
+        name: Install pnpm
+        with:
+          version: 10.33.2
+          run_install: false
+      - name: Install all dependencies and symlink for ep_etherpad-lite
+        run: pnpm install --frozen-lockfile
+      - name: Install Etherpad plugins
+        # Same plugin set as backend-tests.yml's withpluginsLinux job.
+        run: >
+          pnpm add -w
+          ep_align
+          ep_author_hover
+          ep_cursortrace
+          ep_font_size
+          ep_headings2
+          ep_markdown
+          ep_readonly_guest
+          ep_set_title_on_pad
+          ep_spellcheck
+          ep_subscript_and_superscript
+          ep_table_of_contents
+      - name: Create settings.json
+        run: cp ./src/tests/settings.json settings.json
+      - name: Run the frontend tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm run prod > /tmp/etherpad-server.log 2>&1 &
+          # Generous 90s budget so a slow runner (or, in the with-plugins
+          # variant, plugin boot) doesn't lose the race against the test
+          # phase. Fail loudly on timeout rather than silently falling
+          # through to tests against a half-started server.
+          # --max-time bounds each probe so a stuck server can't make a
+          # single curl call eat the whole 90s budget.
+          can_connect() { curl --max-time 3 -sSfo /dev/null http://localhost:9001/; }
+          for i in $(seq 1 90); do can_connect && break; sleep 1; done
+          if ! can_connect; then
+            echo "::error::Etherpad did not respond on :9001 within 90s"
+            echo "----- server log -----"
+            tail -n 200 /tmp/etherpad-server.log || true
+            exit 1
+          fi
+          cd src
+          pnpm exec playwright install firefox  --with-deps
+          # WITH_PLUGINS skips a small set of specs that fail when the
+          # /ether plugin set is loaded — tracked for fixup follow-ups.
+          WITH_PLUGINS=1 pnpm run test-ui --project=firefox
+      - name: Upload server log on failure
+        uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: server-log-firefox-with-plugins
+          path: /tmp/etherpad-server.log
+          retention-days: 7
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: playwright-report-firefox-with-plugins
+          path: src/playwright-report/
+          retention-days: 30

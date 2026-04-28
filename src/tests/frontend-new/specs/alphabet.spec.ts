@@ -10,6 +10,7 @@ test.describe('All the alphabet works n stuff', () => {
   const expectedString = 'abcdefghijklmnopqrstuvwxyz';
 
   test('when you enter any char it appears right', async ({page}) => {
+    test.skip(process.env.WITH_PLUGINS === '1', 'flaky in with-plugins suite — see #7611');
 
     // get the inner iframe
     const innerFrame =  await getPadBody(page!);

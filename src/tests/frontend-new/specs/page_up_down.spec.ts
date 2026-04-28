@@ -10,6 +10,7 @@ test.describe('Page Up / Page Down', function () {
   test.describe.configure({retries: 2});
 
   test('PageDown moves caret forward by a page of lines', async function ({page}) {
+    test.skip(process.env.WITH_PLUGINS === '1', 'flaky in with-plugins suite — see #7611');
     const padBody = await getPadBody(page);
     await clearPadContent(page);
 

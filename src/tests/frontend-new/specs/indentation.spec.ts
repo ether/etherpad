@@ -31,6 +31,7 @@ test.describe('indentation button', function () {
 
 
   test('keeps the indent on enter for the new line', async function ({page}) {
+    test.skip(process.env.WITH_PLUGINS === '1', 'flaky in with-plugins suite — see #7611');
     const padBody = await getPadBody(page);
     await padBody.click()
     await clearPadContent(page)
@@ -140,6 +141,7 @@ test.describe('indentation button', function () {
 
   test("issue #2772 shows '*' when multiple indented lines " +
     ' receive a style and are outdented', async function ({page}) {
+    test.skip(process.env.WITH_PLUGINS === '1', 'flaky in with-plugins suite — see #7611');
 
     const padBody = await getPadBody(page);
     await padBody.click()

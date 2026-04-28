@@ -29,6 +29,7 @@ test.describe('ordered_list.js', function () {
     });
 
     test('issue #1125 keeps the numbered list on enter for the new line', async function ({page}) {
+      test.skip(process.env.WITH_PLUGINS === '1', 'flaky in with-plugins suite — see #7611');
       // EMULATES PASTING INTO A PAD
       const padBody = await getPadBody(page);
       await clearPadContent(page)

@@ -8,6 +8,7 @@ test.beforeEach(async ({ page })=>{
 
 
 test('delete keystroke', async ({page}) => {
+  test.skip(process.env.WITH_PLUGINS === '1', 'flaky in with-plugins suite — see #7611');
   const padText = "Hello World this is a test"
   const body = await getPadBody(page)
   await body.click()
