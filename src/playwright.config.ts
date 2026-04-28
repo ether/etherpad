@@ -7,8 +7,31 @@ export const defaultTestTimeout = 90 * 1000
 /**
  * See https://playwright.dev/docs/test-configuration.
  */
+// Mirror of how tests/backend/specs picks up plugin specs from
+// `../node_modules/ep_*/static/tests/backend/specs/**`. Plugins that
+// ship Playwright frontend tests at the conventional location below are
+// discovered automatically when the plugin is installed alongside core.
+//
+// Path is relative to `testDir` (which is './' so the same root as
+// playwright resolves from). Quirk: testDir defaults to one path; we
+// expand to '.' so the testMatch globs can reach both core's tests and
+// node_modules paths above src/.
+//
+// See docs/PLUGIN_FRONTEND_TESTS.md for the per-plugin spec layout
+// convention.
+const testDirRoot = '.';
+const testMatchGlobs = [
+    'tests/frontend-new/specs/**/*.spec.ts',
+    // Plugins installed via `pnpm add -w ep_*` (CI / dev workspace).
+    '../node_modules/ep_*/static/tests/frontend-new/specs/**/*.spec.ts',
+    // Plugins installed via the admin UI / live-plugin-manager land
+    // here instead of node_modules.
+    'plugin_packages/ep_*/static/tests/frontend-new/specs/**/*.spec.ts',
+];
+
 export default defineConfig({
-    testDir: './tests/frontend-new/',
+    testDir: testDirRoot,
+    testMatch: testMatchGlobs,
     /* Run tests in files in parallel */
     fullyParallel: true,
     /* Fail the build on CI if you accidentally left test.only in the source code. */
