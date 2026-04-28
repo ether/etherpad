@@ -143,8 +143,13 @@ version['1.3.0'] = {
 };
 
 
+version['1.3.1'] = {
+  ...version['1.3.0'],
+  anonymizeAuthor: ['authorID'],
+};
+
 // set the latest available API version here
-exports.latestApiVersion = '1.3.0';
+exports.latestApiVersion = '1.3.1';
 
 // exports the versions so it can be used by the new Swagger endpoint
 exports.version = version;
