@@ -10,10 +10,19 @@ cd "${APP_DIR}"
 export NODE_ENV
 export ETHERPAD_PRODUCTION=true
 
+# Resolve `node` explicitly to the apt-installed binary (the .deb declares
+# `Depends: nodejs (>= 22)`, which always lands at /usr/bin/node). Relying
+# on PATH would let a stray /usr/local/bin/node — e.g. an older nvm or
+# toolcache install — shadow the version we actually require, and the
+# server would crash on startup with "Node 20.x is not supported".
+NODE_BIN=/usr/bin/node
+[ -x "${NODE_BIN}" ] || NODE_BIN=$(command -v node) \
+  || { echo "etherpad: node not found (install the 'nodejs' package)" >&2; exit 1; }
+
 # Run the server through tsx's CommonJS hook — Etherpad's prod entrypoint
 # (src/node/server.ts) uses `exports.start = ...`, which fails under the
 # ESM loader. Mirrors the `prod` script in src/package.json.
-exec node \
+exec "${NODE_BIN}" \
     --require "${APP_DIR}/src/node_modules/tsx/dist/cjs/index.cjs" \
     "${APP_DIR}/src/node/server.ts" \
     "$@"
