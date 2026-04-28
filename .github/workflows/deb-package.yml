@@ -323,12 +323,14 @@ jobs:
           for arch in amd64 arm64; do
             mkdir -p "${REPO}/pool/main/e/etherpad" "${REPO}/dists/${SUITE}/${COMP}/binary-${arch}"
           done
-          # Drop the .debs into pool/. Skip the etherpad-latest_*.deb
-          # filename aliases — apt resolves by package name + version,
-          # not filename, and including the alias would create a
-          # duplicate Packages entry.
+          # Drop the .debs into pool/. The leading-digit pattern
+          # excludes the etherpad-latest_*.deb filename aliases the
+          # release job stages — apt resolves by package name + version,
+          # not filename, so including the alias would create duplicate
+          # Packages entries. (Also defends against any future alias that
+          # accidentally lands on dist/etherpad_<word>_<arch>.deb.)
           shopt -s nullglob
-          DEBS=(dist/etherpad_*_amd64.deb dist/etherpad_*_arm64.deb)
+          DEBS=(dist/etherpad_[0-9]*_amd64.deb dist/etherpad_[0-9]*_arm64.deb)
           shopt -u nullglob
           # Refuse to publish nothing. Without this, a missing or renamed
           # build artefact would wipe site/public/apt and push an empty,
@@ -348,17 +350,21 @@ jobs:
                 > "dists/${SUITE}/${COMP}/binary-${arch}/Packages"
               gzip -kf "dists/${SUITE}/${COMP}/binary-${arch}/Packages"
             done
-            # Generate the suite's Release file.
-            cat > "dists/${SUITE}/Release" <<RELEASE
-          Origin: Etherpad
-          Label: Etherpad
-          Suite: ${SUITE}
-          Codename: ${SUITE}
-          Architectures: amd64 arm64
-          Components: ${COMP}
-          Description: Etherpad official apt repository (${SUITE} channel)
-          Date: $(date -Ru)
-          RELEASE
+            # Generate the suite's Release file. The heredoc lines
+            # MUST start at column 1 — apt parsers reject leading
+            # whitespace on header fields (RFC 822 / Debian control).
+            # printf is used over a heredoc to make that contract
+            # impossible to lose to a future re-indent.
+            printf '%s\n' \
+              "Origin: Etherpad" \
+              "Label: Etherpad" \
+              "Suite: ${SUITE}" \
+              "Codename: ${SUITE}" \
+              "Architectures: amd64 arm64" \
+              "Components: ${COMP}" \
+              "Description: Etherpad official apt repository (${SUITE} channel)" \
+              "Date: $(date -Ru)" \
+              > "dists/${SUITE}/Release"
             # apt-ftparchive appends checksums.
             apt-ftparchive release "dists/${SUITE}" >> "dists/${SUITE}/Release"
             # Sign it (clear-signed InRelease + detached Release.gpg).
