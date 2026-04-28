@@ -140,7 +140,7 @@ jobs:
         run: |
           set -eux
           # Ubuntu's default apt nodejs is 18 — too old for our
-          # `Depends: nodejs (>= 20)`. Add NodeSource's apt repo
+          # `Depends: nodejs (>= 22)`. Add NodeSource's apt repo
           # explicitly (key + sources.list) instead of `curl | sudo bash`
           # so we don't execute network-fetched code as root.
           NODE_MAJOR=24
