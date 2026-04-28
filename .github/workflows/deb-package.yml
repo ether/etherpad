@@ -15,16 +15,6 @@ on:
       - 'src/node/utils/run_cmd.ts'
       - 'src/static/js/pluginfw/**'
       - 'settings.json.template'
-  pull_request:
-    paths:
-      - 'packaging/**'
-      - '.github/workflows/deb-package.yml'
-      - 'src/package.json'
-      - 'pnpm-lock.yaml'
-      - 'src/node/server.ts'
-      - 'src/node/utils/run_cmd.ts'
-      - 'src/static/js/pluginfw/**'
-      - 'settings.json.template'
   workflow_dispatch:
     inputs:
       ref:

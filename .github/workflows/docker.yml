@@ -59,6 +59,7 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
+          cache-dependency-path: etherpad/pnpm-lock.yaml
       -
         name: Test
         working-directory: etherpad
@@ -79,6 +80,10 @@ jobs:
           git clean -dxf .
 
   build-test-db-drivers:
+    # Spinning up MySQL + Postgres + cross-driver smoke is expensive; only
+    # run it on pushes to develop (and tagged release pushes), not on every
+    # feature-branch PR.
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:
       contents: read
