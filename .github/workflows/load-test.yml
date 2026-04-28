@@ -42,7 +42,7 @@ jobs:
         run: pnpm install --frozen-lockfile
       -
         name: Install etherpad-load-test
-        run: sudo npm install -g etherpad-load-test-socket-io
+        run: sudo npm install -g etherpad-load-test
       -
         name: Run load test
         run: src/tests/frontend/travis/runnerLoadTest.sh 25 50
@@ -73,7 +73,7 @@ jobs:
           run_install: false
       -
         name: Install etherpad-load-test
-        run:  sudo npm install -g etherpad-load-test-socket-io
+        run:  sudo npm install -g etherpad-load-test
       -
         name: Install etherpad plugins
         run: >
@@ -135,7 +135,7 @@ jobs:
         run: pnpm install --frozen-lockfile
       -
         name: Install etherpad-load-test
-        run: sudo npm install -g etherpad-load-test-socket-io
+        run: sudo npm install -g etherpad-load-test
       -
         name: Run load test
         run: src/tests/frontend/travis/runnerLoadTest.sh 5000 5
