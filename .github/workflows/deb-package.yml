@@ -144,18 +144,37 @@ jobs:
           # explicitly (key + sources.list) instead of `curl | sudo bash`
           # so we don't execute network-fetched code as root.
           NODE_MAJOR=24
+          # GitHub runner images often ship a NodeSource node_20.x list
+          # preinstalled (sometimes as a .sources deb822 file). Wipe any
+          # existing nodesource entries so the only Node candidate apt sees
+          # is our node_24.x repo. Otherwise `apt-get install -y nodejs`
+          # picks the higher-version 20.x build that's already cached and
+          # `dpkg -i` then fails on `Depends: nodejs (>= 22)`.
+          sudo rm -f /etc/apt/sources.list.d/nodesource.list \
+                     /etc/apt/sources.list.d/nodesource.sources \
+                     /etc/apt/preferences.d/nodesource \
+                     /etc/apt/preferences.d/nodesource.pref
           KEYRING=/usr/share/keyrings/nodesource.gpg
           curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
-            | sudo gpg --dearmor -o "${KEYRING}"
+            | sudo gpg --dearmor --yes -o "${KEYRING}"
           echo "deb [signed-by=${KEYRING}] https://deb.nodesource.com/node_${NODE_MAJOR}.x nodistro main" \
             | sudo tee /etc/apt/sources.list.d/nodesource.list
-          # Pin NodeSource above Ubuntu's own nodejs (noble-updates ships 20.x,
-          # which would otherwise win the default-priority tie and fail our
-          # `Depends: nodejs (>= 22)` check.)
-          printf 'Package: nodejs\nPin: origin deb.nodesource.com\nPin-Priority: 1001\n' \
+          # Pin nodejs to the 24.x line so neither Ubuntu's noble-updates
+          # 20.x nor any leftover NodeSource cache can win the resolver.
+          printf 'Package: nodejs\nPin: version %s.*\nPin-Priority: 1001\n' "${NODE_MAJOR}" \
             | sudo tee /etc/apt/preferences.d/nodesource >/dev/null
           sudo apt-get update
-          sudo apt-get install -y nodejs
+          # Pin the major explicitly on the install line as a belt-and-
+          # suspenders guard against any preference file being ignored.
+          sudo apt-get install -y "nodejs=${NODE_MAJOR}.*"
+          # Sanity check before invoking dpkg so the failure mode is obvious
+          # if pinning ever regresses again.
+          installed_major=$(dpkg-query -W -f='${Version}' nodejs | cut -d. -f1)
+          if [ "${installed_major}" != "${NODE_MAJOR}" ]; then
+            echo "::error::Expected nodejs major ${NODE_MAJOR}, got ${installed_major}"
+            apt-cache policy nodejs || true
+            exit 1
+          fi
           sudo dpkg -i dist/*.deb || sudo apt-get install -f -y
           # /etc/etherpad is mode 0750 root:etherpad on purpose (DB creds
           # live here) so the runner user can't read into it. Each check
