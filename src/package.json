@@ -62,7 +62,7 @@
     "mssql": "^12.5.0",
     "mysql2": "^3.22.3",
     "nano": "^11.0.5",
-    "oidc-provider": "9.8.2",
+    "oidc-provider": "9.8.3",
     "openapi-backend": "^5.16.1",
     "pg": "^8.20.0",
     "prom-client": "^15.1.3",
