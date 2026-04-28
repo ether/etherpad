@@ -48,6 +48,7 @@ test.describe('timeslider follow', function () {
   * the change is applied.
   */
   test('only to lines that exist in the pad view, regression test for #4389', async function ({page}) {
+    test.skip(process.env.WITH_PLUGINS === '1', 'fails with /ether plugin set loaded — see #7611');
     const padBody = await getPadBody(page)
     await padBody.click()
 

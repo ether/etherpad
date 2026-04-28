@@ -1,5 +1,5 @@
 import {expect, test} from "@playwright/test";
-import {getPadBody, goToNewPad} from "../helper/padHelper";
+import {goToNewPad} from "../helper/padHelper";
 import {showSettings} from "../helper/settingsHelper";
 
 test.beforeEach(async ({ page, browser })=>{
@@ -8,7 +8,12 @@ test.beforeEach(async ({ page, browser })=>{
   await goToNewPad(page);
 })
 
-
+// niceSelect.js wraps each <select> with an immediately-following
+// <div class="nice-select"> sibling. Targeting via `#languagemenu +
+// .nice-select` is robust to plugins (ep_headings2, ep_font_size, etc.)
+// that add their own .nice-select dropdowns earlier in the page —
+// otherwise `.nice-select.nth(1)` drifts off the language menu.
+const langDropdown = (page: any) => page.locator('#languagemenu + .nice-select')
 
 test.describe('Language select and change', function () {
 
@@ -18,7 +23,7 @@ test.describe('Language select and change', function () {
     await showSettings(page)
 
     // click the language button
-    const languageDropDown  = page.locator('.nice-select').nth(1)
+    const languageDropDown = langDropdown(page)
 
     await languageDropDown.click()
     await page.locator('.nice-select.open').locator('[data-value=de]').click()
@@ -33,7 +38,7 @@ test.describe('Language select and change', function () {
     await showSettings(page)
 
     // click the language button
-    await page.locator('.nice-select').nth(1).locator('.current').click()
+    await langDropdown(page).locator('.current').click()
     await page.locator('.nice-select.open').locator('[data-value=de]').click()
 
     // select german
@@ -41,7 +46,7 @@ test.describe('Language select and change', function () {
 
 
     // change to english
-    await page.locator('.nice-select').nth(1).locator('.current').click()
+    await langDropdown(page).locator('.current').click()
     await page.locator('.nice-select.open').locator('[data-value=en]').click()
 
     // check if the language is now English
@@ -53,14 +58,14 @@ test.describe('Language select and change', function () {
     await showSettings(page)
 
     // click the language button
-    await page.locator('.nice-select').nth(1).locator('.current').click()
+    await langDropdown(page).locator('.current').click()
     await page.locator('.nice-select.open').locator('[data-value=de]').click()
 
     // select german
     await page.locator('.buttonicon-bold').evaluate((el) => el.parentElement!.title === 'Fett (Strg-B)');
 
     // click the language button
-    await page.locator('.nice-select').nth(1).locator('.current').click()
+    await langDropdown(page).locator('.current').click()
     // select arabic
     // $languageoption.attr('selected','selected'); // Breaks the test..
     await page.locator('.nice-select.open').locator('[data-value=ar]').click()
@@ -72,9 +77,9 @@ test.describe('Language select and change', function () {
     await showSettings(page)
 
     // change to english
-    const languageDropDown  = page.locator('.nice-select').nth(1)
+    const languageDropDown = langDropdown(page)
     await languageDropDown.locator('.current').click()
-    await languageDropDown.locator('[data-value=en]').click()
+    await page.locator('.nice-select.open').locator('[data-value=en]').click()
 
     await expect(languageDropDown.locator('.current')).toHaveText('English')
 

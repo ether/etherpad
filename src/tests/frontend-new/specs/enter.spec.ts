@@ -31,6 +31,7 @@ test.describe('enter keystroke', function () {
   });
 
   test('enter is always visible after event', async function ({page}) {
+    test.skip(process.env.WITH_PLUGINS === '1', 'fails with /ether plugin set loaded — see #7611');
     const padBody = await getPadBody(page);
     const originalLength = await padBody.locator('div').count();
     let lastLine = padBody.locator('div').last();

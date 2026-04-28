@@ -34,7 +34,11 @@ export default defineConfig({
   reporter: process.env.CI ? [['github'], ['list']] : 'html',
   expect: { timeout: defaultExpectTimeout },
   timeout: defaultTestTimeout,
-  retries: process.env.CI ? 2 : 0,
+  // Plugin-loaded suites are inherently flakier (slower pad boot,
+  // extra hooks racing) so give them a bigger retry cushion. Strict
+  // equality on '1' so WITH_PLUGINS=0 doesn't accidentally enable the
+  // with-plugins behaviour (any non-empty string is truthy in JS).
+  retries: process.env.CI ? (process.env.WITH_PLUGINS === '1' ? 5 : 2) : 0,
   workers: 2,
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {

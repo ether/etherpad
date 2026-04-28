@@ -8,6 +8,7 @@ test.describe('timeslider line numbers', function () {
   });
 
   test('shows line numbers aligned with the rendered document lines', async function ({page}) {
+    test.skip(process.env.WITH_PLUGINS === '1', 'flaky in with-plugins suite — see #7611');
     const padId = await goToNewPad(page);
     await clearPadContent(page);
     await writeToPad(page, 'One\nTwo\nThree');

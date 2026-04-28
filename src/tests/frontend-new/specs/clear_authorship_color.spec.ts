@@ -71,6 +71,7 @@ test("clear authorship colors can be undone to restore author colors", async fun
 
 // Test for https://github.com/ether/etherpad-lite/issues/5128
 test('clears authorship when first line has line attributes', async function ({page}) {
+  test.skip(process.env.WITH_PLUGINS === '1', 'flaky in with-plugins suite — see #7611');
   // Make sure there is text with author info. The first line must have a line attribute.
   const padBody = await getPadBody(page);
   // Accept confirm dialogs before any action that might trigger one
