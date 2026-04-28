@@ -24,6 +24,7 @@ import {MapArrayType} from "../types/MapType";
 import {SocketModule} from "../types/SocketModule";
 import log4js from 'log4js';
 import settings from '../utils/Settings';
+import {anonymizeIp} from '../utils/anonymizeIp';
 const stats = require('../../node/stats')
 
 const logger = log4js.getLogger('socket.io');
@@ -61,7 +62,7 @@ exports.setSocketIO = (_io:any) => {
   io = _io;
 
   io.sockets.on('connection', (socket:any) => {
-    const ip = settings.disableIPlogging ? 'ANONYMOUS' : socket.request.ip;
+    const ip = anonymizeIp(socket.request.ip, settings.ipLogging);
     logger.debug(`${socket.id} connected from IP ${ip}`);
 
     // wrap the original send function to log the messages

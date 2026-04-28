@@ -480,7 +480,15 @@
   },
 
   /*
-   * Privacy: disable IP logging
+   * Controls what Etherpad writes to its logs about client IP addresses.
+   * Allowed values: "anonymous" (default), "truncated", "full".
+   * See settings.json.template for details.
+   */
+  "ipLogging": "${IP_LOGGING:anonymous}",
+
+  /*
+   * Deprecated — use `ipLogging` above. Still honoured for one release
+   * cycle: true → "anonymous", false → "full".
    */
   "disableIPlogging": "${DISABLE_IP_LOGGING:false}",
 

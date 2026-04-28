@@ -244,7 +244,8 @@ export type SettingsType = {
   allowUnknownFileEnds: boolean,
   loglevel: string,
   logLayoutType: string,
-  disableIPlogging: boolean,
+  disableIPlogging: boolean,            // deprecated — see ipLogging
+  ipLogging: 'full' | 'truncated' | 'anonymous',
   automaticReconnectionTimeout: number,
   loadTest: boolean,
   dumpOnUncleanExit: boolean,
@@ -503,6 +504,7 @@ const settings: SettingsType = {
    * Disable IP logging
    */
   disableIPlogging: false,
+  ipLogging: 'anonymous',
   /**
    * Number of seconds to automatically reconnect pad
    */
@@ -953,6 +955,27 @@ export const reloadSettings = () => {
             'Abiword import/export support has been removed. ' +
             'Please install LibreOffice and set "soffice" to its executable path instead.'
         );
+    }
+
+    // Deprecation shim: if the operator set the legacy boolean `disableIPlogging`
+    // without also setting the new tri-state `ipLogging`, map the boolean over
+    // once and emit a WARN. An explicitly-set `ipLogging` always wins.
+    if (settingsParsed != null && 'disableIPlogging' in (settingsParsed as any) &&
+        !('ipLogging' in (settingsParsed as any))) {
+      logger.warn(
+          '`disableIPlogging` is deprecated; use `ipLogging: "anonymous"` ' +
+          '(or "truncated" / "full") instead.');
+      settings.ipLogging = (settingsParsed as any).disableIPlogging ? 'anonymous' : 'full';
+    }
+
+    // Validate `ipLogging`. anonymizeIp() would otherwise silently treat an
+    // unknown value as "truncated" and ship partially-redacted IPs.
+    const validIpLogging = ['full', 'truncated', 'anonymous'];
+    if (!validIpLogging.includes(settings.ipLogging as any)) {
+      logger.warn(
+          `ipLogging="${settings.ipLogging}" is not one of ` +
+          `${validIpLogging.join(', ')}; falling back to "anonymous".`);
+      settings.ipLogging = 'anonymous';
     }
 
     // Init logging config
