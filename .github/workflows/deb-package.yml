@@ -149,6 +149,11 @@ jobs:
             | sudo gpg --dearmor -o "${KEYRING}"
           echo "deb [signed-by=${KEYRING}] https://deb.nodesource.com/node_${NODE_MAJOR}.x nodistro main" \
             | sudo tee /etc/apt/sources.list.d/nodesource.list
+          # Pin NodeSource above Ubuntu's own nodejs (noble-updates ships 20.x,
+          # which would otherwise win the default-priority tie and fail our
+          # `Depends: nodejs (>= 22)` check.)
+          printf 'Package: nodejs\nPin: origin deb.nodesource.com\nPin-Priority: 1001\n' \
+            | sudo tee /etc/apt/preferences.d/nodesource >/dev/null
           sudo apt-get update
           sudo apt-get install -y nodejs
           sudo dpkg -i dist/*.deb || sudo apt-get install -f -y
