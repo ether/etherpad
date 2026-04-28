@@ -40,7 +40,7 @@
     "ejs": "^5.0.2",
     "esbuild": "^0.28.0",
     "express": "^5.2.1",
-    "express-rate-limit": "^8.4.0",
+    "express-rate-limit": "^8.4.1",
     "express-session": "^1.19.0",
     "find-root": "1.1.0",
     "formidable": "^3.5.4",
