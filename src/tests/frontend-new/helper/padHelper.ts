@@ -142,7 +142,18 @@ export const clearPadContent = async (page: Page) => {
 export const writeToPad = async (page: Page, text: string) => {
   const body = await getPadBody(page);
   await body.click();
-  await page.keyboard.type(text);
+  // Use insertText (single input event) instead of keyboard.type
+  // (one keydown/keyup per char). Firefox under WITH_PLUGINS load
+  // racily drops characters from per-key events; insertText delivers
+  // each chunk in one event, which Etherpad's incorporateUserChanges
+  // pipeline handles atomically. insertText does not translate \n
+  // into a real Enter keystroke, so split on newlines and press
+  // Enter between segments to preserve multi-line input.
+  const lines = text.split('\n');
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i]) await page.keyboard.insertText(lines[i]);
+    if (i < lines.length - 1) await page.keyboard.press('Enter');
+  }
 }
 
 export const clearAuthorship = async (page: Page) => {
