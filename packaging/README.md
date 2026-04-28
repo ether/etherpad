@@ -53,7 +53,25 @@ packaging/test-local.sh --build-only   # just produce dist/*.deb
 This is the fastest way to validate that the systemd hardening, plugin
 path symlinks, and tsx wrapper actually work together before pushing.
 
-## Installing
+## Installing via the Etherpad apt repository (recommended)
+
+The release workflow publishes a signed apt repository at
+`https://etherpad.org/apt/` on every tagged release. Three lines on
+any Debian/Ubuntu/Mint:
+
+```sh
+curl -fsSL https://etherpad.org/key.asc \
+  | sudo gpg --dearmor -o /usr/share/keyrings/etherpad.gpg
+echo "deb [signed-by=/usr/share/keyrings/etherpad.gpg] https://etherpad.org/apt stable main" \
+  | sudo tee /etc/apt/sources.list.d/etherpad.list
+sudo apt update && sudo apt install etherpad
+```
+
+`apt upgrade` works going forward. Repo metadata is signed with the
+GPG keypair documented in `packaging/apt/key.asc` (long key id
+`AF0CD687D51A6E63`).
+
+## Installing a single .deb directly
 
 The release page publishes both versioned and stable filenames per arch:
 

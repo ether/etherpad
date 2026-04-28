@@ -226,3 +226,165 @@ jobs:
         with:
           files: dist/*.deb
           fail_on_unmatched_files: true
+
+  apt-publish:
+    # Generates a signed apt repository (Packages.gz + Release/InRelease)
+    # from the .deb artefacts and cross-pushes it into ether/ether.github.com
+    # under public/apt/. The Next.js site that powers etherpad.org serves
+    # public/ verbatim, so the repo lands at:
+    #
+    #   https://etherpad.org/apt/        (apt repo root)
+    #   https://etherpad.org/key.asc     (public key for `apt-key`/keyring)
+    #
+    # Tag pushes go into the `stable` suite. Required secrets:
+    #   APT_SIGNING_KEY  ASCII-armoured private key for the Etherpad APT
+    #                    Repository keypair (fingerprint
+    #                    6953FA0C6431F30347D65B03AF0CD687D51A6E63).
+    #   SITE_DEPLOY_KEY  SSH private key matching a deploy key with write
+    #                    access on ether/ether.github.com. The site repo
+    #                    holds the public half.
+    name: Publish apt repository to etherpad.org
+    needs: release
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout etherpad source (for packaging/apt/key.asc)
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - name: Configure deploy key for ether/ether.github.com
+        env:
+          SITE_DEPLOY_KEY: ${{ secrets.SITE_DEPLOY_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SITE_DEPLOY_KEY:-}" ]; then
+            echo "::error::SITE_DEPLOY_KEY secret is not set on ether/etherpad."
+            echo "::error::Add an SSH deploy key with write access on ether/ether.github.com and store the private key here."
+            exit 1
+          fi
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "${SITE_DEPLOY_KEY}" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          ssh-keyscan -t ed25519,rsa github.com >> ~/.ssh/known_hosts 2>/dev/null
+          cat > ~/.ssh/config <<'CFG'
+          Host github.com
+            HostName github.com
+            User git
+            IdentityFile ~/.ssh/id_deploy
+            IdentitiesOnly yes
+          CFG
+          chmod 600 ~/.ssh/config
+
+      - name: Clone ether/ether.github.com
+        run: git clone --depth 1 git@github.com:ether/ether.github.com.git site
+
+      - uses: actions/download-artifact@v8
+        with:
+          path: dist
+          pattern: etherpad-*-deb
+          merge-multiple: true
+
+      - name: Install apt-utils + gpg
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq apt-utils gnupg
+
+      - name: Import signing key
+        env:
+          APT_SIGNING_KEY: ${{ secrets.APT_SIGNING_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${APT_SIGNING_KEY:-}" ]; then
+            echo "::error::APT_SIGNING_KEY secret is not set; cannot sign Release file."
+            exit 1
+          fi
+          export GNUPGHOME="$(mktemp -d)"
+          chmod 700 "${GNUPGHOME}"
+          echo "GNUPGHOME=${GNUPGHOME}" >>"${GITHUB_ENV}"
+          printf '%s' "${APT_SIGNING_KEY}" | gpg --batch --import
+          # Sanity check: expected long key id.
+          gpg --list-secret-keys --keyid-format=long | grep -q AF0CD687D51A6E63
+
+      - name: Generate apt repo metadata
+        run: |
+          set -euo pipefail
+          REPO=site/public/apt
+          SUITE=stable
+          COMP=main
+          # Wipe any previous repo state so removed versions don't linger
+          # in pool/. Packages.gz is regenerated from whatever is in pool/
+          # right now, so this is the simplest correct option — alternative
+          # is per-version diffing which is fragile.
+          rm -rf "${REPO}"
+          # We ship one architecture-agnostic suite with per-arch pools.
+          # Layout: apt/dists/<suite>/main/binary-{amd64,arm64}/
+          for arch in amd64 arm64; do
+            mkdir -p "${REPO}/pool/main/e/etherpad" "${REPO}/dists/${SUITE}/${COMP}/binary-${arch}"
+          done
+          # Drop the .debs into pool/. Skip the etherpad-latest_*.deb
+          # filename aliases — apt resolves by package name + version,
+          # not filename, and including the alias would create a
+          # duplicate Packages entry.
+          shopt -s nullglob
+          DEBS=(dist/etherpad_*_amd64.deb dist/etherpad_*_arm64.deb)
+          shopt -u nullglob
+          # Refuse to publish nothing. Without this, a missing or renamed
+          # build artefact would wipe site/public/apt and push an empty,
+          # signed apt repo — breaking `apt update` for every existing
+          # subscriber until the next successful release.
+          if [ ${#DEBS[@]} -lt 2 ]; then
+            echo "::error::Expected per-arch .deb artifacts in dist/, found ${#DEBS[@]}: ${DEBS[*]:-<none>}"
+            echo "::error::Refusing to publish a partial / empty apt repository."
+            exit 1
+          fi
+          cp "${DEBS[@]}" "${REPO}/pool/main/e/etherpad/"
+          # Generate per-arch Packages files.
+          (
+            cd "${REPO}"
+            for arch in amd64 arm64; do
+              apt-ftparchive --arch "${arch}" packages pool/main \
+                > "dists/${SUITE}/${COMP}/binary-${arch}/Packages"
+              gzip -kf "dists/${SUITE}/${COMP}/binary-${arch}/Packages"
+            done
+            # Generate the suite's Release file.
+            cat > "dists/${SUITE}/Release" <<RELEASE
+          Origin: Etherpad
+          Label: Etherpad
+          Suite: ${SUITE}
+          Codename: ${SUITE}
+          Architectures: amd64 arm64
+          Components: ${COMP}
+          Description: Etherpad official apt repository (${SUITE} channel)
+          Date: $(date -Ru)
+          RELEASE
+            # apt-ftparchive appends checksums.
+            apt-ftparchive release "dists/${SUITE}" >> "dists/${SUITE}/Release"
+            # Sign it (clear-signed InRelease + detached Release.gpg).
+            gpg --default-key AF0CD687D51A6E63 --batch --yes \
+              --clearsign -o "dists/${SUITE}/InRelease" "dists/${SUITE}/Release"
+            gpg --default-key AF0CD687D51A6E63 --batch --yes \
+              -abs -o "dists/${SUITE}/Release.gpg" "dists/${SUITE}/Release"
+          )
+
+      - name: Stage public key alongside the site
+        run: |
+          # Users curl this to add our key to their keyring before apt update.
+          cp packaging/apt/key.asc site/public/key.asc
+
+      - name: Commit + push to ether/ether.github.com
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          cd site
+          git -c user.email=actions@github.com -c user.name='github-actions[bot]' \
+            add public/apt public/key.asc
+          if git diff --cached --quiet; then
+            echo "No apt-repo changes to publish."
+            exit 0
+          fi
+          git -c user.email=actions@github.com -c user.name='github-actions[bot]' \
+            commit -m "apt: publish Etherpad ${TAG}"
+          git push origin HEAD:master
