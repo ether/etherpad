@@ -70,7 +70,7 @@ sudo systemctl start etherpad
 curl http://localhost:9001/health
 ```
 
-`apt` will pull in `nodejs (>= 20)` (matches Etherpad's `engines.node`).
+`apt` will pull in `nodejs (>= 22)` (matches Etherpad's `engines.node`).
 Recommended runtime is the current Node.js LTS (24); on distros without a
 new enough Node, add NodeSource first:
 

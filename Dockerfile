@@ -9,7 +9,7 @@ ARG BUILD_ENV=git
 
 ARG PnpmVersion=10.28.2
 
-FROM node:lts-alpine AS adminbuild
+FROM node:22-alpine AS adminbuild
 RUN npm install -g pnpm@${PnpmVersion}
 WORKDIR /opt/etherpad-lite
 COPY . .
@@ -17,7 +17,7 @@ RUN pnpm install
 RUN pnpm run build:ui
 
 
-FROM node:lts-alpine AS build
+FROM node:22-alpine AS build
 LABEL maintainer="Etherpad team, https://github.com/ether/etherpad"
 
 # Set these arguments when building the image from behind a proxy
