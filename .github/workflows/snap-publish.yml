@@ -1,0 +1,87 @@
+# Builds and publishes the Etherpad snap on tagged releases.
+# Mirrors the trigger pattern from .github/workflows/docker.yml / release.yml
+# (tags matching v?X.Y.Z).
+#
+# One-time maintainer setup:
+#   1. `snapcraft register etherpad-lite` claims the name.
+#   2. Generate a store credential:
+#        snapcraft export-login --snaps etherpad-lite \
+#          --channels edge,stable \
+#          --acls package_access,package_push,package_release -
+#      Store the output as repo secret SNAPCRAFT_STORE_CREDENTIALS.
+#   3. Create a GitHub Environment called `snap-store-stable` with required
+#      reviewers so stable promotion is gated.
+#
+# Ref: https://snapcraft.io/docs/releasing-to-the-snap-store
+name: Snap
+on:
+  push:
+    tags:
+      - 'v?[0-9]+.[0-9]+.[0-9]+'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      snap-file: ${{ steps.build.outputs.snap }}
+    steps:
+      - name: Check out
+        uses: actions/checkout@v6
+
+      - name: Build snap
+        id: build
+        uses: snapcore/action-build@v1
+
+      - name: Upload snap artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: etherpad-lite-snap
+          path: ${{ steps.build.outputs.snap }}
+          if-no-files-found: error
+          retention-days: 7
+
+  publish-edge:
+    needs: build
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Download snap artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: etherpad-lite-snap
+
+      - name: Publish to edge
+        uses: snapcore/action-publish@v1
+        env:
+          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
+        with:
+          snap: ${{ needs.build.outputs.snap-file }}
+          release: edge
+
+  publish-stable:
+    needs: [build, publish-edge]
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    # Manual gate: promote edge -> stable via GitHub Environments approval.
+    environment: snap-store-stable
+    steps:
+      - name: Download snap artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: etherpad-lite-snap
+
+      - name: Publish to stable
+        uses: snapcore/action-publish@v1
+        env:
+          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
+        with:
+          snap: ${{ needs.build.outputs.snap-file }}
+          release: stable
