@@ -354,13 +354,34 @@ exports.handleMessage = async (socket:any, message: ClientVarMessage) => {
   if (!thisSession) throw new Error('message from an unknown connection');
 
   if (message.type === 'CLIENT_READY') {
+    // Prefer the HttpOnly author-token cookie over the in-message token (GDPR
+    // PR3). Legacy clients (pre-PR3 browsers or API consumers) still send
+    // `token` in the CLIENT_READY payload — honour it one more release, warn
+    // once so the migration is visible in logs. The socket.io handshake does
+    // not run cookie-parser, so pull the cookie directly from the Cookie
+    // header.
+    const cookiePrefix = settings.cookie?.prefix || '';
+    const cookieHeader: string = socket.request?.headers?.cookie || '';
+    const cookieName = `${cookiePrefix}token`;
+    const cookieMatch = cookieHeader.split(/;\s*/).find(
+        (c) => c.split('=')[0] === cookieName);
+    const cookieToken = cookieMatch ? decodeURIComponent(cookieMatch.split('=').slice(1).join('=')) : null;
+    const legacyToken = typeof message.token === 'string' ? message.token : null;
+    const resolvedToken = cookieToken || legacyToken;
+    if (!cookieToken && legacyToken && !thisSession.legacyTokenWarned) {
+      messageLogger.warn(
+          'client sent author token via CLIENT_READY message; cookie migration ' +
+          'will take effect on next HTTP response. ' +
+          'See docs/superpowers/specs/2026-04-19-gdpr-pr3-anon-identity-design.md');
+      thisSession.legacyTokenWarned = true;
+    }
     // Remember this information since we won't have the cookie in further socket.io messages. This
     // information will be used to check if the sessionId of this connection is still valid since it
     // could have been deleted by the API.
     thisSession.auth = {
       sessionID: message.sessionID,
       padID: message.padId,
-      token: message.token,
+      token: resolvedToken,
     };
 
     // Pad does not exist, so we need to sanitize the id
