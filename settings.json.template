@@ -176,6 +176,32 @@
    "enableMetrics": "${ENABLE_METRICS:true}",
 
   /*
+   * Self-update subsystem.
+   * tier: "off" | "notify" | "manual" | "auto" | "autonomous"
+   * Default "notify" shows a banner when an update is available. "off" disables the version check.
+   */
+  "updates": {
+    "tier": "notify",
+    "source": "github",
+    "channel": "stable",
+    "installMethod": "auto",
+    "checkIntervalHours": 6,
+    "githubRepo": "ether/etherpad",
+    /*
+     * Lock /admin/update/status to authenticated admins. Default false keeps the
+     * endpoint open (the version is already public via /health). Set true to hide
+     * full update detail from non-admins without turning the updater off.
+     */
+    "requireAdminForStatus": false
+  },
+
+  /*
+   * Contact address for admin notifications (updates, security advisories, future features).
+   * Set to null to disable outbound mail from the updater.
+   */
+  "adminEmail": null,
+
+  /*
    * Settings for cleanup of pads
    */
   "cleanup": {

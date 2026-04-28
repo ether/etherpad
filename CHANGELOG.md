@@ -1,3 +1,15 @@
+# Unreleased
+
+### Notable enhancements
+
+- New built-in self-update subsystem (Tier 1: notify).
+  - Periodic check against the GitHub Releases API for the configured repo (default `ether/etherpad`). Configurable via the new `updates.*` settings block, default tier `"notify"`. Set `updates.tier` to `"off"` to disable entirely.
+  - The admin UI shows a banner and a dedicated "Etherpad updates" page with the current version, latest version, install method, and changelog.
+  - Pad users see a discreet footer badge **only** when the running version is severely outdated (one or more major versions behind) or flagged as vulnerable in a recent release manifest. The public endpoint that drives this never leaks the version string itself.
+  - New top-level `adminEmail` setting. When set, the updater emails the admin on first detection of severe / vulnerable status, with escalating cadence (weekly while vulnerable, monthly while severely outdated). PR 1 ships the dedupe + cadence logic; real SMTP wiring lands in a follow-up PR.
+  - Tier 1 ships in this release. Tiers 2 (manual click), 3 (auto with grace window) and 4 (autonomous in maintenance window) are designed and will land in subsequent releases.
+  - See `doc/admin/updates.md` for full configuration.
+
 # 2.7.2
 
 ### Notable enhancements and fixes

@@ -92,3 +92,18 @@ input {
   margin-left:auto;
   margin-right:auto;
 }
+
+/* Auto-update version badge — only visible when /api/version-status reports severe or vulnerable. */
+#version-badge {
+  position: fixed;
+  bottom: 8px;
+  right: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+  border-radius: 4px;
+  z-index: 9999;
+  pointer-events: auto;
+  max-width: 320px;
+}
+#version-badge[data-level="severe"]   { background: #fff3cd; color: #664d03; border: 1px solid #ffe69c; }
+#version-badge[data-level="vulnerable"] { background: #f8d7da; color: #58151c; border: 1px solid #f1aeb5; }
