@@ -34,7 +34,7 @@ is_cmd() { command -v "$1" >/dev/null 2>&1; }
 ETHERPAD_DIR="${ETHERPAD_DIR:-etherpad-lite}"
 ETHERPAD_BRANCH="${ETHERPAD_BRANCH:-master}"
 ETHERPAD_REPO="${ETHERPAD_REPO:-https://github.com/ether/etherpad.git}"
-REQUIRED_NODE_MAJOR=20
+REQUIRED_NODE_MAJOR=22
 
 step "Etherpad installer"
 
