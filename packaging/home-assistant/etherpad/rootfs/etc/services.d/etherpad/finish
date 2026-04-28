@@ -1,0 +1,12 @@
+#!/usr/bin/with-contenv bashio
+# ==============================================================================
+# Home Assistant Add-on: Etherpad
+# Cleanup when the Etherpad service exits. Exit code 256 = signaled;
+# anything else is a real fault — tell s6 to bring the container down so
+# the supervisor can restart it cleanly.
+# ==============================================================================
+if [[ "${1}" -ne 0 ]] && [[ "${1}" -ne 256 ]]; then
+  bashio::log.warning "Etherpad crashed (exit=${1}), halting add-on."
+  exec /run/s6/basedir/bin/halt
+fi
+bashio::log.info "Etherpad service stopped cleanly."

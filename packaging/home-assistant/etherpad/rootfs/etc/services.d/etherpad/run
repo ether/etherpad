@@ -1,0 +1,15 @@
+#!/usr/bin/with-contenv bashio
+# ==============================================================================
+# Home Assistant Add-on: Etherpad
+# Starts Etherpad as a long-running service under s6-overlay.
+# ==============================================================================
+set -e
+
+# Load rendered config from cont-init.
+# shellcheck source=/dev/null
+. /etc/etherpad/env
+
+cd "${EP_DIR}"
+
+bashio::log.info "Starting Etherpad ${ETHERPAD_VERSION} on port ${PORT}..."
+exec pnpm run prod
