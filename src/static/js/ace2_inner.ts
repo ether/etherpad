@@ -239,6 +239,9 @@ function Ace2Inner(editorInfo, cssManagers) {
       if ((typeof info.fade) === 'number') {
         bgcolor = fadeColor(bgcolor, info.fade);
       }
+      // textColorFromBackgroundColor is WCAG-aware (issue #7377): it returns
+      // whichever of black/white produces the higher contrast against the
+      // author's bg, guaranteeing at least AA (4.5:1) for any sRGB colour.
       const textColor =
           colorutils.textColorFromBackgroundColor(bgcolor, window.clientVars.skinName);
       const styles = [
