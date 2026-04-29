@@ -187,7 +187,7 @@ describe(__filename, function () {
     });
   });
 
-  // Regression test for https://github.com/ether/etherpad/issues/7138.
+  // Regression test for ether/etherpad#7138.
   // padOptions.fadeInactiveAuthorColors must default to true so existing
   // installations keep the legacy fade-on-inactive behavior, and must be
   // overridable via PAD_OPTIONS_FADE_INACTIVE_AUTHOR_COLORS in docker.
