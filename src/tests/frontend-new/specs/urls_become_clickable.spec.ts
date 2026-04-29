@@ -5,7 +5,6 @@ import {clearPadContent, getPadBody, goToNewPad, writeToPad} from "../helper/pad
 // beforeEach pad-creation timeout is also bypassed under with-plugins,
 // where Firefox in particular tends to time out before the editor is
 // fully ready for the URL-rendering checks.
-test.skip(process.env.WITH_PLUGINS === '1', 'flaky in with-plugins suite — see #7611');
 
 test.beforeEach(async ({ page })=>{
   await goToNewPad(page);

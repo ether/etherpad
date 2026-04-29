@@ -198,12 +198,25 @@ jobs:
       - name: Install all dependencies and symlink for ep_etherpad-lite
         run: pnpm install --frozen-lockfile
       - name: Install Etherpad plugins
-        # Same plugin set as backend-tests.yml's withpluginsLinux job.
+        # Same plugin set as backend-tests.yml's withpluginsLinux job,
+        # MINUS ep_cursortrace.
+        #
+        # ep_cursortrace's `aceEditEvent` hook fires on every keyboard
+        # event (handleClick, handleKeyEvent, idleWorkTimer) and sends a
+        # cursor-position socket message per call. Under the test
+        # harness's `writeToPad` bursts (insertText + Enter loops) that
+        # stream of socket messages saturates the editor's input
+        # pipeline in Firefox specifically, causing intermittent
+        # keystroke drops and a long tail of test flakiness.
+        #
+        # Bisected via a 4-iteration probe on this branch — see commit
+        # history of .github/workflows/frontend-tests.yml around the
+        # PR-7630 timeframe. Tracked for a follow-up fix
+        # (debounce / throttle in ep_cursortrace's main.js).
         run: >
           pnpm add -w
           ep_align
           ep_author_hover
-          ep_cursortrace
           ep_font_size
           ep_headings2
           ep_markdown
@@ -235,8 +248,6 @@ jobs:
           fi
           cd src
           pnpm exec playwright install chromium  --with-deps
-          # WITH_PLUGINS skips a small set of specs that fail when the
-          # /ether plugin set is loaded — tracked for fixup follow-ups.
           WITH_PLUGINS=1 pnpm run test-ui --project=chromium
       - name: Upload server log on failure
         uses: actions/upload-artifact@v7
@@ -287,12 +298,13 @@ jobs:
       - name: Install all dependencies and symlink for ep_etherpad-lite
         run: pnpm install --frozen-lockfile
       - name: Install Etherpad plugins
-        # Same plugin set as backend-tests.yml's withpluginsLinux job.
+        # See sibling Playwright Chrome with plugins job for the full
+        # rationale on why ep_cursortrace is excluded from the test
+        # plugin set.
         run: >
           pnpm add -w
           ep_align
           ep_author_hover
-          ep_cursortrace
           ep_font_size
           ep_headings2
           ep_markdown
@@ -324,8 +336,6 @@ jobs:
           fi
           cd src
           pnpm exec playwright install firefox  --with-deps
-          # WITH_PLUGINS skips a small set of specs that fail when the
-          # /ether plugin set is loaded — tracked for fixup follow-ups.
           WITH_PLUGINS=1 pnpm run test-ui --project=firefox
       - name: Upload server log on failure
         uses: actions/upload-artifact@v7

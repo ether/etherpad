@@ -7,7 +7,6 @@ test.beforeEach(async ({page}) => {
 
 // Regression test for https://github.com/ether/etherpad-lite/issues/2581
 test.describe('numbered list wrapped line indentation', function () {
-  test.skip(process.env.WITH_PLUGINS === '1', 'flaky in with-plugins suite — see #7611');
   test('wrapped lines in a numbered list item are indented', async function ({page}) {
     const padBody = await getPadBody(page);
     await clearPadContent(page);
@@ -23,7 +22,10 @@ test.describe('numbered list wrapped line indentation', function () {
     // the line divs (which can detach locators and make `selectText()` flaky
     // in CI when many lines of text have just been typed).
     await selectAllText(page);
-    await page.locator('.buttonicon-insertorderedlist').first().click();
+    // force:true bypasses #toolbar-overlay (intercepts pointer events
+    // after a text selection); same pattern as clearAuthorship.
+    await page.locator('.buttonicon-insertorderedlist').first()
+        .click({force: true});
 
     // Verify the list item has padding-left applied (not text-indent)
     const ol = padBody.locator('ol').first();

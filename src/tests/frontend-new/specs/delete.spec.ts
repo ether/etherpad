@@ -1,5 +1,5 @@
 import {expect, test} from "@playwright/test";
-import {clearPadContent, getPadBody, goToNewPad} from "../helper/padHelper";
+import {clearPadContent, getPadBody, goToNewPad, writeToPad} from "../helper/padHelper";
 
 test.beforeEach(async ({ page })=>{
   // create a new pad before each test run
@@ -8,12 +8,14 @@ test.beforeEach(async ({ page })=>{
 
 
 test('delete keystroke', async ({page}) => {
-  test.skip(process.env.WITH_PLUGINS === '1', 'flaky in with-plugins suite — see #7611');
   const padText = "Hello World this is a test"
   const body = await getPadBody(page)
   await body.click()
   await clearPadContent(page)
-  await page.keyboard.type(padText)
+  // writeToPad uses keyboard.insertText (single input event); per-key
+  // keyboard.type races and drops characters in Firefox under
+  // WITH_PLUGINS load — see #7625.
+  await writeToPad(page, padText)
   // Navigate to the end of the text
   await page.keyboard.press('End');
   // Delete the last character

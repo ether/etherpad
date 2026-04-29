@@ -6,7 +6,6 @@ test.beforeEach(async ({page}) => {
 });
 
 test('toolbar select change returns focus to the pad editor (#7589)', async ({page}) => {
-  test.skip(process.env.WITH_PLUGINS === '1', 'flaky in with-plugins suite — see #7611');
   // Regression: after picking a value from a toolbar select (ep_headings
   // style picker is the canonical example), the caret should return to
   // the pad editor so typing continues instead of being swallowed by

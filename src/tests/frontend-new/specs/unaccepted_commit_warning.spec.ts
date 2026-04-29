@@ -4,7 +4,6 @@ import {clearPadContent, goToNewPad, writeToPad} from '../helper/padHelper';
 test.describe('unaccepted commit warning', () => {
   test('hasUnacceptedCommit clears once the server acknowledges the commit',
       async ({page}) => {
-        test.skip(process.env.WITH_PLUGINS === '1', 'flaky in with-plugins suite — see #7611');
         await goToNewPad(page);
         await clearPadContent(page);
         await writeToPad(page, 'trigger a commit');

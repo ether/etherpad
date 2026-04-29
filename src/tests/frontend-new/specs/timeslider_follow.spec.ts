@@ -13,6 +13,12 @@ test.describe('timeslider follow', function () {
   // TODO needs test if content is also followed, when user a makes edits
   // while user b is in the timeslider
   test("content as it's added to timeslider", async function ({page}) {
+    // Each writeToPad here drives 11 lines (1 'a' + 10 empty), called
+    // 6 times = 66 sequential Enter keypresses. Under WITH_PLUGINS
+    // load Firefox drops Enters and the timeslider position assertion
+    // depends on an exact line layout. Same root cause as #4389 (sister
+    // test in this file). Tracked by #7611.
+    test.skip(process.env.WITH_PLUGINS === '1', 'flaky in with-plugins suite — see #7611');
     // send 6 revisions
     const revs = 6;
     const message = 'a\n\n\n\n\n\n\n\n\n\n';
@@ -48,7 +54,13 @@ test.describe('timeslider follow', function () {
   * the change is applied.
   */
   test('only to lines that exist in the pad view, regression test for #4389', async function ({page}) {
-    test.skip(process.env.WITH_PLUGINS === '1', 'fails with /ether plugin set loaded — see #7611');
+    // Stays skipped under WITH_PLUGINS: the setup needs ~120 sequential
+    // Enter keypresses to push line 40 below the viewport, and at that
+    // burst length Firefox under plugin load drops Enters faster than
+    // the writeToPad helper can value-wait + retry. Re-press attempts
+    // can themselves overshoot the exact line count when a "dropped"
+    // Enter eventually lands. Tracked by the umbrella #7611 issue.
+    test.skip(process.env.WITH_PLUGINS === '1', '120-Enter setup races plugin load — see #7611');
     const padBody = await getPadBody(page)
     await padBody.click()
 
