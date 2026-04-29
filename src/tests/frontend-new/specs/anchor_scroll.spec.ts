@@ -48,6 +48,35 @@ test.describe('anchor scrolling', () => {
     }).toBeLessThanOrEqual(80);
   });
 
+  test('reapply loop exits early once the target offset is stable', async ({page}) => {
+    await goToNewPad(page);
+    const padUrl = page.url();
+    await clearPadContent(page);
+    await writeToPad(page, Array.from({length: 30}, (_v, i) => `Line ${i + 1}`).join('\n'));
+    await page.waitForTimeout(1000);
+
+    await page.goto('about:blank');
+    await page.goto(`${padUrl}#L20`);
+    await page.waitForSelector('iframe[name="ace_outer"]');
+    await page.waitForSelector('#editorcontainer.initialized');
+
+    const outerDoc = page.frameLocator('iframe[name="ace_outer"]').locator('#outerdocbody');
+    const getScrollTop = async () => await outerDoc.evaluate(
+        (el) => el.parentElement?.scrollTop || 0);
+
+    await expect.poll(getScrollTop).toBeGreaterThan(10);
+    // Wait long enough for the stable-tick early-exit (3 ticks * 250ms + slack), well
+    // under the 10s hard timeout. After early-exit, scrolling away from the anchor must
+    // not be reverted by another reapply tick.
+    await page.waitForTimeout(2000);
+
+    await outerDoc.evaluate((el) => {
+      if (el.parentElement) el.parentElement.scrollTop = 0;
+    });
+    await page.waitForTimeout(1500);
+    expect(await getScrollTop()).toBeLessThanOrEqual(20);
+  });
+
   test('user scroll cancels the reapply loop so navigation is not locked', async ({page}) => {
     await goToNewPad(page);
     const padUrl = page.url();

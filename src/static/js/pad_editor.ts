@@ -230,6 +230,10 @@ const focusOnHashedLine = (ace, lineNumberInt) => {
   if (!hasMobileLayout) offsetTop += parseInt($inner.css('padding-top').replace('px', ''));
   const $outerdocHTML = $aceOuter.contents().find('#outerdocbody').parent();
   $outerdoc.css({top: `${offsetTop}px`}); // Chrome
+  // Direct scrollTop() (was previously $.animate({scrollTop}) for Firefox). The animation
+  // workaround is no longer needed because focusOnLine() reapplies the scroll on a settle
+  // interval until layout stabilises, which covers Firefox's late-layout behaviour without
+  // an animated scroll fighting concurrent layout shifts.
   $outerdocHTML.scrollTop(offsetTop);
   const node = line[0];
   ace.callWithAce((ace) => {
@@ -263,10 +267,18 @@ exports.focusOnLine = (ace) => {
     return line.offset().top;
   };
 
+  // Settle window: keep correcting the scroll position while late content (images,
+  // plugin-rendered blocks) shifts the target line's offsetTop. The interval ends when
+  // either: (a) maxSettleDuration elapses, (b) the user interacts (see stop() below),
+  // or (c) the target offset has not changed for stableTicksRequired consecutive ticks
+  // (layout has settled — no need to keep re-scrolling).
   const maxSettleDuration = 10000;
   const settleInterval = 250;
+  const stableTicksRequired = 3;
   const startTime = Date.now();
   let intervalId: number | null = null;
+  let lastOffset: number | null = null;
+  let stableTicks = 0;
 
   const userEventNames = ['wheel', 'touchmove', 'keydown', 'mousedown'];
   const docs: Document[] = [];
@@ -289,6 +301,13 @@ exports.focusOnLine = (ace) => {
     const currentOffsetTop = getCurrentTargetOffset();
     if (currentOffsetTop == null) return;
     focusOnHashedLine(ace, lineNumberInt);
+    if (lastOffset != null && currentOffsetTop === lastOffset) {
+      stableTicks += 1;
+      if (stableTicks >= stableTicksRequired) stop();
+    } else {
+      stableTicks = 0;
+    }
+    lastOffset = currentOffsetTop;
   };
 
   focusUntilStable();
