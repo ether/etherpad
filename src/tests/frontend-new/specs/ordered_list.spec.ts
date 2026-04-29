@@ -9,41 +9,37 @@ test.beforeEach(async ({ page })=>{
 test.describe('ordered_list.js', function () {
 
     test('issue #4748 keeps numbers increment on OL', async function ({page}) {
-      test.skip(process.env.WITH_PLUGINS === '1', 'flaky in with-plugins suite — see #7611');
       const padBody = await getPadBody(page);
       await clearPadContent(page)
-      await writeToPad(page, 'Line 1')
-      await page.keyboard.press('Enter')
-      await writeToPad(page, 'Line 2')
+      await writeToPad(page, 'Line 1\nLine 2')
 
+      // force:true bypasses #toolbar-overlay (intercepts pointer
+      // events after a text selection); same pattern as
+      // clearAuthorship.
       const $insertorderedlistButton = page.locator('.buttonicon-insertorderedlist')
       await padBody.locator('div').first().selectText()
-      await $insertorderedlistButton.first().click();
+      await $insertorderedlistButton.first().click({force: true});
 
       const secondLine = padBody.locator('div').nth(1)
 
       await secondLine.selectText()
-      await $insertorderedlistButton.click();
+      await $insertorderedlistButton.click({force: true});
 
       expect(await secondLine.locator('ol').getAttribute('start')).toEqual('2');
     });
 
     test('issue #1125 keeps the numbered list on enter for the new line', async function ({page}) {
-      test.skip(process.env.WITH_PLUGINS === '1', 'flaky in with-plugins suite — see #7611');
       // EMULATES PASTING INTO A PAD
       const padBody = await getPadBody(page);
       await clearPadContent(page)
       await expect(padBody.locator('div')).toHaveCount(1)
       const $insertorderedlistButton = page.locator('.buttonicon-insertorderedlist')
-      await $insertorderedlistButton.click();
+      await $insertorderedlistButton.click({force: true});
 
       // type a bit, make a line break and type again
       const firstTextElement = padBody.locator('div').first()
       await firstTextElement.click()
-      await writeToPad(page, 'line 1')
-      await page.keyboard.press('Enter')
-      await writeToPad(page, 'line 2')
-      await page.keyboard.press('Enter')
+      await writeToPad(page, 'line 1\nline 2\n')
 
       await expect(padBody.locator('div span').nth(1)).toHaveText('line 2');
 
@@ -58,7 +54,6 @@ test.describe('ordered_list.js', function () {
 
   // Regression test for https://github.com/ether/etherpad-lite/issues/5160
   test('issue #5160 ordered list increments correctly after unordered list', async function ({page}) {
-    test.skip(process.env.WITH_PLUGINS === '1', 'flaky in with-plugins suite — see #7611');
     const padBody = await getPadBody(page);
     await clearPadContent(page);
 
@@ -97,7 +92,6 @@ test.describe('ordered_list.js', function () {
 
   // Regression test for https://github.com/ether/etherpad-lite/issues/5718
   test('issue #5718 consecutive numbering works after indented sub-bullets', async function ({page}) {
-    test.skip(process.env.WITH_PLUGINS === '1', 'flaky in with-plugins suite — see #7611');
     const padBody = await getPadBody(page);
     await clearPadContent(page);
 
