@@ -114,19 +114,35 @@ export const appendQueryParams = async (page: Page, queryParameters: MapArrayTyp
   await page.waitForSelector('#editorcontainer.initialized');
 }
 
+// Wait until the inner editor body has flipped from
+// `class="static" contentEditable="false"` to editable. ace does this
+// once padeditor.init resolves; under WITH_PLUGINS load in Firefox the
+// flip can lag past `#editorcontainer.initialized`, long enough that
+// an immediate click + keyboard.type runs against a still-static body
+// and is silently dropped (the body keeps showing the default welcome
+// text and never sees the input). Helpers used by every test call
+// this so we only have one source of truth for "the editor is ready
+// to receive input".
+const waitForEditorReady = async (page: Page) => {
+  await page.waitForSelector('iframe[name="ace_outer"]');
+  await page.waitForSelector('#editorcontainer.initialized');
+  await page.frameLocator('iframe[name="ace_outer"]')
+            .frameLocator('iframe[name="ace_inner"]')
+            .locator('#innerdocbody[contenteditable="true"]')
+            .waitFor({state: 'attached'});
+};
+
 export const goToNewPad = async (page: Page) => {
   // create a new pad before each test run
   const padId = "FRONTEND_TESTS"+randomUUID();
   await page.goto('http://localhost:9001/p/'+padId);
-  await page.waitForSelector('iframe[name="ace_outer"]');
-  await page.waitForSelector('#editorcontainer.initialized');
+  await waitForEditorReady(page);
   return padId;
 }
 
 export const goToPad = async (page: Page, padId: string) => {
   await page.goto('http://localhost:9001/p/'+padId);
-  await page.waitForSelector('iframe[name="ace_outer"]');
-  await page.waitForSelector('#editorcontainer.initialized');
+  await waitForEditorReady(page);
 }
 
 
