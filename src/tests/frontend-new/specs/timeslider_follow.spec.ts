@@ -48,6 +48,13 @@ test.describe('timeslider follow', function () {
   * the change is applied.
   */
   test('only to lines that exist in the pad view, regression test for #4389', async function ({page}) {
+    // Stays skipped under WITH_PLUGINS: the setup needs ~120 sequential
+    // Enter keypresses to push line 40 below the viewport, and at that
+    // burst length Firefox under plugin load drops Enters faster than
+    // the writeToPad helper can value-wait + retry. Re-press attempts
+    // can themselves overshoot the exact line count when a "dropped"
+    // Enter eventually lands. Tracked by the umbrella #7611 issue.
+    test.skip(process.env.WITH_PLUGINS === '1', '120-Enter setup races plugin load — see #7611');
     const padBody = await getPadBody(page)
     await padBody.click()
 

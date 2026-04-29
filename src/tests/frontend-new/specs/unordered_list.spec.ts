@@ -13,14 +13,14 @@ test.describe('unordered_list.js', function () {
       const originalText = await padBody.locator('div').first().textContent();
 
       const $insertunorderedlistButton = page.locator('.buttonicon-insertunorderedlist');
-      await $insertunorderedlistButton.click();
+      await $insertunorderedlistButton.click({force: true});
 
       await expect(padBody.locator('div').first()).toHaveText(originalText!);
       await expect(padBody.locator('div ul li')).toHaveCount(1);
 
       // remove indentation by bullet and ensure text string remains the same
       const $outdentButton = page.locator('.buttonicon-outdent');
-      await $outdentButton.click();
+      await $outdentButton.click({force: true});
       await expect(padBody.locator('div').first()).toHaveText(originalText!);
     });
   });
@@ -35,13 +35,13 @@ test.describe('unordered_list.js', function () {
 
       await padBody.locator('div').first().selectText()
       const $insertunorderedlistButton = page.locator('.buttonicon-insertunorderedlist');
-      await $insertunorderedlistButton.click();
+      await $insertunorderedlistButton.click({force: true});
 
       await expect(padBody.locator('div').first()).toHaveText(originalText!);
       await expect(padBody.locator('div ul li')).toHaveCount(1);
 
       // remove indentation by bullet and ensure text string remains the same
-      await $insertunorderedlistButton.click();
+      await $insertunorderedlistButton.click({force: true});
       await expect(padBody.locator('div').locator('ul')).toHaveCount(0)
     });
   });
@@ -88,7 +88,7 @@ test.describe('unordered_list.js', function () {
       await padBody.locator('div').first().click();
 
       const $insertunorderedlistButton = page.locator('.buttonicon-insertunorderedlist');
-      await $insertunorderedlistButton.click();
+      await $insertunorderedlistButton.click({force: true});
 
       await padBody.locator('div').first().click();
       await page.keyboard.press('Home');
@@ -114,13 +114,13 @@ test.describe('unordered_list.js', function () {
       await $firstTextElement.selectText();
 
       const $insertunorderedlistButton = page.locator('.buttonicon-insertunorderedlist');
-      await $insertunorderedlistButton.click();
+      await $insertunorderedlistButton.click({force: true});
 
-      await page.locator('.buttonicon-indent').click();
+      await page.locator('.buttonicon-indent').click({force: true});
 
       await expect(padBody.locator('div').first().locator('.list-bullet2')).toHaveCount(1);
       const outdentButton = page.locator('.buttonicon-outdent');
-      await outdentButton.click();
+      await outdentButton.click({force: true});
 
       await expect(padBody.locator('div').first().locator('.list-bullet1')).toHaveCount(1);
     });

@@ -1,4 +1,4 @@
-import {Frame, Locator, Page} from "@playwright/test";
+import {expect, Frame, Locator, Page} from "@playwright/test";
 import {MapArrayType} from "../../../node/types/MapType";
 import {randomUUID} from "node:crypto";
 
@@ -165,10 +165,42 @@ export const writeToPad = async (page: Page, text: string) => {
   // pipeline handles atomically. insertText does not translate \n
   // into a real Enter keystroke, so split on newlines and press
   // Enter between segments to preserve multi-line input.
+  //
+  // For long multi-line writes (e.g. timeslider_follow's ~100-line
+  // setup) a tight keyboard.press('Enter') sequence still races the
+  // editor's input pipeline under load and drops occasional Enters,
+  // leaving the pad short by a line. Value-wait for the line count
+  // to advance after each Enter so the next press only fires once
+  // the previous has landed.
   const lines = text.split('\n');
+  const baseLineCount = await body.locator('div').count();
   for (let i = 0; i < lines.length; i++) {
     if (lines[i]) await page.keyboard.insertText(lines[i]);
-    if (i < lines.length - 1) await page.keyboard.press('Enter');
+    if (i < lines.length - 1) {
+      // Press Enter; if the editor doesn't acknowledge the new line
+      // within a short window, the keystroke was dropped — re-press.
+      // Up to 3 attempts per Enter; under WITH_PLUGINS load Firefox
+      // occasionally swallows an Enter even after insertText has
+      // landed.
+      const expectedCount = baseLineCount + i + 1;
+      let attempt = 0;
+      while (attempt < 3) {
+        await page.keyboard.press('Enter');
+        try {
+          await expect(body.locator('div'))
+              .toHaveCount(expectedCount, {timeout: 2000});
+          break;
+        } catch {
+          attempt++;
+          if (attempt === 3) {
+            // Last try: surface the original timeout with the full
+            // 20s budget so the failure mode is the canonical
+            // "expected N, got M" rather than a swallowed retry loop.
+            await expect(body.locator('div')).toHaveCount(expectedCount);
+          }
+        }
+      }
+    }
   }
 }
 
