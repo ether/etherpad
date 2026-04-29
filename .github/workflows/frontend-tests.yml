@@ -198,14 +198,10 @@ jobs:
       - name: Install all dependencies and symlink for ep_etherpad-lite
         run: pnpm install --frozen-lockfile
       - name: Install Etherpad plugins
-        # Same plugin set as backend-tests.yml's withpluginsLinux job.
+        # BISECT-B: HALF B of the standard plugin set. Sister job
+        # Firefox-with-plugins has HALF A. Revert before merge.
         run: >
           pnpm add -w
-          ep_align
-          ep_author_hover
-          ep_cursortrace
-          ep_font_size
-          ep_headings2
           ep_markdown
           ep_readonly_guest
           ep_set_title_on_pad
@@ -219,12 +215,6 @@ jobs:
         run: |
           set -euo pipefail
           pnpm run prod > /tmp/etherpad-server.log 2>&1 &
-          # Generous 90s budget so a slow runner (or, in the with-plugins
-          # variant, plugin boot) doesn't lose the race against the test
-          # phase. Fail loudly on timeout rather than silently falling
-          # through to tests against a half-started server.
-          # --max-time bounds each probe so a stuck server can't make a
-          # single curl call eat the whole 90s budget.
           can_connect() { curl --max-time 3 -sSfo /dev/null http://localhost:9001/; }
           for i in $(seq 1 90); do can_connect && break; sleep 1; done
           if ! can_connect; then
@@ -234,10 +224,11 @@ jobs:
             exit 1
           fi
           cd src
-          pnpm exec playwright install chromium  --with-deps
-          # WITH_PLUGINS skips a small set of specs that fail when the
-          # /ether plugin set is loaded — tracked for fixup follow-ups.
-          WITH_PLUGINS=1 pnpm run test-ui --project=chromium
+          # Bisection: run Firefox here too (Chromium doesn't reliably
+          # trip the flake we're chasing). Restore --project=chromium
+          # before merge.
+          pnpm exec playwright install firefox  --with-deps
+          WITH_PLUGINS=1 pnpm run test-ui --project=firefox
       - name: Upload server log on failure
         uses: actions/upload-artifact@v7
         if: failure()
@@ -287,7 +278,12 @@ jobs:
       - name: Install all dependencies and symlink for ep_etherpad-lite
         run: pnpm install --frozen-lockfile
       - name: Install Etherpad plugins
-        # Same plugin set as backend-tests.yml's withpluginsLinux job.
+        # BISECT-A: HALF A of the standard plugin set. If this job
+        # passes the failures isolate to one of the HALF B plugins
+        # (markdown, readonly_guest, set_title_on_pad, spellcheck,
+        # subscript_and_superscript, table_of_contents); if it fails
+        # the culprit is in this list. Revert this hunk + the
+        # Chrome-with-plugins HALF-B hunk before merge.
         run: >
           pnpm add -w
           ep_align
@@ -295,12 +291,6 @@ jobs:
           ep_cursortrace
           ep_font_size
           ep_headings2
-          ep_markdown
-          ep_readonly_guest
-          ep_set_title_on_pad
-          ep_spellcheck
-          ep_subscript_and_superscript
-          ep_table_of_contents
       - name: Create settings.json
         run: cp ./src/tests/settings.json settings.json
       - name: Run the frontend tests
@@ -308,12 +298,6 @@ jobs:
         run: |
           set -euo pipefail
           pnpm run prod > /tmp/etherpad-server.log 2>&1 &
-          # Generous 90s budget so a slow runner (or, in the with-plugins
-          # variant, plugin boot) doesn't lose the race against the test
-          # phase. Fail loudly on timeout rather than silently falling
-          # through to tests against a half-started server.
-          # --max-time bounds each probe so a stuck server can't make a
-          # single curl call eat the whole 90s budget.
           can_connect() { curl --max-time 3 -sSfo /dev/null http://localhost:9001/; }
           for i in $(seq 1 90); do can_connect && break; sleep 1; done
           if ! can_connect; then
@@ -324,8 +308,6 @@ jobs:
           fi
           cd src
           pnpm exec playwright install firefox  --with-deps
-          # WITH_PLUGINS skips a small set of specs that fail when the
-          # /ether plugin set is loaded — tracked for fixup follow-ups.
           WITH_PLUGINS=1 pnpm run test-ui --project=firefox
       - name: Upload server log on failure
         uses: actions/upload-artifact@v7
