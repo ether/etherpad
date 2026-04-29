@@ -11,7 +11,6 @@ test('bold text retains formatting after copy-paste', async ({page}) => {
   // suspected clipboard / pad state leakage between specs. Tracked
   // by #7611 — needs deeper rework (real clipboard or REST-driven
   // setup) to un-skip reliably.
-  test.skip(process.env.WITH_PLUGINS === '1', 'flaky in with-plugins suite — see #7611');
   const padBody = await getPadBody(page);
   await clearPadContent(page);
 

@@ -198,10 +198,21 @@ jobs:
       - name: Install all dependencies and symlink for ep_etherpad-lite
         run: pnpm install --frozen-lockfile
       - name: Install Etherpad plugins
-        # BISECT-CONFIRM: Same full-set-minus-cursortrace as the
-        # Firefox-with-plugins job. Two independent Firefox runs
-        # of the same plugin set give us a 100% sanity check
-        # against single-run flakes.
+        # Same plugin set as backend-tests.yml's withpluginsLinux job,
+        # MINUS ep_cursortrace.
+        #
+        # ep_cursortrace's `aceEditEvent` hook fires on every keyboard
+        # event (handleClick, handleKeyEvent, idleWorkTimer) and sends a
+        # cursor-position socket message per call. Under the test
+        # harness's `writeToPad` bursts (insertText + Enter loops) that
+        # stream of socket messages saturates the editor's input
+        # pipeline in Firefox specifically, causing intermittent
+        # keystroke drops and a long tail of test flakiness.
+        #
+        # Bisected via a 4-iteration probe on this branch — see commit
+        # history of .github/workflows/frontend-tests.yml around the
+        # PR-7630 timeframe. Tracked for a follow-up fix
+        # (debounce / throttle in ep_cursortrace's main.js).
         run: >
           pnpm add -w
           ep_align
@@ -221,6 +232,12 @@ jobs:
         run: |
           set -euo pipefail
           pnpm run prod > /tmp/etherpad-server.log 2>&1 &
+          # Generous 90s budget so a slow runner (or, in the with-plugins
+          # variant, plugin boot) doesn't lose the race against the test
+          # phase. Fail loudly on timeout rather than silently falling
+          # through to tests against a half-started server.
+          # --max-time bounds each probe so a stuck server can't make a
+          # single curl call eat the whole 90s budget.
           can_connect() { curl --max-time 3 -sSfo /dev/null http://localhost:9001/; }
           for i in $(seq 1 90); do can_connect && break; sleep 1; done
           if ! can_connect; then
@@ -230,11 +247,8 @@ jobs:
             exit 1
           fi
           cd src
-          # Bisection: run Firefox here too (Chromium doesn't reliably
-          # trip the flake we're chasing). Restore --project=chromium
-          # before merge.
-          pnpm exec playwright install firefox  --with-deps
-          WITH_PLUGINS=1 pnpm run test-ui --project=firefox
+          pnpm exec playwright install chromium  --with-deps
+          WITH_PLUGINS=1 pnpm run test-ui --project=chromium
       - name: Upload server log on failure
         uses: actions/upload-artifact@v7
         if: failure()
@@ -284,10 +298,9 @@ jobs:
       - name: Install all dependencies and symlink for ep_etherpad-lite
         run: pnpm install --frozen-lockfile
       - name: Install Etherpad plugins
-        # BISECT-CONFIRM: Full plugin set MINUS ep_cursortrace.
-        # If this passes (and the sibling Chrome-with-plugins job
-        # confirms by also passing the same set on a 2nd Firefox run)
-        # we are 100% confident ep_cursortrace is the culprit.
+        # See sibling Playwright Chrome with plugins job for the full
+        # rationale on why ep_cursortrace is excluded from the test
+        # plugin set.
         run: >
           pnpm add -w
           ep_align
@@ -307,6 +320,12 @@ jobs:
         run: |
           set -euo pipefail
           pnpm run prod > /tmp/etherpad-server.log 2>&1 &
+          # Generous 90s budget so a slow runner (or, in the with-plugins
+          # variant, plugin boot) doesn't lose the race against the test
+          # phase. Fail loudly on timeout rather than silently falling
+          # through to tests against a half-started server.
+          # --max-time bounds each probe so a stuck server can't make a
+          # single curl call eat the whole 90s budget.
           can_connect() { curl --max-time 3 -sSfo /dev/null http://localhost:9001/; }
           for i in $(seq 1 90); do can_connect && break; sleep 1; done
           if ! can_connect; then
