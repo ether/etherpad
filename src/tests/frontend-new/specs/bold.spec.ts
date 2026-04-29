@@ -10,7 +10,6 @@ test.beforeEach(async ({ page })=>{
 test.describe('bold button', ()=>{
 
   test('makes text bold on click', async ({page}) => {
-    test.skip(process.env.WITH_PLUGINS === '1', 'flaky in with-plugins suite — see #7611');
 // get the inner iframe
     const innerFrame = await getPadBody(page);
 
@@ -20,8 +19,11 @@ test.describe('bold button', ()=>{
     await page.keyboard.type("Hi Etherpad");
     await selectAllText(page);
 
-    // click the bold button
-    await page.locator("button[data-l10n-id='pad.toolbar.bold.title']").click();
+    // click the bold button. force:true bypasses the #toolbar-overlay
+    // div that intercepts pointer events after a text selection (same
+    // pattern as clearAuthorship in padHelper).
+    await page.locator("button[data-l10n-id='pad.toolbar.bold.title']")
+        .click({force: true});
 
 
     // check if the text is bold
@@ -29,7 +31,6 @@ test.describe('bold button', ()=>{
   })
 
   test('makes text bold on keypress', async ({page}) => {
-    test.skip(process.env.WITH_PLUGINS === '1', 'flaky in with-plugins suite — see #7611');
     // get the inner iframe
     const innerFrame = await getPadBody(page);
 
