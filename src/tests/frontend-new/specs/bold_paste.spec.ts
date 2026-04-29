@@ -10,7 +10,6 @@ test('bold text retains formatting after copy-paste', async ({page}) => {
   // Passes in isolation; fails in the with-plugins suite due to
   // suspected clipboard / pad state leakage between specs. Tracked in
   // the umbrella issue for plugin-vs-core test breakage (filed in PR).
-  test.skip(process.env.WITH_PLUGINS === '1', 'flaky in with-plugins suite — see #7611');
   const padBody = await getPadBody(page);
   await clearPadContent(page);
 
