@@ -61,7 +61,6 @@ test("makes sure that an empty message can't be sent", async function ({page}) {
 });
 
 test('makes chat stick to right side of the screen via settings, remove sticky via settings, close it', async ({page}) =>{
-  test.skip(process.env.WITH_PLUGINS === '1', 'flaky in with-plugins suite — see #7611');
   await showSettings(page);
 
   await enableStickyChatviaSettings(page);
@@ -122,7 +121,6 @@ test('Checks showChat=false URL Parameter hides chat then' +
 // visibility via the .visible class — so without an explicit display reset the
 // box stays hidden by the lingering inline style. (PR #7597)
 test('chat icon click reveals chatbox after a disable → enable cycle', async ({page}) => {
-  test.skip(process.env.WITH_PLUGINS === '1', 'flaky in with-plugins suite — see #7611');
   await showSettings(page);
   await page.locator('label[for="options-disablechat"]').click();
   await expect(page.locator('#options-disablechat')).toBeChecked();
