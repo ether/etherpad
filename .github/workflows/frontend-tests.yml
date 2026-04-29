@@ -198,11 +198,10 @@ jobs:
       - name: Install all dependencies and symlink for ep_etherpad-lite
         run: pnpm install --frozen-lockfile
       - name: Install Etherpad plugins
-        # BISECT-A2: other half of the 5-plugin set that failed
-        # iteration 1. Job still runs --project=firefox per probe.
+        # BISECT-A2b: Iteration 3 — the other half of the failing
+        # set without ep_cursortrace.
         run: >
           pnpm add -w
-          ep_cursortrace
           ep_font_size
           ep_headings2
       - name: Create settings.json
@@ -275,13 +274,11 @@ jobs:
       - name: Install all dependencies and symlink for ep_etherpad-lite
         run: pnpm install --frozen-lockfile
       - name: Install Etherpad plugins
-        # BISECT-A1: Iteration 2 — HALF A failed iteration 1, so
-        # culprit is in the 5-plugin set. Splitting into A1 (here)
-        # and A2 (Chrome-with-plugins job).
+        # BISECT-A2a: Iteration 3 — A2 (cursortrace+font_size+headings2)
+        # failed iter 2. Singling out ep_cursortrace.
         run: >
           pnpm add -w
-          ep_align
-          ep_author_hover
+          ep_cursortrace
       - name: Create settings.json
         run: cp ./src/tests/settings.json settings.json
       - name: Run the frontend tests
