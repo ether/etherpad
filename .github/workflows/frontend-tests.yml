@@ -198,16 +198,13 @@ jobs:
       - name: Install all dependencies and symlink for ep_etherpad-lite
         run: pnpm install --frozen-lockfile
       - name: Install Etherpad plugins
-        # BISECT-B: HALF B of the standard plugin set. Sister job
-        # Firefox-with-plugins has HALF A. Revert before merge.
+        # BISECT-A2: other half of the 5-plugin set that failed
+        # iteration 1. Job still runs --project=firefox per probe.
         run: >
           pnpm add -w
-          ep_markdown
-          ep_readonly_guest
-          ep_set_title_on_pad
-          ep_spellcheck
-          ep_subscript_and_superscript
-          ep_table_of_contents
+          ep_cursortrace
+          ep_font_size
+          ep_headings2
       - name: Create settings.json
         run: cp ./src/tests/settings.json settings.json
       - name: Run the frontend tests
@@ -278,19 +275,13 @@ jobs:
       - name: Install all dependencies and symlink for ep_etherpad-lite
         run: pnpm install --frozen-lockfile
       - name: Install Etherpad plugins
-        # BISECT-A: HALF A of the standard plugin set. If this job
-        # passes the failures isolate to one of the HALF B plugins
-        # (markdown, readonly_guest, set_title_on_pad, spellcheck,
-        # subscript_and_superscript, table_of_contents); if it fails
-        # the culprit is in this list. Revert this hunk + the
-        # Chrome-with-plugins HALF-B hunk before merge.
+        # BISECT-A1: Iteration 2 — HALF A failed iteration 1, so
+        # culprit is in the 5-plugin set. Splitting into A1 (here)
+        # and A2 (Chrome-with-plugins job).
         run: >
           pnpm add -w
           ep_align
           ep_author_hover
-          ep_cursortrace
-          ep_font_size
-          ep_headings2
       - name: Create settings.json
         run: cp ./src/tests/settings.json settings.json
       - name: Run the frontend tests
