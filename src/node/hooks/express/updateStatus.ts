@@ -9,6 +9,9 @@ import {loadState} from '../../updater/state';
 
 
 let badgeCache: {value: 'severe' | 'vulnerable' | null; at: number} = {value: null, at: 0};
+// Coalesce concurrent computeOutdated() calls during a cache-miss so a burst of
+// requests at expiry doesn't fan out into N redundant disk reads.
+let badgeInFlight: Promise<'severe' | 'vulnerable' | null> | null = null;
 const BADGE_CACHE_MS = 60 * 1000;
 
 const computeOutdated = async (): Promise<'severe' | 'vulnerable' | null> => {
@@ -24,6 +27,7 @@ const computeOutdated = async (): Promise<'severe' | 'vulnerable' | null> => {
 /** Test-only: clear the in-memory badge cache so integration tests see fresh state. */
 export const _resetBadgeCacheForTests = (): void => {
   badgeCache = {value: null, at: 0};
+  badgeInFlight = null;
 };
 
 // Wrap an async Express handler so a rejected promise becomes next(err) rather than
@@ -45,7 +49,16 @@ export const expressCreateServer = (
   app.get('/api/version-status', wrapAsync(async (_req, res) => {
     const now = Date.now();
     if (now - badgeCache.at > BADGE_CACHE_MS) {
-      badgeCache = {value: await computeOutdated(), at: now};
+      // Single-flight: if another request is already computing, await its
+      // promise instead of starting a second one. The first to land seeds
+      // the cache; the rest read it.
+      if (!badgeInFlight) {
+        badgeInFlight = computeOutdated().finally(() => { badgeInFlight = null; });
+      }
+      const value = await badgeInFlight;
+      // Only the request that observed the original miss writes the cache;
+      // followers may race on the assignment but write the same value.
+      badgeCache = {value, at: now};
     }
     res.json({outdated: badgeCache.value});
   }));

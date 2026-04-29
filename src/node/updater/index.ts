@@ -41,8 +41,11 @@ const performCheck = async (): Promise<void> => {
   // it to disk; concurrent runs would race on saveState() and could double-send emails.
   if (checkInFlight) return;
   checkInFlight = true;
-  const state = await getCurrentState();
   try {
+    // getCurrentState() can throw on a non-ENOENT fs error from loadState();
+    // it must run inside the try/finally so checkInFlight is always cleared,
+    // otherwise a one-time permission error permanently disables polling.
+    const state = await getCurrentState();
     const result = await checkLatestRelease({
       fetcher: realFetcher,
       prevEtag: state.lastEtag,
@@ -106,7 +109,15 @@ const performCheck = async (): Promise<void> => {
 };
 
 const startPolling = (): void => {
-  const intervalMs = Math.max(1, settings.updates.checkIntervalHours) * 60 * 60 * 1000;
+  // Coerce in case settings.json carries a non-number (Math.max(1, NaN) === NaN,
+  // which becomes a tight setInterval loop). Clamp to a sane window: at least 1h
+  // (don't hammer GitHub) and at most a week (don't silently stop checking).
+  const rawHours = Number(settings.updates.checkIntervalHours);
+  const safeHours = Number.isFinite(rawHours) ? Math.min(168, Math.max(1, rawHours)) : 6;
+  if (safeHours !== rawHours) {
+    logger.warn(`updates.checkIntervalHours invalid (${settings.updates.checkIntervalHours}); using ${safeHours}h`);
+  }
+  const intervalMs = safeHours * 60 * 60 * 1000;
   if (timer) clearInterval(timer);
   if (initialTimer) clearTimeout(initialTimer);
   timer = setInterval(() => { void performCheck(); }, intervalMs);

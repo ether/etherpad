@@ -52,6 +52,53 @@ describe('loadState', () => {
     const s = await loadState(statePath());
     expect(s).toEqual(EMPTY_STATE);
   });
+
+  it('returns empty state when latest is missing required subfields', async () => {
+    // Regression: top-level shape passed earlier validation but downstream code
+    // calls .trim() / semver parsing on latest.version → crash on bad input.
+    const broken = {...EMPTY_STATE, latest: {version: 1}};
+    await fs.writeFile(statePath(), JSON.stringify(broken));
+    const s = await loadState(statePath());
+    expect(s).toEqual(EMPTY_STATE);
+  });
+
+  it('returns empty state when vulnerableBelow entries miss threshold', async () => {
+    const broken = {...EMPTY_STATE, vulnerableBelow: [{announcedBy: 'v1.0.0'}]};
+    await fs.writeFile(statePath(), JSON.stringify(broken));
+    const s = await loadState(statePath());
+    expect(s).toEqual(EMPTY_STATE);
+  });
+
+  it('returns empty state when vulnerableBelow.threshold is non-string', async () => {
+    const broken = {...EMPTY_STATE, vulnerableBelow: [{announcedBy: 'v1', threshold: 123}]};
+    await fs.writeFile(statePath(), JSON.stringify(broken));
+    const s = await loadState(statePath());
+    expect(s).toEqual(EMPTY_STATE);
+  });
+
+  it('returns empty state when email subfield is wrong type', async () => {
+    const broken = {...EMPTY_STATE, email: {severeAt: 0, vulnerableAt: null, vulnerableNewReleaseTag: null}};
+    await fs.writeFile(statePath(), JSON.stringify(broken));
+    const s = await loadState(statePath());
+    expect(s).toEqual(EMPTY_STATE);
+  });
+
+  it('accepts a fully-typed latest payload', async () => {
+    const good = {
+      ...EMPTY_STATE,
+      latest: {
+        version: '2.7.2',
+        tag: 'v2.7.2',
+        body: 'release notes',
+        publishedAt: '2026-04-25T00:00:00Z',
+        htmlUrl: 'https://example.invalid/r/v2.7.2',
+        prerelease: false,
+      },
+    };
+    await fs.writeFile(statePath(), JSON.stringify(good));
+    const s = await loadState(statePath());
+    expect(s.latest?.version).toBe('2.7.2');
+  });
 });
 
 describe('saveState', () => {
