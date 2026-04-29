@@ -198,12 +198,22 @@ jobs:
       - name: Install all dependencies and symlink for ep_etherpad-lite
         run: pnpm install --frozen-lockfile
       - name: Install Etherpad plugins
-        # BISECT-A2b: Iteration 3 — the other half of the failing
-        # set without ep_cursortrace.
+        # BISECT-CONFIRM: Same full-set-minus-cursortrace as the
+        # Firefox-with-plugins job. Two independent Firefox runs
+        # of the same plugin set give us a 100% sanity check
+        # against single-run flakes.
         run: >
           pnpm add -w
+          ep_align
+          ep_author_hover
           ep_font_size
           ep_headings2
+          ep_markdown
+          ep_readonly_guest
+          ep_set_title_on_pad
+          ep_spellcheck
+          ep_subscript_and_superscript
+          ep_table_of_contents
       - name: Create settings.json
         run: cp ./src/tests/settings.json settings.json
       - name: Run the frontend tests
@@ -274,11 +284,22 @@ jobs:
       - name: Install all dependencies and symlink for ep_etherpad-lite
         run: pnpm install --frozen-lockfile
       - name: Install Etherpad plugins
-        # BISECT-A2a: Iteration 3 — A2 (cursortrace+font_size+headings2)
-        # failed iter 2. Singling out ep_cursortrace.
+        # BISECT-CONFIRM: Full plugin set MINUS ep_cursortrace.
+        # If this passes (and the sibling Chrome-with-plugins job
+        # confirms by also passing the same set on a 2nd Firefox run)
+        # we are 100% confident ep_cursortrace is the culprit.
         run: >
           pnpm add -w
-          ep_cursortrace
+          ep_align
+          ep_author_hover
+          ep_font_size
+          ep_headings2
+          ep_markdown
+          ep_readonly_guest
+          ep_set_title_on_pad
+          ep_spellcheck
+          ep_subscript_and_superscript
+          ep_table_of_contents
       - name: Create settings.json
         run: cp ./src/tests/settings.json settings.json
       - name: Run the frontend tests
