@@ -636,6 +636,44 @@ exports.copyPadWithoutHistory = async (sourceID: string, destinationID: string, 
 };
 
 /**
+compactPad(padID, [keepRevisions]) collapses the pad's revision history to
+reclaim database space (issue #6194). Wraps the existing `Cleanup` helper
+so admins can trigger it over the public API / CLI rather than only
+through the admin settings UI.
+
+When `keepRevisions` is omitted (or `null`), all history is collapsed
+into a single base revision that reproduces the current atext
+(equivalent to a freshly-imported pad). When set to a positive integer
+N, the pad keeps only its last N revisions (equivalent to
+`cleanup.keepRevisions`). Pad text and chat history are preserved in
+both modes. Destructive — recommend exporting the `.etherpad` snapshot
+first.
+
+Example returns:
+
+{code: 0, message:"ok", data: {ok: true, mode: "all"}}
+{code: 1, message:"padID does not exist", data: null}
+
+ @param {String} padID the id of the pad to compact
+ @param {Number|null} keepRevisions number of recent revisions to keep;
+     null / omitted collapses the full history
+*/
+exports.compactPad = async (padID: string, keepRevisions: number | null = null) => {
+  const pad = await getPadSafe(padID, true);
+  const cleanup = require('../utils/Cleanup');
+  if (keepRevisions == null) {
+    await cleanup.deleteAllRevisions(pad.id);
+    return {ok: true, mode: 'all'};
+  }
+  const keep = Number(keepRevisions);
+  if (!Number.isFinite(keep) || keep < 0) {
+    throw new CustomError('keepRevisions must be a non-negative integer', 'apierror');
+  }
+  const ok = await cleanup.deleteRevisions(pad.id, keep);
+  return {ok, mode: 'keepLast', keepRevisions: keep};
+};
+
+/**
 movePad(sourceID, destinationID[, force=false]) moves a pad. If force is true,
   the destination will be overwritten if it exists.
 
