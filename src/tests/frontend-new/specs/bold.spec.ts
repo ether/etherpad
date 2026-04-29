@@ -1,7 +1,5 @@
 import {expect, test} from "@playwright/test";
-import {randomInt} from "node:crypto";
-import {getPadBody, goToNewPad, selectAllText} from "../helper/padHelper";
-import exp from "node:constants";
+import {clearPadContent, getPadBody, goToNewPad, selectAllText, writeToPad} from "../helper/padHelper";
 
 test.beforeEach(async ({ page })=>{
   await goToNewPad(page);
@@ -13,10 +11,13 @@ test.describe('bold button', ()=>{
 // get the inner iframe
     const innerFrame = await getPadBody(page);
 
-    await innerFrame.click()
-    // Select pad text
-    await selectAllText(page);
-    await page.keyboard.type("Hi Etherpad");
+    // clearPadContent + writeToPad replaces the legacy
+    // selectAllText + keyboard.type pattern: writeToPad delivers the
+    // string in a single input event (insertText), which Firefox
+    // under WITH_PLUGINS load handles reliably — per-key keyboard.type
+    // was racily dropping characters before the selectAllText.
+    await clearPadContent(page);
+    await writeToPad(page, "Hi Etherpad");
     await selectAllText(page);
 
     // click the bold button. force:true bypasses the #toolbar-overlay
@@ -34,10 +35,13 @@ test.describe('bold button', ()=>{
     // get the inner iframe
     const innerFrame = await getPadBody(page);
 
-    await innerFrame.click()
-    // Select pad text
-    await selectAllText(page);
-    await page.keyboard.type("Hi Etherpad");
+    // clearPadContent + writeToPad replaces the legacy
+    // selectAllText + keyboard.type pattern: writeToPad delivers the
+    // string in a single input event (insertText), which Firefox
+    // under WITH_PLUGINS load handles reliably — per-key keyboard.type
+    // was racily dropping characters before the selectAllText.
+    await clearPadContent(page);
+    await writeToPad(page, "Hi Etherpad");
     await selectAllText(page);
 
     // Press CTRL + B
