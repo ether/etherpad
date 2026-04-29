@@ -225,6 +225,8 @@ export type SettingsType = {
     cmdShiftN: boolean,
     cmdShift1: boolean,
     cmdShiftC: boolean,
+    cmdShiftD: boolean,
+    cmdShiftK: boolean,
     cmdH: boolean,
     ctrlHome: boolean,
     pageUp: boolean,
@@ -438,6 +440,8 @@ const settings: SettingsType = {
     cmdShiftN: true,
     cmdShift1: true,
     cmdShiftC: true,
+    cmdShiftD: true, // duplicate current line(s) — issue #6433
+    cmdShiftK: true, // delete current line(s) — issue #6433
     cmdH: true,
     ctrlHome: true,
     pageUp: true,
