@@ -15,10 +15,13 @@ test.describe('ordered_list.js', function () {
 
       // force:true bypasses #toolbar-overlay (intercepts pointer
       // events after a text selection); same pattern as
-      // clearAuthorship.
-      const $insertorderedlistButton = page.locator('.buttonicon-insertorderedlist')
+      // clearAuthorship. Use data-l10n-id rather than the buttonicon
+      // class so the selector stays unique even if a plugin adds
+      // another element carrying .buttonicon-insertorderedlist.
+      const $insertorderedlistButton =
+          page.locator("button[data-l10n-id='pad.toolbar.ol.title']")
       await padBody.locator('div').first().selectText()
-      await $insertorderedlistButton.first().click({force: true});
+      await $insertorderedlistButton.click({force: true});
 
       const secondLine = padBody.locator('div').nth(1)
 
