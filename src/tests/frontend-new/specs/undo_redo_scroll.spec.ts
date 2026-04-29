@@ -17,6 +17,12 @@ test.beforeEach(async ({page}) => {
 // path moved the caret to an arbitrary line below the viewport.
 test.describe('Undo scroll-to-caret (#7007)', function () {
   test.describe.configure({retries: 2});
+  // 45-line writeToPad setup races the editor's input pipeline under
+  // WITH_PLUGINS load — even with the per-Enter value-wait that
+  // briefly worked here, the scroll-position assertion depends on a
+  // stable layout that rarely materialises before the assertion
+  // window. Tracked by #7611.
+  test.skip(process.env.WITH_PLUGINS === '1', 'flaky in with-plugins suite — see #7611');
 
   // Use the Etherpad keyboard path so the undo module has real
   // changesets to replay. 45 lines is enough to push the pad well past

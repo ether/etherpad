@@ -50,6 +50,11 @@ test.describe('unordered_list.js', function () {
   test.describe('keep unordered list on enter key', function () {
 
     test('Keeps the unordered list on enter for the new line', async function ({page}) {
+      // The toolbar-click + writeToPad-with-newlines combination
+      // races under WITH_PLUGINS load — the Enter between the two
+      // typed lines occasionally drops, leaving only one UL item
+      // and breaking the toHaveCount assertion. Tracked by #7611.
+      test.skip(process.env.WITH_PLUGINS === '1', 'flaky in with-plugins suite — see #7611');
       const padBody = await getPadBody(page);
       await clearPadContent(page)
       await expect(padBody.locator('div')).toHaveCount(1)

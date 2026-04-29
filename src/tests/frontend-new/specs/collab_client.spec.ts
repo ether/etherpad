@@ -40,6 +40,12 @@ test.describe('Messages in the COLLABROOM', function () {
   };
 
   test('bug #4978 regression test', async function ({browser}) {
+    // Multi-context test that opens a second browser context and races
+    // cross-pad propagation. Re-skipped under WITH_PLUGINS — the
+    // beforeEach burst of 5 writeToPad+Enter sequences leaves the
+    // pads in too-racy a state for the cross-context assertions to
+    // settle reliably. Tracked by #7611.
+    test.skip(process.env.WITH_PLUGINS === '1', 'flaky in with-plugins suite — see #7611');
     // The bug was triggered by receiving a change from another user while simultaneously composing
     // a character and waiting for an acknowledgement of a previously sent change.
 

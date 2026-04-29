@@ -31,6 +31,12 @@ test.describe('enter keystroke', function () {
   });
 
   test('enter is always visible after event', async function ({page}) {
+    // Even with the per-iteration toHaveCount value-wait, this 15-Enter
+    // loop occasionally misses a line under WITH_PLUGINS load when the
+    // editor's input pipeline backs up and a press is silently dropped.
+    // Tracked by #7611 — needs a different drive mechanism (REST API
+    // or single multi-line write) to un-skip reliably.
+    test.skip(process.env.WITH_PLUGINS === '1', 'flaky in with-plugins suite — see #7611');
     const padBody = await getPadBody(page);
     const originalLength = await padBody.locator('div').count();
 

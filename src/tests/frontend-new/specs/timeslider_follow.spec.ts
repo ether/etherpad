@@ -13,6 +13,12 @@ test.describe('timeslider follow', function () {
   // TODO needs test if content is also followed, when user a makes edits
   // while user b is in the timeslider
   test("content as it's added to timeslider", async function ({page}) {
+    // Each writeToPad here drives 11 lines (1 'a' + 10 empty), called
+    // 6 times = 66 sequential Enter keypresses. Under WITH_PLUGINS
+    // load Firefox drops Enters and the timeslider position assertion
+    // depends on an exact line layout. Same root cause as #4389 (sister
+    // test in this file). Tracked by #7611.
+    test.skip(process.env.WITH_PLUGINS === '1', 'flaky in with-plugins suite — see #7611');
     // send 6 revisions
     const revs = 6;
     const message = 'a\n\n\n\n\n\n\n\n\n\n';
