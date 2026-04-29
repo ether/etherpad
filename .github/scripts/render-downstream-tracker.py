@@ -33,7 +33,34 @@ GROUPS: list[tuple[str, str]] = [
 def render(catalog_path: Path, version: str, repo: str) -> str:
     with catalog_path.open() as f:
         catalog = yaml.safe_load(f)
+    if not isinstance(catalog, dict):
+        raise ValueError(
+            f"{catalog_path}: top-level must be a mapping, "
+            f"got {type(catalog).__name__}"
+        )
     items = catalog.get("downstreams", [])
+    if not isinstance(items, list):
+        raise ValueError(
+            f"{catalog_path}: `downstreams` must be a list, "
+            f"got {type(items).__name__}"
+        )
+    for idx, item in enumerate(items):
+        if not isinstance(item, dict):
+            raise ValueError(
+                f"{catalog_path}: downstreams[{idx}] must be a mapping, "
+                f"got {type(item).__name__}"
+            )
+        if "name" not in item or "update_type" not in item:
+            raise ValueError(
+                f"{catalog_path}: downstreams[{idx}] missing required "
+                f"`name` and/or `update_type`"
+            )
+        if "path" in item and "file" in item:
+            raise ValueError(
+                f"{catalog_path}: downstreams[{idx}] ({item['name']}) "
+                f"sets both `path` and `file`; use `file` for files and "
+                f"`path` for directories, not both"
+            )
 
     out: list[str] = []
     out.append(f"## Downstream distribution checklist for `{version}`\n")
@@ -64,9 +91,13 @@ def render(catalog_path: Path, version: str, repo: str) -> str:
 def _render_item(item: dict, repo: str) -> str:
     name = item["name"]
     target_repo = item.get("repo")
-    # `path` and `file` are aliases that point at a specific file/dir
-    # inside the downstream repo (or inside this repo for `manual_ci`).
-    path = item.get("path") or item.get("file")
+    # `file:` deep-links to a single file (GitHub /blob/...).
+    # `path:` deep-links to a directory (GitHub /tree/...).
+    # `/blob/<dir>` and `/tree/<file>` both 404 on GitHub, so the two
+    # must be distinguished. The renderer trusts the YAML key — see
+    # render() for the both-set guard.
+    file_path = item.get("file")
+    dir_path = item.get("path")
     workflow = item.get("workflow")
     notes = item.get("notes", "").strip()
 
@@ -76,8 +107,10 @@ def _render_item(item: dict, repo: str) -> str:
     link = ""
     if target_repo:
         base = f"https://github.com/{target_repo}"
-        if path:
-            link = f" — [`{target_repo}/{path}`]({base}/blob/HEAD/{path})"
+        if file_path:
+            link = f" — [`{target_repo}/{file_path}`]({base}/blob/HEAD/{file_path})"
+        elif dir_path:
+            link = f" — [`{target_repo}/{dir_path}`]({base}/tree/HEAD/{dir_path})"
         else:
             link = f" — [`{target_repo}`]({base})"
     if workflow:
@@ -101,7 +134,14 @@ def main() -> int:
     catalog_path = Path(sys.argv[1])
     version = sys.argv[2]
     repo = sys.argv[3]
-    print(render(catalog_path, version, repo))
+    try:
+        body = render(catalog_path, version, repo)
+    except ValueError as e:
+        # Surface validation errors as a clean CI failure with a single
+        # actionable line, instead of a Python traceback.
+        print(f"render-downstream-tracker: {e}", file=sys.stderr)
+        return 1
+    print(body)
     return 0
 
 

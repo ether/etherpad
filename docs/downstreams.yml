@@ -93,7 +93,7 @@ downstreams:
 
   - name: Proxmox VE Helper-Script
     repo: community-scripts/ProxmoxVED
-    path: ct/etherpad.sh
+    file: ct/etherpad.sh
     update_type: external_auto
     notes: |
       The script uses `check_for_gh_release` against `ether/etherpad-lite`
@@ -127,7 +127,7 @@ downstreams:
   # ---- External, per-release PR needed ----------------------------------
   - name: CasaOS App Store
     repo: IceWhaleTech/CasaOS-AppStore
-    path: Apps/Etherpad/docker-compose.yml
+    file: Apps/Etherpad/docker-compose.yml
     update_type: external_pr
     notes: |
       Docker image tag is pinned in the compose file. File a PR bumping
@@ -136,7 +136,7 @@ downstreams:
 
   - name: BigBlueButton
     repo: bigbluebutton/bigbluebutton
-    path: bbb-etherpad.placeholder.sh
+    file: bbb-etherpad.placeholder.sh
     update_type: external_pr
     notes: |
       Pinned to a specific tag in the placeholder clone script. Major
