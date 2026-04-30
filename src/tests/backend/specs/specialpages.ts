@@ -54,4 +54,59 @@ describe(__filename, function () {
         .expect(200);
     });
   });
+
+  describe('theme-color meta', function () {
+    const backupVariants:MapArrayType<any> = {};
+    beforeEach(function () {
+      backupVariants.skinVariants = settings.skinVariants;
+      backupVariants.enableDarkMode = settings.enableDarkMode;
+    });
+    afterEach(function () {
+      settings.skinVariants = backupVariants.skinVariants;
+      settings.enableDarkMode = backupVariants.enableDarkMode;
+    });
+
+    it('pad page emits theme-color matching the configured toolbar', async function () {
+      settings.skinVariants = 'super-light-toolbar super-light-editor light-background';
+      settings.enableDarkMode = true;
+      const res = await agent.get('/p/testpad').expect(200);
+      assert.match(
+          res.text,
+          /<meta name="theme-color" content="#ffffff" media="\(prefers-color-scheme: light\)">/);
+      assert.match(
+          res.text,
+          /<meta name="theme-color" content="#485365" media="\(prefers-color-scheme: dark\)">/);
+    });
+
+    it('pad page omits dark theme-color when dark mode is disabled', async function () {
+      settings.skinVariants = 'super-light-toolbar super-light-editor light-background';
+      settings.enableDarkMode = false;
+      const res = await agent.get('/p/testpad').expect(200);
+      assert.match(
+          res.text,
+          /<meta name="theme-color" content="#ffffff" media="\(prefers-color-scheme: light\)">/);
+      assert.doesNotMatch(res.text, /prefers-color-scheme: dark/);
+    });
+
+    it('pad page picks up an explicit dark toolbar variant', async function () {
+      settings.skinVariants = 'dark-toolbar dark-editor dark-background';
+      settings.enableDarkMode = true;
+      const res = await agent.get('/p/testpad').expect(200);
+      assert.match(
+          res.text,
+          /<meta name="theme-color" content="#576273" media="\(prefers-color-scheme: dark\)">/);
+    });
+
+    it('timeslider page emits theme-color', async function () {
+      settings.skinVariants = 'super-light-toolbar super-light-editor light-background';
+      settings.enableDarkMode = true;
+      const res = await agent.get('/p/testpad/timeslider').expect(200);
+      assert.match(
+          res.text,
+          /<meta name="theme-color" content="#ffffff" media="\(prefers-color-scheme: light\)">/);
+      assert.match(
+          res.text,
+          /<meta name="theme-color" content="#485365" media="\(prefers-color-scheme: dark\)">/);
+    });
+  });
 });

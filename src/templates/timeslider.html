@@ -1,8 +1,10 @@
 <%
   var langs = require("ep_etherpad-lite/node/hooks/i18n").availableLangs
+  var skinColors = require('ep_etherpad-lite/node/utils/SkinColors');
   var renderLang = (req && typeof req.acceptsLanguages === 'function'
     && req.acceptsLanguages(Object.keys(langs))) || 'en';
   var renderDir = (langs[renderLang] && langs[renderLang].direction === 'rtl') ? 'rtl' : 'ltr';
+  var themeColors = skinColors.toolbarThemeColors(settings.skinVariants);
 %>
 <!doctype html>
 <html lang="<%=renderLang%>" dir="<%=renderDir%>" translate="no" class="pad <%=settings.skinVariants%>">
@@ -36,6 +38,8 @@
   <meta name="robots" content="noindex, nofollow">
   <meta name="referrer" content="no-referrer">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
+  <meta name="theme-color" content="<%=themeColors.light%>" media="(prefers-color-scheme: light)">
+  <% if (settings.enableDarkMode) { %><meta name="theme-color" content="<%=themeColors.dark%>" media="(prefers-color-scheme: dark)"><% } %>
   <link rel="shortcut icon" href="../../favicon.ico">
   <% e.begin_block("timesliderStyles"); %>
   <link rel="stylesheet" href="../../static/css/pad.css?v=<%=settings.randomVersionString%>">
