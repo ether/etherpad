@@ -10,6 +10,8 @@ import settings, {getEpVersion} from '../../utils/Settings';
 import util from 'node:util';
 const webaccess = require('./webaccess');
 const plugins = require('../../../static/js/pluginfw/plugin_defs');
+const i18n = require('../i18n');
+import {renderSocialMeta} from '../../utils/socialMeta';
 
 import {build, buildSync} from 'esbuild'
 import {ArgsExpressType} from "../../types/ArgsExpressType";
@@ -172,7 +174,10 @@ const handleLiveReload = async (args: ArgsExpressType, padString: string, timeSl
       })
       setRouteHandler('/', (req: any, res: any) => {
         const proxyPath = sanitizeProxyPath(req);
-        res.send(eejs.require('ep_etherpad-lite/templates/index.html', {req, entrypoint: proxyPath + '/watch/index?hash=' + hash, settings}));
+        const socialMetaHtml = renderSocialMeta({
+          req, settings, availableLangs: i18n.availableLangs, locales: i18n.locales, kind: 'home',
+        });
+        res.send(eejs.require('ep_etherpad-lite/templates/index.html', {req, entrypoint: proxyPath + '/watch/index?hash=' + hash, settings, socialMetaHtml}));
       })
     })
 
@@ -196,12 +201,16 @@ const handleLiveReload = async (args: ArgsExpressType, padString: string, timeSl
         });
 
         const proxyPath = sanitizeProxyPath(req);
+        const socialMetaHtml = renderSocialMeta({
+          req, settings, availableLangs: i18n.availableLangs, locales: i18n.locales, kind: 'pad', padName: req.params.pad,
+        });
         const content = eejs.require('ep_etherpad-lite/templates/pad.html', {
           req,
           toolbar,
           isReadOnly,
           entrypoint: proxyPath + '/watch/pad?hash=' + hash,
-          settings: settings.getPublicSettings()
+          settings: settings.getPublicSettings(),
+          socialMetaHtml,
         })
         res.send(content);
       })
@@ -227,12 +236,16 @@ const handleLiveReload = async (args: ArgsExpressType, padString: string, timeSl
         });
 
         const proxyPath = sanitizeProxyPath(req);
+        const socialMetaHtml = renderSocialMeta({
+          req, settings, availableLangs: i18n.availableLangs, locales: i18n.locales, kind: 'timeslider', padName: req.params.pad,
+        });
         const content = eejs.require('ep_etherpad-lite/templates/timeslider.html', {
           req,
           toolbar,
           isReadOnly,
           entrypoint: proxyPath + '/watch/timeslider?hash=' + hash,
-          settings: settings.getPublicSettings()
+          settings: settings.getPublicSettings(),
+          socialMetaHtml,
         })
         res.send(content);
       })
@@ -342,7 +355,10 @@ exports.expressCreateServer = async (_hookName: string, args: ArgsExpressType, c
 
     // serve index.html under /
     args.app.get('/', (req: any, res: any) => {
-      res.send(eejs.require('ep_etherpad-lite/templates/index.html', {req, settings, entrypoint: "./"+fileNameIndex}));
+      const socialMetaHtml = renderSocialMeta({
+        req, settings, availableLangs: i18n.availableLangs, locales: i18n.locales, kind: 'home',
+      });
+      res.send(eejs.require('ep_etherpad-lite/templates/index.html', {req, settings, entrypoint: "./"+fileNameIndex, socialMetaHtml}));
     });
 
 
@@ -356,12 +372,16 @@ exports.expressCreateServer = async (_hookName: string, args: ArgsExpressType, c
         isReadOnly
       });
 
+      const socialMetaHtml = renderSocialMeta({
+        req, settings, availableLangs: i18n.availableLangs, locales: i18n.locales, kind: 'pad', padName: req.params.pad,
+      });
       const content = eejs.require('ep_etherpad-lite/templates/pad.html', {
         req,
         toolbar,
         isReadOnly,
         entrypoint: "../"+fileNamePad,
-        settings: settings.getPublicSettings()
+        settings: settings.getPublicSettings(),
+        socialMetaHtml,
       })
       res.send(content);
     });
@@ -372,11 +392,15 @@ exports.expressCreateServer = async (_hookName: string, args: ArgsExpressType, c
         toolbar,
       });
 
+      const socialMetaHtml = renderSocialMeta({
+        req, settings, availableLangs: i18n.availableLangs, locales: i18n.locales, kind: 'timeslider', padName: req.params.pad,
+      });
       res.send(eejs.require('ep_etherpad-lite/templates/timeslider.html', {
         req,
         toolbar,
         entrypoint: "../../"+fileNameTimeSlider,
-        settings: settings.getPublicSettings()
+        settings: settings.getPublicSettings(),
+        socialMetaHtml,
       }));
     });
   } else {

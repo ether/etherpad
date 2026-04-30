@@ -12,6 +12,7 @@
   <% e.begin_block("htmlHead"); %>
   <% e.end_block(); %>
   <title><%=settings.title%></title>
+<%- typeof socialMetaHtml !== 'undefined' ? socialMetaHtml : '' %>
   <link rel="manifest" href="../../manifest.json" />
   <script>
     /*
