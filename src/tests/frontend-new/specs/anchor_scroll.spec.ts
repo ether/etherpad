@@ -65,10 +65,10 @@ test.describe('anchor scrolling', () => {
         (el) => el.parentElement?.scrollTop || 0);
 
     await expect.poll(getScrollTop).toBeGreaterThan(10);
-    // Wait long enough for the stable-tick early-exit (3 ticks * 250ms + slack), well
-    // under the 10s hard timeout. After early-exit, scrolling away from the anchor must
-    // not be reverted by another reapply tick.
-    await page.waitForTimeout(2000);
+    // Wait past minSettleDuration (2s) plus stableTicksRequired (4 * 250ms = 1s) plus
+    // slack, well under the 10s hard timeout. After early-exit, scrolling away from the
+    // anchor must not be reverted by another reapply tick.
+    await page.waitForTimeout(3500);
 
     await outerDoc.evaluate((el) => {
       if (el.parentElement) el.parentElement.scrollTop = 0;

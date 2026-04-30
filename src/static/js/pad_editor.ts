@@ -269,16 +269,27 @@ exports.focusOnLine = (ace) => {
 
   // Settle window: keep correcting the scroll position while late content (images,
   // plugin-rendered blocks) shifts the target line's offsetTop. The interval ends when
-  // either: (a) maxSettleDuration elapses, (b) the user interacts (see stop() below),
-  // or (c) the target offset has not changed for stableTicksRequired consecutive ticks
-  // (layout has settled — no need to keep re-scrolling).
+  // any of the following becomes true:
+  //   (a) maxSettleDuration (10s) has elapsed — hard ceiling
+  //   (b) the user interacts (see stop() below) — never fight the user
+  //   (c) at least minSettleDuration (2s) has elapsed AND the target offset has not
+  //       moved by more than offsetEpsilon for stableTicksRequired consecutive ticks
+  //       (image loads / plugin renders past the 2s window are still corrected; brief
+  //       early stability does not exit the loop prematurely)
+  //   (d) the target line is missing from the DOM for missingTicksRequired consecutive
+  //       ticks (the anchor doesn't exist — bail rather than spin to maxSettleDuration)
+  // Sub-pixel tolerance avoids strict-equality flapping on fractional offsets.
   const maxSettleDuration = 10000;
+  const minSettleDuration = 2000;
   const settleInterval = 250;
-  const stableTicksRequired = 3;
+  const stableTicksRequired = 4;
+  const offsetEpsilon = 1;
+  const missingTicksRequired = 8; // 2s of consecutive misses → assume invalid anchor
   const startTime = Date.now();
   let intervalId: number | null = null;
   let lastOffset: number | null = null;
   let stableTicks = 0;
+  let missingTicks = 0;
 
   const userEventNames = ['wheel', 'touchmove', 'keydown', 'mousedown'];
   const docs: Document[] = [];
@@ -299,11 +310,19 @@ exports.focusOnLine = (ace) => {
       return;
     }
     const currentOffsetTop = getCurrentTargetOffset();
-    if (currentOffsetTop == null) return;
+    if (currentOffsetTop == null) {
+      missingTicks += 1;
+      if (missingTicks >= missingTicksRequired) stop();
+      return;
+    }
+    missingTicks = 0;
     focusOnHashedLine(ace, lineNumberInt);
-    if (lastOffset != null && currentOffsetTop === lastOffset) {
+    if (lastOffset != null && Math.abs(currentOffsetTop - lastOffset) < offsetEpsilon) {
       stableTicks += 1;
-      if (stableTicks >= stableTicksRequired) stop();
+      if (stableTicks >= stableTicksRequired
+          && Date.now() - startTime >= minSettleDuration) {
+        stop();
+      }
     } else {
       stableTicks = 0;
     }
