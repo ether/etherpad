@@ -1,4 +1,4 @@
-import {toolbarThemeColors} from "../../../node/utils/SkinColors";
+import {toolbarThemeColors, configuredToolbarColor} from "../../../node/utils/SkinColors";
 import {expect, describe, it} from "vitest";
 
 describe('SkinColors.toolbarThemeColors', function () {
@@ -38,5 +38,23 @@ describe('SkinColors.toolbarThemeColors', function () {
     const colors = toolbarThemeColors('light-toolbar dark-toolbar');
     expect(colors.light).toBe('#f2f3f4');
     expect(colors.dark).toBe('#576273');
+  });
+});
+
+describe('SkinColors.configuredToolbarColor', function () {
+  it('returns the default light color when no toolbar token is set', function () {
+    expect(configuredToolbarColor('')).toBe('#ffffff');
+    expect(configuredToolbarColor(null)).toBe('#ffffff');
+    expect(configuredToolbarColor('full-width-editor')).toBe('#ffffff');
+  });
+
+  it('returns the configured light toolbar color', function () {
+    expect(configuredToolbarColor('super-light-toolbar super-light-editor')).toBe('#ffffff');
+    expect(configuredToolbarColor('light-toolbar')).toBe('#f2f3f4');
+  });
+
+  it('returns the configured dark toolbar color', function () {
+    expect(configuredToolbarColor('dark-toolbar dark-editor')).toBe('#576273');
+    expect(configuredToolbarColor('super-dark-toolbar')).toBe('#485365');
   });
 });

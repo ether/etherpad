@@ -97,16 +97,21 @@ describe(__filename, function () {
           /<meta name="theme-color" content="#576273" media="\(prefers-color-scheme: dark\)">/);
     });
 
-    it('timeslider page emits theme-color', async function () {
+    it('timeslider page emits a single theme-color matching the configured toolbar', async function () {
       settings.skinVariants = 'super-light-toolbar super-light-editor light-background';
       settings.enableDarkMode = true;
       const res = await agent.get('/p/testpad/timeslider').expect(200);
-      assert.match(
-          res.text,
-          /<meta name="theme-color" content="#ffffff" media="\(prefers-color-scheme: light\)">/);
-      assert.match(
-          res.text,
-          /<meta name="theme-color" content="#485365" media="\(prefers-color-scheme: dark\)">/);
+      assert.match(res.text, /<meta name="theme-color" content="#ffffff">/);
+      // No prefers-color-scheme variants — timeslider does not switch skin variants on OS theme.
+      assert.doesNotMatch(res.text, /prefers-color-scheme/);
+    });
+
+    it('timeslider page picks up an explicitly dark configured toolbar', async function () {
+      settings.skinVariants = 'super-dark-toolbar super-dark-editor dark-background';
+      settings.enableDarkMode = true;
+      const res = await agent.get('/p/testpad/timeslider').expect(200);
+      assert.match(res.text, /<meta name="theme-color" content="#485365">/);
+      assert.doesNotMatch(res.text, /prefers-color-scheme/);
     });
   });
 });

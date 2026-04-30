@@ -27,4 +27,17 @@ export const toolbarThemeColors = (skinVariants: string | undefined | null) => {
   return {light, dark};
 };
 
-module.exports = {toolbarThemeColors};
+// The toolbar color that the configured skinVariants resolves to with no
+// client-side dark-mode toggling. Used by pages (e.g. timeslider) that do not
+// switch skin variants based on prefers-color-scheme, so that theme-color
+// always matches what the user actually sees.
+export const configuredToolbarColor = (skinVariants: string | undefined | null) => {
+  const tokens = (skinVariants || '').split(/\s+/).filter(Boolean);
+  for (const token of tokens) {
+    const color = TOOLBAR_COLORS[token];
+    if (color) return color;
+  }
+  return DEFAULT_LIGHT;
+};
+
+module.exports = {toolbarThemeColors, configuredToolbarColor};
