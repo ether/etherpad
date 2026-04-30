@@ -20,14 +20,7 @@ const PLUGIN_SPECS = [
 ];
 const FRONTEND_MATCH = [CORE_SPECS, ...PLUGIN_SPECS];
 
-// Vendored plugin specs we can't edit that are flaky under the WITH_PLUGINS
-// firefox run (keystrokes drop when the /ether plugin set is loaded). Skip
-// only when WITH_PLUGINS=1 so the standalone plugin runs still cover them.
-// Tracking issue: #7611. Mirror of the `test.skip(WITH_PLUGINS)` pattern
-// used in our own core specs.
-const FRONTEND_IGNORE = process.env.WITH_PLUGINS === '1' ? [
-  '**/ep_headings2*/static/tests/frontend-new/specs/headings.spec.ts',
-] : [];
+const FRONTEND_IGNORE: string[] = [];
 
 /**
  * See https://playwright.dev/docs/test-configuration.
