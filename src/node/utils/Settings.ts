@@ -164,7 +164,6 @@ export type SettingsType = {
   title: string,
   showRecentPads: boolean,
   favicon: string | null,
-  socialDescription: string | {[lang: string]: string},
   ttl: {
     AccessToken: number,
     AuthorizationCode: number,
@@ -324,14 +323,6 @@ const settings: SettingsType = {
    * Etherpad root directory.
    */
   favicon: null,
-
-  /**
-   * Description used for Open Graph / Twitter Card link previews when an
-   * Etherpad URL is shared in chat apps. May be a single string applied to
-   * every locale, or an object keyed by BCP-47 language tag with an optional
-   * `default` fallback.
-   */
-  socialDescription: 'A collaborative document that everyone can edit in real time.',
   ttl: {
     AccessToken: 1 * 60 * 60, // 1 hour in seconds
     AuthorizationCode: 10 * 60, // 10 minutes in seconds

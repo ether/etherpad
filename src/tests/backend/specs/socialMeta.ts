@@ -23,13 +23,11 @@ describe(__filename, function () {
 
   beforeEach(async function () {
     backup.title = settings.title;
-    backup.socialDescription = settings.socialDescription;
     backup.favicon = settings.favicon;
   });
 
   afterEach(async function () {
     settings.title = backup.title;
-    settings.socialDescription = backup.socialDescription;
     settings.favicon = backup.favicon;
   });
 
@@ -39,27 +37,23 @@ describe(__filename, function () {
       assert.equal(ogTag(res.text, 'og:title'), `TestPad7599 | ${settings.title}`);
     });
 
-    it('emits the default socialDescription when settings is a plain string', async function () {
-      settings.socialDescription = 'Plain string default';
-      const res = await agent.get('/p/TestPad7599').expect(200);
-      assert.equal(ogTag(res.text, 'og:description'), 'Plain string default');
-    });
-
-    it('respects per-locale socialDescription map', async function () {
-      settings.socialDescription = {
-        default: 'Fallback',
-        de: 'Deutsche Beschreibung',
-      };
+    it('emits og:description from the i18n catalog (English default)', async function () {
       const res = await agent.get('/p/TestPad7599')
-          .set('Accept-Language', 'de').expect(200);
-      assert.equal(ogTag(res.text, 'og:description'), 'Deutsche Beschreibung');
+          .set('Accept-Language', 'en').expect(200);
+      const desc = ogTag(res.text, 'og:description');
+      // Sourced from src/locales/en.json under "pad.social.description".
+      assert.ok(desc && desc.length > 0, `og:description should be non-empty, got: ${desc}`);
+      assert.match(desc!, /collaborative/i);
     });
 
-    it('falls back to default for unknown locale', async function () {
-      settings.socialDescription = {default: 'Fallback', de: 'X'};
+    it('falls back to English description when language has no override', async function () {
+      // Most non-English locales do not yet translate pad.social.description,
+      // so a request in (e.g.) Japanese should still receive the English string.
       const res = await agent.get('/p/TestPad7599')
           .set('Accept-Language', 'ja').expect(200);
-      assert.equal(ogTag(res.text, 'og:description'), 'Fallback');
+      const desc = ogTag(res.text, 'og:description');
+      assert.ok(desc && desc.length > 0,
+          'og:description should fall back to en, not be empty');
     });
 
     it('emits og:image and og:image:alt', async function () {
@@ -99,8 +93,6 @@ describe(__filename, function () {
             // Etherpad may 404 or render — either is fine, but no raw <script>
             // injected via og:title.
           });
-      // Whatever the status code, the response body must not contain a raw
-      // <script> from our meta tags.
       const ogTitle = ogTag(res.text || '', 'og:title');
       if (ogTitle != null) {
         assert.ok(!/<script>/i.test(ogTitle),

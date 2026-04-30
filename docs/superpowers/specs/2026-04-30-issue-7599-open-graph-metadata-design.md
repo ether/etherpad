@@ -59,47 +59,30 @@ to `{decoded pad name} (history) | {settings.title}`.
 For the **homepage** (`/`): same tags, with `og:title` set to
 `settings.title` and `og:url` set to the request URL.
 
-## Settings change
+## i18n source
 
-Add one new key to `settings.json.template`, `settings.json.docker`, and
-`src/node/utils/Settings.ts`. The value may be either a plain string (used
-for every locale) or an object mapping BCP-47 language tag → string:
+The description text lives in Etherpad's standard locale catalog under the
+key `pad.social.description`. The shipped English default in
+`src/locales/en.json` is the softer rewording of the wording in the issue:
 
-```jsonc
-/*
- * Description used for Open Graph / Twitter Card link previews when an
- * Etherpad URL is shared in chat apps. Keep entries short (~200 chars).
- *
- * May be a string applied to every locale, or an object keyed by language
- * tag with a "default" fallback:
- *
- *   "socialDescription": "A collaborative document everyone can edit."
- *
- *   "socialDescription": {
- *     "default": "A collaborative document everyone can edit.",
- *     "de":      "Ein Dokument, das alle in Echtzeit bearbeiten können.",
- *     "fr":      "Un document collaboratif éditable en temps réel."
- *   }
- */
-"socialDescription": "A collaborative document that everyone can edit in real time."
-```
+> A collaborative document that everyone can edit in real time.
 
-The shipped default is the softer rewording of the wording in the issue.
+Other locale files may translate the key as the translation community picks
+it up; missing translations fall back to English. **No new `settings.json`
+key is added** — operators who want to override the text per-language do so
+via the existing `customLocaleStrings` mechanism that Etherpad already
+supports.
 
 **Locale negotiation.** Resolution order at request time:
-1. If `socialDescription` is a string, use it verbatim.
-2. Else look up `socialDescription[renderLang]` (the value already negotiated
-   from `req.acceptsLanguages()` in the templates).
-3. Else look up `socialDescription[renderLang.split('-')[0]]` (e.g. fall
-   `de-AT` back to `de`).
-4. Else `socialDescription.default`.
-5. Else the shipped string default.
+1. `locales[renderLang]['pad.social.description']` (exact match, where
+   `renderLang` was negotiated via `req.acceptsLanguages()`).
+2. `locales[primarySubtag]['pad.social.description']` (e.g. `de-AT` → `de`).
+3. `locales.en['pad.social.description']` (English fallback).
+4. Empty string (only if `en.json` is missing the key — should not happen
+   in core).
 
-Why not pull from Etherpad's `.json` translation catalog? Because the
-catalog is sized to the UI strings of the editor; mixing a single
-operator-defined description into it would force every translation
-contributor to translate that string. Operator-controlled config is the
-right boundary.
+The `i18n` hook now exports the loaded `locales` map so other server-side
+modules can look up translated strings without re-reading the JSON files.
 
 ## Implementation outline
 

@@ -6,11 +6,12 @@
  * user-controlled, so this is the security boundary that prevents reflected
  * XSS via crafted pad IDs.
  *
- * Resolution order for the description, when `socialDescription` is an
- * object: exact `renderLang` match → primary subtag (`de-AT` → `de`) →
- * `default` key → empty string. When it is a plain string, it is used
- * verbatim regardless of `renderLang`.
+ * The description text is sourced from Etherpad's i18n catalog under the key
+ * `pad.social.description`. Operators can override it per-language via the
+ * standard `customLocaleStrings` mechanism in settings.json.
  */
+
+const SOCIAL_DESCRIPTION_KEY = 'pad.social.description';
 
 const ESCAPE_MAP: {[ch: string]: string} = {
   '&': '&amp;',
@@ -23,15 +24,23 @@ const ESCAPE_MAP: {[ch: string]: string} = {
 const escapeHtml = (s: string): string => s.replace(/[&<>"']/g, (c) => ESCAPE_MAP[c]);
 
 const resolveDescription = (
-  cfg: string | {[lang: string]: string} | undefined,
+  locales: {[lang: string]: {[key: string]: string}} | undefined,
   renderLang: string,
 ): string => {
-  if (cfg == null) return '';
-  if (typeof cfg === 'string') return cfg;
-  if (cfg[renderLang]) return cfg[renderLang];
+  if (!locales) return '';
+  // Exact match.
+  if (locales[renderLang] && locales[renderLang][SOCIAL_DESCRIPTION_KEY]) {
+    return locales[renderLang][SOCIAL_DESCRIPTION_KEY];
+  }
+  // Primary subtag fallback (e.g. de-AT → de).
   const primary = renderLang.split('-')[0];
-  if (cfg[primary]) return cfg[primary];
-  if (cfg.default) return cfg.default;
+  if (locales[primary] && locales[primary][SOCIAL_DESCRIPTION_KEY]) {
+    return locales[primary][SOCIAL_DESCRIPTION_KEY];
+  }
+  // English fallback.
+  if (locales.en && locales.en[SOCIAL_DESCRIPTION_KEY]) {
+    return locales.en[SOCIAL_DESCRIPTION_KEY];
+  }
   return '';
 };
 
@@ -45,19 +54,12 @@ const toOgLocale = (renderLang: string): string => {
 };
 
 export type SocialMetaOpts = {
-  // Absolute URL of the current request (e.g. https://pad.example/p/Foo).
   url: string,
-  // Site title (== settings.title).
   siteName: string,
-  // Title for this page (e.g. `MyPad | Etherpad`).
   title: string,
-  // Description for this page.
   description: string,
-  // Absolute URL to the preview image (favicon by default).
   imageUrl: string,
-  // Alt text for the preview image (a11y for chat-app screen readers).
   imageAlt: string,
-  // Negotiated language (BCP-47), used for og:locale.
   renderLang: string,
 };
 
@@ -91,8 +93,6 @@ const negotiateRenderLang = (req: any, availableLangs: {[k: string]: any}): stri
 };
 
 const buildAbsoluteUrl = (req: any, pathname: string): string => {
-  // Honors X-Forwarded-Proto/Host when Express `trust proxy` is set, which is
-  // already the case in production Etherpad deployments behind a reverse proxy.
   const proto = req.protocol || 'http';
   const host = (req.get && req.get('host')) || 'localhost';
   return `${proto}://${host}${pathname}`;
@@ -100,8 +100,6 @@ const buildAbsoluteUrl = (req: any, pathname: string): string => {
 
 const resolveImageUrl = (req: any, faviconSetting: string | null | undefined): string => {
   if (faviconSetting && /^https?:\/\//i.test(faviconSetting)) return faviconSetting;
-  // Etherpad serves a favicon at /favicon.ico via the favicon middleware
-  // regardless of whether a custom one is configured.
   return buildAbsoluteUrl(req, '/favicon.ico');
 };
 
@@ -109,6 +107,7 @@ export type RenderOpts = {
   req: any,
   settings: any,
   availableLangs: {[k: string]: any},
+  locales: {[lang: string]: {[key: string]: string}},
   kind: 'pad' | 'timeslider' | 'home',
   padName?: string,
 };
@@ -116,21 +115,17 @@ export type RenderOpts = {
 export const renderSocialMeta = (o: RenderOpts): string => {
   const renderLang = negotiateRenderLang(o.req, o.availableLangs);
   const siteName = o.settings.title || 'Etherpad';
-  const description = resolveDescription(o.settings.socialDescription, renderLang);
+  const description = resolveDescription(o.locales, renderLang);
   const imageUrl = resolveImageUrl(o.req, o.settings.favicon);
   const imageAlt = `${siteName} logo`;
 
   let title = siteName;
   let pathname = (o.req && o.req.originalUrl) || '/';
   if (o.padName) {
-    // Express has already URL-decoded :pad route params; do not decode
-    // again. Double-decoding throws URIError on names like "100%" (route
-    // /p/100%25), which would prevent the page from rendering.
+    // Express has already URL-decoded :pad route params; do not decode again.
     if (o.kind === 'pad') title = `${o.padName} | ${siteName}`;
     else if (o.kind === 'timeslider') title = `${o.padName} (history) | ${siteName}`;
   }
-  // Strip query string from canonical URL — link unfurlers should not key
-  // off ephemeral params.
   const qIdx = pathname.indexOf('?');
   if (qIdx >= 0) pathname = pathname.slice(0, qIdx);
 

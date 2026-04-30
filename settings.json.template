@@ -109,22 +109,6 @@
   "favicon": null,
 
   /*
-   * Description used for Open Graph / Twitter Card link previews when an
-   * Etherpad URL is shared in chat apps (WhatsApp, Signal, Slack, etc.).
-   * Keep entries short (~200 chars).
-   *
-   * May be a string applied to every locale, or an object keyed by BCP-47
-   * language tag with an optional "default" fallback, e.g.:
-   *
-   *   "socialDescription": {
-   *     "default": "A collaborative document that everyone can edit.",
-   *     "de":      "Ein Dokument, das alle in Echtzeit bearbeiten können.",
-   *     "fr":      "Un document collaboratif éditable en temps réel."
-   *   }
-   */
-  "socialDescription": "A collaborative document that everyone can edit in real time.",
-
-  /*
    * Skin name.
    *
    * Its value has to be an existing directory under src/static/skins.
