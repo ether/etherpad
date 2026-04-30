@@ -4,10 +4,7 @@
   var renderLang = (req && typeof req.acceptsLanguages === 'function'
     && req.acceptsLanguages(Object.keys(langs))) || 'en';
   var renderDir = (langs[renderLang] && langs[renderLang].direction === 'rtl') ? 'rtl' : 'ltr';
-  // Timeslider does not switch skin variants based on prefers-color-scheme, so
-  // emit a single theme-color matching the configured toolbar to avoid a
-  // dark address-bar over a light toolbar mismatch.
-  var themeColor = skinColors.configuredToolbarColor(settings.skinVariants);
+  var themeColor = skinColors.configuredToolbarColor(settings.skinName, settings.skinVariants);
 %>
 <!doctype html>
 <html lang="<%=renderLang%>" dir="<%=renderDir%>" translate="no" class="pad <%=settings.skinVariants%>">
@@ -41,7 +38,7 @@
   <meta name="robots" content="noindex, nofollow">
   <meta name="referrer" content="no-referrer">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
-  <meta name="theme-color" content="<%=themeColor%>">
+  <% if (themeColor) { %><meta name="theme-color" content="<%=themeColor%>"><% } %>
   <link rel="shortcut icon" href="../../favicon.ico">
   <% e.begin_block("timesliderStyles"); %>
   <link rel="stylesheet" href="../../static/css/pad.css?v=<%=settings.randomVersionString%>">

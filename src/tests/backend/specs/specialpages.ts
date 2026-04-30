@@ -56,65 +56,53 @@ describe(__filename, function () {
   });
 
   describe('theme-color meta', function () {
-    const backupVariants:MapArrayType<any> = {};
+    const backups:MapArrayType<any> = {};
     beforeEach(function () {
-      backupVariants.skinVariants = settings.skinVariants;
-      backupVariants.enableDarkMode = settings.enableDarkMode;
+      backups.skinName = settings.skinName;
+      backups.skinVariants = settings.skinVariants;
     });
     afterEach(function () {
-      settings.skinVariants = backupVariants.skinVariants;
-      settings.enableDarkMode = backupVariants.enableDarkMode;
+      settings.skinName = backups.skinName;
+      settings.skinVariants = backups.skinVariants;
     });
 
-    it('pad page emits theme-color matching the configured toolbar', async function () {
+    it('pad page emits theme-color matching the configured colibris toolbar', async function () {
+      settings.skinName = 'colibris';
       settings.skinVariants = 'super-light-toolbar super-light-editor light-background';
-      settings.enableDarkMode = true;
-      const res = await agent.get('/p/testpad').expect(200);
-      // Unconditional light theme-color so dark-OS users with dark mode disabled
-      // still match the (light) toolbar.
-      assert.match(res.text, /<meta name="theme-color" content="#ffffff">/);
-      assert.match(
-          res.text,
-          /<meta name="theme-color" content="#485365" media="\(prefers-color-scheme: dark\)">/);
-    });
-
-    it('pad page omits dark theme-color when dark mode is disabled', async function () {
-      settings.skinVariants = 'super-light-toolbar super-light-editor light-background';
-      settings.enableDarkMode = false;
       const res = await agent.get('/p/testpad').expect(200);
       assert.match(res.text, /<meta name="theme-color" content="#ffffff">/);
+      // No media-query variants — runtime dark-mode also depends on localStorage,
+      // which a server-rendered media query cannot account for.
       assert.doesNotMatch(res.text, /prefers-color-scheme/);
     });
 
-    it('pad page baseline theme-color tracks an explicit dark toolbar variant', async function () {
+    it('pad page tracks an explicit dark toolbar variant', async function () {
+      settings.skinName = 'colibris';
       settings.skinVariants = 'dark-toolbar dark-editor dark-background';
-      settings.enableDarkMode = true;
       const res = await agent.get('/p/testpad').expect(200);
-      // Baseline meta matches the configured toolbar (#576273 = dark-toolbar) so
-      // light-OS users see the right color.
       assert.match(res.text, /<meta name="theme-color" content="#576273">/);
-      // The dark media-query meta is hardcoded to super-dark because pad.ts
-      // forces super-dark-toolbar on dark-OS clients regardless of skinVariants.
-      assert.match(
-          res.text,
-          /<meta name="theme-color" content="#485365" media="\(prefers-color-scheme: dark\)">/);
     });
 
-    it('timeslider page emits a single theme-color matching the configured toolbar', async function () {
-      settings.skinVariants = 'super-light-toolbar super-light-editor light-background';
-      settings.enableDarkMode = true;
-      const res = await agent.get('/p/testpad/timeslider').expect(200);
-      assert.match(res.text, /<meta name="theme-color" content="#ffffff">/);
-      // No prefers-color-scheme variants — timeslider does not switch skin variants on OS theme.
-      assert.doesNotMatch(res.text, /prefers-color-scheme/);
+    it('pad page omits theme-color for non-colibris skins', async function () {
+      settings.skinName = 'no-skin';
+      settings.skinVariants = 'super-light-toolbar';
+      const res = await agent.get('/p/testpad').expect(200);
+      assert.doesNotMatch(res.text, /theme-color/);
     });
 
-    it('timeslider page picks up an explicitly dark configured toolbar', async function () {
+    it('timeslider page emits theme-color matching the configured toolbar', async function () {
+      settings.skinName = 'colibris';
       settings.skinVariants = 'super-dark-toolbar super-dark-editor dark-background';
-      settings.enableDarkMode = true;
       const res = await agent.get('/p/testpad/timeslider').expect(200);
       assert.match(res.text, /<meta name="theme-color" content="#485365">/);
       assert.doesNotMatch(res.text, /prefers-color-scheme/);
+    });
+
+    it('timeslider page omits theme-color for non-colibris skins', async function () {
+      settings.skinName = 'no-skin';
+      settings.skinVariants = 'super-light-toolbar';
+      const res = await agent.get('/p/testpad/timeslider').expect(200);
+      assert.doesNotMatch(res.text, /theme-color/);
     });
   });
 });

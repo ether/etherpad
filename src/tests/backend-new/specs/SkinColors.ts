@@ -1,28 +1,38 @@
-import {DARK_MODE_TOOLBAR_COLOR, configuredToolbarColor} from "../../../node/utils/SkinColors";
+import {configuredToolbarColor} from "../../../node/utils/SkinColors";
 import {expect, describe, it} from "vitest";
 
-describe('SkinColors.DARK_MODE_TOOLBAR_COLOR', function () {
-  it('matches the super-dark-toolbar color forced by client-side dark mode', function () {
-    // pad.ts swaps to super-dark-toolbar on dark OS, so the dark theme-color
-    // must match that fixed value, not whatever was configured in skinVariants.
-    expect(DARK_MODE_TOOLBAR_COLOR).toBe('#485365');
-  });
-});
-
 describe('SkinColors.configuredToolbarColor', function () {
-  it('returns the default light color when no toolbar token is set', function () {
-    expect(configuredToolbarColor('')).toBe('#ffffff');
-    expect(configuredToolbarColor(null)).toBe('#ffffff');
-    expect(configuredToolbarColor('full-width-editor')).toBe('#ffffff');
+  it('returns null for non-colibris skins so the meta is omitted', function () {
+    expect(configuredToolbarColor('no-skin', 'super-light-toolbar')).toBeNull();
+    expect(configuredToolbarColor(null, 'super-light-toolbar')).toBeNull();
+    expect(configuredToolbarColor('custom-skin', 'dark-toolbar')).toBeNull();
   });
 
-  it('returns the configured light toolbar color', function () {
-    expect(configuredToolbarColor('super-light-toolbar super-light-editor')).toBe('#ffffff');
-    expect(configuredToolbarColor('light-toolbar')).toBe('#f2f3f4');
+  it('returns the colibris default when no toolbar token is set', function () {
+    expect(configuredToolbarColor('colibris', '')).toBe('#ffffff');
+    expect(configuredToolbarColor('colibris', null)).toBe('#ffffff');
+    expect(configuredToolbarColor('colibris', 'full-width-editor')).toBe('#ffffff');
   });
 
-  it('returns the configured dark toolbar color', function () {
-    expect(configuredToolbarColor('dark-toolbar dark-editor')).toBe('#576273');
-    expect(configuredToolbarColor('super-dark-toolbar')).toBe('#485365');
+  it('maps each *-toolbar token to its colibris --bg-color', function () {
+    expect(configuredToolbarColor('colibris', 'super-light-toolbar')).toBe('#ffffff');
+    expect(configuredToolbarColor('colibris', 'light-toolbar')).toBe('#f2f3f4');
+    expect(configuredToolbarColor('colibris', 'super-dark-toolbar')).toBe('#485365');
+    expect(configuredToolbarColor('colibris', 'dark-toolbar')).toBe('#576273');
+  });
+
+  it('respects CSS source order when multiple toolbar tokens are present', function () {
+    // pad-variants.css declares dark-toolbar last, so it wins on tie regardless of token order.
+    expect(configuredToolbarColor('colibris', 'super-light-toolbar dark-toolbar')).toBe('#576273');
+    expect(configuredToolbarColor('colibris', 'dark-toolbar super-light-toolbar')).toBe('#576273');
+    // super-dark-toolbar precedes dark-toolbar in CSS, so dark wins when both are present.
+    expect(configuredToolbarColor('colibris', 'super-dark-toolbar dark-toolbar')).toBe('#576273');
+    // super-dark-toolbar wins over light-toolbar.
+    expect(configuredToolbarColor('colibris', 'light-toolbar super-dark-toolbar')).toBe('#485365');
+  });
+
+  it('ignores unrelated tokens', function () {
+    expect(configuredToolbarColor('colibris', 'super-light-toolbar full-width-editor light-background'))
+        .toBe('#ffffff');
   });
 });
