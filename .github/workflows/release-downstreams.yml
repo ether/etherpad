@@ -1,0 +1,102 @@
+name: Release — downstream bump tracker
+
+# Opens a single tracking issue on every release that lists every
+# downstream distribution of Etherpad (see docs/downstreams.yml) with
+# hints on whether they update automatically or need a manual PR.
+#
+# Rationale: external catalogs (CasaOS, TrueCharts, BBB, Unraid, …) go
+# stale because nobody remembers to poke them at release time. This
+# workflow turns "remember to update every downstream" into a checklist
+# we can close methodically.
+#
+# To test before a real release: run `Actions → Release — downstream
+# bump tracker → Run workflow`, supply a version (e.g. `2.6.1-test`).
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version string to use (e.g. 2.6.1). Defaults to the release tag.
+        required: true
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  open-tracking-issue:
+    runs-on: ubuntu-latest
+    # Opt-out gate: set the repo variable `SKIP_DOWNSTREAM_TRACKER=true`
+    # to disable this workflow without removing the file. Default is
+    # opt-out, not opt-in, because forgetting a flag at release time is
+    # exactly the failure mode this tracker exists to prevent.
+    if: vars.SKIP_DOWNSTREAM_TRACKER != 'true'
+    steps:
+      - name: Check out
+        uses: actions/checkout@v6
+
+      - name: Resolve version
+        id: v
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+          # `inputs.version` only exists on workflow_dispatch; reading it on
+          # release events can yield an empty string or a context-evaluation
+          # error depending on GitHub Actions behavior. Pull the dispatch
+          # payload directly via github.event.inputs so release runs stay
+          # clean.
+          INPUT: ${{ github.event.inputs.version }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          VERSION="${TAG:-$INPUT}"
+          VERSION="${VERSION#v}"
+          if [ -z "${VERSION}" ]; then
+            echo "Could not determine version (event=${EVENT})." >&2
+            exit 1
+          fi
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Render issue body
+        id: render
+        env:
+          VERSION: ${{ steps.v.outputs.version }}
+        run: |
+          python3 -m pip install --quiet pyyaml
+          BODY=$(mktemp)
+          python3 .github/scripts/render-downstream-tracker.py \
+              docs/downstreams.yml \
+              "$VERSION" \
+              "$GITHUB_REPOSITORY" \
+              > "$BODY"
+          echo "body-path=$BODY" >> "$GITHUB_OUTPUT"
+
+      - name: Open tracking issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.v.outputs.version }}
+          BODY_PATH: ${{ steps.render.outputs.body-path }}
+        run: |
+          set -euo pipefail
+          TITLE="Downstream bumps for ${VERSION}"
+          # Dedupe: re-runs of this workflow (or repeated workflow_dispatch
+          # for the same version) must not pile up duplicate tracking issues.
+          # Search both open and closed for the same exact title.
+          EXISTING=$(gh issue list \
+            --repo "$GITHUB_REPOSITORY" \
+            --state all \
+            --label release \
+            --label downstream \
+            --search "\"$TITLE\" in:title" \
+            --json number,title \
+            --jq ".[] | select(.title == \"$TITLE\") | .number" \
+            | head -n1)
+          if [ -n "${EXISTING:-}" ]; then
+            echo "Tracking issue #$EXISTING already exists for ${VERSION}; skipping create."
+            exit 0
+          fi
+          gh issue create \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "$TITLE" \
+            --label "release,downstream" \
+            --body-file "$BODY_PATH"
