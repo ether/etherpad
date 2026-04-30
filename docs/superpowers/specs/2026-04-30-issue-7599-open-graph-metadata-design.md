@@ -40,10 +40,13 @@ For the **pad page** (`/p/:pad`):
 | `og:url`            | absolute URL of the request                                 |
 | `og:type`           | `website`                                                   |
 | `og:site_name`      | `settings.title`                                            |
+| `og:locale`         | negotiated `renderLang` (already computed in `pad.html`), normalized to BCP-47 with underscore (e.g. `en_US`, `de_DE`); falls back to `en_US` |
+| `og:image:alt`      | `"{settings.title} logo"` (a11y — screen readers in chat clients announce this) |
 | `twitter:card`      | `summary`                                                   |
 | `twitter:title`     | same as `og:title`                                          |
 | `twitter:description` | same as `og:description`                                  |
 | `twitter:image`     | same as `og:image`                                          |
+| `twitter:image:alt` | same as `og:image:alt`                                      |
 
 \* `settings.favicon` is normally null (defaults route to the bundled
 `favicon.ico` via the favicon middleware). The template builds the absolute
@@ -59,17 +62,44 @@ For the **homepage** (`/`): same tags, with `og:title` set to
 ## Settings change
 
 Add one new key to `settings.json.template`, `settings.json.docker`, and
-`src/node/utils/Settings.ts`:
+`src/node/utils/Settings.ts`. The value may be either a plain string (used
+for every locale) or an object mapping BCP-47 language tag → string:
 
 ```jsonc
 /*
  * Description used for Open Graph / Twitter Card link previews when an
- * Etherpad URL is shared in chat apps. Keep it short (under ~200 chars).
+ * Etherpad URL is shared in chat apps. Keep entries short (~200 chars).
+ *
+ * May be a string applied to every locale, or an object keyed by language
+ * tag with a "default" fallback:
+ *
+ *   "socialDescription": "A collaborative document everyone can edit."
+ *
+ *   "socialDescription": {
+ *     "default": "A collaborative document everyone can edit.",
+ *     "de":      "Ein Dokument, das alle in Echtzeit bearbeiten können.",
+ *     "fr":      "Un document collaboratif éditable en temps réel."
+ *   }
  */
 "socialDescription": "A collaborative document that everyone can edit in real time."
 ```
 
-The default is the softer rewording of the wording in the issue.
+The shipped default is the softer rewording of the wording in the issue.
+
+**Locale negotiation.** Resolution order at request time:
+1. If `socialDescription` is a string, use it verbatim.
+2. Else look up `socialDescription[renderLang]` (the value already negotiated
+   from `req.acceptsLanguages()` in the templates).
+3. Else look up `socialDescription[renderLang.split('-')[0]]` (e.g. fall
+   `de-AT` back to `de`).
+4. Else `socialDescription.default`.
+5. Else the shipped string default.
+
+Why not pull from Etherpad's `.json` translation catalog? Because the
+catalog is sized to the UI strings of the editor; mixing a single
+operator-defined description into it would force every translation
+contributor to translate that string. Operator-controlled config is the
+right boundary.
 
 ## Implementation outline
 
@@ -107,6 +137,10 @@ Add to the existing backend test suite (likely
   not raw HTML.
 - GET `/p/TestPad/timeslider` → `og:title` contains `(history)`.
 - GET `/` → `og:title` equals `settings.title`.
+- GET `/p/TestPad` with `Accept-Language: de` and
+  `socialDescription: {default: "X", de: "Y"}` → `og:description` is `Y`
+  and `og:locale` is `de_DE` (or `de`).
+- Response includes `og:image:alt` and `twitter:image:alt`.
 
 The XSS escape test is the security-relevant one: pad IDs are user-controlled
 (anyone can navigate to `/p/<anything>`).
