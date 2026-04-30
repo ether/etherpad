@@ -86,13 +86,18 @@ describe(__filename, function () {
       assert.doesNotMatch(res.text, /prefers-color-scheme/);
     });
 
-    it('pad page picks up an explicit dark toolbar variant', async function () {
+    it('pad page baseline theme-color tracks an explicit dark toolbar variant', async function () {
       settings.skinVariants = 'dark-toolbar dark-editor dark-background';
       settings.enableDarkMode = true;
       const res = await agent.get('/p/testpad').expect(200);
+      // Baseline meta matches the configured toolbar (#576273 = dark-toolbar) so
+      // light-OS users see the right color.
+      assert.match(res.text, /<meta name="theme-color" content="#576273">/);
+      // The dark media-query meta is hardcoded to super-dark because pad.ts
+      // forces super-dark-toolbar on dark-OS clients regardless of skinVariants.
       assert.match(
           res.text,
-          /<meta name="theme-color" content="#576273" media="\(prefers-color-scheme: dark\)">/);
+          /<meta name="theme-color" content="#485365" media="\(prefers-color-scheme: dark\)">/);
     });
 
     it('timeslider page emits a single theme-color matching the configured toolbar', async function () {

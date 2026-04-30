@@ -6,7 +6,12 @@
   var renderLang = (req && typeof req.acceptsLanguages === 'function'
     && req.acceptsLanguages(Object.keys(langs))) || 'en';
   var renderDir = (langs[renderLang] && langs[renderLang].direction === 'rtl') ? 'rtl' : 'ltr';
-  var themeColors = skinColors.toolbarThemeColors(settings.skinVariants);
+  // The baseline theme-color matches the configured toolbar (whatever skinVariants
+  // resolved to). When dark mode is enabled, the client-side override forces the
+  // toolbar to super-dark-toolbar on dark-OS clients, so the dark media-query
+  // meta uses that fixed color rather than anything derived from skinVariants.
+  var configuredColor = skinColors.configuredToolbarColor(settings.skinVariants);
+  var darkModeColor = skinColors.DARK_MODE_TOOLBAR_COLOR;
 %>
 <!doctype html>
 <html lang="<%=renderLang%>" dir="<%=renderDir%>" translate="no" class="pad <%=pluginUtils.clientPluginNames().join(' '); %> <%=settings.skinVariants%>">
@@ -43,8 +48,8 @@
   <meta name="robots" content="noindex, nofollow">
   <meta name="referrer" content="no-referrer">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
-  <meta name="theme-color" content="<%=themeColors.light%>">
-  <% if (settings.enableDarkMode) { %><meta name="theme-color" content="<%=themeColors.dark%>" media="(prefers-color-scheme: dark)"><% } %>
+  <meta name="theme-color" content="<%=configuredColor%>">
+  <% if (settings.enableDarkMode) { %><meta name="theme-color" content="<%=darkModeColor%>" media="(prefers-color-scheme: dark)"><% } %>
   <link rel="shortcut icon" href="../favicon.ico">
 
   <% e.begin_block("styles"); %>
