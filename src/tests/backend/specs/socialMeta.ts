@@ -76,15 +76,21 @@ describe(__filename, function () {
       assert.match(locale || '', /^en/);
     });
 
-    it('decodes URL-encoded pad names in og:title', async function () {
-      // %2D is "-", which is a valid pad-name character. Spaces (%20) are
-      // not allowed and would redirect to a sanitized name, masking what
-      // we're trying to assert. The encoded-hyphen round-trip still proves
-      // we URL-decode before interpolating into og:title.
+    it('uses the Express-decoded pad name in og:title', async function () {
+      // %2D is "-"; Express decodes the route param before we see it, so
+      // og:title contains the decoded form.
       const res = await agent.get('/p/Has%2DDash7599').expect(200);
       const title = ogTag(res.text, 'og:title');
       assert.ok(title && title.startsWith('Has-Dash7599 | '),
           `unexpected og:title: ${title}`);
+    });
+
+    it('does not throw for pad names containing literal "%"', async function () {
+      // /p/100%25 → Express decodes to req.params.pad === "100%". A naive
+      // second decodeURIComponent call would throw URIError; this test
+      // guards that regression.
+      const res = await agent.get('/p/100%25Test').expect(200);
+      assert.ok(ogTag(res.text, 'og:title'), 'og:title should still render');
     });
 
     it('HTML-escapes pad names to prevent XSS via crafted IDs', async function () {

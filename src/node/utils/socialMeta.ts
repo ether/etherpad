@@ -122,10 +122,12 @@ export const renderSocialMeta = (o: RenderOpts): string => {
 
   let title = siteName;
   let pathname = (o.req && o.req.originalUrl) || '/';
-  if (o.kind === 'pad' && o.padName) {
-    title = `${decodeURIComponent(o.padName)} | ${siteName}`;
-  } else if (o.kind === 'timeslider' && o.padName) {
-    title = `${decodeURIComponent(o.padName)} (history) | ${siteName}`;
+  if (o.padName) {
+    // Express has already URL-decoded :pad route params; do not decode
+    // again. Double-decoding throws URIError on names like "100%" (route
+    // /p/100%25), which would prevent the page from rendering.
+    if (o.kind === 'pad') title = `${o.padName} | ${siteName}`;
+    else if (o.kind === 'timeslider') title = `${o.padName} (history) | ${siteName}`;
   }
   // Strip query string from canonical URL — link unfurlers should not key
   // off ephemeral params.
