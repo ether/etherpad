@@ -215,6 +215,68 @@ describe(__filename, function () {
       assert.equal(ogTag(html, 'og:url'), 'https://pad.example/p/Foo');
     });
 
+    it('prefers settings.publicURL over request-derived origin', function () {
+      const html = renderSocialMeta({
+        req: fakeReq({protocol: 'http', get: (h: string) => h === 'host' ? 'evil.com' : '', originalUrl: '/p/Foo'}),
+        settings: {title: 'Etherpad', favicon: null, publicURL: 'https://pad.canonical.example'},
+        availableLangs: {en: {}}, locales: enLocales, kind: 'pad', padName: 'Foo',
+      });
+      assert.equal(ogTag(html, 'og:url'), 'https://pad.canonical.example/p/Foo');
+      assert.equal(ogTag(html, 'og:image'), 'https://pad.canonical.example/favicon.ico');
+    });
+
+    it('strips trailing slash from settings.publicURL', function () {
+      const html = renderSocialMeta({
+        req: fakeReq({originalUrl: '/p/Foo'}),
+        settings: {title: 'Etherpad', favicon: null, publicURL: 'https://pad.example///'},
+        availableLangs: {en: {}}, locales: enLocales, kind: 'pad', padName: 'Foo',
+      });
+      assert.equal(ogTag(html, 'og:url'), 'https://pad.example/p/Foo');
+    });
+
+    it('ignores malformed settings.publicURL and falls back to request', function () {
+      // No scheme, has path, contains userinfo — all rejected.
+      for (const bad of ['pad.example', 'http:///foo', 'https://user@pad.example', 'javascript:alert(1)']) {
+        const html = renderSocialMeta({
+          req: fakeReq({originalUrl: '/p/Foo'}),
+          settings: {title: 'Etherpad', favicon: null, publicURL: bad},
+          availableLangs: {en: {}}, locales: enLocales, kind: 'pad', padName: 'Foo',
+        });
+        assert.equal(ogTag(html, 'og:url'), 'https://pad.example/p/Foo',
+            `should fall back for malformed publicURL: ${bad}`);
+      }
+    });
+
+    it('rejects invalid Host header values when no publicURL is configured', function () {
+      // Whether a vulnerable proxy lets header injection through or not, the
+      // helper must not echo a non-DNS-shaped Host into og:url.
+      for (const bad of ['evil.com\r\nX-Injected: 1', 'user@evil.com', '<script>', '*']) {
+        const html = renderSocialMeta({
+          req: fakeReq({get: (h: string) => h === 'host' ? bad : '', originalUrl: '/p/Foo'}),
+          settings: baseSettings, availableLangs: {en: {}}, locales: enLocales,
+          kind: 'pad', padName: 'Foo',
+        });
+        const url = ogTag(html, 'og:url') || '';
+        assert.ok(!url.includes('\n') && !url.includes('\r'), `CRLF leaked: ${url}`);
+        assert.ok(!url.includes('<') && !url.includes('>'), `HTML leaked: ${url}`);
+        assert.ok(!url.includes('@'), `userinfo leaked: ${url}`);
+        assert.ok(url.startsWith('https://localhost/'), `unexpected fallback: ${url}`);
+      }
+    });
+
+    it('caps protocol to http or https — no smuggled schemes', function () {
+      // If something upstream lets req.protocol be a weird value (e.g. via a
+      // crafted X-Forwarded-Proto), we still emit only http or https.
+      const html = renderSocialMeta({
+        req: fakeReq({protocol: 'javascript', originalUrl: '/p/Foo'}),
+        settings: baseSettings, availableLangs: {en: {}}, locales: enLocales,
+        kind: 'pad', padName: 'Foo',
+      });
+      const url = ogTag(html, 'og:url') || '';
+      assert.ok(url.startsWith('http://') || url.startsWith('https://'),
+          `unexpected scheme in og:url: ${url}`);
+    });
+
     it('does not double-decode pad names containing literal "%"', function () {
       // Express decodes /p/100%25 to req.params.pad === "100%". Calling
       // decodeURIComponent("100%") would throw URIError. Verify the helper

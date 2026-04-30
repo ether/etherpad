@@ -118,6 +118,14 @@
   "favicon": "${FAVICON:null}",
 
   /*
+   * Canonical public origin of this Etherpad instance, e.g.
+   * "https://pad.example.com" (no trailing slash, must include scheme).
+   * Used to build absolute URLs in OG/Twitter link-preview meta tags.
+   * When null, falls back to the incoming request's protocol+Host.
+   */
+  "publicURL": "${PUBLIC_URL:null}",
+
+  /*
    * Skin name.
    *
    * Its value has to be an existing directory under src/static/skins.

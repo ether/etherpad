@@ -92,15 +92,42 @@ const negotiateRenderLang = (req: any, availableLangs: {[k: string]: any}): stri
   return 'en';
 };
 
-const buildAbsoluteUrl = (req: any, pathname: string): string => {
-  const proto = req.protocol || 'http';
-  const host = (req.get && req.get('host')) || 'localhost';
+// Strict hostname[:port] pattern. Rejects header injection (\r\n), userinfo
+// (user@host), wildcards, and any non-DNS-character garbage. Length-capped so
+// a giant Host header can't blow up the response.
+const HOST_RE = /^[a-z0-9]([a-z0-9.-]{0,253}[a-z0-9])?(:\d{1,5})?$/i;
+
+const sanitizeHost = (host: string | undefined): string | null => {
+  if (!host || host.length > 255) return null;
+  return HOST_RE.test(host) ? host : null;
+};
+
+const sanitizePublicURL = (raw: string | null | undefined): string | null => {
+  if (!raw || typeof raw !== 'string') return null;
+  // Must be http(s)://host[:port], no path. Strip trailing slash if present.
+  const m = raw.replace(/\/+$/, '').match(/^(https?):\/\/([^\/?#]+)$/i);
+  if (!m) return null;
+  return sanitizeHost(m[2]) ? `${m[1].toLowerCase()}://${m[2]}` : null;
+};
+
+// Builds an absolute URL. Prefers settings.publicURL when configured (operator-
+// trusted); otherwise falls back to the request's protocol+Host with strict
+// host validation so a crafted Host header can't appear in og:url / og:image.
+const buildAbsoluteUrl = (
+  req: any, pathname: string, publicURL: string | null | undefined,
+): string => {
+  const trusted = sanitizePublicURL(publicURL);
+  if (trusted) return `${trusted}${pathname}`;
+  const proto = req.protocol === 'https' ? 'https' : 'http';
+  const host = sanitizeHost(req.get && req.get('host')) || 'localhost';
   return `${proto}://${host}${pathname}`;
 };
 
-const resolveImageUrl = (req: any, faviconSetting: string | null | undefined): string => {
+const resolveImageUrl = (
+  req: any, faviconSetting: string | null | undefined, publicURL: string | null | undefined,
+): string => {
   if (faviconSetting && /^https?:\/\//i.test(faviconSetting)) return faviconSetting;
-  return buildAbsoluteUrl(req, '/favicon.ico');
+  return buildAbsoluteUrl(req, '/favicon.ico', publicURL);
 };
 
 export type RenderOpts = {
@@ -116,7 +143,7 @@ export const renderSocialMeta = (o: RenderOpts): string => {
   const renderLang = negotiateRenderLang(o.req, o.availableLangs);
   const siteName = o.settings.title || 'Etherpad';
   const description = resolveDescription(o.locales, renderLang);
-  const imageUrl = resolveImageUrl(o.req, o.settings.favicon);
+  const imageUrl = resolveImageUrl(o.req, o.settings.favicon, o.settings.publicURL);
   const imageAlt = `${siteName} logo`;
 
   let title = siteName;
@@ -130,7 +157,7 @@ export const renderSocialMeta = (o: RenderOpts): string => {
   if (qIdx >= 0) pathname = pathname.slice(0, qIdx);
 
   return buildSocialMetaHtml({
-    url: buildAbsoluteUrl(o.req, pathname),
+    url: buildAbsoluteUrl(o.req, pathname, o.settings.publicURL),
     siteName,
     title,
     description,
