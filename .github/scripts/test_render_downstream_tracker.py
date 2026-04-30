@@ -77,6 +77,46 @@ def main() -> int:
                 file: file.txt
         """, "both `path` and `file`")
 
+        # Unknown / typo'd update_type must be rejected, not silently dropped.
+        expect_value_error(tmpdir, """
+            downstreams:
+              - name: Typo
+                update_type: external-pr
+        """, "unknown update_type")
+
+        # IO and YAML parse errors must surface cleanly via main(), not a
+        # bare traceback. Drive main() and check stderr/exit shape.
+        import io
+        import contextlib
+
+        # Missing catalog file → exit 1 with a single stderr line.
+        argv_backup = sys.argv
+        try:
+            sys.argv = ["render-downstream-tracker.py", str(tmpdir / "nope.yml"), "1.0", "ether/x"]
+            stderr = io.StringIO()
+            with contextlib.redirect_stderr(stderr), contextlib.redirect_stdout(io.StringIO()):
+                rc = mod.main()
+            assert rc == 1, rc
+            err = stderr.getvalue()
+            assert "render-downstream-tracker:" in err, err
+            assert "FileNotFoundError" in err or "OSError" in err, err
+        finally:
+            sys.argv = argv_backup
+
+        # Malformed YAML → exit 1 with a single stderr line.
+        bad_yaml = tmpdir / "bad.yml"
+        bad_yaml.write_text("downstreams: [unbalanced\n")
+        try:
+            sys.argv = ["render-downstream-tracker.py", str(bad_yaml), "1.0", "ether/x"]
+            stderr = io.StringIO()
+            with contextlib.redirect_stderr(stderr), contextlib.redirect_stdout(io.StringIO()):
+                rc = mod.main()
+            assert rc == 1, rc
+            err = stderr.getvalue()
+            assert "render-downstream-tracker:" in err, err
+        finally:
+            sys.argv = argv_backup
+
     print("ok")
     return 0
 

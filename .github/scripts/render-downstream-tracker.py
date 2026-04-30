@@ -55,6 +55,17 @@ def render(catalog_path: Path, version: str, repo: str) -> str:
                 f"{catalog_path}: downstreams[{idx}] missing required "
                 f"`name` and/or `update_type`"
             )
+        # Reject typo'd update_type values up front. Without this, an entry
+        # with `update_type: external-pr` (dash instead of underscore) is
+        # silently dropped from the rendered checklist because render() only
+        # iterates the GROUPS allowlist below.
+        allowed = {g[0] for g in GROUPS}
+        if item["update_type"] not in allowed:
+            raise ValueError(
+                f"{catalog_path}: downstreams[{idx}] ({item['name']}) "
+                f"has unknown update_type {item['update_type']!r}; "
+                f"expected one of {sorted(allowed)}"
+            )
         if "path" in item and "file" in item:
             raise ValueError(
                 f"{catalog_path}: downstreams[{idx}] ({item['name']}) "
@@ -136,10 +147,12 @@ def main() -> int:
     repo = sys.argv[3]
     try:
         body = render(catalog_path, version, repo)
-    except ValueError as e:
-        # Surface validation errors as a clean CI failure with a single
-        # actionable line, instead of a Python traceback.
-        print(f"render-downstream-tracker: {e}", file=sys.stderr)
+    except (ValueError, OSError, yaml.YAMLError) as e:
+        # Surface validation, IO, and YAML parse errors as a clean CI
+        # failure with a single actionable line, instead of a Python
+        # traceback. A missing/unreadable catalog or syntactically broken
+        # YAML is a bad-input case, not a bug in this script.
+        print(f"render-downstream-tracker: {type(e).__name__}: {e}", file=sys.stderr)
         return 1
     print(body)
     return 0
