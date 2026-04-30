@@ -70,9 +70,9 @@ describe(__filename, function () {
       settings.skinVariants = 'super-light-toolbar super-light-editor light-background';
       settings.enableDarkMode = true;
       const res = await agent.get('/p/testpad').expect(200);
-      assert.match(
-          res.text,
-          /<meta name="theme-color" content="#ffffff" media="\(prefers-color-scheme: light\)">/);
+      // Unconditional light theme-color so dark-OS users with dark mode disabled
+      // still match the (light) toolbar.
+      assert.match(res.text, /<meta name="theme-color" content="#ffffff">/);
       assert.match(
           res.text,
           /<meta name="theme-color" content="#485365" media="\(prefers-color-scheme: dark\)">/);
@@ -82,10 +82,8 @@ describe(__filename, function () {
       settings.skinVariants = 'super-light-toolbar super-light-editor light-background';
       settings.enableDarkMode = false;
       const res = await agent.get('/p/testpad').expect(200);
-      assert.match(
-          res.text,
-          /<meta name="theme-color" content="#ffffff" media="\(prefers-color-scheme: light\)">/);
-      assert.doesNotMatch(res.text, /prefers-color-scheme: dark/);
+      assert.match(res.text, /<meta name="theme-color" content="#ffffff">/);
+      assert.doesNotMatch(res.text, /prefers-color-scheme/);
     });
 
     it('pad page picks up an explicit dark toolbar variant', async function () {
