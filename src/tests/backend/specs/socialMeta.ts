@@ -77,9 +77,13 @@ describe(__filename, function () {
     });
 
     it('decodes URL-encoded pad names in og:title', async function () {
-      const res = await agent.get('/p/Has%20Space7599').expect(200);
+      // %2D is "-", which is a valid pad-name character. Spaces (%20) are
+      // not allowed and would redirect to a sanitized name, masking what
+      // we're trying to assert. The encoded-hyphen round-trip still proves
+      // we URL-decode before interpolating into og:title.
+      const res = await agent.get('/p/Has%2DDash7599').expect(200);
       const title = ogTag(res.text, 'og:title');
-      assert.ok(title && title.startsWith('Has Space7599 | '),
+      assert.ok(title && title.startsWith('Has-Dash7599 | '),
           `unexpected og:title: ${title}`);
     });
 
