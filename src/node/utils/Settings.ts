@@ -174,6 +174,13 @@ export type SettingsType = {
   updateServer: string,
   enableDarkMode: boolean,
   enablePadWideSettings: boolean,
+  privacyBanner: {
+    enabled: boolean,
+    title: string,
+    body: string,
+    learnMoreUrl: string | null,
+    dismissal: 'dismissible' | 'sticky',
+  },
   skinName: string | null,
   skinVariants: string,
   ip: string,
@@ -298,7 +305,7 @@ export type SettingsType = {
   lowerCasePadIds: boolean,
   randomVersionString: string,
   gitVersion: string
-  getPublicSettings: () => Pick<SettingsType, "title" | "skinVariants"|"randomVersionString"|"skinName"|"toolbar"| "exposeVersion"| "gitVersion" | "enablePadWideSettings">,
+  getPublicSettings: () => Pick<SettingsType, "title" | "skinVariants"|"randomVersionString"|"skinName"|"toolbar"| "exposeVersion"| "gitVersion" | "enablePadWideSettings" | "privacyBanner">,
 }
 
 const settings: SettingsType = {
@@ -333,6 +340,14 @@ const settings: SettingsType = {
   updateServer: "https://static.etherpad.org",
   enableDarkMode: true,
   enablePadWideSettings: false,
+  privacyBanner: {
+    enabled: false,
+    title: 'Privacy notice',
+    body: 'This instance processes pad content on our servers. ' +
+        'See the linked policy for retention and how to request erasure.',
+    learnMoreUrl: null,
+    dismissal: 'dismissible',
+  },
   /*
  * Skin name.
  *
@@ -665,6 +680,7 @@ const settings: SettingsType = {
       skinName: settings.skinName,
       skinVariants: settings.skinVariants,
       enablePadWideSettings: settings.enablePadWideSettings,
+      privacyBanner: settings.privacyBanner,
     }
   },
   gitVersion: getGitCommit(),
