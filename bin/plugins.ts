@@ -1,7 +1,7 @@
 'use strict';
 
 import {linkInstaller, checkForMigration} from "ep_etherpad-lite/static/js/pluginfw/installer";
-import {persistInstalledPlugins} from "./commonPlugins";
+import {persistInstalledPlugins, filterUpdatablePluginNames} from "./commonPlugins";
 import fs from "node:fs";
 const settings = require('ep_etherpad-lite/node/utils/Settings');
 
@@ -80,14 +80,17 @@ const list = ()=>{
 
 // Re-install every plugin in installed_plugins.json without a version pin so
 // the registry-latest gets resolved and overwrites the existing pinned copy
-// in src/plugin_packages/. ep_etherpad-lite is excluded because the core is
-// vendored, not plugin-installed.
+// in src/plugin_packages/. ep_etherpad-lite is the vendored core, never
+// installed via the plugin path. filterUpdatablePluginNames also enforces
+// the ep_ prefix so a corrupted manifest cannot coerce us into installing
+// arbitrary npm packages, and de-duplicates repeats.
 const update = ()=> {
   (async () => {
     const path = settings.root+"/var/installed_plugins.json";
-    let plugins: {name: string}[];
+    let entries: Array<{name?: unknown}>;
     try {
-      plugins = JSON.parse(fs.readFileSync(path, "utf-8")).plugins || [];
+      const parsed = JSON.parse(fs.readFileSync(path, "utf-8"));
+      entries = Array.isArray(parsed?.plugins) ? parsed.plugins : [];
     } catch (err: any) {
       if (err.code === 'ENOENT') {
         console.log("No installed_plugins.json found — nothing to update");
@@ -95,9 +98,7 @@ const update = ()=> {
       }
       throw err;
     }
-    const names = plugins
-      .map((p) => p.name)
-      .filter((n) => n && n !== 'ep_etherpad-lite');
+    const names = filterUpdatablePluginNames(entries);
     if (names.length === 0) {
       console.log("No plugins installed — nothing to update");
       return;
