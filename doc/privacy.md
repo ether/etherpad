@@ -56,6 +56,6 @@ See [`cookies.md`](cookies.md) for the full cookie list.
 ## Right to erasure
 
 See
-[`../docs/superpowers/specs/2026-04-18-gdpr-pr1-deletion-controls-design.md`](../docs/superpowers/specs/2026-04-18-gdpr-pr1-deletion-controls-design.md)
+[`docs/superpowers/specs/2026-04-18-gdpr-pr1-deletion-controls-design.md`](https://github.com/ether/etherpad/blob/develop/docs/superpowers/specs/2026-04-18-gdpr-pr1-deletion-controls-design.md)
 for the deletion-token mechanism. Full author erasure is tracked as a
 follow-up in [ether/etherpad#6701](https://github.com/ether/etherpad/issues/6701).
