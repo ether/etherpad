@@ -27,7 +27,8 @@ process.on('unhandledRejection', (err) => { throw err; });
 
 const settings = require('ep_etherpad-lite/tests/container/loadSettings').loadSettings();
 
-axios.defaults.baseURL = `http://${settings.ip}:${settings.port}`;
+axios.defaults.baseURL =
+    `${settings.ssl ? 'https' : 'http'}://${settings.ip}:${settings.port}`;
 
 const usage = () => {
   console.error('Usage:');

@@ -6,6 +6,7 @@ const assert = require('assert').strict;
 const common = require('../common');
 const padManager = require('../../../node/db/PadManager');
 const api = require('../../../node/db/API');
+const settings = require('../../../node/utils/Settings');
 
 // Coverage for the compactPad API endpoint added in #6194.
 // The underlying Cleanup logic is tested where it lives; these tests just
@@ -13,8 +14,18 @@ const api = require('../../../node/db/API');
 describe(__filename, function () {
   let padId: string;
   let agent: any;
+  let cleanupEnabledBackup: boolean;
 
-  before(async function () { agent = await common.init(); });
+  before(async function () {
+    agent = await common.init();
+    // compactPad is gated on cleanup.enabled (matches the admin/Cleanup
+    // path). Enable it for the duration of these tests and restore after,
+    // and add a focused spec below that asserts the gate.
+    cleanupEnabledBackup = settings.cleanup.enabled;
+    settings.cleanup.enabled = true;
+  });
+
+  after(function () { settings.cleanup.enabled = cleanupEnabledBackup; });
 
   beforeEach(async function () {
     padId = common.randomString();
@@ -83,6 +94,34 @@ describe(__filename, function () {
           // @ts-ignore - deliberately passing an invalid type
           () => api.compactPad(padId, 'nope'),
           /keepRevisions must be a non-negative integer/);
+    });
+
+    it('rejects fractional keepRevisions', async function () {
+      // 2.5 is finite + non-negative but not an integer — Cleanup.deleteRevisions
+      // does revision-index arithmetic that assumes integer math, so we
+      // reject at the API boundary instead of letting it silently misbehave.
+      const pad = await padManager.getPad(padId);
+      await pad.appendText('content\n');
+      await assert.rejects(
+          () => api.compactPad(padId, 2.5),
+          /keepRevisions must be a non-negative integer/);
+    });
+
+    it('refuses to run when cleanup.enabled is false', async function () {
+      // Mirrors the admin/Cleanup-socket path: same opt-in, same surface
+      // area. An operator who hasn't reviewed the cleanup story shouldn't
+      // get destructive compaction by default just because the API is
+      // exposed.
+      settings.cleanup.enabled = false;
+      try {
+        const pad = await padManager.getPad(padId);
+        await pad.appendText('content\n');
+        await assert.rejects(
+            () => api.compactPad(padId),
+            /cleanup\.enabled = true/);
+      } finally {
+        settings.cleanup.enabled = true;
+      }
     });
   });
 

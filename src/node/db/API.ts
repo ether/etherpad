@@ -660,6 +660,9 @@ reclaim database space (issue #6194). Wraps the existing `Cleanup` helper
 so admins can trigger it over the public API / CLI rather than only
 through the admin settings UI.
 
+Gated on `settings.cleanup.enabled` so the public API can't bypass the
+same opt-in switch the admin/Cleanup path already requires.
+
 When `keepRevisions` is omitted (or `null`), all history is collapsed
 into a single base revision that reproduces the current atext
 (equivalent to a freshly-imported pad). When set to a positive integer
@@ -672,12 +675,17 @@ Example returns:
 
 {code: 0, message:"ok", data: {ok: true, mode: "all"}}
 {code: 1, message:"padID does not exist", data: null}
+{code: 1, message:"compactPad requires cleanup.enabled = true ...", data: null}
 
  @param {String} padID the id of the pad to compact
  @param {Number|null} keepRevisions number of recent revisions to keep;
      null / omitted collapses the full history
 */
 exports.compactPad = async (padID: string, keepRevisions: number | null = null) => {
+  if (!settings.cleanup.enabled) {
+    throw new CustomError(
+        'compactPad requires cleanup.enabled = true in settings.json', 'apierror');
+  }
   const pad = await getPadSafe(padID, true);
   const cleanup = require('../utils/Cleanup');
   if (keepRevisions == null) {
@@ -685,7 +693,7 @@ exports.compactPad = async (padID: string, keepRevisions: number | null = null) 
     return {ok: true, mode: 'all'};
   }
   const keep = Number(keepRevisions);
-  if (!Number.isFinite(keep) || keep < 0) {
+  if (!Number.isInteger(keep) || keep < 0) {
     throw new CustomError('keepRevisions must be a non-negative integer', 'apierror');
   }
   const ok = await cleanup.deleteRevisions(pad.id, keep);

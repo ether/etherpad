@@ -593,6 +593,8 @@ _Example returns:_
 
 collapses the pad's revision history to reclaim database space (issue #6194). Wraps the same `Cleanup` helper that powers the admin-settings UI, so admins can trigger compaction over the public API or via `bin/compactPad` without going through the admin UI.
 
+*Gated on `settings.cleanup.enabled = true`* (matches the admin/Cleanup path). The endpoint returns an error if cleanup isn't enabled in `settings.json`, so the public API can't bypass the same opt-in switch the admin UI requires.
+
 When `keepRevisions` is omitted (or null), all history is collapsed into a single base revision that reproduces the current pad text — equivalent to a freshly-imported pad. When set to a positive integer N, the pad keeps only its last N revisions.
 
 Pad text and chat are preserved in both modes. Saved-revision bookmarks are cleared. *This operation is destructive — export the pad first via `getEtherpad` if you need a backup.*
@@ -603,6 +605,7 @@ _Example returns:_
   * `{code: 0, message:"ok", data: {ok: true, mode: "keepLast", keepRevisions: 50}}`
   * `{code: 1, message:"padID does not exist", data: null}`
   * `{code: 1, message:"keepRevisions must be a non-negative integer", data: null}`
+  * `{code: 1, message:"compactPad requires cleanup.enabled = true in settings.json", data: null}`
 
 ==== getReadOnlyID(padID)
  * API >= 1
