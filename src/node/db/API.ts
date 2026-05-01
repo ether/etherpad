@@ -520,7 +520,13 @@ exports.createPad = async (padID: string, text: string, authorId = '') => {
 
   // create pad
   await getPadSafe(padID, false, text, authorId);
-  return {deletionToken: await padDeletionManager.createDeletionTokenIfAbsent(padID)};
+  // When requireAuthentication is on, every creator has a stable identity, so
+  // the cookie/identity path covers recovery and the one-time token is just
+  // an extra surface to leak.
+  const deletionToken = settings.requireAuthentication
+      ? null
+      : await padDeletionManager.createDeletionTokenIfAbsent(padID);
+  return {deletionToken};
 };
 
 /**

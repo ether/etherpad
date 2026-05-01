@@ -245,7 +245,11 @@ const showDeletionTokenModalIfPresent = () => {
   if ($modal.length === 0) return;
 
   $input.val(token);
+  const previouslyFocused = document.activeElement as HTMLElement | null;
   $modal.prop('hidden', false).addClass('popup-show');
+  // Focus the token input so screen readers announce the dialog body and the
+  // user lands on the value they need to copy.
+  setTimeout(() => ($input[0] as HTMLInputElement)?.focus(), 0);
 
   $copy.off('click.gdpr').on('click.gdpr', async () => {
     try {
@@ -261,6 +265,9 @@ const showDeletionTokenModalIfPresent = () => {
     $input.val('');
     $modal.prop('hidden', true).removeClass('popup-show');
     (window as any).clientVars.padDeletionToken = null;
+    if (previouslyFocused && document.body.contains(previouslyFocused)) {
+      previouslyFocused.focus();
+    }
   });
 };
 
@@ -368,14 +375,20 @@ const handshake = async () => {
 
   socket.on('shout', (obj) => {
     if(obj.type === "COLLABROOM") {
-      let date = new Date(obj.data.payload.timestamp);
+      const payload = obj.data.payload;
+      const msgObj = payload?.message || {};
+      // Pad-deletion denial shouts are surfaced inline by pad_editor.ts as an
+      // alert tied to the delete action; suppress the global "Admin message"
+      // gritter so the user doesn't see a confusing duplicate.
+      if (typeof msgObj.messageKey === 'string'
+          && msgObj.messageKey.startsWith('pad.deletionToken.')) return;
+      const text = msgObj.messageKey ? html10n.get(msgObj.messageKey) : msgObj.message;
+      if (!text) return;
+      const date = new Date(payload.timestamp);
       $.gritter.add({
-        // (string | mandatory) the heading of the notification
         title: 'Admin message',
-        // (string | mandatory) the text inside the notification
-        text: '[' + date.toLocaleTimeString() + ']: ' + obj.data.payload.message.message,
-        // (bool | optional) if you want it to fade out on its own or just sit there
-        sticky: obj.data.payload.message.sticky
+        text: '[' + date.toLocaleTimeString() + ']: ' + text,
+        sticky: msgObj.sticky
       });
     }
   })

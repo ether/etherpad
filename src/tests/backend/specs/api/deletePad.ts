@@ -29,7 +29,10 @@ describe(__filename, function () {
     apiVersion = res.body.currentVersion;
   });
 
-  afterEach(function () { settings.allowPadDeletionByAllUsers = false; });
+  afterEach(function () {
+    settings.allowPadDeletionByAllUsers = false;
+    settings.requireAuthentication = false;
+  });
 
   it('createPad returns a plaintext deletionToken the first time', async function () {
     const padId = makeId();
@@ -66,6 +69,15 @@ describe(__filename, function () {
     settings.allowPadDeletionByAllUsers = true;
     const del = await callApi('deletePad', {padID: padId, deletionToken: 'bogus'});
     assert.equal(del.body.code, 0);
+  });
+
+  it('createPad returns null deletionToken when requireAuthentication is on', async function () {
+    settings.requireAuthentication = true;
+    const padId = makeId();
+    const res = await callApi('createPad', {padID: padId});
+    assert.equal(res.body.code, 0, JSON.stringify(res.body));
+    assert.equal(res.body.data.deletionToken, null);
+    await callApi('deletePad', {padID: padId});
   });
 
   it('JWT admin call (no deletionToken) still works — admins stay trusted', async function () {

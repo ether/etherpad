@@ -265,22 +265,34 @@ const handlePadDelete = async (socket: any, padDeleteMessage: PadDeleteMessage) 
   const retrievedPad = await padManager.getPad(padId);
   const firstContributor = await retrievedPad.getRevisionAuthor(0);
   const isCreator = session.author === firstContributor;
-  const tokenOk = !isCreator && await padDeletionManager.isValidDeletionToken(
-      padId, padDeleteMessage.data.deletionToken);
-  const flagOk = !isCreator && !tokenOk && settings.allowPadDeletionByAllUsers;
+  const suppliedToken = padDeleteMessage.data.deletionToken;
+  const tokenSupplied = typeof suppliedToken === 'string' && suppliedToken !== '';
+  const tokenOk = tokenSupplied &&
+      await padDeletionManager.isValidDeletionToken(padId, suppliedToken);
+  // When a token is supplied it must validate. We deliberately do NOT fall
+  // back to the creator-cookie path, otherwise a creator pasting a wrong
+  // recovery token into the disclosure field would still succeed — masking a
+  // typo and contradicting the UI.
+  const creatorOk = !tokenSupplied && isCreator;
+  const flagOk = !tokenSupplied && !isCreator && settings.allowPadDeletionByAllUsers;
 
-  if (isCreator || tokenOk || flagOk) {
+  if (creatorOk || tokenOk || flagOk) {
     await retrievedPad.remove();
     return;
   }
 
+  // tokenSupplied-but-invalid is a different user-facing message from
+  // not-the-creator. The client localizes via the l10n key.
+  const messageKey = tokenSupplied
+      ? 'pad.deletionToken.invalid'
+      : 'pad.deletionToken.notCreator';
   socket.emit('shout', {
     type: 'COLLABROOM',
     data: {
       type: 'shoutMessage',
       payload: {
         message: {
-          message: 'You are not the creator of this pad, so you cannot delete it',
+          messageKey,
           sticky: false,
         },
         timestamp: Date.now(),
@@ -1102,7 +1114,9 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
     // once. Readonly sessions never see it.
     const isCreator =
         !sessionInfo.readonly && sessionInfo.author === await pad.getRevisionAuthor(0);
-    const padDeletionToken = isCreator
+    // Skip token issuance when requireAuthentication is on: every creator has a
+    // stable identity so the cookie/identity path is sufficient.
+    const padDeletionToken = isCreator && !settings.requireAuthentication
         ? await padDeletionManager.createDeletionTokenIfAbsent(sessionInfo.padId)
         : null;
 

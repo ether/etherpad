@@ -152,7 +152,10 @@ const padeditor = (() => {
         });
         pad.socket.on('shout', (data: any) => {
           handled = true;
-          const msg = data?.data?.payload?.message?.message;
+          const payload = data?.data?.payload?.message;
+          const msg = payload?.messageKey
+              ? html10n.get(payload.messageKey)
+              : payload?.message;
           if (msg) window.alert(msg);
         });
         pad.collabClient.sendMessage({
@@ -182,7 +185,10 @@ const padeditor = (() => {
           // message instead of deleting. Listen for it and show the error.
           pad.socket.on('shout', (data: any) => {
             handled = true;
-            const msg = data?.data?.payload?.message?.message;
+            const payload = data?.data?.payload?.message;
+            const msg = payload?.messageKey
+                ? html10n.get(payload.messageKey)
+                : payload?.message;
             if (msg) window.alert(msg);
           });
           pad.collabClient.sendMessage({type: 'PAD_DELETE', data:{padId: pad.getPadId()}});

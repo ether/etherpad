@@ -106,9 +106,11 @@
   "pad.deletionToken.copy": "Copy",
   "pad.deletionToken.copied": "Copied",
   "pad.deletionToken.acknowledge": "I've saved it",
-  "pad.deletionToken.deleteWithToken": "Delete with token",
+  "pad.deletionToken.deleteWithToken": "Delete Pad with Token",
   "pad.deletionToken.tokenFieldLabel": "Pad deletion token",
+  "pad.deletionToken.tokenValueLabel": "Your pad deletion token (read-only)",
   "pad.deletionToken.invalid": "That token is not valid for this pad.",
+  "pad.deletionToken.notCreator": "You are not the creator of this pad, so you cannot delete it.",
   "pad.settings.about": "About",
   "pad.settings.poweredBy": "Powered by",
 

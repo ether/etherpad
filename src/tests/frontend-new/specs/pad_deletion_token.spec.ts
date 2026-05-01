@@ -56,6 +56,38 @@ test.describe('pad deletion token', () => {
     await context2.close();
   });
 
+  test('creator pasting a wrong token into the disclosure field does not delete the pad',
+      async ({page}) => {
+    const padId = await newPadKeepingModal(page);
+    await page.locator('#deletiontoken-ack').click();
+
+    // Same browser context — the creator cookie/identity is still in place.
+    // The bug we're guarding against: handler short-circuited on isCreator
+    // and ignored a supplied-but-invalid token, so the pad was deleted anyway.
+    await showSettings(page);
+    await page.locator('#delete-pad-with-token > summary').click();
+    await page.locator('#delete-pad-token-input').fill('definitely-not-the-real-token');
+    const dialogs: string[] = [];
+    page.on('dialog', async (d) => {
+      dialogs.push(d.message());
+      await d.accept();
+    });
+    await page.locator('#delete-pad-token-submit').click();
+
+    await expect.poll(() => dialogs.length, {timeout: 10000}).toBeGreaterThanOrEqual(2);
+    expect(dialogs.some((m) => /not valid for this pad/i.test(m))).toBe(true);
+    // Regression guard: the global shout handler should NOT surface a
+    // "Admin message" gritter for deletion-denial shouts, and certainly never
+    // an "undefined" body.
+    const gritterHits = await page.locator('.gritter-item').allInnerTexts();
+    expect(gritterHits.join('\n')).not.toMatch(/Admin message/);
+    expect(gritterHits.join('\n')).not.toMatch(/undefined/);
+
+    // Pad must still exist — reload and verify the editor comes back.
+    await page.goto(`http://localhost:9001/p/${padId}`);
+    await expect(page.locator('#editorcontainer.initialized')).toBeVisible();
+  });
+
   test('wrong token keeps the pad alive and surfaces a shout', async ({page, browser}) => {
     const padId = await newPadKeepingModal(page);
     await page.locator('#deletiontoken-ack').click();
@@ -75,7 +107,7 @@ test.describe('pad deletion token', () => {
     await page2.locator('#delete-pad-token-submit').click();
 
     await expect.poll(() => dialogs.length, {timeout: 10000}).toBeGreaterThanOrEqual(2);
-    expect(dialogs.some((m) => /not the creator|cannot delete/i.test(m))).toBe(true);
+    expect(dialogs.some((m) => /not valid for this pad/i.test(m))).toBe(true);
 
     await page.reload();
     await expect(page.locator('#editorcontainer.initialized')).toBeVisible();
