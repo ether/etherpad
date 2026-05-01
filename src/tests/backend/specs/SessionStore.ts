@@ -26,6 +26,19 @@ describe(__filename, function () {
   const destroy = async () => await util.promisify(ss!.destroy).call(ss, sid);
   const touch = async (sess: Session) => await util.promisify(ss!.touch).call(ss, sid, sess);
 
+  // Poll until `cond` is true. Used in place of fixed sleeps for "the cleanup timer should have
+  // fired by now" assertions — passes immediately when cleanup completes so tests stay fast,
+  // but tolerates slow CI runners where the event loop may be delayed by hundreds of ms.
+  const eventually = async (cond: () => Promise<boolean>, maxMs = 2000, intervalMs = 25) => {
+    const deadline = Date.now() + maxMs;
+    // First check is immediate so the helper doesn't add a fixed delay.
+    while (true) {
+      if (await cond()) return;
+      if (Date.now() >= deadline) throw new Error(`condition not met within ${maxMs}ms`);
+      await new Promise((r) => setTimeout(r, intervalMs));
+    }
+  };
+
   before(async function () {
     await common.init();
   });
@@ -60,9 +73,8 @@ describe(__filename, function () {
       const sess:any  = {foo: 'bar', cookie: {expires: new Date(Date.now() + 300)}};
       await set(sess);
       assert.equal(JSON.stringify(await db.get(`sessionstorage:${sid}`)), JSON.stringify(sess));
-      await new Promise((resolve) => setTimeout(resolve, 330));
-      // Writing should start a timeout.
-      assert(await db.get(`sessionstorage:${sid}`) == null);
+      // Writing should start a timeout that purges the record once expiry passes.
+      await eventually(async () => await db.get(`sessionstorage:${sid}`) == null);
     });
 
     it('set of already expired session', async function () {
@@ -77,8 +89,7 @@ describe(__filename, function () {
       await set(sess);
       const sess2:any  = {foo: 'bar', cookie: {expires: new Date(Date.now() + 300)}};
       await set(sess2);
-      await new Promise((resolve) => setTimeout(resolve, 330));
-      assert(await db.get(`sessionstorage:${sid}`) == null);
+      await eventually(async () => await db.get(`sessionstorage:${sid}`) == null);
     });
 
     it('switch from expiring to non-expiring', async function () {
@@ -112,9 +123,8 @@ describe(__filename, function () {
       const sess = {foo: 'bar', cookie: {expires: new Date(Date.now() + 300)}};
       await db.set(`sessionstorage:${sid}`, sess);
       assert.equal(JSON.stringify(await get()), JSON.stringify(sess));
-      await new Promise((resolve) => setTimeout(resolve, 330));
-      // Reading should start a timeout.
-      assert(await db.get(`sessionstorage:${sid}`) == null);
+      // Reading should start a timeout that purges the record once expiry passes.
+      await eventually(async () => await db.get(`sessionstorage:${sid}`) == null);
     });
 
     it('get of record from previous run (already expired)', async function () {
@@ -139,11 +149,14 @@ describe(__filename, function () {
 
   describe('shutdown', function () {
     it('shutdown cancels timeouts', async function () {
-      const sess:any  = {foo: 'bar', cookie: {expires: new Date(Date.now() + 300)}};
+      // expires=500 / wait=700 keeps comfortable headroom on slow CI: setup
+      // (set+get+shutdown) must finish before the timer would fire (500ms is plenty), and the
+      // 700ms wait is past the original expiry so a cancelled timer would have fired by then.
+      const sess:any  = {foo: 'bar', cookie: {expires: new Date(Date.now() + 500)}};
       await set(sess);
       assert.equal(JSON.stringify(await get()), JSON.stringify(sess));
       ss!.shutdown();
-      await new Promise((resolve) => setTimeout(resolve, 330));
+      await new Promise((resolve) => setTimeout(resolve, 700));
       // The record should not have been automatically purged.
       assert.equal(JSON.stringify(await db.get(`sessionstorage:${sid}`)), JSON.stringify(sess));
     });
