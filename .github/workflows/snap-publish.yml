@@ -1,11 +1,15 @@
 # Builds and publishes the Etherpad snap on tagged releases.
 # Mirrors the trigger pattern from .github/workflows/docker.yml / release.yml
-# (tags matching v?X.Y.Z).
+# (semver tags, with or without a leading `v`).
+#
+# Note: `on.push.tags` uses GitHub's filter-pattern globs, NOT regex — so the
+# pattern must be expressed as two glob entries, not a single `v?...` regex.
+# https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions#filter-pattern-cheat-sheet
 #
 # One-time maintainer setup:
-#   1. `snapcraft register etherpad-lite` claims the name.
+#   1. `snapcraft register etherpad` claims the name.
 #   2. Generate a store credential:
-#        snapcraft export-login --snaps etherpad-lite \
+#        snapcraft export-login --snaps etherpad \
 #          --channels edge,stable \
 #          --acls package_access,package_push,package_release -
 #      Store the output as repo secret SNAPCRAFT_STORE_CREDENTIALS.
@@ -17,7 +21,8 @@ name: Snap
 on:
   push:
     tags:
-      - 'v?[0-9]+.[0-9]+.[0-9]+'
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+      - '[0-9]+.[0-9]+.[0-9]+'
   workflow_dispatch:
 
 permissions:
@@ -39,7 +44,7 @@ jobs:
       - name: Upload snap artifact
         uses: actions/upload-artifact@v4
         with:
-          name: etherpad-lite-snap
+          name: etherpad-snap
           path: ${{ steps.build.outputs.snap }}
           if-no-files-found: error
           retention-days: 7
@@ -54,7 +59,7 @@ jobs:
       - name: Download snap artifact
         uses: actions/download-artifact@v4
         with:
-          name: etherpad-lite-snap
+          name: etherpad-snap
 
       - name: Publish to edge
         uses: snapcore/action-publish@v1
@@ -76,7 +81,7 @@ jobs:
       - name: Download snap artifact
         uses: actions/download-artifact@v4
         with:
-          name: etherpad-lite-snap
+          name: etherpad-snap
 
       - name: Publish to stable
         uses: snapcore/action-publish@v1

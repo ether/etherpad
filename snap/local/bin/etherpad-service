@@ -13,7 +13,7 @@
 #    an env var, so EP_SETTINGS alone would be ignored).
 set -euo pipefail
 
-APP_DIR="${SNAP}/opt/etherpad-lite"
+APP_DIR="${SNAP}/opt/etherpad"
 NODE_BIN="${SNAP}/opt/node/bin/node"
 
 export PATH="${SNAP}/opt/node/bin:${SNAP}/usr/bin:${SNAP}/bin:${PATH}"
@@ -36,7 +36,7 @@ if [ ! -f "${SETTINGS}" ]; then
     -e 's|"filename": "var/dirty.db"|"filename": "'"${VAR_DIR}"'/etherpad.db"|' \
     "${SETTINGS}"
   # Rewrite ip/port literals to Etherpad's env-substitution syntax so
-  # `snap set etherpad-lite port=<n>` / `ip=<addr>` actually take effect.
+  # `snap set etherpad port=<n>` / `ip=<addr>` actually take effect.
   # Only substitute the first (top-level) occurrence — `dbSettings.port`
   # has the same key name lower down and must not be touched.
   sed -i \

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Validates values set via `snap set etherpad-lite key=value`.
+# Validates values set via `snap set etherpad key=value`.
 # Supported keys:
 #   port  : integer 1-65535 (default 9001). Ports <1024 require AppArmor override.
 #   ip    : bind address (default 0.0.0.0)
@@ -19,6 +19,6 @@ if [ -n "${IP}" ] && ! [[ "${IP}" =~ ^[0-9a-fA-F.:]+$ ]]; then
   exit 1
 fi
 
-if snapctl services etherpad-lite.etherpad-lite 2>/dev/null | grep -q active; then
-  snapctl restart etherpad-lite.etherpad-lite
+if snapctl services etherpad.etherpad 2>/dev/null | grep -q active; then
+  snapctl restart etherpad.etherpad
 fi

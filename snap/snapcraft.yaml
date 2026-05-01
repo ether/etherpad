@@ -10,7 +10,7 @@
 #   strict confinement works cleanly.
 # - We use `dump` + a manual override-build (rather than the npm plugin)
 #   because this repo is a pnpm workspace and we pin Node.js 22 manually.
-name: etherpad-lite
+name: etherpad
 title: Etherpad
 summary: Real-time collaborative document editor
 description: |
@@ -23,11 +23,11 @@ description: |
   Default listen port: 9001.
 
   Upstream: https://etherpad.org
-  Source:   https://github.com/ether/etherpad-lite
+  Source:   https://github.com/ether/etherpad
 license: Apache-2.0
 website: https://etherpad.org
-source-code: https://github.com/ether/etherpad-lite
-issues: https://github.com/ether/etherpad-lite/issues
+source-code: https://github.com/ether/etherpad
+issues: https://github.com/ether/etherpad/issues
 contact: https://etherpad.org/#community
 
 adopt-info: etherpad
@@ -41,7 +41,8 @@ platforms:
   arm64:
 
 apps:
-  etherpad-lite:
+  # Bare app name matches the snap name → users invoke it as plain `etherpad`.
+  etherpad:
     command: bin/etherpad-service
     daemon: simple
     install-mode: enable
@@ -61,7 +62,7 @@ apps:
     plugs:
       - network
 
-  etherpad:
+  cli:
     command: bin/etherpad-cli
     plugs:
       - network
@@ -111,7 +112,7 @@ parts:
       corepack prepare pnpm@10.33.0 --activate
 
       # -- 3. Copy source into install dir and build.
-      APP_DIR="${CRAFT_PART_INSTALL}/opt/etherpad-lite"
+      APP_DIR="${CRAFT_PART_INSTALL}/opt/etherpad"
       mkdir -p "${APP_DIR}"
       cp -a "${CRAFT_PART_SRC}/." "${APP_DIR}/"
       cd "${APP_DIR}"

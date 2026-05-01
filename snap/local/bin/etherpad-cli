@@ -1,24 +1,35 @@
 #!/bin/bash
 # Thin passthrough to Etherpad's bin/ scripts.
-# Usage: etherpad-lite.etherpad <bin-script> [args...]
+# Usage: etherpad.cli <bin-script> [args...]
 set -euo pipefail
 
-APP_DIR="${SNAP}/opt/etherpad-lite"
+APP_DIR="${SNAP}/opt/etherpad"
 NODE_BIN="${SNAP}/opt/node/bin/node"
 export PATH="${SNAP}/opt/node/bin:${PATH}"
 
 if [ "$#" -eq 0 ]; then
-  echo "Usage: etherpad-lite.etherpad <bin-script> [args...]"
+  echo "Usage: etherpad.cli <bin-script> [args...]"
   echo "Available scripts:"
   ls "${APP_DIR}/bin" | grep -E '\.(ts|sh)$' | sed 's/^/  /'
   exit 2
 fi
 
 SCRIPT_NAME="$1"; shift
+
+# Reject path-traversal attempts: only a bare filename is allowed, since
+# the script lookup is anchored at $APP_DIR/bin and must not escape it.
+case "${SCRIPT_NAME}" in
+  */*|*..*|"")
+    echo "invalid script name: ${SCRIPT_NAME} (must be a bare filename)" >&2
+    exit 2 ;;
+esac
+
 SCRIPT_PATH="${APP_DIR}/bin/${SCRIPT_NAME}"
-[ -f "${SCRIPT_PATH}" ] || { echo "no such script: ${SCRIPT_NAME}"; exit 2; }
+[ -f "${SCRIPT_PATH}" ] || { echo "no such script: ${SCRIPT_NAME}" >&2; exit 2; }
 
 case "${SCRIPT_PATH}" in
   *.sh)  exec "${SCRIPT_PATH}" "$@" ;;
   *.ts)  exec "${NODE_BIN}" --import tsx/esm "${SCRIPT_PATH}" "$@" ;;
+  *)     echo "unsupported script type: ${SCRIPT_NAME} (expected .sh or .ts)" >&2
+         exit 2 ;;
 esac
