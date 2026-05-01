@@ -98,7 +98,7 @@ Portal submits content into new blog post
 ## Usage
 
 ### API version
-The latest version is `1.3.0`
+The latest version is `1.3.1`
 
 The current version can be queried via /api.
 
@@ -636,6 +636,21 @@ moves a pad. If force is true and the destination pad exists, it will be overwri
 *Example returns:*
 * `{code: 0, message:"ok", data: null}`
 * `{code: 1, message:"padID does not exist", data: null}`
+
+#### compactPad(padID, [keepRevisions])
+* API >= 1.3.1
+
+collapses the pad's revision history to reclaim database space (issue #6194). Wraps the same `Cleanup` helper that powers the admin-settings UI, so admins can trigger compaction over the public API or via `bin/compactPad` without going through the admin UI.
+
+When `keepRevisions` is omitted (or null), all history is collapsed into a single base revision that reproduces the current pad text — equivalent to a freshly-imported pad. When set to a positive integer N, the pad keeps only its last N revisions.
+
+Pad text and chat are preserved in both modes. Saved-revision bookmarks are cleared. **This operation is destructive — export the pad first via `getEtherpad` if you need a backup.**
+
+*Example returns:*
+* `{code: 0, message:"ok", data: {ok: true, mode: "all"}}`
+* `{code: 0, message:"ok", data: {ok: true, mode: "keepLast", keepRevisions: 50}}`
+* `{code: 1, message:"padID does not exist", data: null}`
+* `{code: 1, message:"keepRevisions must be a non-negative integer", data: null}`
 
 #### getReadOnlyID(padID)
 * API >= 1

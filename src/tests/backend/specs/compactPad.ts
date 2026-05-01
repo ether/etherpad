@@ -1,5 +1,7 @@
 'use strict';
 
+import {generateJWTToken} from "../common";
+
 const assert = require('assert').strict;
 const common = require('../common');
 const padManager = require('../../../node/db/PadManager');
@@ -10,6 +12,9 @@ const api = require('../../../node/db/API');
 // verify the public-API wiring and argument handling.
 describe(__filename, function () {
   let padId: string;
+  let agent: any;
+
+  before(async function () { agent = await common.init(); });
 
   beforeEach(async function () {
     padId = common.randomString();
@@ -78,6 +83,40 @@ describe(__filename, function () {
           // @ts-ignore - deliberately passing an invalid type
           () => api.compactPad(padId, 'nope'),
           /keepRevisions must be a non-negative integer/);
+    });
+  });
+
+  // Verifies the APIHandler dispatch wiring — i.e. that `keepRevisions`
+  // travels from the URL query string to the API function under the
+  // right argument name. This catches regressions where the handler's
+  // version map gets renamed without updating the function signature.
+  describe('HTTP API dispatch (1.3.1)', function () {
+    it('passes keepRevisions from query string into compactPad', async function () {
+      const pad = await padManager.getPad(padId);
+      for (let i = 0; i < 5; i++) await pad.appendText(`http-line-${i}\n`);
+
+      const res = await agent.get(
+          `/api/1.3.1/compactPad?padID=${padId}&keepRevisions=2`)
+          .set('authorization', await generateJWTToken())
+          .expect(200)
+          .expect('Content-Type', /json/);
+
+      assert.strictEqual(res.body.code, 0, JSON.stringify(res.body));
+      assert.strictEqual(res.body.data.mode, 'keepLast');
+      assert.strictEqual(res.body.data.keepRevisions, 2);
+    });
+
+    it('collapses all history when keepRevisions is absent from URL', async function () {
+      const pad = await padManager.getPad(padId);
+      for (let i = 0; i < 3; i++) await pad.appendText(`http-all-${i}\n`);
+
+      const res = await agent.get(`/api/1.3.1/compactPad?padID=${padId}`)
+          .set('authorization', await generateJWTToken())
+          .expect(200)
+          .expect('Content-Type', /json/);
+
+      assert.strictEqual(res.body.code, 0, JSON.stringify(res.body));
+      assert.deepStrictEqual(res.body.data, {ok: true, mode: 'all'});
     });
   });
 });
