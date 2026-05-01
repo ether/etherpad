@@ -234,6 +234,45 @@ const normalizeChatOptions = (options) => {
   return options;
 };
 
+// Surfaces the one-time pad deletion token when the server sends it in
+// clientVars (creator session, first CLIENT_READY). The token is cleared from
+// clientVars on acknowledgement so it is not re-exposed to later code paths.
+const showDeletionTokenModalIfPresent = () => {
+  const token: string | null = (window as any).clientVars?.padDeletionToken;
+  if (!token) return;
+  const $modal = $('#deletiontoken-modal');
+  const $input = $('#deletiontoken-value');
+  const $copy = $('#deletiontoken-copy');
+  const $ack = $('#deletiontoken-ack');
+  if ($modal.length === 0) return;
+
+  $input.val(token);
+  const previouslyFocused = document.activeElement as HTMLElement | null;
+  $modal.prop('hidden', false).addClass('popup-show');
+  // Focus the token input so screen readers announce the dialog body and the
+  // user lands on the value they need to copy.
+  setTimeout(() => ($input[0] as HTMLInputElement)?.focus(), 0);
+
+  $copy.off('click.gdpr').on('click.gdpr', async () => {
+    try {
+      await navigator.clipboard.writeText(token);
+    } catch (_e) {
+      ($input[0] as HTMLInputElement).select();
+      document.execCommand('copy');
+    }
+    $copy.text(html10n.get('pad.deletionToken.copied'));
+  });
+
+  $ack.off('click.gdpr').on('click.gdpr', () => {
+    $input.val('');
+    $modal.prop('hidden', true).removeClass('popup-show');
+    (window as any).clientVars.padDeletionToken = null;
+    if (previouslyFocused && document.body.contains(previouslyFocused)) {
+      previouslyFocused.focus();
+    }
+  });
+};
+
 const sendClientReady = (isReconnect) => {
   let padId = document.location.pathname.substring(document.location.pathname.lastIndexOf('/') + 1);
   // unescape necessary due to Safari and Opera interpretation of spaces
@@ -338,14 +377,20 @@ const handshake = async () => {
 
   socket.on('shout', (obj) => {
     if(obj.type === "COLLABROOM") {
-      let date = new Date(obj.data.payload.timestamp);
+      const payload = obj.data.payload;
+      const msgObj = payload?.message || {};
+      // Pad-deletion denial shouts are surfaced inline by pad_editor.ts as an
+      // alert tied to the delete action; suppress the global "Admin message"
+      // gritter so the user doesn't see a confusing duplicate.
+      if (typeof msgObj.messageKey === 'string'
+          && msgObj.messageKey.startsWith('pad.deletionToken.')) return;
+      const text = msgObj.messageKey ? html10n.get(msgObj.messageKey) : msgObj.message;
+      if (!text) return;
+      const date = new Date(payload.timestamp);
       $.gritter.add({
-        // (string | mandatory) the heading of the notification
         title: 'Admin message',
-        // (string | mandatory) the text inside the notification
-        text: '[' + date.toLocaleTimeString() + ']: ' + obj.data.payload.message.message,
-        // (bool | optional) if you want it to fade out on its own or just sit there
-        sticky: obj.data.payload.message.sticky
+        text: '[' + date.toLocaleTimeString() + ']: ' + text,
+        sticky: msgObj.sticky
       });
     }
   })
@@ -659,6 +704,8 @@ const pad = {
         $('#theme-toggle-row').prop('hidden', false);
         $('#options-darkmode').prop('checked', skinVariants.isDarkMode());
       }
+
+      showDeletionTokenModalIfPresent();
 
       hooks.aCallAll('postAceInit', {ace: padeditor.ace, clientVars, pad});
     };

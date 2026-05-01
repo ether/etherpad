@@ -137,6 +137,21 @@ export const goToNewPad = async (page: Page) => {
   const padId = "FRONTEND_TESTS"+randomUUID();
   await page.goto('http://localhost:9001/p/'+padId);
   await waitForEditorReady(page);
+  // Creator sessions see the one-time pad-deletion-token modal on first visit.
+  // Hide it directly instead of clicking the ack button — clicking the button
+  // transfers focus out of the pad iframe and breaks subsequent keyboard tests.
+  // Tests that need to interact with the modal should navigate to a new pad
+  // inline instead of using this helper.
+  await page.evaluate(() => {
+    const modal = document.getElementById('deletiontoken-modal');
+    if (modal == null || modal.hidden) return;
+    modal.hidden = true;
+    modal.classList.remove('popup-show');
+    const input = document.getElementById('deletiontoken-value') as HTMLInputElement | null;
+    if (input) input.value = '';
+    const w = window as unknown as {clientVars?: {padDeletionToken?: string | null}};
+    if (w.clientVars != null) w.clientVars.padDeletionToken = null;
+  });
   return padId;
 }
 
