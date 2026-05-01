@@ -160,7 +160,7 @@ volumes:
 
 ### Requirements
 
-[Node.js](https://nodejs.org/) >= 22.
+[Node.js](https://nodejs.org/) >= 22.12.
 
 ### Windows, macOS, Linux
 

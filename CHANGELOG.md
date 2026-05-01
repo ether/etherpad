@@ -2,7 +2,7 @@
 
 ### Breaking changes
 
-- **Minimum required Node.js version is now 22.** Node.js 20 is reaching end-of-life (see https://nodejs.org/en/about/previous-releases). The CI matrix now targets Node 22, 24, and 25. Upgrading should be straightforward — install a current Node.js release before updating Etherpad.
+- **Minimum required Node.js version is now 22.12.** Node.js 20 is reaching end-of-life (see https://nodejs.org/en/about/previous-releases) and the docs build's `oxc-minify` peer requires `^20.19.0 || >=22.12.0`. The CI matrix now targets Node 22, 24, and 25. Upgrading should be straightforward — install a current Node.js release before updating Etherpad.
 
 ### Notable enhancements
 
