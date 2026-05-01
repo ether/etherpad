@@ -7,6 +7,14 @@ on:
     branches: ["develop"]
     paths:
       - doc/** # Only run workflow when changes are made to the doc directory
+      - .github/workflows/build-and-deploy-docs.yml
+  # Build (but do not deploy) on PRs that touch docs or this workflow, so that
+  # a docs-build regression is caught at PR review time instead of breaking
+  # develop after merge — see #7640.
+  pull_request:
+    paths:
+      - doc/**
+      - .github/workflows/build-and-deploy-docs.yml
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
@@ -52,7 +60,17 @@ jobs:
         with:
           version: 10.33.2
           run_install: false
+      # Pin Node so the build does not silently fall back to whatever the
+      # runner image ships with. oxc-minify (a vitepress peer when
+      # rolldown-vite is in use) requires Node ^20.19.0 || >=22.12.0; the
+      # repo declares engines.node >=22.12.0 to match.
+      - name: Use Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
       - name: Setup Pages
+        if: github.event_name == 'push'
         uses: actions/configure-pages@v6
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -60,12 +78,15 @@ jobs:
         working-directory: doc
         run: pnpm run docs:build
         env:
+          GITHUB_PAGES: ${{ github.event_name == 'push' && 'true' || '' }}
           COMMIT_REF: ${{ github.sha }}
       - name: Upload artifact
+        if: github.event_name == 'push'
         uses: actions/upload-pages-artifact@v5
         with:
           # Upload entire repository
           path: './doc/.vitepress/dist'
       - name: Deploy to GitHub Pages
+        if: github.event_name == 'push'
         id: deployment
         uses: actions/deploy-pages@v5
