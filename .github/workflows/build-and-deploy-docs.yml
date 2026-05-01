@@ -1,42 +1,38 @@
-# Workflow for deploying static content to GitHub Pages
+# Workflow for building and deploying the VitePress site to GitHub Pages.
+# Build runs on every push to develop and on every PR that touches docs (so
+# a build regression is caught at review time instead of breaking develop
+# after merge — see #7640). Deploy runs only on push: the github-pages
+# environment has protection rules that reject PR refs, and a PR build
+# never produced an artifact to deploy anyway.
 name: Deploy Docs to GitHub Pages
 
 on:
-  # Runs on pushes targeting the default branch
   push:
     branches: ["develop"]
     paths:
-      - doc/** # Only run workflow when changes are made to the doc directory
+      - doc/**
       - .github/workflows/build-and-deploy-docs.yml
-  # Build (but do not deploy) on PRs that touch docs or this workflow, so that
-  # a docs-build regression is caught at PR review time instead of breaking
-  # develop after merge — see #7640.
   pull_request:
     paths:
       - doc/**
       - .github/workflows/build-and-deploy-docs.yml
-  # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
-# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
   contents: read
   pages: write
   id-token: write
   packages: read
 
-# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
-# However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
+# Allow only one concurrent deployment, skipping runs queued between the run
+# in-progress and latest queued. Do NOT cancel in-progress runs — production
+# deployments are allowed to complete.
 concurrency:
   group: "pages"
   cancel-in-progress: false
 
 jobs:
-  # Single deploy job since we're just deploying
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -84,9 +80,20 @@ jobs:
         if: github.event_name == 'push'
         uses: actions/upload-pages-artifact@v5
         with:
-          # Upload entire repository
           path: './doc/.vitepress/dist'
+
+  # Deploy to GitHub Pages on push to develop only. Kept as a separate job
+  # because the github-pages environment's protection rules reject any
+  # non-develop ref (including PR merge refs), which used to fail the entire
+  # workflow at job-creation time before any build step could run.
+  deploy:
+    needs: build
+    if: github.event_name == 'push'
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
       - name: Deploy to GitHub Pages
-        if: github.event_name == 'push'
         id: deployment
         uses: actions/deploy-pages@v5
