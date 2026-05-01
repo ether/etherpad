@@ -164,6 +164,7 @@ export type SettingsType = {
   title: string,
   showRecentPads: boolean,
   favicon: string | null,
+  publicURL: string | null,
   ttl: {
     AccessToken: number,
     AuthorizationCode: number,
@@ -323,6 +324,18 @@ const settings: SettingsType = {
    * Etherpad root directory.
    */
   favicon: null,
+
+  /**
+   * Canonical public origin of this Etherpad instance, e.g. "https://pad.example.com".
+   * When set, it is used to build absolute URLs in server-rendered output (currently
+   * the Open Graph / Twitter Card meta tags). When null, those URLs fall back to the
+   * incoming request's protocol+host, which is safe when Host/X-Forwarded-Host
+   * headers are trusted but should be configured explicitly in production to avoid
+   * client-controlled origin values appearing in og:url / og:image.
+   *
+   * No trailing slash. Must include scheme.
+   */
+  publicURL: null,
   ttl: {
     AccessToken: 1 * 60 * 60, // 1 hour in seconds
     AuthorizationCode: 10 * 60, // 10 minutes in seconds

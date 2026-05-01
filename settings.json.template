@@ -109,6 +109,21 @@
   "favicon": null,
 
   /*
+   * Canonical public origin of this Etherpad instance, e.g.
+   * "https://pad.example.com" (no trailing slash, must include scheme).
+   *
+   * When set, this is used to build absolute URLs in server-rendered output
+   * such as the Open Graph / Twitter Card link-preview meta tags (og:url,
+   * og:image, ...). When null, those URLs fall back to the request's
+   * protocol+Host, which can reflect client-controlled headers if your
+   * reverse proxy passes them through unsanitized.
+   *
+   * Set this in production deployments to lock down the canonical origin
+   * advertised in shared link previews.
+   */
+  "publicURL": null,
+
+  /*
    * Skin name.
    *
    * Its value has to be an existing directory under src/static/skins.

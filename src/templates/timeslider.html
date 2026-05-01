@@ -10,6 +10,7 @@
 <html lang="<%=renderLang%>" dir="<%=renderDir%>" translate="no" class="pad <%=settings.skinVariants%>">
 <head>
   <title data-l10n-id="timeslider.pageTitle" data-l10n-args='{ "appTitle": "<%=settings.title%>" }'><%=settings.title%> Timeslider</title>
+<%- typeof socialMetaHtml !== 'undefined' ? socialMetaHtml : '' %>
   <script>
     /*
     |@licstart  The following is the entire license notice for the
