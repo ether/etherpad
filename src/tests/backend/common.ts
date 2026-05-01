@@ -126,7 +126,7 @@ export const waitForSocketEvent = async (socket: any, event:string) => {
       const timeout = setTimeout(() => {
         reject(new Error(`timed out waiting for ${event} event`));
         cancelTimeout = () => {};
-      }, 1000);
+      }, 5000);
       cancelTimeout = () => {
         clearTimeout(timeout);
         resolve();

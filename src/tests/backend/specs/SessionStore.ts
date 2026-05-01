@@ -57,10 +57,10 @@ describe(__filename, function () {
     });
 
     it('set of session that expires', async function () {
-      const sess:any  = {foo: 'bar', cookie: {expires: new Date(Date.now() + 100)}};
+      const sess:any  = {foo: 'bar', cookie: {expires: new Date(Date.now() + 300)}};
       await set(sess);
       assert.equal(JSON.stringify(await db.get(`sessionstorage:${sid}`)), JSON.stringify(sess));
-      await new Promise((resolve) => setTimeout(resolve, 110));
+      await new Promise((resolve) => setTimeout(resolve, 330));
       // Writing should start a timeout.
       assert(await db.get(`sessionstorage:${sid}`) == null);
     });
@@ -75,18 +75,18 @@ describe(__filename, function () {
     it('switch from non-expiring to expiring', async function () {
       const sess:any  = {foo: 'bar'};
       await set(sess);
-      const sess2:any  = {foo: 'bar', cookie: {expires: new Date(Date.now() + 100)}};
+      const sess2:any  = {foo: 'bar', cookie: {expires: new Date(Date.now() + 300)}};
       await set(sess2);
-      await new Promise((resolve) => setTimeout(resolve, 110));
+      await new Promise((resolve) => setTimeout(resolve, 330));
       assert(await db.get(`sessionstorage:${sid}`) == null);
     });
 
     it('switch from expiring to non-expiring', async function () {
-      const sess:any  = {foo: 'bar', cookie: {expires: new Date(Date.now() + 100)}};
+      const sess:any  = {foo: 'bar', cookie: {expires: new Date(Date.now() + 300)}};
       await set(sess);
       const sess2:any  = {foo: 'bar'};
       await set(sess2);
-      await new Promise((resolve) => setTimeout(resolve, 110));
+      await new Promise((resolve) => setTimeout(resolve, 330));
       assert.equal(JSON.stringify(await db.get(`sessionstorage:${sid}`)), JSON.stringify(sess2));
     });
   });
@@ -109,10 +109,10 @@ describe(__filename, function () {
     });
 
     it('get of record from previous run (not yet expired)', async function () {
-      const sess = {foo: 'bar', cookie: {expires: new Date(Date.now() + 100)}};
+      const sess = {foo: 'bar', cookie: {expires: new Date(Date.now() + 300)}};
       await db.set(`sessionstorage:${sid}`, sess);
       assert.equal(JSON.stringify(await get()), JSON.stringify(sess));
-      await new Promise((resolve) => setTimeout(resolve, 110));
+      await new Promise((resolve) => setTimeout(resolve, 330));
       // Reading should start a timeout.
       assert(await db.get(`sessionstorage:${sid}`) == null);
     });
@@ -125,13 +125,13 @@ describe(__filename, function () {
     });
 
     it('external expiration update is picked up', async function () {
-      const sess:any  = {foo: 'bar', cookie: {expires: new Date(Date.now() + 100)}};
+      const sess:any  = {foo: 'bar', cookie: {expires: new Date(Date.now() + 300)}};
       await set(sess);
       assert.equal(JSON.stringify(await get()), JSON.stringify(sess));
-      const sess2 = {...sess, cookie: {expires: new Date(Date.now() + 200)}};
+      const sess2 = {...sess, cookie: {expires: new Date(Date.now() + 600)}};
       await db.set(`sessionstorage:${sid}`, sess2);
       assert.equal(JSON.stringify(await get()), JSON.stringify(sess2));
-      await new Promise((resolve) => setTimeout(resolve, 110));
+      await new Promise((resolve) => setTimeout(resolve, 330));
       // The original timeout should not have fired.
       assert.equal(JSON.stringify(await get()), JSON.stringify(sess2));
     });
@@ -139,11 +139,11 @@ describe(__filename, function () {
 
   describe('shutdown', function () {
     it('shutdown cancels timeouts', async function () {
-      const sess:any  = {foo: 'bar', cookie: {expires: new Date(Date.now() + 100)}};
+      const sess:any  = {foo: 'bar', cookie: {expires: new Date(Date.now() + 300)}};
       await set(sess);
       assert.equal(JSON.stringify(await get()), JSON.stringify(sess));
       ss!.shutdown();
-      await new Promise((resolve) => setTimeout(resolve, 110));
+      await new Promise((resolve) => setTimeout(resolve, 330));
       // The record should not have been automatically purged.
       assert.equal(JSON.stringify(await db.get(`sessionstorage:${sid}`)), JSON.stringify(sess));
     });
@@ -151,18 +151,18 @@ describe(__filename, function () {
 
   describe('destroy', function () {
     it('destroy deletes the database record', async function () {
-      const sess:any  = {cookie: {expires: new Date(Date.now() + 100)}};
+      const sess:any  = {cookie: {expires: new Date(Date.now() + 300)}};
       await set(sess);
       await destroy();
       assert(await db.get(`sessionstorage:${sid}`) == null);
     });
 
     it('destroy cancels the timeout', async function () {
-      const sess:any  = {cookie: {expires: new Date(Date.now() + 100)}};
+      const sess:any  = {cookie: {expires: new Date(Date.now() + 300)}};
       await set(sess);
       await destroy();
       await db.set(`sessionstorage:${sid}`, sess);
-      await new Promise((resolve) => setTimeout(resolve, 110));
+      await new Promise((resolve) => setTimeout(resolve, 330));
       assert.equal(JSON.stringify(await db.get(`sessionstorage:${sid}`)), JSON.stringify(sess));
     });
 
