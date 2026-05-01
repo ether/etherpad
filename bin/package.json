@@ -23,6 +23,8 @@
     "makeDocs": "node --import tsx make_docs.ts",
     "checkPad": "node --import tsx checkPad.ts",
     "checkAllPads": "node --import tsx checkAllPads.ts",
+    "compactPad": "node --import tsx compactPad.ts",
+    "compactAllPads": "node --import tsx compactAllPads.ts",
     "createUserSession": "node --import tsx createUserSession.ts",
     "deletePad": "node --import tsx deletePad.ts",
     "repairPad": "node --import tsx repairPad.ts",
