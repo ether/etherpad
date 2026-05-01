@@ -1,5 +1,7 @@
 'use strict';
 
+import type {Request} from 'express';
+
 /**
  * Builds the Open Graph + Twitter Card <meta> tag block for the pad page,
  * timeslider and homepage. Output values are HTML-escaped — pad names are
@@ -84,7 +86,19 @@ export const buildSocialMetaHtml = (opts: SocialMetaOpts): string => {
   ].join('\n');
 };
 
-const negotiateRenderLang = (req: any, availableLangs: {[k: string]: any}): string => {
+// Only the keys are read; values are intentionally unconstrained because the
+// i18n module hands us a record whose value shape varies by language.
+type AvailableLangs = {[lang: string]: unknown};
+
+// Narrow shape of the global Settings module that this file actually touches.
+// Defined locally to avoid coupling socialMeta to the full Settings surface.
+type SocialMetaSettings = {
+  title?: string,
+  favicon?: string | null,
+  publicURL?: string | null,
+};
+
+const negotiateRenderLang = (req: Request, availableLangs: AvailableLangs): string => {
   if (req && typeof req.acceptsLanguages === 'function') {
     const negotiated = req.acceptsLanguages(Object.keys(availableLangs));
     if (negotiated) return negotiated;
@@ -114,7 +128,7 @@ const sanitizePublicURL = (raw: string | null | undefined): string | null => {
 // trusted); otherwise falls back to the request's protocol+Host with strict
 // host validation so a crafted Host header can't appear in og:url / og:image.
 const buildAbsoluteUrl = (
-  req: any, pathname: string, publicURL: string | null | undefined,
+  req: Request, pathname: string, publicURL: string | null | undefined,
 ): string => {
   const trusted = sanitizePublicURL(publicURL);
   if (trusted) return `${trusted}${pathname}`;
@@ -124,16 +138,16 @@ const buildAbsoluteUrl = (
 };
 
 const resolveImageUrl = (
-  req: any, faviconSetting: string | null | undefined, publicURL: string | null | undefined,
+  req: Request, faviconSetting: string | null | undefined, publicURL: string | null | undefined,
 ): string => {
   if (faviconSetting && /^https?:\/\//i.test(faviconSetting)) return faviconSetting;
   return buildAbsoluteUrl(req, '/favicon.ico', publicURL);
 };
 
 export type RenderOpts = {
-  req: any,
-  settings: any,
-  availableLangs: {[k: string]: any},
+  req: Request,
+  settings: SocialMetaSettings,
+  availableLangs: AvailableLangs,
   locales: {[lang: string]: {[key: string]: string}},
   kind: 'pad' | 'timeslider' | 'home',
   padName?: string,
