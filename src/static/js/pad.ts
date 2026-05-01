@@ -470,7 +470,10 @@ const pad = {
 
   // these don't require init; clientVars should all go through here
   getPadId: () => clientVars.padId,
-  getClientIp: () => clientVars.clientIp,
+  // Retained as a plugin-compat shim. The server no longer populates
+  // clientIp on clientVars (value was always '127.0.0.1'; see #6701 /
+  // privacy audit). pad_utils.uniqueId still consumes this as a prefix.
+  getClientIp: () => '127.0.0.1',
   getColorPalette: () => clientVars.colorPalette,
   getPrivilege: (name) => clientVars.accountPrivs[name],
   canEditPadSettings: () => !!clientVars.canEditPadSettings,
