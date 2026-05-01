@@ -19,7 +19,9 @@ const possibleActions = [
   "rm",
   "remove",
   "ls",
-  "list"
+  "list",
+  "up",
+  "update"
 ]
 
 const install = ()=> {
@@ -76,6 +78,39 @@ const list = ()=>{
   })();
 }
 
+// Re-install every plugin in installed_plugins.json without a version pin so
+// the registry-latest gets resolved and overwrites the existing pinned copy
+// in src/plugin_packages/. ep_etherpad-lite is excluded because the core is
+// vendored, not plugin-installed.
+const update = ()=> {
+  (async () => {
+    const path = settings.root+"/var/installed_plugins.json";
+    let plugins: {name: string}[];
+    try {
+      plugins = JSON.parse(fs.readFileSync(path, "utf-8")).plugins || [];
+    } catch (err: any) {
+      if (err.code === 'ENOENT') {
+        console.log("No installed_plugins.json found — nothing to update");
+        return;
+      }
+      throw err;
+    }
+    const names = plugins
+      .map((p) => p.name)
+      .filter((n) => n && n !== 'ep_etherpad-lite');
+    if (names.length === 0) {
+      console.log("No plugins installed — nothing to update");
+      return;
+    }
+    console.log(`Updating plugins to latest from registry: ${names.join(', ')}`);
+    await checkForMigration();
+    for (const name of names) {
+      await linkInstaller.installPlugin(name);
+    }
+    await persistInstalledPlugins();
+  })();
+}
+
 const remove = (plugins: string[])=>{
   const walk =  async () => {
     for (const plugin of plugins) {
@@ -111,6 +146,12 @@ switch (action) {
     break;
   case "remove":
     remove(args.slice(1));
+    break;
+  case "up":
+    update();
+    break;
+  case "update":
+    update();
     break;
   default:
     console.error('Expected at least one argument!');
