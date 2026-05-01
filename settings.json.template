@@ -308,7 +308,14 @@
      * as the author goes inactive. Set to false if users pick light colors and the
      * faded variants become visually indistinguishable.
      */
-    "fadeInactiveAuthorColors": true
+    "fadeInactiveAuthorColors": true,
+    /*
+     * Clamp author background colors to a WCAG 2.1 AA contrast ratio (4.5:1)
+     * against the rendered text colour at render time. The author's stored
+     * colour is not modified — only the displayed shade is adjusted. Set to
+     * false to render exact author colours regardless of contrast.
+     */
+    "enforceReadableAuthorColors": true
   },
 
   /*

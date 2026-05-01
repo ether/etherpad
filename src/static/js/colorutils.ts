@@ -134,24 +134,61 @@ colorutils.contrastRatio = (c1, c2) => {
   return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
 };
 
+// Per-skin rendered text colours for WCAG comparisons (issue #7377). The
+// `*Ref` values are the colours actually painted in the browser — they MUST
+// match what the CSS variables resolve to so contrast comparisons reflect
+// what the user sees. The `*Out` values are what we hand back to CSS (the
+// variable name in colibris, a hex literal otherwise).
+//
+// Colibris dark = #485365 from src/static/skins/colibris/pad.css's
+// --super-dark-color. If that variable is ever retuned, update this table.
+const SKIN_TEXT_COLORS = {
+  colibris: {darkRef: '#485365', lightRef: '#ffffff', darkOut: 'var(--super-dark-color)', lightOut: 'var(--super-light-color)'},
+  default: {darkRef: '#222222', lightRef: '#ffffff', darkOut: '#222', lightOut: '#fff'},
+};
+const skinTextColors = (skinName) => SKIN_TEXT_COLORS[skinName] || SKIN_TEXT_COLORS.default;
+
 // WCAG-aware text-colour selection (issue #7377). Pick whichever of the two
-// concrete text colours (black-ish #222 and white-ish #fff, or the equivalent
-// colibris CSS variables) produces the higher contrast ratio against the
-// background. The comparison uses the ACTUAL rendered text colours rather
-// than pure black/white so the result reflects what the user will see; the
-// old luminosity-cutoff heuristic produced sub-optimal picks for some
-// mid-saturation backgrounds (e.g. #ff0000 → white at 4.00:1 when #222
-// would have given ~3.98:1 — practically identical, and for many mid-tones
-// the margin is larger).
-const BLACK_ISH = colorutils.css2triple('#222222');
-const WHITE_ISH = colorutils.css2triple('#ffffff');
+// rendered text colours for the active skin produces the higher contrast
+// ratio against the background.
 colorutils.textColorFromBackgroundColor = (bgcolor, skinName) => {
-  const white = skinName === 'colibris' ? 'var(--super-light-color)' : '#fff';
-  const black = skinName === 'colibris' ? 'var(--super-dark-color)' : '#222';
+  const refs = skinTextColors(skinName);
   const triple = colorutils.css2triple(bgcolor);
-  const ratioWithBlack = colorutils.contrastRatio(triple, BLACK_ISH);
-  const ratioWithWhite = colorutils.contrastRatio(triple, WHITE_ISH);
-  return ratioWithBlack >= ratioWithWhite ? black : white;
+  const ratioDark = colorutils.contrastRatio(triple, colorutils.css2triple(refs.darkRef));
+  const ratioLight = colorutils.contrastRatio(triple, colorutils.css2triple(refs.lightRef));
+  return ratioDark >= ratioLight ? refs.darkOut : refs.lightOut;
+};
+
+// Some backgrounds (the issue's #9AB3FA, every mid-saturation primary like
+// #ff0000) cannot meet AA against either rendered text colour for a given
+// skin — text-colour selection alone can't fix them. ensureReadableBackground
+// blends the bg toward the extreme OPPOSITE the better-contrast text in 5%
+// increments until AA is met, preserving hue. Author's stored colour is
+// untouched — this is a viewer-side render clamp.
+//
+// Returns the input unchanged for non-hex inputs (CSS vars etc.) so callers
+// can apply this generically without first checking the value shape.
+colorutils.ensureReadableBackground = (cssColor, skinName, minContrast) => {
+  if (!colorutils.isCssHex(cssColor)) return cssColor;
+  if (minContrast == null) minContrast = 4.5;
+  const refs = skinTextColors(skinName);
+  const dark = colorutils.css2triple(refs.darkRef);
+  const light = colorutils.css2triple(refs.lightRef);
+  const triple = colorutils.css2triple(cssColor);
+  const ratioDark = colorutils.contrastRatio(triple, dark);
+  const ratioLight = colorutils.contrastRatio(triple, light);
+  if (Math.max(ratioDark, ratioLight) >= minContrast) return cssColor;
+  // Better text colour wins; blend bg toward the opposite end so the
+  // contrast against that text grows.
+  const blendTarget = ratioDark >= ratioLight ? [1, 1, 1] : [0, 0, 0];
+  const textRef = ratioDark >= ratioLight ? dark : light;
+  for (let i = 1; i <= 20; i++) {
+    const blended = colorutils.blend(triple, blendTarget, i * 0.05);
+    if (colorutils.contrastRatio(blended, textRef) >= minContrast) {
+      return colorutils.triple2css(blended);
+    }
+  }
+  return colorutils.triple2css(blendTarget);
 };
 
 exports.colorutils = colorutils;

@@ -76,6 +76,79 @@ describe(__filename, function () {
       assert.strictEqual(onDark, 'var(--super-light-color)');
     });
 
+    it('uses the actually-rendered colibris dark colour (#485365) for ratio comparisons', function () {
+      // Issue #7377 repro: bg #9AB3FA with default colibris text.
+      // The pad renders --super-dark-color as #485365 (not #222), so the
+      // selector must compare against #485365 to match what the user sees.
+      // Pre-fix this returned 'var(--super-dark-color)' based on a phantom
+      // 7.7:1 ratio computed against #222, while the actual rendered ratio
+      // was 3.78:1 — identical to what the issue reported.
+      const bg = colorutils.css2triple('#9AB3FA');
+      const colibrisDark = colorutils.css2triple('#485365');
+      const colibrisLight = colorutils.css2triple('#ffffff');
+      const ratioDark = colorutils.contrastRatio(bg, colibrisDark);
+      const ratioLight = colorutils.contrastRatio(bg, colibrisLight);
+      const picked = colorutils.textColorFromBackgroundColor('#9AB3FA', 'colibris');
+      const expected =
+          ratioDark >= ratioLight ? 'var(--super-dark-color)' : 'var(--super-light-color)';
+      assert.strictEqual(picked, expected,
+          `for #9AB3FA, dark=${ratioDark.toFixed(2)} vs light=${ratioLight.toFixed(2)} → ${expected}`);
+    });
+  });
+
+  describe('ensureReadableBackground (issue #7377)', function () {
+    const AA = 4.5;
+
+    const ratioToBetterText = (bgHex: string, skin: string) => {
+      const bg = colorutils.css2triple(bgHex);
+      // Skin-aware rendered text references — must match the production map
+      // in colorutils so the test fails if either drifts.
+      const dark = skin === 'colibris'
+        ? colorutils.css2triple('#485365')
+        : colorutils.css2triple('#222222');
+      const light = colorutils.css2triple('#ffffff');
+      return Math.max(colorutils.contrastRatio(bg, dark), colorutils.contrastRatio(bg, light));
+    };
+
+    it('clamps the issue-#7377 scenario (#9AB3FA on colibris) to ≥ AA', function () {
+      const out = colorutils.ensureReadableBackground('#9AB3FA', 'colibris');
+      assert.ok(colorutils.isCssHex(out), `expected a hex color, got ${out}`);
+      const ratio = ratioToBetterText(out, 'colibris');
+      assert.ok(ratio >= AA, `${out} only reaches ${ratio.toFixed(3)}:1 against rendered text`);
+    });
+
+    it('clamps #ff0000 (default skin) to ≥ AA — the case the test suite previously flagged as unsolvable', function () {
+      const out = colorutils.ensureReadableBackground('#ff0000', 'default');
+      const ratio = ratioToBetterText(out, 'default');
+      assert.ok(ratio >= AA, `${out} only reaches ${ratio.toFixed(3)}:1 against rendered text`);
+    });
+
+    it('returns the original hex unchanged when the bg already meets AA', function () {
+      // #ffeedd against colibris #485365 is well over AA, so we shouldn't
+      // mutate the author's colour.
+      const out = colorutils.ensureReadableBackground('#ffeedd', 'colibris');
+      assert.strictEqual(out, '#ffeedd');
+    });
+
+    it('passes non-hex bg values through unchanged (CSS vars, etc.)', function () {
+      assert.strictEqual(
+          colorutils.ensureReadableBackground('var(--something)', 'colibris'),
+          'var(--something)');
+    });
+
+    it('every pure primary clears AA after the clamp', function () {
+      const samples = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff',
+                       '#9AB3FA', '#cc6688', '#88aacc', '#ffcc88'];
+      for (const bg of samples) {
+        const out = colorutils.ensureReadableBackground(bg, 'colibris');
+        const ratio = ratioToBetterText(out, 'colibris');
+        assert.ok(ratio >= AA,
+            `${bg} → ${out} only reaches ${ratio.toFixed(3)}:1 (skin: colibris)`);
+      }
+    });
+  });
+
+  describe('textColorFromBackgroundColor — invariant', function () {
     it('always picks whichever of black/white gives the higher contrast', function () {
       // Regression invariant: the returned text colour must never produce
       // LOWER contrast than the alternative. Pre-fix, the `luminosity < 0.5`
