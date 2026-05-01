@@ -299,6 +299,16 @@ export type SettingsType = {
   lowerCasePadIds: boolean,
   randomVersionString: string,
   gitVersion: string
+  updates: {
+    tier: 'off' | 'notify' | 'manual' | 'auto' | 'autonomous',
+    source: 'github',
+    channel: 'stable',
+    installMethod: 'auto' | 'git' | 'docker' | 'npm' | 'managed',
+    checkIntervalHours: number,
+    githubRepo: string,
+    requireAdminForStatus: boolean,
+  },
+  adminEmail: string | null,
   getPublicSettings: () => Pick<SettingsType, "title" | "skinVariants"|"randomVersionString"|"skinName"|"toolbar"| "exposeVersion"| "gitVersion" | "enablePadWideSettings">,
 }
 
@@ -431,6 +441,28 @@ const settings: SettingsType = {
    * Wether to enable the /stats endpoint. The functionality in the admin menu is untouched for this.
    */
   enableMetrics: true,
+  /**
+   * Self-update subsystem (PR 1: tier 1 only).
+   * Tier "off" disables the version check entirely. Default "notify" shows a banner when behind.
+   */
+  updates: {
+    tier: 'notify',
+    source: 'github',
+    channel: 'stable',
+    installMethod: 'auto',
+    checkIntervalHours: 6,
+    githubRepo: 'ether/etherpad',
+    // The /admin/update/status endpoint returns full info including currentVersion.
+    // Default false matches existing behavior: the version is already exposed via /health.
+    // Set true to require an authenticated admin session for the endpoint without
+    // disabling the updater itself.
+    requireAdminForStatus: false,
+  },
+  /**
+   * Contact address for admin notifications (updates, future security advisories).
+   * Null disables outbound mail from the updater.
+   */
+  adminEmail: null,
   /**
    * Whether certain shortcut keys are enabled for a user in the pad
    */
