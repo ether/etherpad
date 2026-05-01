@@ -177,8 +177,11 @@
 }
 
 /* GDPR privacy banner (PR4) */
+/* `.privacy-banner[hidden]` (class+attr, specificity 0,2,0) outranks the
+ * `.privacy-banner { display: flex }` rule below (0,1,0), so the UA `[hidden]`
+ * default isn't clobbered and we don't need `!important`. */
 .privacy-banner[hidden] {
-  display: none !important;
+  display: none;
 }
 
 .privacy-banner {
