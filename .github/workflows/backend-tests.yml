@@ -126,7 +126,9 @@ jobs:
           ep_align
           ep_author_hover
           ep_cursortrace
+          ep_font_color
           ep_font_size
+          ep_hash_auth
           ep_headings2
           ep_markdown
           ep_readonly_guest
@@ -238,7 +240,9 @@ jobs:
           ep_align
           ep_author_hover
           ep_cursortrace
+          ep_font_color
           ep_font_size
+          ep_hash_auth
           ep_headings2
           ep_markdown
           ep_readonly_guest
