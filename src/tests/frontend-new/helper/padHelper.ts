@@ -133,25 +133,33 @@ const waitForEditorReady = async (page: Page) => {
 };
 
 export const goToNewPad = async (page: Page) => {
-  // create a new pad before each test run
+  // Suppress the one-time pad-deletion-token modal in tests. The modal
+  // pops up on creator sessions via the clientVars handshake and steals
+  // focus through a setTimeout, which races with goToNewPad's
+  // waitForEditorReady — the editor iframe attaches before clientVars
+  // arrives, so any post-load DOM hide runs too early and the modal
+  // still opens mid-test, eating Enter / Tab presses (#7546 regression
+  // observed in enter.spec and indentation.spec). Intercept clientVars
+  // assignment instead and null out padDeletionToken before pad.ts can
+  // read it; that way the modal-show short-circuits at the source.
+  // Tests that need to interact with the modal navigate inline and do
+  // not call this helper.
+  await page.addInitScript(() => {
+    let stored: unknown;
+    Object.defineProperty(window, 'clientVars', {
+      configurable: true,
+      get() { return stored; },
+      set(v) {
+        if (v != null && typeof v === 'object') {
+          (v as {padDeletionToken?: string | null}).padDeletionToken = null;
+        }
+        stored = v;
+      },
+    });
+  });
   const padId = "FRONTEND_TESTS"+randomUUID();
   await page.goto('http://localhost:9001/p/'+padId);
   await waitForEditorReady(page);
-  // Creator sessions see the one-time pad-deletion-token modal on first visit.
-  // Hide it directly instead of clicking the ack button — clicking the button
-  // transfers focus out of the pad iframe and breaks subsequent keyboard tests.
-  // Tests that need to interact with the modal should navigate to a new pad
-  // inline instead of using this helper.
-  await page.evaluate(() => {
-    const modal = document.getElementById('deletiontoken-modal');
-    if (modal == null || modal.hidden) return;
-    modal.hidden = true;
-    modal.classList.remove('popup-show');
-    const input = document.getElementById('deletiontoken-value') as HTMLInputElement | null;
-    if (input) input.value = '';
-    const w = window as unknown as {clientVars?: {padDeletionToken?: string | null}};
-    if (w.clientVars != null) w.clientVars.padDeletionToken = null;
-  });
   return padId;
 }
 
