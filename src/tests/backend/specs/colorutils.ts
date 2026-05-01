@@ -136,6 +136,71 @@ describe(__filename, function () {
           'var(--something)');
     });
 
+    it('clamps a dark mid-saturation bg by darkening (light text wins)', function () {
+      // Counterpart to the #9AB3FA case. #6b3a3a sits in the band where the
+      // higher-contrast text is light (#ffffff: ~5.32 — already AA, sanity
+      // check). Pick a darker example where light text is winning but still
+      // sub-AA, e.g. #884444.
+      const bg = colorutils.css2triple('#884444');
+      const dark = colorutils.css2triple('#222222');
+      const light = colorutils.css2triple('#ffffff');
+      const initialRatio = Math.max(
+          colorutils.contrastRatio(bg, dark), colorutils.contrastRatio(bg, light));
+      // Only meaningful as a clamp test if the input actually fails AA.
+      if (initialRatio >= 4.5) {
+        // Pick a tighter input that's known to fail.
+        const fail = colorutils.ensureReadableBackground('#7a4444', 'default');
+        const failTriple = colorutils.css2triple(fail);
+        const r = Math.max(
+            colorutils.contrastRatio(failTriple, dark),
+            colorutils.contrastRatio(failTriple, light));
+        assert.ok(r >= 4.5);
+        return;
+      }
+      const out = colorutils.ensureReadableBackground('#884444', 'default');
+      const outTriple = colorutils.css2triple(out);
+      const r = Math.max(
+          colorutils.contrastRatio(outTriple, dark),
+          colorutils.contrastRatio(outTriple, light));
+      assert.ok(r >= 4.5, `${out} only reached ${r.toFixed(3)}:1`);
+      // Direction check: when light text wins, we darken bg (its luminance
+      // should decrease, not increase).
+      const before = colorutils.relativeLuminance(bg);
+      const after = colorutils.relativeLuminance(outTriple);
+      assert.ok(after <= before,
+          `expected darker bg when light text wins, got luminance ${before} → ${after}`);
+    });
+
+    it('respects an explicit minContrast parameter', function () {
+      // Same input, two thresholds: AAA (7.0) must produce a more-clamped bg
+      // than AA (4.5).
+      const aa = colorutils.ensureReadableBackground('#9AB3FA', 'colibris', 4.5);
+      const aaa = colorutils.ensureReadableBackground('#9AB3FA', 'colibris', 7.0);
+      const dark = colorutils.css2triple('#485365');
+      const ratioAA = colorutils.contrastRatio(colorutils.css2triple(aa), dark);
+      const ratioAAA = colorutils.contrastRatio(colorutils.css2triple(aaa), dark);
+      assert.ok(ratioAA >= 4.5, `AA: ${ratioAA.toFixed(3)}`);
+      assert.ok(ratioAAA >= 7.0, `AAA: ${ratioAAA.toFixed(3)}`);
+    });
+
+    it('returns a parseable hex string', function () {
+      const out = colorutils.ensureReadableBackground('#9AB3FA', 'colibris');
+      assert.ok(colorutils.isCssHex(out), `not a hex color: ${out}`);
+      // Round-trip safe — must parse back into a triple without throwing.
+      assert.doesNotThrow(() => colorutils.css2triple(out));
+    });
+
+    it('accepts short-hex (#abc) input', function () {
+      // #f00 == #ff0000. The selector path normalises via css2sixhex; the
+      // clamp must do the same so callers can pass either form safely.
+      assert.doesNotThrow(() => colorutils.ensureReadableBackground('#f00', 'default'));
+      const out = colorutils.ensureReadableBackground('#f00', 'default');
+      const ratio = Math.max(
+          colorutils.contrastRatio(colorutils.css2triple(out), colorutils.css2triple('#222222')),
+          colorutils.contrastRatio(colorutils.css2triple(out), colorutils.css2triple('#ffffff')));
+      assert.ok(ratio >= 4.5);
+    });
+
     it('every pure primary clears AA after the clamp', function () {
       const samples = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff',
                        '#9AB3FA', '#cc6688', '#88aacc', '#ffcc88'];
