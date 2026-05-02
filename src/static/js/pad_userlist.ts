@@ -380,6 +380,11 @@ const paduserlist = (() => {
         // Skip clicks on the color swatch — that has its own click handler
         // (color-picker semantics) and shouldn't double up as a chat trigger.
         if ($(event.target).closest('.usertdswatch').length) return;
+        // Skip clicks on form controls inside the row. The most important
+        // case is the rename <input> rendered for unnamed users — without
+        // this guard, clicking the input would steal focus into #chatinput
+        // and make it impossible to name an unnamed user from the list.
+        if ($(event.target).closest('input, textarea, select, button, a, [contenteditable=true]').length) return;
         const tr = $(this);
         const authorId = tr.attr('data-authorId');
         if (!authorId) return;
