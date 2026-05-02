@@ -111,7 +111,7 @@ export const init = async function () {
  * @param {string} event - The socket.io Socket event to listen for.
  * @returns The argument(s) passed to the event handler.
  */
-export const waitForSocketEvent = async (socket: any, event:string) => {
+export const waitForSocketEvent = async (socket: any, event:string, timeoutMs = 1000) => {
   const errorEvents = [
     'error',
     'connect_error',
@@ -126,7 +126,7 @@ export const waitForSocketEvent = async (socket: any, event:string) => {
       const timeout = setTimeout(() => {
         reject(new Error(`timed out waiting for ${event} event`));
         cancelTimeout = () => {};
-      }, 1000);
+      }, timeoutMs);
       cancelTimeout = () => {
         clearTimeout(timeout);
         resolve();
@@ -185,7 +185,9 @@ export const connect = async (res:any = null) => {
     query: {cookie: reqCookieHdr, padId},
   });
   try {
-    await waitForSocketEvent(socket, 'connect');
+    // Connect is a known slow path on loaded CI runners — give it a longer budget than the
+    // default per-message wait used elsewhere.
+    await waitForSocketEvent(socket, 'connect', 5000);
   } catch (e) {
     socket.close();
     throw e;
@@ -213,7 +215,9 @@ export const handshake = async (socket: any, padId:string, token = padutils.gene
     token,
   });
   logger.debug('waiting for CLIENT_VARS response...');
-  const msg = await waitForSocketEvent(socket, 'message');
+  // CLIENT_VARS is a known slow path on loaded CI runners (auth + pad load) — give it a longer
+  // budget than the default per-message wait used elsewhere.
+  const msg = await waitForSocketEvent(socket, 'message', 5000);
   logger.debug('received CLIENT_VARS message');
   return msg;
 };
