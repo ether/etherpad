@@ -2,6 +2,19 @@ table#otheruserstable {
   margin-top: 20px;
 }
 
+/*
+ * Clicking a row in the user list opens chat and prefills "@<name> ".
+ * The pointer cursor on the name cell makes the affordance visible —
+ * the swatch keeps its own (color-picker) click semantics, so leave
+ * its cursor alone.
+ */
+#otheruserstable tr[data-authorId] .usertdname {
+  cursor: pointer;
+}
+#otheruserstable tr[data-authorId]:hover .usertdname {
+  text-decoration: underline;
+}
+
 .popup#users.chatAndUsers > .popup-content {
   padding: 20px 10px;
   height: 250px;
