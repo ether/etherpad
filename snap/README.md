@@ -208,8 +208,10 @@ with `sudo rm -rf parts stage prime`.
 
 ## Publishing
 
-Maintainers only. See
-[Releasing to the Snap Store](https://snapcraft.io/docs/releasing-to-the-snap-store).
+Maintainers only. See:
+- [Register a snap](https://documentation.ubuntu.com/snapcraft/latest/how-to/publishing/register-a-snap/) — claims the name on the store
+- [`snapcraft export-login`](https://documentation.ubuntu.com/snapcraft/reference/commands/export-login/) — generates the credential we put in `SNAPCRAFT_STORE_CREDENTIALS`
+- [Snapcraft publishing how-to index](https://documentation.ubuntu.com/snapcraft/latest/how-to/publishing/)
 
 One-time setup:
 

@@ -16,7 +16,7 @@
 #   3. Create a GitHub Environment called `snap-store-stable` with required
 #      reviewers so stable promotion is gated.
 #
-# Ref: https://snapcraft.io/docs/releasing-to-the-snap-store
+# Ref: https://documentation.ubuntu.com/snapcraft/latest/how-to/publishing/
 name: Snap
 on:
   push:
