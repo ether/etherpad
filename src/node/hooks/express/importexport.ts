@@ -4,6 +4,7 @@ import {ArgsExpressType} from "../../types/ArgsExpressType";
 
 const hasPadAccess = require('../../padaccess');
 import settings, {exportAvailable} from '../../utils/Settings';
+import {anonymizeIp} from '../../utils/anonymizeIp';
 const exportHandler = require('../../handler/ExportHandler');
 const importHandler = require('../../handler/ImportHandler');
 const padManager = require('../../db/PadManager');
@@ -19,7 +20,8 @@ exports.expressCreateServer = (hookName:string, args:ArgsExpressType, cb:Functio
       if (request.rateLimit.current === request.rateLimit.limit + 1) {
         // when the rate limiter triggers, write a warning in the logs
         console.warn('Import/Export rate limiter triggered on ' +
-            `"${request.originalUrl}" for IP address ${request.ip}`);
+            `"${request.originalUrl}" for IP address ` +
+            `${anonymizeIp(request.ip, settings.ipLogging)}`);
       }
     },
   });

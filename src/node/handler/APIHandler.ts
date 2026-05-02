@@ -53,7 +53,7 @@ version['1'] = {
   setHTML: ['padID', 'html'],
   getRevisionsCount: ['padID'],
   getLastEdited: ['padID'],
-  deletePad: ['padID'],
+  deletePad: ['padID', 'deletionToken'],
   getReadOnlyID: ['padID'],
   setPublicStatus: ['padID', 'publicStatus'],
   getPublicStatus: ['padID'],
@@ -142,9 +142,14 @@ version['1.3.0'] = {
   setText: ['padID', 'text', 'authorId'],
 };
 
+version['1.3.1'] = {
+  ...version['1.3.0'],
+  compactPad: ['padID', 'keepRevisions'],
+};
+
 
 // set the latest available API version here
-exports.latestApiVersion = '1.3.0';
+exports.latestApiVersion = '1.3.1';
 
 // exports the versions so it can be used by the new Swagger endpoint
 exports.version = version;

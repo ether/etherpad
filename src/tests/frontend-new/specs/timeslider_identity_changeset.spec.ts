@@ -1,5 +1,6 @@
 import {expect, test} from "@playwright/test";
-import {goToNewPad, getPadBody, clearPadContent, writeToPad} from "../helper/padHelper";
+import {goToNewPad, getPadBody, clearPadContent, selectAllText, writeToPad}
+  from "../helper/padHelper";
 
 /**
  * Regression test for https://github.com/ether/etherpad-lite/issues/5214
@@ -25,10 +26,12 @@ test.describe('Timeslider with identity changesets (bug #5214)', function () {
     await writeToPad(page, 'First revision text');
     await page.waitForTimeout(500);
 
-    // Select all and delete (creates a "delete everything" revision)
-    await page.keyboard.down('Control');
-    await page.keyboard.press('A');
-    await page.keyboard.up('Control');
+    // Select all and delete (creates a "delete everything" revision).
+    // Use selectAllText helper instead of raw keyboard chord: under
+    // Firefox + WITH_PLUGINS the keyboard.down/press/up('Control')
+    // sequence races with the focus delegation into the inner ace
+    // iframe and can drop either the Control or the A keystroke.
+    await selectAllText(page);
     await page.keyboard.press('Backspace');
     await page.waitForTimeout(500);
 

@@ -23,6 +23,7 @@ import {deserializeOps} from '../../static/js/Changeset';
 import ChatMessage from '../../static/js/ChatMessage';
 import {Builder} from "../../static/js/Builder";
 import {Attribute} from "../../static/js/types/Attribute";
+import settings from '../utils/Settings';
 const CustomError = require('../utils/customError');
 const padManager = require('./PadManager');
 const padMessageHandler = require('../handler/PadMessageHandler');
@@ -30,6 +31,7 @@ import readOnlyManager from './ReadOnlyManager';
 const groupManager = require('./GroupManager');
 const authorManager = require('./AuthorManager');
 const sessionManager = require('./SessionManager');
+const padDeletionManager = require('./PadDeletionManager');
 const exportHtml = require('../utils/ExportHtml');
 const exportTxt = require('../utils/ExportTxt');
 const importHtml = require('../utils/ImportHtml');
@@ -518,19 +520,36 @@ exports.createPad = async (padID: string, text: string, authorId = '') => {
 
   // create pad
   await getPadSafe(padID, false, text, authorId);
+  // When requireAuthentication is on, every creator has a stable identity, so
+  // the cookie/identity path covers recovery and the one-time token is just
+  // an extra surface to leak.
+  const deletionToken = settings.requireAuthentication
+      ? null
+      : await padDeletionManager.createDeletionTokenIfAbsent(padID);
+  return {deletionToken};
 };
 
 /**
-deletePad(padID) deletes a pad
+deletePad(padID, [deletionToken]) deletes a pad
 
 Example returns:
 
 {code: 0, message:"ok", data: null}
 {code: 1, message:"padID does not exist", data: null}
+{code: 1, message:"invalid deletionToken", data: null}
  @param {String} padID the id of the pad
+ @param {String} [deletionToken] recovery token issued by createPad
 */
-exports.deletePad = async (padID: string) => {
+exports.deletePad = async (padID: string, deletionToken?: string) => {
   const pad = await getPadSafe(padID, true);
+  // apikey-authenticated callers (no deletionToken supplied) are trusted.
+  // When a caller supplies a deletionToken, it must validate unless the
+  // instance has opted everyone in via allowPadDeletionByAllUsers.
+  if (deletionToken !== undefined && deletionToken !== '' &&
+      !settings.allowPadDeletionByAllUsers &&
+      !await padDeletionManager.isValidDeletionToken(padID, deletionToken)) {
+    throw new CustomError('invalid deletionToken', 'apierror');
+  }
   await pad.remove();
 };
 
@@ -633,6 +652,52 @@ Example returns:
 exports.copyPadWithoutHistory = async (sourceID: string, destinationID: string, force:boolean, authorId = '') => {
   const pad = await getPadSafe(sourceID, true);
   await pad.copyPadWithoutHistory(destinationID, force, authorId);
+};
+
+/**
+compactPad(padID, [keepRevisions]) collapses the pad's revision history to
+reclaim database space (issue #6194). Wraps the existing `Cleanup` helper
+so admins can trigger it over the public API / CLI rather than only
+through the admin settings UI.
+
+Gated on `settings.cleanup.enabled` so the public API can't bypass the
+same opt-in switch the admin/Cleanup path already requires.
+
+When `keepRevisions` is omitted (or `null`), all history is collapsed
+into a single base revision that reproduces the current atext
+(equivalent to a freshly-imported pad). When set to a positive integer
+N, the pad keeps only its last N revisions (equivalent to
+`cleanup.keepRevisions`). Pad text and chat history are preserved in
+both modes. Destructive — recommend exporting the `.etherpad` snapshot
+first.
+
+Example returns:
+
+{code: 0, message:"ok", data: {ok: true, mode: "all"}}
+{code: 1, message:"padID does not exist", data: null}
+{code: 1, message:"compactPad requires cleanup.enabled = true ...", data: null}
+
+ @param {String} padID the id of the pad to compact
+ @param {Number|null} keepRevisions number of recent revisions to keep;
+     null / omitted collapses the full history
+*/
+exports.compactPad = async (padID: string, keepRevisions: number | null = null) => {
+  if (!settings.cleanup.enabled) {
+    throw new CustomError(
+        'compactPad requires cleanup.enabled = true in settings.json', 'apierror');
+  }
+  const pad = await getPadSafe(padID, true);
+  const cleanup = require('../utils/Cleanup');
+  if (keepRevisions == null) {
+    await cleanup.deleteAllRevisions(pad.id);
+    return {ok: true, mode: 'all'};
+  }
+  const keep = Number(keepRevisions);
+  if (!Number.isInteger(keep) || keep < 0) {
+    throw new CustomError('keepRevisions must be a non-negative integer', 'apierror');
+  }
+  const ok = await cleanup.deleteRevisions(pad.id, keep);
+  return {ok, mode: 'keepLast', keepRevisions: keep};
 };
 
 /**

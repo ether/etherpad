@@ -1,4 +1,4 @@
-import {Frame, Locator, Page} from "@playwright/test";
+import {expect, Frame, Locator, Page} from "@playwright/test";
 import {MapArrayType} from "../../../node/types/MapType";
 import {randomUUID} from "node:crypto";
 
@@ -114,19 +114,58 @@ export const appendQueryParams = async (page: Page, queryParameters: MapArrayTyp
   await page.waitForSelector('#editorcontainer.initialized');
 }
 
-export const goToNewPad = async (page: Page) => {
-  // create a new pad before each test run
-  const padId = "FRONTEND_TESTS"+randomUUID();
-  await page.goto('http://localhost:9001/p/'+padId);
+// Wait until the inner editor body has flipped from
+// `class="static" contentEditable="false"` to editable. ace does this
+// once padeditor.init resolves; under WITH_PLUGINS load in Firefox the
+// flip can lag past `#editorcontainer.initialized`, long enough that
+// an immediate click + keyboard.type runs against a still-static body
+// and is silently dropped (the body keeps showing the default welcome
+// text and never sees the input). Helpers used by every test call
+// this so we only have one source of truth for "the editor is ready
+// to receive input".
+const waitForEditorReady = async (page: Page) => {
   await page.waitForSelector('iframe[name="ace_outer"]');
   await page.waitForSelector('#editorcontainer.initialized');
+  await page.frameLocator('iframe[name="ace_outer"]')
+            .frameLocator('iframe[name="ace_inner"]')
+            .locator('#innerdocbody[contenteditable="true"]')
+            .waitFor({state: 'attached'});
+};
+
+export const goToNewPad = async (page: Page) => {
+  // Suppress the one-time pad-deletion-token modal in tests. The modal
+  // pops up on creator sessions via the clientVars handshake and steals
+  // focus through a setTimeout, which races with goToNewPad's
+  // waitForEditorReady — the editor iframe attaches before clientVars
+  // arrives, so any post-load DOM hide runs too early and the modal
+  // still opens mid-test, eating Enter / Tab presses (#7546 regression
+  // observed in enter.spec and indentation.spec). Intercept clientVars
+  // assignment instead and null out padDeletionToken before pad.ts can
+  // read it; that way the modal-show short-circuits at the source.
+  // Tests that need to interact with the modal navigate inline and do
+  // not call this helper.
+  await page.addInitScript(() => {
+    let stored: unknown;
+    Object.defineProperty(window, 'clientVars', {
+      configurable: true,
+      get() { return stored; },
+      set(v) {
+        if (v != null && typeof v === 'object') {
+          (v as {padDeletionToken?: string | null}).padDeletionToken = null;
+        }
+        stored = v;
+      },
+    });
+  });
+  const padId = "FRONTEND_TESTS"+randomUUID();
+  await page.goto('http://localhost:9001/p/'+padId);
+  await waitForEditorReady(page);
   return padId;
 }
 
 export const goToPad = async (page: Page, padId: string) => {
   await page.goto('http://localhost:9001/p/'+padId);
-  await page.waitForSelector('iframe[name="ace_outer"]');
-  await page.waitForSelector('#editorcontainer.initialized');
+  await waitForEditorReady(page);
 }
 
 
@@ -142,7 +181,18 @@ export const clearPadContent = async (page: Page) => {
 export const writeToPad = async (page: Page, text: string) => {
   const body = await getPadBody(page);
   await body.click();
-  await page.keyboard.type(text);
+  // Use insertText (single input event) instead of keyboard.type
+  // (one keydown/keyup per char). Firefox under WITH_PLUGINS load
+  // racily drops characters from per-key events; insertText delivers
+  // each chunk in one event, which Etherpad's incorporateUserChanges
+  // pipeline handles atomically. insertText does not translate \n
+  // into a real Enter keystroke, so split on newlines and press
+  // Enter between segments to preserve multi-line input.
+  const lines = text.split('\n');
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i]) await page.keyboard.insertText(lines[i]);
+    if (i < lines.length - 1) await page.keyboard.press('Enter');
+  }
 }
 
 export const clearAuthorship = async (page: Page) => {

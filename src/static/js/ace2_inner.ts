@@ -476,8 +476,8 @@ function Ace2Inner(editorInfo, cssManagers) {
       if (text.charAt(text.length - 1) !== '\n') {
         throw new Error('new raw text must end with newline');
       }
-      if (/[\r\t\xa0]/.exec(text)) {
-        throw new Error('new raw text must not contain CR, tab, or nbsp');
+      if (/[\r\t]/.exec(text)) {
+        throw new Error('new raw text must not contain CR or tab');
       }
       lines = text.substring(0, text.length - 1).split('\n');
     } else {
@@ -2042,7 +2042,7 @@ function Ace2Inner(editorInfo, cssManagers) {
       (nonEmpty) => domline.createDomLine(nonEmpty, doesWrap, browser, document);
 
   const textify =
-      (str) => str.replace(/[\n\r ]/g, ' ').replace(/\xa0/g, ' ').replace(/\t/g, '        ');
+      (str) => str.replace(/[\n\r ]/g, ' ').replace(/\t/g, '        ');
 
   const _blockElems = {
     div: 1,
@@ -2478,6 +2478,77 @@ function Ace2Inner(editorInfo, cssManagers) {
     }
   };
 
+  // --------------------------------------------------------------------------
+  // Line-oriented editing (issue #6433): IDE-style duplicate-line /
+  // delete-line shortcuts. Full multi-cursor support would require changes
+  // to the rep model; these single-cursor ops get users the highest-value
+  // behavior (duplicate, delete) without that architectural lift. Both
+  // helpers operate on the *line range* spanned by the current selection, so
+  // a user with three lines highlighted can duplicate or delete all three at
+  // once — matching VS Code's behavior.
+  // --------------------------------------------------------------------------
+
+  const selectedLineRange = (): [number, number] => {
+    if (!rep.selStart || !rep.selEnd) return [0, 0];
+    return [
+      Math.min(rep.selStart[0], rep.selEnd[0]),
+      Math.max(rep.selStart[0], rep.selEnd[0]),
+    ];
+  };
+
+  const doDuplicateSelectedLines = () => {
+    if (!rep.selStart || !rep.selEnd) return;
+    const [start, end] = selectedLineRange();
+    const lineTexts: string[] = [];
+    for (let i = start; i <= end; i++) {
+      lineTexts.push(rep.lines.atIndex(i).text);
+    }
+    // Insert the block at the start of the next line so the duplicate lands
+    // *below* the selection and the caret visually stays with the original
+    // content — same as the IDE convention.
+    //
+    // Known limitation: performDocumentReplaceRange assigns only the current
+    // author attribute to the inserted text, so character-level attributes
+    // (bold, italic, list, heading) on the source line are *not* carried over
+    // to the duplicate. A first attempt to rebuild this via a custom
+    // Builder + per-op `rep.alines[i]` iteration tripped over the
+    // "insertion-past-final-newline" edge case that
+    // performDocumentReplaceRange handles internally; getting both right
+    // together is beyond the scope of this PR. Tracked for follow-up — the
+    // plain-text duplicate is still a useful shortcut for unformatted text,
+    // which is the common case.
+    const inserted = `${lineTexts.join('\n')}\n`;
+    performDocumentReplaceRange([end + 1, 0], [end + 1, 0], inserted);
+  };
+
+  const doDeleteSelectedLines = () => {
+    if (!rep.selStart || !rep.selEnd) return;
+    const [start, end] = selectedLineRange();
+    const numLines = rep.lines.length();
+    if (end + 1 < numLines) {
+      // Strip the selected line(s) along with their trailing newline.
+      performDocumentReplaceRange([start, 0], [end + 1, 0], '');
+    } else if (start > 0) {
+      // The selection covers the final line(s) — also consume the preceding
+      // newline so the pad doesn't end up with a dangling empty line.
+      const prevLen = rep.lines.atIndex(start - 1).text.length;
+      const lastLen = rep.lines.atIndex(end).text.length;
+      performDocumentReplaceRange([start - 1, prevLen], [end, lastLen], '');
+    } else {
+      // Whole pad selected (or only line). Blank the selected range but keep
+      // an empty line behind — Etherpad always expects at least one line to
+      // exist. The range end must be [end, lastLen] so multi-line whole-pad
+      // selections are cleared completely; using [0, lastLen] here (with
+      // lastLen computed from `end`) would only partially blank line 0 and
+      // could produce an invalid range when lastLen exceeds line 0's width.
+      const lastLen = rep.lines.atIndex(end).text.length;
+      performDocumentReplaceRange([0, 0], [end, lastLen], '');
+    }
+  };
+
+  editorInfo.ace_doDuplicateSelectedLines = doDuplicateSelectedLines;
+  editorInfo.ace_doDeleteSelectedLines = doDeleteSelectedLines;
+
   const doDeleteKey = (optEvt) => {
     const evt = optEvt || {};
     let handled = false;
@@ -2862,6 +2933,26 @@ function Ace2Inner(editorInfo, cssManagers) {
           CMDS.clearauthorship();
         }
         if (!specialHandled && isTypeForCmdKey &&
+            // cmd-shift-D (duplicate line) — issue #6433
+            (evt.metaKey || evt.ctrlKey) && evt.shiftKey &&
+            String.fromCharCode(which).toLowerCase() === 'd' &&
+            padShortcutEnabled.cmdShiftD) {
+          fastIncorp(21);
+          evt.preventDefault();
+          doDuplicateSelectedLines();
+          specialHandled = true;
+        }
+        if (!specialHandled && isTypeForCmdKey &&
+            // cmd-shift-K (delete line) — issue #6433
+            (evt.metaKey || evt.ctrlKey) && evt.shiftKey &&
+            String.fromCharCode(which).toLowerCase() === 'k' &&
+            padShortcutEnabled.cmdShiftK) {
+          fastIncorp(22);
+          evt.preventDefault();
+          doDeleteSelectedLines();
+          specialHandled = true;
+        }
+        if (!specialHandled && isTypeForCmdKey &&
             // cmd-H (backspace)
             (evt.ctrlKey) && String.fromCharCode(which).toLowerCase() === 'h' &&
             padShortcutEnabled.cmdH) {
@@ -2879,22 +2970,36 @@ function Ace2Inner(editorInfo, cssManagers) {
           // This is required, browsers will try to do normal default behavior on
           // page up / down and the default behavior SUCKS
           evt.preventDefault();
-          const oldVisibleLineRange = scroll.getVisibleLineRange(rep);
-          let topOffset = rep.selStart[0] - oldVisibleLineRange[0];
-          if (topOffset < 0) {
-            topOffset = 0;
-          }
 
           const isPageDown = evt.which === 34;
           const isPageUp = evt.which === 33;
 
+          const oldVisibleLineRange = scroll.getVisibleLineRange(rep);
+          let topOffset = rep.selStart[0] - oldVisibleLineRange[0];
+          if (topOffset < 0) topOffset = 0;
+
           scheduler.setTimeout(() => {
-            // the visible lines IE 1,10
             const newVisibleLineRange = scroll.getVisibleLineRange(rep);
-            // total count of lines in pad IE 10
             const linesCount = rep.lines.length();
-            // How many lines are in the viewport right now?
-            const numberOfLinesInViewport = newVisibleLineRange[1] - newVisibleLineRange[0];
+
+            // Calculate lines to skip based on viewport pixel height divided by
+            // the average rendered line height. This correctly handles long wrapped
+            // lines that consume multiple visual rows (fixes #4562).
+            const viewportHeight = getInnerHeight();
+            const visibleStart = newVisibleLineRange[0];
+            const visibleEnd = newVisibleLineRange[1];
+            let totalPixelHeight = 0;
+            for (let i = visibleStart; i <= Math.min(visibleEnd, linesCount - 1); i++) {
+              const entry = rep.lines.atIndex(i);
+              if (entry && entry.lineNode) {
+                totalPixelHeight += entry.lineNode.offsetHeight;
+              }
+            }
+            const visibleLogicalLines = visibleEnd - visibleStart + 1;
+            // Use pixel-based count: how many logical lines fit in one viewport
+            const numberOfLinesInViewport = visibleLogicalLines > 0 && totalPixelHeight > 0
+                ? Math.max(1, Math.round(visibleLogicalLines * viewportHeight / totalPixelHeight))
+                : Math.max(1, visibleLogicalLines);
 
             if (isPageUp && padShortcutEnabled.pageUp) {
               rep.selStart[0] -= numberOfLinesInViewport;
@@ -2910,18 +3015,11 @@ function Ace2Inner(editorInfo, cssManagers) {
             rep.selStart[0] = Math.max(0, Math.min(rep.selStart[0], linesCount - 1));
             rep.selEnd[0] = Math.max(0, Math.min(rep.selEnd[0], linesCount - 1));
             updateBrowserSelectionFromRep();
-            // get the current caret selection, can't use rep. here because that only gives
-            // us the start position not the current
+            // scroll to the caret position
             const myselection = targetDoc.getSelection();
-            // get the carets selection offset in px IE 214
             let caretOffsetTop = myselection.focusNode.parentNode.offsetTop ||
                 myselection.focusNode.offsetTop;
-
-            // sometimes the first selection is -1 which causes problems
-            // (Especially with ep_page_view)
-            // so use focusNode.offsetTop value.
             if (caretOffsetTop === -1) caretOffsetTop = myselection.focusNode.offsetTop;
-            // set the scrollY offset of the viewport on the document
             scroll.setScrollY(caretOffsetTop);
           }, 200);
         }
@@ -2994,6 +3092,25 @@ function Ace2Inner(editorInfo, cssManagers) {
                 lineAndColumnFromChar(selectionInfo.selStart),
                 lineAndColumnFromChar(selectionInfo.selEnd),
                 selectionInfo.selFocusAtStart);
+            // Issue #7007: bring the caret's line into view after
+            // undo/redo so the user can actually see the change that
+            // just got reverted. The outer inCallStack's finally-block
+            // scroll path is fragile on large pads — in particular
+            // `scrollNodeVerticallyIntoView`'s caret-below-viewport
+            // branch intentionally scrolls to a fixed offset to keep
+            // the Enter-on-last-line experience smooth (see PR #4639),
+            // which leaves undo/redo pointed at the wrong spot
+            // whenever the caret jumps to a mid-document line. Using
+            // Element.scrollIntoView with block:"center" is native,
+            // framework-agnostic, and matches the behavior other
+            // editors (gedit, libreoffice) use.
+            const focusPoint = selectionInfo.selFocusAtStart
+                ? lineAndColumnFromChar(selectionInfo.selStart)
+                : lineAndColumnFromChar(selectionInfo.selEnd);
+            const caretLineNode = rep.lines.atIndex(focusPoint[0])?.lineNode;
+            if (caretLineNode && typeof caretLineNode.scrollIntoView === 'function') {
+              caretLineNode.scrollIntoView({block: 'center', behavior: 'auto'});
+            }
           }
           const oldEvent = currentCallStack.startNewEvent(oldEventType, true);
           return oldEvent;

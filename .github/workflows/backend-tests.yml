@@ -28,27 +28,28 @@ jobs:
       fail-fast: false
       matrix:
         # PRs: test on latest Node only. Push to develop: full matrix.
-        node: ${{ github.event_name == 'pull_request' && fromJSON('[">=24.0.0 <25.0.0"]') || fromJSON('[">=20.0.0 <21.0.0", ">=22.0.0 <23.0.0", ">=24.0.0 <25.0.0"]') }}
+        node: ${{ github.event_name == 'pull_request' && fromJSON('[24]') || fromJSON('[22, 24, 25]') }}
     steps:
       -
         name: Checkout repository
         uses: actions/checkout@v6
       - uses: actions/cache@v5
-        name: Setup gnpm cache
-        if: always()
+        name: Cache pnpm store
         with:
-          path: |
-             ${{ env.PNPM_HOME }}
-             ~/.local/share/gnpm
-             /usr/local/bin/gnpm
-             /usr/local/bin/gnpm-0.0.12
-          key: ${{ runner.os }}-gnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          path: ${{ env.PNPM_HOME }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
-                  ${{ runner.os }}-gnpm-store-
-      - name: Setup gnpm
-        uses: SamTV12345/gnpm-setup@main
+            ${{ runner.os }}-pnpm-store-
+      - uses: pnpm/action-setup@v6
+        name: Install pnpm
         with:
-          version: 0.0.12
+          version: 10.33.2
+          run_install: false
+      - name: Use Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node }}
+          cache: pnpm
       -
         name: Install libreoffice
         uses: awalsh128/cache-apt-pkgs-action@v1.6.0
@@ -57,19 +58,19 @@ jobs:
           version: 1.0
       -
         name: Install all dependencies and symlink for ep_etherpad-lite
-        run: gnpm i --frozen-lockfile --runtimeVersion="${{ matrix.node }}"
+        run: pnpm i --frozen-lockfile
       - name: Install admin ui
         working-directory: admin
-        run: gnpm install  --runtimeVersion="${{ matrix.node }}"
+        run: pnpm install
       - name: Build admin ui
         working-directory: admin
-        run: gnpm build  --runtimeVersion="${{ matrix.node }}"
+        run: pnpm build
       -
         name: Run the backend tests
-        run: gnpm test  --runtimeVersion="${{ matrix.node }}"
+        run: pnpm test
       - name: Run the new vitest tests
         working-directory: src
-        run: gnpm run test:vitest  --runtimeVersion="${{ matrix.node }}"
+        run: pnpm run test:vitest
 
   withpluginsLinux:
     env:
@@ -84,27 +85,28 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: ${{ github.event_name == 'pull_request' && fromJSON('[">=24.0.0 <25.0.0"]') || fromJSON('[">=20.0.0 <21.0.0", ">=22.0.0 <23.0.0", ">=24.0.0 <25.0.0"]') }}
+        node: ${{ github.event_name == 'pull_request' && fromJSON('[24]') || fromJSON('[22, 24, 25]') }}
     steps:
       -
         name: Checkout repository
         uses: actions/checkout@v6
       - uses: actions/cache@v5
-        name: Setup pnpm cache
-        if: always()
+        name: Cache pnpm store
         with:
-          path: |
-            ${{ env.PNPM_HOME }}
-            ~/.local/share/gnpm
-            /usr/local/bin/gnpm
-            /usr/local/bin/gnpm-0.0.12
-          key: ${{ runner.os }}-gnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          path: ${{ env.PNPM_HOME }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
-            ${{ runner.os }}-gnpm-store-
-      - name: Setup gnpm
-        uses: SamTV12345/gnpm-setup@main
+            ${{ runner.os }}-pnpm-store-
+      - uses: pnpm/action-setup@v6
+        name: Install pnpm
         with:
-          version: 0.0.12
+          version: 10.33.2
+          run_install: false
+      - name: Use Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node }}
+          cache: pnpm
       -
         name: Install libreoffice
         uses: awalsh128/cache-apt-pkgs-action@v1.6.0
@@ -113,18 +115,20 @@ jobs:
           version: 1.0
       -
         name: Install all dependencies and symlink for ep_etherpad-lite
-        run: gnpm install --frozen-lockfile --runtimeVersion="${{ matrix.node }}"
+        run: pnpm install --frozen-lockfile
       - name: Build admin ui
         working-directory: admin
-        run: gnpm build   --runtimeVersion="${{ matrix.node }}"
+        run: pnpm build
       -
         name: Install Etherpad plugins
         run: >
-          gnpm install --workspace-root
+          pnpm add -w
           ep_align
           ep_author_hover
           ep_cursortrace
+          ep_font_color
           ep_font_size
+          ep_hash_auth
           ep_headings2
           ep_markdown
           ep_readonly_guest
@@ -134,10 +138,10 @@ jobs:
           ep_table_of_contents
       -
         name: Run the backend tests
-        run: gnpm test   --runtimeVersion="${{ matrix.node }}"
+        run: pnpm test
       - name: Run the new vitest tests
         working-directory: src
-        run: gnpm run test:vitest   --runtimeVersion="${{ matrix.node }}"
+        run: pnpm run test:vitest
 
   # Windows tests only run on push to develop/master, not on PRs
   withoutpluginsWindows:
@@ -148,7 +152,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: [">=20.0.0 <21.0.0", ">=22.0.0 <23.0.0", ">=24.0.0 <25.0.0"]
+        node: [22, 24, 25]
     name: Windows without plugins
     runs-on: windows-latest
     steps:
@@ -156,26 +160,28 @@ jobs:
         name: Checkout repository
         uses: actions/checkout@v6
       - uses: actions/cache@v5
-        name: Setup pnpm cache
-        if: always()
+        name: Cache pnpm store
         with:
-          path: |
-            ${{ env.PNPM_HOME }}
-            C:\gnpm\
-            C:\Users\runneradmin\AppData\Roaming\gnpm\
-          key: ${{ runner.os }}-gnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          path: ${{ env.PNPM_HOME }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
-            ${{ runner.os }}-gnpm-store-
-      - name: Setup gnpm
-        uses: SamTV12345/gnpm-setup@main
+            ${{ runner.os }}-pnpm-store-
+      - uses: pnpm/action-setup@v6
+        name: Install pnpm
         with:
-          version: 0.0.12
+          version: 10.33.2
+          run_install: false
+      - name: Use Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node }}
+          cache: pnpm
       -
         name: Install all dependencies and symlink for ep_etherpad-lite
-        run: gnpm install --frozen-lockfile   --runtimeVersion="${{ matrix.node }}"
+        run: pnpm install --frozen-lockfile
       - name: Build admin ui
         working-directory: admin
-        run: gnpm build   --runtimeVersion="${{ matrix.node }}"
+        run: pnpm build
       -
         name:  Fix up the settings.json
         run: |
@@ -184,10 +190,10 @@ jobs:
       -
         name: Run the backend tests
         working-directory: src
-        run: gnpm test  --runtimeVersion="${{ matrix.node }}"
+        run: pnpm test
       - name: Run the new vitest tests
         working-directory: src
-        run: gnpm run test:vitest  --runtimeVersion="${{ matrix.node }}"
+        run: pnpm run test:vitest
 
   withpluginsWindows:
     env:
@@ -197,7 +203,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: [">=20.0.0 <21.0.0", ">=22.0.0 <23.0.0", ">=24.0.0 <25.0.0"]
+        node: [22, 24, 25]
     name: Windows with Plugins
     runs-on: windows-latest
 
@@ -206,33 +212,37 @@ jobs:
         name: Checkout repository
         uses: actions/checkout@v6
       - uses: actions/cache@v5
-        name: Setup pnpm cache
-        if: always()
+        name: Cache pnpm store
         with:
-          path: |
-            ${{ env.PNPM_HOME }}
-            C:\gnpm\
-            C:\Users\runneradmin\AppData\Roaming\gnpm\
-          key: ${{ runner.os }}-gnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          path: ${{ env.PNPM_HOME }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
-            ${{ runner.os }}-gnpm-store-
-      - name: Setup gnpm
-        uses: SamTV12345/gnpm-setup@main
+            ${{ runner.os }}-pnpm-store-
+      - uses: pnpm/action-setup@v6
+        name: Install pnpm
         with:
-          version: 0.0.12
+          version: 10.33.2
+          run_install: false
+      - name: Use Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node }}
+          cache: pnpm
       - name: Install dependencies
-        run: gnpm install --runtimeVersion="${{ matrix.node }}"
+        run: pnpm install
       - name: Build admin ui
         working-directory: admin
-        run: gnpm build --runtimeVersion="${{ matrix.node }}"
+        run: pnpm build
       -
         name: Install Etherpad plugins
         run: >
-          gnpm install --workspace-root
+          pnpm add -w
           ep_align
           ep_author_hover
           ep_cursortrace
+          ep_font_color
           ep_font_size
+          ep_hash_auth
           ep_headings2
           ep_markdown
           ep_readonly_guest
@@ -251,7 +261,7 @@ jobs:
       # rules.
       -
         name: Install all dependencies and symlink for ep_etherpad-lite
-        run: gnpm install --frozen-lockfile   --runtimeVersion="${{ matrix.node }}"
+        run: pnpm install --frozen-lockfile
       -
         name:  Fix up the settings.json
         run: |
@@ -260,7 +270,7 @@ jobs:
       -
         name: Run the backend tests
         working-directory: src
-        run: gnpm test   --runtimeVersion="${{ matrix.node }}"
+        run: pnpm test
       - name: Run the new vitest tests
         working-directory: src
-        run: gnpm run test:vitest   --runtimeVersion="${{ matrix.node }}"
+        run: pnpm run test:vitest

@@ -51,7 +51,7 @@ pnpm --filter ep_etherpad-lite run prod         # Start production server
 - **Commits:** Maintain a linear history (no merge commits). Use meaningful messages in the format: `submodule: description`.
 - **Feature Flags:** New features should be placed behind feature flags and disabled by default.
 - **Deprecation:** Never remove features abruptly; deprecate them first with a `WARN` log.
-- **Forks:** For etherpad-lite changes, commit to `johnmclear/etherpad-lite` fork on a new branch, then PR to `ether/etherpad-lite`. For plugins (`ep_*` repos), committing directly is acceptable.
+- **Forks:** For etherpad-lite changes, commit to `johnmclear/etherpad-lite` fork on a new branch, then PR to `ether/etherpad`. For plugins (`ep_*` repos), committing directly is acceptable.
 
 ### Testing & Validation
 - **Requirement:** Every bug fix MUST include a regression test in the same commit.

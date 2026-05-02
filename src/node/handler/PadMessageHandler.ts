@@ -23,6 +23,7 @@ import {MapArrayType} from "../types/MapType";
 
 import AttributeMap from '../../static/js/AttributeMap';
 const padManager = require('../db/PadManager');
+const padDeletionManager = require('../db/PadDeletionManager');
 import {checkRep, cloneAText, compose, deserializeOps, follow, identity, inverse, makeAText, makeSplice, moveOpsToNewPool, mutateAttributionLines, mutateTextLines, oldLen, prepareForWire, splitAttributionLines, splitTextLines, unpack} from '../../static/js/Changeset';
 import ChatMessage from '../../static/js/ChatMessage';
 import AttributePool from '../../static/js/AttributePool';
@@ -34,6 +35,8 @@ import settings, {
   exportAvailable,
   sofficeAvailable
 } from '../utils/Settings';
+import {anonymizeIp} from '../utils/anonymizeIp';
+const logIp = (ip: string | null | undefined) => anonymizeIp(ip, settings.ipLogging);
 const securityManager = require('../db/SecurityManager');
 const plugins = require('../../static/js/pluginfw/plugin_defs');
 import log4js from 'log4js';
@@ -108,6 +111,34 @@ function getActivePadCountFromSessionInfos() {
   return padIds.size;
 }
 exports.getActivePadCountFromSessionInfos = getActivePadCountFromSessionInfos;
+
+/**
+ * Build a sanitized copy of the plugins registry suitable for sending to the
+ * client as part of clientVars. The shape is preserved but each plugin's
+ * `package` field is reduced to `{name, version}` so internal paths (realPath,
+ * path, location) are not leaked to the browser.
+ *
+ * CRITICAL: this function MUST NOT mutate the shared server-side registry.
+ * Other components — notably `src/node/utils/Minify.ts` — read
+ * `plugins.plugins[x].package.realPath` on every static asset request to
+ * resolve `/static/plugins/ep_<name>/...` URLs to disk. Mutating the shared object
+ * in place would clobber `realPath` and cause every such request to 500 with
+ * `ERR_INVALID_ARG_TYPE: The "path" argument must be of type string`.
+ */
+const sanitizePluginsForWire = (
+  pluginsRegistry: MapArrayType<any>,
+): MapArrayType<any> => {
+  const out: MapArrayType<any> = {};
+  for (const [name, plugin] of Object.entries(pluginsRegistry)) {
+    const p: any = plugin.package;
+    out[name] = {
+      ...plugin,
+      package: {name: p.name, version: p.version},
+    };
+  }
+  return out;
+};
+exports.sanitizePluginsForWire = sanitizePluginsForWire;
 
 stats.gauge('totalUsers', () => getTotalActiveUsers());
 stats.gauge('activePads', () => {
@@ -203,7 +234,7 @@ exports.handleDisconnect = async (socket:any) => {
   accessLogger.info('[LEAVE]' +
                     ` pad:${session.padId}` +
                     ` socket:${socket.id}` +
-                    ` IP:${settings.disableIPlogging ? 'ANONYMOUS' : socket.request.ip}` +
+                    ` IP:${logIp(socket.request.ip)}` +
                     ` authorID:${session.author}` +
                     (user && user.username ? ` username:${user.username}` : ''));
   /* eslint-enable prefer-template */
@@ -229,39 +260,48 @@ exports.handleDisconnect = async (socket:any) => {
 const handlePadDelete = async (socket: any, padDeleteMessage: PadDeleteMessage) => {
   const session = sessioninfos[socket.id];
   if (!session || !session.author || !session.padId) throw new Error('session not ready');
-  if (await padManager.doesPadExist(padDeleteMessage.data.padId)) {
-    const retrievedPad = await padManager.getPad(padDeleteMessage.data.padId)
-    // Only the one doing the first revision can delete the pad, otherwise people could troll a lot
-    const firstContributor = await retrievedPad.getRevisionAuthor(0)
-    if (session.author === firstContributor) {
-      await retrievedPad.remove()
-    } else {
+  const padId = padDeleteMessage.data.padId;
+  if (session.padId !== padId) throw new Error('refusing cross-pad delete');
+  if (!await padManager.doesPadExist(padId)) return;
 
-      type ShoutMessage = {
-        message: string,
-        sticky: boolean,
-      }
+  const retrievedPad = await padManager.getPad(padId);
+  const firstContributor = await retrievedPad.getRevisionAuthor(0);
+  const isCreator = session.author === firstContributor;
+  const suppliedToken = padDeleteMessage.data.deletionToken;
+  const tokenSupplied = typeof suppliedToken === 'string' && suppliedToken !== '';
+  const tokenOk = tokenSupplied &&
+      await padDeletionManager.isValidDeletionToken(padId, suppliedToken);
+  // When a token is supplied it must validate. We deliberately do NOT fall
+  // back to the creator-cookie path, otherwise a creator pasting a wrong
+  // recovery token into the disclosure field would still succeed — masking a
+  // typo and contradicting the UI.
+  const creatorOk = !tokenSupplied && isCreator;
+  const flagOk = !tokenSupplied && !isCreator && settings.allowPadDeletionByAllUsers;
 
-      const messageToShout: ShoutMessage = {
-        message: 'You are not the creator of this pad, so you cannot delete it',
-        sticky: false
-      }
-      const messageToSend = {
-        type: "COLLABROOM",
-        data: {
-          type: "shoutMessage",
-          payload: {
-            message: messageToShout,
-            timestamp: Date.now()
-          }
-        }
-      }
-      socket.emit('shout',
-        messageToSend
-      )
-    }
+  if (creatorOk || tokenOk || flagOk) {
+    await retrievedPad.remove();
+    return;
   }
-}
+
+  // tokenSupplied-but-invalid is a different user-facing message from
+  // not-the-creator. The client localizes via the l10n key.
+  const messageKey = tokenSupplied
+      ? 'pad.deletionToken.invalid'
+      : 'pad.deletionToken.notCreator';
+  socket.emit('shout', {
+    type: 'COLLABROOM',
+    data: {
+      type: 'shoutMessage',
+      payload: {
+        message: {
+          messageKey,
+          sticky: false,
+        },
+        timestamp: Date.now(),
+      },
+    },
+  });
+};
 
 const isPadCreator = async (pad: any, authorId: string) => authorId === await pad.getRevisionAuthor(0);
 
@@ -311,7 +351,7 @@ exports.handleMessage = async (socket:any, message: ClientVarMessage) => {
     try {
       await rateLimiter.consume(socket.request.ip); // consume 1 point per event from IP
     } catch (err) {
-      messageLogger.warn(`Rate limited IP ${socket.request.ip}. To reduce the amount of rate ` +
+      messageLogger.warn(`Rate limited IP ${logIp(socket.request.ip)}. To reduce the amount of rate ` +
                          'limiting that happens edit the rateLimit values in settings.json');
       stats.meter('rateLimited').mark();
       socket.emit('message', {disconnect: 'rateLimited'});
@@ -356,7 +396,7 @@ exports.handleMessage = async (socket:any, message: ClientVarMessage) => {
 
   const auth = thisSession.auth;
   if (!auth) {
-    const ip = settings.disableIPlogging ? 'ANONYMOUS' : (socket.request.ip || '<unknown>');
+    const ip = logIp(socket.request.ip);
     const msg = JSON.stringify(message, null, 2);
     throw new Error(`pre-CLIENT_READY message from IP ${ip}: ${msg}`);
   }
@@ -373,7 +413,7 @@ exports.handleMessage = async (socket:any, message: ClientVarMessage) => {
     throw new Error([
       'Author ID changed mid-session. Bad or missing token or sessionID?',
       `socket:${socket.id}`,
-      `IP:${settings.disableIPlogging ? 'ANONYMOUS' : socket.request.ip}`,
+      `IP:${logIp(socket.request.ip)}`,
       `originalAuthorID:${thisSession.author}`,
       `newAuthorID:${authorID}`,
       ...(user && user.username) ? [`username:${user.username}`] : [],
@@ -978,7 +1018,7 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
   accessLogger.info(`[${pad.head > 0 ? 'ENTER' : 'CREATE'}]` +
                     ` pad:${sessionInfo.padId}` +
                     ` socket:${socket.id}` +
-                    ` IP:${settings.disableIPlogging ? 'ANONYMOUS' : socket.request.ip}` +
+                    ` IP:${logIp(socket.request.ip)}` +
                     ` authorID:${sessionInfo.author}` +
                     (user && user.username ? ` username:${user.username}` : ''));
   /* eslint-enable prefer-template */
@@ -1068,6 +1108,20 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
       throw new Error('corrupt pad');
     }
 
+    const pluginsSanitized = sanitizePluginsForWire(plugins.plugins);
+
+    // Only the original creator of the pad (revision 0 author) receives the
+    // deletion token, and only on their first arrival — subsequent visits get
+    // null because createDeletionTokenIfAbsent() only emits a plaintext token
+    // once. Readonly sessions never see it.
+    const isCreator =
+        !sessionInfo.readonly && sessionInfo.author === await pad.getRevisionAuthor(0);
+    // Skip token issuance when requireAuthentication is on: every creator has a
+    // stable identity so the cookie/identity path is sufficient.
+    const padDeletionToken = isCreator && !settings.requireAuthentication
+        ? await padDeletionManager.createDeletionTokenIfAbsent(sessionInfo.padId)
+        : null;
+
     // Warning: never ever send sessionInfo.padId to the client. If the client is read only you
     // would open a security hole 1 swedish mile wide...
     const canEditPadSettings = settings.enablePadWideSettings &&
@@ -1081,13 +1135,13 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
       },
       enableDarkMode: settings.enableDarkMode,
       enablePadWideSettings: settings.enablePadWideSettings,
+      padDeletionToken,
       automaticReconnectionTimeout: settings.automaticReconnectionTimeout,
       initialRevisionList: [],
       initialOptions: pad.getPadSettings(),
       savedRevisions: pad.getSavedRevisions(),
       collab_client_vars: {
         initialAttributedText: atext,
-        clientIp: '127.0.0.1',
         padId: sessionInfo.auth.padID,
         historicalAuthorData,
         apool,
@@ -1095,7 +1149,6 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
         time: currentTime,
       },
       colorPalette: authorManager.getColorPalette(),
-      clientIp: '127.0.0.1',
       userColor: authorColorId,
       padId: sessionInfo.auth.padID,
       padOptions: settings.padOptions,
@@ -1116,7 +1169,7 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
       exportAvailable: exportAvailable(),
       docxExport: settings.docxExport,
       plugins: {
-        plugins: plugins.plugins,
+        plugins: pluginsSanitized,
         parts: plugins.parts,
       },
       indentationOnNewLine: settings.indentationOnNewLine,

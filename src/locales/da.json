@@ -74,7 +74,6 @@
 	"pad.importExport.exportword": "Microsoft Word",
 	"pad.importExport.exportpdf": "PDF",
 	"pad.importExport.exportopen": "ODF (Open Document Format)",
-	"pad.importExport.abiword.innerHTML": "Du kan kun importere fra almindelig tekst eller HTML-formater. For mere avancerede importfunktioner skal du <a href=\"https://github.com/ether/etherpad-lite/wiki/How-to-enable-importing-and-exporting-different-file-formats-with-AbiWord\">installere AbiWord eller LibreOffice</a> .",
 	"pad.modals.connected": "Forbundet.",
 	"pad.modals.reconnecting": "Genopretter forbindelsen til din pad...",
 	"pad.modals.forcereconnect": "Gennemtving genoprettelse af forbindelsen",

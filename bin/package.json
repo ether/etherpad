@@ -1,18 +1,18 @@
 {
   "name": "bin",
-  "version": "2.6.1",
+  "version": "2.7.2",
   "description": "",
   "main": "checkAllPads.js",
   "directories": {
     "doc": "doc"
   },
   "dependencies": {
-    "axios": "^1.15.0",
+    "axios": "^1.15.2",
     "ep_etherpad-lite": "workspace:../src",
     "log4js": "^6.9.1",
     "semver": "^7.7.4",
     "tsx": "^4.21.0",
-    "ueberdb2": "^5.0.45"
+    "ueberdb2": "^5.0.48"
   },
   "devDependencies": {
     "@types/node": "^25.6.0",
@@ -23,6 +23,8 @@
     "makeDocs": "node --import tsx make_docs.ts",
     "checkPad": "node --import tsx checkPad.ts",
     "checkAllPads": "node --import tsx checkAllPads.ts",
+    "compactPad": "node --import tsx compactPad.ts",
+    "compactAllPads": "node --import tsx compactAllPads.ts",
     "createUserSession": "node --import tsx createUserSession.ts",
     "deletePad": "node --import tsx deletePad.ts",
     "repairPad": "node --import tsx repairPad.ts",

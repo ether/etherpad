@@ -16,6 +16,7 @@ const assert = require('assert').strict;
 const db = require('./DB');
 import settings from '../utils/Settings';
 const authorManager = require('./AuthorManager');
+const padDeletionManager = require('./PadDeletionManager');
 const padManager = require('./PadManager');
 const padMessageHandler = require('../handler/PadMessageHandler');
 const groupManager = require('./GroupManager');
@@ -39,7 +40,7 @@ type PadSettings = {
   showChat: boolean;
   alwaysShowChat: boolean;
   chatAndUsers: boolean;
-  lang: string;
+  lang: string | null;
   view: PadViewSettings;
 };
 
@@ -51,8 +52,7 @@ type PadSettings = {
  */
 exports.cleanText = (txt:string): string => txt.replace(/\r\n/g, '\n')
     .replace(/\r/g, '\n')
-    .replace(/\t/g, '        ')
-    .replace(/\xa0/g, ' ');
+    .replace(/\t/g, '        ');
 
 class Pad {
   private db: Database;
@@ -92,7 +92,11 @@ class Pad {
         !!rawPadSettings.showChat,
       alwaysShowChat: !!rawPadSettings.alwaysShowChat,
       chatAndUsers: !!rawPadSettings.chatAndUsers,
-      lang: typeof rawPadSettings.lang === 'string' ? rawPadSettings.lang : 'en',
+      // Default to null (not 'en') so the client's l10n auto-detect chain
+      // (cookie -> navigator.language -> 'en' fallback) runs. Hardcoding 'en'
+      // forces English on every pad regardless of the browser's Accept-Language
+      // and broke #7586 (German system saw English pad UI in v2.7.0).
+      lang: typeof rawPadSettings.lang === 'string' ? rawPadSettings.lang : null,
       view: {
         showAuthorColors: rawView.showAuthorColors == null ? true : !!rawView.showAuthorColors,
         showLineNumbers: rawView.showLineNumbers == null ?
@@ -661,6 +665,7 @@ class Pad {
 
     // delete the pad entry and delete pad from padManager
     p.push(padManager.removePad(padID));
+    p.push(padDeletionManager.removeDeletionToken(padID));
     p.push(hooks.aCallAll('padRemove', {
       get padID() {
         pad_utils.warnDeprecated('padRemove padID context property is deprecated; use pad.id instead');

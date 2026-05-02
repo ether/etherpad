@@ -1,14 +1,25 @@
 <%
   var langs = require("ep_etherpad-lite/node/hooks/i18n").availableLangs
     , pluginUtils = require('ep_etherpad-lite/static/js/pluginfw/shared')
+    , skinColors = require('ep_etherpad-lite/node/utils/SkinColors')
     ;
+  var renderLang = (req && typeof req.acceptsLanguages === 'function'
+    && req.acceptsLanguages(Object.keys(langs))) || 'en';
+  var renderDir = (langs[renderLang] && langs[renderLang].direction === 'rtl') ? 'rtl' : 'ltr';
+  // theme-color matches the configured toolbar so mobile address bars don't
+  // paint a mismatched system color above the toolbar on first paint. We do
+  // not emit a prefers-color-scheme: dark variant: the client-side dark-mode
+  // auto-switch is gated on enableDarkMode, matchMedia, and a localStorage
+  // white-mode override, none of which a media query can express.
+  var configuredColor = skinColors.configuredToolbarColor(settings.skinName, settings.skinVariants);
 %>
 <!doctype html>
-<html translate="no" class="pad <%=pluginUtils.clientPluginNames().join(' '); %> <%=settings.skinVariants%>">
+<html lang="<%=renderLang%>" dir="<%=renderDir%>" translate="no" class="pad <%=pluginUtils.clientPluginNames().join(' '); %> <%=settings.skinVariants%>">
 <head>
   <% e.begin_block("htmlHead"); %>
   <% e.end_block(); %>
   <title><%=settings.title%></title>
+<%- typeof socialMetaHtml !== 'undefined' ? socialMetaHtml : '' %>
   <link rel="manifest" href="../../manifest.json" />
   <script>
     /*
@@ -38,6 +49,7 @@
   <meta name="robots" content="noindex, nofollow">
   <meta name="referrer" content="no-referrer">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
+  <% if (configuredColor) { %><meta name="theme-color" content="<%=configuredColor%>"><% } %>
   <link rel="shortcut icon" href="../favicon.ico">
 
   <% e.begin_block("styles"); %>
@@ -71,7 +83,7 @@
           <%- toolbar.menu(settings.toolbar.right, isReadOnly, 'right', 'pad') %>
           <% e.end_block(); %>
       </ul>
-      <span class="show-more-icon-btn"></span> <!-- use on small screen to display hidden toolbar buttons -->
+      <button type="button" class="show-more-icon-btn" aria-label="Show more toolbar buttons" aria-expanded="false"></button> <!-- use on small screen to display hidden toolbar buttons -->
   </div>
 
   <% e.begin_block("afterEditbar"); %><% e.end_block(); %>
@@ -114,11 +126,11 @@
       <!-- SETTINGS POPUP (change font, language, chat parameters) -->
       <!------------------------------------------------------------->
 
-      <div id="settings" class="popup"><div class="popup-content">
+      <div id="settings" class="popup" role="dialog" aria-modal="true" aria-labelledby="settings-title"><div class="popup-content">
           <% if (settings.enablePadWideSettings) { %>
-          <h1 data-l10n-id="pad.settings.title">Settings</h1>
+          <h1 id="settings-title" data-l10n-id="pad.settings.title">Settings</h1>
           <% } else { %>
-          <h1 data-l10n-id="pad.settings.padSettings">Pad Settings</h1>
+          <h1 id="settings-title" data-l10n-id="pad.settings.padSettings">Pad Settings</h1>
           <% } %>
           <div class="settings-sections">
             <div id="user-settings-section" class="settings-section">
@@ -242,18 +254,48 @@
               <button class="btn btn-danger" data-l10n-id="pad.settings.deletePad" id="delete-pad">Delete pad</button>
             </div><% } %>
           </div>
+          <% if (!settings.requireAuthentication) { %>
+          <details id="delete-pad-with-token">
+            <summary data-l10n-id="pad.deletionToken.deleteWithToken">Delete with token</summary>
+            <label for="delete-pad-token-input" data-l10n-id="pad.deletionToken.tokenFieldLabel">Pad deletion token</label>
+            <input type="password" id="delete-pad-token-input" autocomplete="off" spellcheck="false">
+            <button id="delete-pad-token-submit" type="button" class="btn btn-danger"
+                    data-l10n-id="pad.settings.deletePad">Delete pad</button>
+          </details>
+          <% } %>
         <h2 data-l10n-id="pad.settings.about">About</h2>
           <span data-l10n-id="pad.settings.poweredBy">Powered by</span>
           <a href="https://etherpad.org" target="_blank" referrerpolicy="no-referrer" rel="noopener">Etherpad</a>
         <% if (settings.exposeVersion) { %>(commit <%= settings.gitVersion %>)<% } %>      </div></div>
 
+      <!--------------------------------------------------->
+      <!-- PAD DELETION TOKEN MODAL (shown once on create) -->
+      <!--------------------------------------------------->
+
+      <div id="deletiontoken-modal" class="popup" role="dialog" aria-modal="true"
+           aria-labelledby="deletiontoken-modal-title" aria-describedby="deletiontoken-modal-body" hidden>
+          <div class="popup-content">
+          <h1 id="deletiontoken-modal-title" data-l10n-id="pad.deletionToken.modalTitle">Save your pad deletion token</h1>
+          <p id="deletiontoken-modal-body" data-l10n-id="pad.deletionToken.modalBody">
+            This token is the only way to delete this pad if you lose your browser session or switch device. Save it somewhere safe — it is shown here exactly once.
+          </p>
+          <div class="deletiontoken-row">
+            <label for="deletiontoken-value" class="sr-only"
+                   data-l10n-id="pad.deletionToken.tokenValueLabel">Your pad deletion token (read-only)</label>
+            <input type="text" id="deletiontoken-value" readonly>
+            <button id="deletiontoken-copy" type="button" aria-live="polite"
+                    data-l10n-id="pad.deletionToken.copy">Copy</button>
+          </div>
+          <button id="deletiontoken-ack" type="button" class="btn btn-primary"
+                  data-l10n-id="pad.deletionToken.acknowledge">I've saved it</button>
+      </div></div>
 
       <!------------------------->
       <!-- IMPORT EXPORT POPUP -->
       <!------------------------->
 
-      <div id="import_export" class="popup"><div class="popup-content">
-          <h1 data-l10n-id="pad.importExport.import_export"></h1>
+      <div id="import_export" class="popup" role="dialog" aria-modal="true" aria-labelledby="importexport-title"><div class="popup-content">
+          <h1 id="importexport-title" data-l10n-id="pad.importExport.import_export"></h1>
           <div class="acl-write">
               <% e.begin_block("importColumn"); %>
               <h2 data-l10n-id="pad.importExport.import"></h2>
@@ -304,7 +346,7 @@
       <!-- CONNECTIVITY POPUP (when you get disconnected) -->
       <!---------------------------------------------------->
 
-      <div id="connectivity" class="popup"><div class="popup-content">
+      <div id="connectivity" class="popup" role="dialog" aria-modal="true" aria-label="Connection status"><div class="popup-content">
           <% e.begin_block("modals"); %>
           <div class="connected visible">
             <h2 data-l10n-id="pad.modals.connected"></h2>
@@ -387,9 +429,9 @@
       <!-- EMBED POPUP (Share, embed) -->
       <!-------------------------------->
 
-      <div id="embed" class="popup"><div class="popup-content">
+      <div id="embed" class="popup" role="dialog" aria-modal="true" aria-labelledby="embed-title"><div class="popup-content">
           <% e.begin_block("embedPopup"); %>
-          <h1 data-l10n-id="pad.share"></h1>
+          <h1 id="embed-title" data-l10n-id="pad.share"></h1>
           <div id="embedreadonly" class="acl-write">
               <input type="checkbox" id="readonlyinput">
               <label for="readonlyinput" data-l10n-id="pad.share.readonly"></label>
@@ -411,11 +453,11 @@
         <!-- USERS POPUP (set username, color, see other users names & color) -->
         <!---------------------------------------------------------------------->
 
-        <div id="users" class="popup"><div class="popup-content">
+        <div id="users" class="popup" role="dialog" aria-modal="true" aria-label="Users on this pad"><div class="popup-content">
             <% e.begin_block("userlist"); %>
             <div id="connectionstatus"></div>
             <div id="myuser">
-                <div id="mycolorpicker" class="popup"><div class="popup-content">
+                <div id="mycolorpicker" class="popup" role="dialog" aria-modal="true" aria-label="Choose your author color"><div class="popup-content">
                     <div id="colorpicker"></div>
                     <div class="btn-container">
                       <button id="mycolorpickersave" data-l10n-id="pad.colorpicker.save" class="btn btn-primary"></button>
@@ -428,7 +470,7 @@
                   <input type="text" id="myusernameedit" disabled="disabled" data-l10n-id="pad.userlist.entername">
                 </div>
             </div>
-            <div id="otherusers" role="document">
+            <div id="otherusers" role="region" aria-live="polite" aria-label="Active users on this pad">
                 <table id="otheruserstable" cellspacing="0" cellpadding="0" border="0">
                     <tr><td></td></tr>
                 </table>
@@ -442,18 +484,18 @@
         <!----------- CHAT ------------>
         <!----------------------------->
 
-        <div id="chaticon" class="visible" onclick="chat.show();return false;" title="Chat (Alt C)">
+        <button type="button" id="chaticon" class="visible" title="Chat (Alt C)" data-l10n-id="pad.chat.title">
             <span id="chatlabel" data-l10n-id="pad.chat"></span>
-            <span class="buttonicon buttonicon-chat"></span>
-            <span id="chatcounter">0</span>
-        </div>
+            <span class="buttonicon buttonicon-chat" aria-hidden="true"></span>
+            <span id="chatcounter" aria-label="Unread messages">0</span>
+        </button>
 
         <div id="chatbox">
           <div class="chat-content">
             <div id="titlebar">
               <h1 id ="titlelabel" data-l10n-id="pad.chat"></h1>
-              <a id="titlecross" class="hide-reduce-btn" onClick="chat.hide();return false;">-&nbsp;</a>
-              <a id="titlesticky" class="stick-to-screen-btn" onClick="chat.stickToScreen(true);return false;" data-l10n-id="pad.chat.stick.title">█&nbsp;&nbsp;</a>
+              <button type="button" id="titlecross" class="hide-reduce-btn" aria-label="Close chat">_</button>
+              <button type="button" id="titlesticky" class="stick-to-screen-btn" data-l10n-id="pad.chat.stick.title">&#9608;</button>
             </div>
             <div id="chattext" class="thin-scrollbar" aria-live="polite" aria-relevant="additions removals text" role="log" aria-atomic="false">
                 <div alt="loading.." id="chatloadmessagesball" class="chatloadmessages loadingAnimation" align="top"></div>
@@ -472,8 +514,8 @@
       <!-- SKIN VARIANTS BUILDER (Customize rendering, only for admins) -->
       <!------------------------------------------------------------------>
       <% if (settings.skinName == 'colibris') { %>
-      <div id="skin-variants" class="popup"><div class="popup-content">
-        <h1>Skin Builder</h1>
+      <div id="skin-variants" class="popup" role="dialog" aria-modal="true" aria-labelledby="skin-variants-title"><div class="popup-content">
+        <h1 id="skin-variants-title">Skin Builder</h1>
 
         <div class="dropdowns-container">
         <% containers = [ "toolbar", "background", "editor" ]; %>
@@ -504,6 +546,7 @@
 
       <% e.end_block(); %>
 
+    <div id="version-badge" role="status" aria-live="polite" style="display:none"></div>
   </div> <!-- End of #editorcontainerbox -->
 
   <% e.end_block(); %>

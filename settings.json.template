@@ -109,6 +109,21 @@
   "favicon": null,
 
   /*
+   * Canonical public origin of this Etherpad instance, e.g.
+   * "https://pad.example.com" (no trailing slash, must include scheme).
+   *
+   * When set, this is used to build absolute URLs in server-rendered output
+   * such as the Open Graph / Twitter Card link-preview meta tags (og:url,
+   * og:image, ...). When null, those URLs fall back to the request's
+   * protocol+Host, which can reflect client-controlled headers if your
+   * reverse proxy passes them through unsanitized.
+   *
+   * Set this in production deployments to lock down the canonical origin
+   * advertised in shared link previews.
+   */
+  "publicURL": null,
+
+  /*
    * Skin name.
    *
    * Its value has to be an existing directory under src/static/skins.
@@ -176,6 +191,32 @@
    "enableMetrics": "${ENABLE_METRICS:true}",
 
   /*
+   * Self-update subsystem.
+   * tier: "off" | "notify" | "manual" | "auto" | "autonomous"
+   * Default "notify" shows a banner when an update is available. "off" disables the version check.
+   */
+  "updates": {
+    "tier": "notify",
+    "source": "github",
+    "channel": "stable",
+    "installMethod": "auto",
+    "checkIntervalHours": 6,
+    "githubRepo": "ether/etherpad",
+    /*
+     * Lock /admin/update/status to authenticated admins. Default false keeps the
+     * endpoint open (the version is already public via /health). Set true to hide
+     * full update detail from non-admins without turning the updater off.
+     */
+    "requireAdminForStatus": false
+  },
+
+  /*
+   * Contact address for admin notifications (updates, security advisories, future features).
+   * Set to null to disable outbound mail from the updater.
+   */
+  "adminEmail": null,
+
+  /*
    * Settings for cleanup of pads
    */
   "cleanup": {
@@ -225,7 +266,7 @@
   /*
    * An Example of MySQL Configuration (commented out).
    *
-   * See: https://github.com/ether/etherpad-lite/wiki/How-to-use-Etherpad-Lite-with-MySQL
+   * See: https://github.com/ether/etherpad/wiki/How-to-use-Etherpad-Lite-with-MySQL
    */
 
   /*
@@ -471,9 +512,31 @@
   },
 
   /*
-   * Privacy: disable IP logging
+   * Controls what Etherpad writes to its logs about client IP addresses.
+   *
+   *   "anonymous" — replace every IP with the literal "ANONYMOUS" (default)
+   *   "truncated" — zero the last octet of IPv4 (1.2.3.0); truncate IPv6 to
+   *                 the first /48 (2001:db8:1::). Keeps aggregate visibility.
+   *   "full"      — log the full IP (document a legal basis + retention
+   *                 policy before choosing this).
+   *
+   * In-memory rate-limiting always keys on the raw IP and is never persisted.
+   */
+  "ipLogging": "anonymous",
+
+  /*
+   * Deprecated — use `ipLogging` above instead. Still honoured for one release
+   * cycle: `true` maps to `ipLogging: "anonymous"`, `false` maps to `"full"`.
+   * A deprecation warning is emitted when only this legacy setting is present.
    */
   "disableIPlogging": false,
+
+  /*
+   * Allow any user who can edit a pad to delete it without the one-time pad
+   * deletion token. If false, only the original creator's author cookie or the
+   * deletion token can delete the pad.
+   */
+  "allowPadDeletionByAllUsers": false,
 
   /*
    * Time (in seconds) to automatically reconnect pad when a "Force reconnect"

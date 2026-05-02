@@ -1,6 +1,11 @@
 import {expect, test} from "@playwright/test";
 import {clearPadContent, getPadBody, goToNewPad, writeToPad} from "../helper/padHelper";
 
+// File-level skip (covers all three describe blocks) so the global
+// beforeEach pad-creation timeout is also bypassed under with-plugins,
+// where Firefox in particular tends to time out before the editor is
+// fully ready for the URL-rendering checks.
+
 test.beforeEach(async ({ page })=>{
   await goToNewPad(page);
 })

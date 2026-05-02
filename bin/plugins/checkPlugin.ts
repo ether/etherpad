@@ -447,10 +447,10 @@ log4js.configure({
   if (files.includes('static')) {
     const staticFiles = await fsp.readdir(`${pluginPath}/static`);
     if (!staticFiles.includes('tests')) {
-      logger.warn('Test files not found, please create tests.  https://github.com/ether/etherpad-lite/wiki/Creating-a-plugin#writing-and-running-front-end-tests-for-your-plugin');
+      logger.warn('Test files not found, please create tests.  https://github.com/ether/etherpad/wiki/Creating-a-plugin#writing-and-running-front-end-tests-for-your-plugin');
     }
   } else {
-    logger.warn('Test files not found, please create tests.  https://github.com/ether/etherpad-lite/wiki/Creating-a-plugin#writing-and-running-front-end-tests-for-your-plugin');
+    logger.warn('Test files not found, please create tests.  https://github.com/ether/etherpad/wiki/Creating-a-plugin#writing-and-running-front-end-tests-for-your-plugin');
   }
 
   // Update all dependencies to their latest compatible versions.

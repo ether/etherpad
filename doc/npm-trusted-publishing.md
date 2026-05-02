@@ -85,10 +85,10 @@ If a package previously had an `NPM_TOKEN` secret in CI:
 
 ## Requirements
 
-- **Node.js**: >= 20.17.0 on the runner. npm 11 requires
-  `^20.17.0 || >=22.9.0`. The npm docs nominally recommend Node 22.14+, but
-  Node 20.17+ works fine — the project's `engines.node` already requires
-  `>=20.0.0`, and `setup-node@v6 with version: 20` resolves to the latest 20.x.
+- **Node.js**: >= 22.12 on the runner. npm 11 requires `>=22.9.0` and
+  `oxc-minify` (a vitepress peer for the docs build) requires `>=22.12.0`,
+  both of which `setup-node@v6 with version: 22` satisfies (resolves to the
+  latest 22.x). The project's `engines.node` requires `>=22.12.0`.
 - **npm CLI**: >= 11.5.1. The publish workflow runs `npm install -g npm@latest`
   before publishing so the bundled npm version doesn't matter.
 - **Runner**: must be a GitHub-hosted (cloud) runner. Self-hosted runners are

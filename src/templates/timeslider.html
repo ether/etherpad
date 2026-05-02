@@ -1,10 +1,16 @@
 <%
   var langs = require("ep_etherpad-lite/node/hooks/i18n").availableLangs
+  var skinColors = require('ep_etherpad-lite/node/utils/SkinColors');
+  var renderLang = (req && typeof req.acceptsLanguages === 'function'
+    && req.acceptsLanguages(Object.keys(langs))) || 'en';
+  var renderDir = (langs[renderLang] && langs[renderLang].direction === 'rtl') ? 'rtl' : 'ltr';
+  var themeColor = skinColors.configuredToolbarColor(settings.skinName, settings.skinVariants);
 %>
 <!doctype html>
-<html translate="no" class="pad <%=settings.skinVariants%>">
+<html lang="<%=renderLang%>" dir="<%=renderDir%>" translate="no" class="pad <%=settings.skinVariants%>">
 <head>
   <title data-l10n-id="timeslider.pageTitle" data-l10n-args='{ "appTitle": "<%=settings.title%>" }'><%=settings.title%> Timeslider</title>
+<%- typeof socialMetaHtml !== 'undefined' ? socialMetaHtml : '' %>
   <script>
     /*
     |@licstart  The following is the entire license notice for the
@@ -33,6 +39,7 @@
   <meta name="robots" content="noindex, nofollow">
   <meta name="referrer" content="no-referrer">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
+  <% if (themeColor) { %><meta name="theme-color" content="<%=themeColor%>"><% } %>
   <link rel="shortcut icon" href="../../favicon.ico">
   <% e.begin_block("timesliderStyles"); %>
   <link rel="stylesheet" href="../../static/css/pad.css?v=<%=settings.randomVersionString%>">

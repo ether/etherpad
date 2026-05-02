@@ -49,7 +49,6 @@
 	"pad.importExport.exportword": "Microsoft Word",
 	"pad.importExport.exportpdf": "PDF",
 	"pad.importExport.exportopen": "ODF",
-	"pad.importExport.abiword.innerHTML": "Bạn chỉ có thể nhập vào từ văn bản thuần túy hay định dạng HTML. Nếu muốn có nhiều chức năng nhập hơn xin hãy <a href=\"https://github.com/ether/etherpad-lite/wiki/How-to-enable-importing-and-exporting-different-file-formats-in-Ubuntu-or-OpenSuse-or-SLES-with-AbiWord\">cài đặt abiword</a>.",
 	"pad.modals.connected": "Đã kết nối lại.",
 	"pad.modals.reconnecting": "Kết nối lại tới pad của bạn",
 	"pad.modals.forcereconnect": "Ép kết nối lại",
