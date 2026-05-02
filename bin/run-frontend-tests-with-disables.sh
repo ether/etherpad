@@ -71,12 +71,22 @@ elif [[ -n "$EP_JSON" ]]; then
   DISABLES="$(read_disables_from_json "$EP_JSON")"
 else
   # Auto-detect from plugin_packages/. Skip if 0 or >1 disabling plugins.
+  #
+  # Live-plugin-manager installs plugins under plugin_packages/.versions/
+  # and exposes them as symlinks at plugin_packages/ep_<name>. find(1)
+  # doesn't follow symlinks by default, so iterate via shell glob and
+  # `-f $dir/ep.json` (which DOES resolve symlinks) instead.
   declare -a CANDIDATES=()
   if [[ -d plugin_packages ]]; then
-    while IFS= read -r f; do
+    shopt -s nullglob
+    for dir in plugin_packages/ep_*; do
+      [[ -L "$dir" || -d "$dir" ]] || continue
+      f="$dir/ep.json"
+      [[ -f "$f" ]] || continue
       d="$(read_disables_from_json "$f")"
       [[ -n "$d" ]] && CANDIDATES+=("$d")
-    done < <(find plugin_packages -maxdepth 3 -name ep.json -not -path '*/.versions/*' 2>/dev/null)
+    done
+    shopt -u nullglob
   fi
   if [[ ${#CANDIDATES[@]} -eq 1 ]]; then
     DISABLES="${CANDIDATES[0]}"
