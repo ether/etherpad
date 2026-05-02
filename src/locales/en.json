@@ -108,6 +108,7 @@
   "pad.settings.stickychat": "Chat always on screen",
   "pad.settings.chatandusers": "Show Chat and Users",
   "pad.settings.colorcheck": "Authorship colors",
+  "pad.settings.fadeInactiveAuthorColors": "Fade inactive author colors",
   "pad.settings.linenocheck": "Line numbers",
   "pad.settings.rtlcheck": "Read content from right to left?",
   "pad.settings.enforceSettings": "Enforce settings for other users",
