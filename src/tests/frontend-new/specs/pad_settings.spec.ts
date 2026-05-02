@@ -28,7 +28,9 @@ test.describe('creator-owned pad settings', () => {
     await context2.close();
   });
 
-  test('pad settings act as defaults until enforcement is enabled', async ({page, browser}) => {
+  test('pad settings act as defaults until enforcement is enabled', {
+    tag: '@feature:line-numbers',
+  }, async ({page, browser}) => {
     const padId = await goToNewPad(page);
 
     const context2 = await browser.newContext();
@@ -122,7 +124,9 @@ test.describe('creator-owned pad settings', () => {
         await context2.close();
       });
 
-  test('uses My View defaults for newly created pads without changing an existing pad default',
+  test('uses My View defaults for newly created pads without changing an existing pad default', {
+    tag: '@feature:line-numbers',
+  },
       async ({page}) => {
         await goToNewPad(page);
         const creatorOuter = page.frameLocator('iframe[name="ace_outer"]').locator('#outerdocbody');
