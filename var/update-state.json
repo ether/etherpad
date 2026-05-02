@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "lastCheckAt": "2026-05-02T18:51:59.127Z",
+  "lastEtag": "W/\"a74c756a310dd68986d30e73a9fecaf093b0f635a5cc55e5075d458e323bbc0d\"",
+  "latest": {
+    "version": "2.7.2",
+    "tag": "v2.7.2",
+    "body": "### Notable enhancements and fixes\r\n\r\n- Accessibility pass: corrected dialog semantics, improved focus management, added missing icon labels, and set the `html lang` attribute correctly.\r\n- Chat: clicking the chat icon works again, disabled toggles render properly, and the username layout no longer overflows.\r\n- `/export/etherpad` now honors the `:rev` URL segment, so revision-specific exports return the requested revision instead of the latest.\r\n- Undo / redo now scrolls the viewport to follow the caret, so reverted edits stay in view.\r\n- Page Down / Page Up now scrolls by viewport height instead of a fixed line count, matching standard editor behavior on tall and short windows alike.\r\n- Editbar: caret is restored to the pad after changing a toolbar select, so typing continues in the document instead of falling through to the toolbar.\r\n- Admin: i18n is restored on `/admin` so the admin UI is translated again.\r\n",
+    "publishedAt": "2026-04-26T09:38:58Z",
+    "prerelease": false,
+    "htmlUrl": "https://github.com/ether/etherpad/releases/tag/v2.7.2"
+  },
+  "vulnerableBelow": [],
+  "email": {
+    "severeAt": null,
+    "vulnerableAt": null,
+    "vulnerableNewReleaseTag": null
+  }
+}

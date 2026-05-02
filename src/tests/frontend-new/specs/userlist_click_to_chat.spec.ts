@@ -144,25 +144,30 @@ test.describe('userlist click → chat prefill', {tag: '@feature:chat'}, () => {
         await goToPad(page2, padId);
         await setSecondUserName(page2, 'Dave');
 
-        await toggleUserList(page1);
-
-        // Open chat first and type a partial message.
+        // Open chat and seed a partial message *before* opening the user
+        // list. fill() is deterministic — it sets the value without
+        // racing the chaticon click handler's own focus timer that
+        // earlier versions of this test were tripping over.
         await page1.locator('#chaticon').click();
-        await page1.locator('#chatinput').click();
-        await page1.keyboard.type('hi there');
+        await page1.waitForFunction(
+            "document.querySelector('#chatbox')?.classList.contains('visible')",
+            null, {timeout: 5_000});
+        await page1.locator('#chatinput').fill('hi there');
 
+        await toggleUserList(page1);
         const daveRow = page1.locator(
             '#otheruserstable tr[data-authorId] .usertdname:has-text("Dave")');
         await expect(daveRow).toBeVisible({timeout: 10_000});
         await daveRow.click();
 
-        // Mention should be appended, partial message preserved.
-        await page1.waitForFunction(
-            "document.querySelector('#chatinput')?.value?.includes('hi there')",
-            null, {timeout: 5_000});
-        const value = await page1.locator('#chatinput').inputValue();
-        expect(value).toContain('hi there');
-        expect(value).toContain('@Dave');
+        // Wait for both pieces to land in the input — the prefill fires
+        // from a 50ms setTimeout in the click handler, so a single wait
+        // covering the full final state is more reliable than two
+        // sequential checks.
+        await page1.waitForFunction(() => {
+          const v = (document.querySelector('#chatinput') as HTMLTextAreaElement)?.value || '';
+          return v.includes('hi there') && v.includes('@Dave');
+        }, null, {timeout: 5_000});
 
         await ctx1.close();
         await ctx2.close();
