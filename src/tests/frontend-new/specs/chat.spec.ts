@@ -20,7 +20,9 @@ test.beforeEach(async ({ page, context })=>{
 })
 
 
-test('opens chat, sends a message, makes sure it exists on the page and hides chat', async ({page}) => {
+test('opens chat, sends a message, makes sure it exists on the page and hides chat', {
+  tag: '@feature:chat',
+}, async ({page}) => {
   const chatValue = "JohnMcLear"
 
   // Open chat
@@ -38,7 +40,9 @@ test('opens chat, sends a message, makes sure it exists on the page and hides ch
   expect(chatMessage).toBe(" "+chatValue);
 })
 
-test("makes sure that an empty message can't be sent", async function ({page}) {
+test("makes sure that an empty message can't be sent", {
+  tag: '@feature:chat',
+}, async function ({page}) {
   const chatValue = 'mluto';
 
   await showChat(page);
@@ -60,7 +64,9 @@ test("makes sure that an empty message can't be sent", async function ({page}) {
   expect(chatMessage).toBe(" "+chatValue);
 });
 
-test('makes chat stick to right side of the screen via settings, remove sticky via settings, close it', async ({page}) =>{
+test('makes chat stick to right side of the screen via settings, remove sticky via settings, close it', {
+  tag: '@feature:chat',
+}, async ({page}) =>{
   await showSettings(page);
 
   await enableStickyChatviaSettings(page);
@@ -77,7 +83,9 @@ test('makes chat stick to right side of the screen via settings, remove sticky v
 });
 
 test('makes chat stick to right side of the screen via icon on the top right, ' +
-  'remove sticky via icon, close it', async function ({page}) {
+  'remove sticky via icon, close it', {
+  tag: '@feature:chat',
+}, async function ({page}) {
   await showChat(page);
 
   await enableStickyChatviaIcon(page);
@@ -95,7 +103,9 @@ test('makes chat stick to right side of the screen via icon on the top right, ' 
 
 
 test('Checks showChat=false URL Parameter hides chat then' +
-  ' when removed it shows chat', async function ({page}) {
+  ' when removed it shows chat', {
+  tag: '@feature:chat',
+}, async function ({page}) {
 
   // get a new pad, but don't clear the cookies
   await appendQueryParams(page, {
@@ -120,7 +130,9 @@ test('Checks showChat=false URL Parameter hides chat then' +
 // jQuery .hide(); re-enabling chat doesn't undo it, and chat.show() only flips
 // visibility via the .visible class — so without an explicit display reset the
 // box stays hidden by the lingering inline style. (PR #7597)
-test('chat icon click reveals chatbox after a disable → enable cycle', async ({page}) => {
+test('chat icon click reveals chatbox after a disable → enable cycle', {
+  tag: '@feature:chat',
+}, async ({page}) => {
   await showSettings(page);
   await page.locator('label[for="options-disablechat"]').click();
   await expect(page.locator('#options-disablechat')).toBeChecked();
@@ -137,7 +149,9 @@ test('chat icon click reveals chatbox after a disable → enable cycle', async (
 });
 
 // Title-bar layout / glyph regressions from #7590 review.
-test('chat title bar lays out as a centred flex row with underscore minimize', async ({page}) => {
+test('chat title bar lays out as a centred flex row with underscore minimize', {
+  tag: '@feature:chat',
+}, async ({page}) => {
   await showChat(page);
 
   // Minimize button uses an underscore (sits at the bottom of its em-box and
@@ -185,7 +199,9 @@ test('chat title bar lays out as a centred flex row with underscore minimize', a
 // became a <button>, the inner <span class="buttonicon"> being `display: flex`
 // (from the global icons.css rule) could intercept clicks and the chat icon
 // stopped opening the panel. The fix scopes a reset on `#chaticon .buttonicon`.
-test('chat icon click reliably opens the chat box', async ({page}) => {
+test('chat icon click reliably opens the chat box', {
+  tag: '@feature:chat',
+}, async ({page}) => {
   await expect(page.locator('#chaticon')).toBeVisible();
   await page.locator('#chaticon').click();
   await expect(page.locator('#chatbox')).toHaveClass(/visible/);

@@ -56,7 +56,9 @@ test.describe('change user color', function () {
       expect(await $colorPickerPreview.getAttribute('style')).toContain(await $userSwatch.getAttribute('style'));
     });
 
-  test('Own user color is shown when you enter a chat', async function ({page}) {
+  test('Own user color is shown when you enter a chat', {
+    tag: '@feature:chat',
+  }, async function ({page}) {
 
     const colorOption = page.locator('#options-colorscheck');
     if (!(await colorOption.isChecked())) {

@@ -90,7 +90,9 @@ test('export links have an accessible name from their localized content', async 
   }
 });
 
-test('chaticon is a button with an accessible name', async ({page}) => {
+test('chaticon is a button with an accessible name', {
+  tag: '@feature:chat',
+}, async ({page}) => {
   const chatIcon = page.locator('#chaticon');
   const tagName = await chatIcon.evaluate((el) => el.tagName.toLowerCase());
   expect(tagName).toBe('button');
@@ -100,7 +102,9 @@ test('chaticon is a button with an accessible name', async ({page}) => {
   expect(label && label.length > 0).toBe(true);
 });
 
-test('chat header close/pin controls are buttons with accessible names', async ({page}) => {
+test('chat header close/pin controls are buttons with accessible names', {
+  tag: '@feature:chat',
+}, async ({page}) => {
   await page.locator('#chaticon').click();
   // #titlecross has no data-l10n-id so its aria-label stays static English.
   // #titlesticky has data-l10n-id, so html10n fills aria-label from the

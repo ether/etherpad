@@ -24,7 +24,9 @@ import {
  * but the server rejects it because User B is submitting changes containing
  * User A's author ID.
  */
-test.describe('undo clear authorship colors with multiple authors (bug #2802)', function () {
+test.describe('undo clear authorship colors with multiple authors (bug #2802)', {
+  tag: '@feature:clear-authorship',
+}, function () {
   test.describe.configure({ retries: 2 });
   let padId: string;
 
