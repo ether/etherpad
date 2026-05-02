@@ -27,3 +27,9 @@ plugin_packages
 playwright-report
 state.json
 /src/static/oidc
+# Snapcraft destructive-mode build outputs (this PR)
+parts/
+stage/
+prime/
+.craft/
+*.snap

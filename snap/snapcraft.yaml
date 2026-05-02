@@ -53,9 +53,10 @@ apps:
     environment:
       HOME: $SNAP_DATA
       NODE_ENV: production
-      EP_SETTINGS: $SNAP_COMMON/etc/settings.json
-      EP_DATA_DIR: $SNAP_COMMON/var
+      # PORT/IP are env-substituted into settings.json on first run and
+      # overridden by the wrapper from `snap set etherpad port=…` / `ip=…`.
       PORT: "9001"
+      IP: "0.0.0.0"
 
   healthcheck:
     command: bin/etherpad-healthcheck-wrapper
@@ -135,7 +136,18 @@ parts:
       rm -rf .git tests/frontend-new/.cache \
              src/tests/frontend-new/test-results || true
 
-      # -- 4. Install wrappers.
+      # -- 4. Etherpad's plugin installer writes installed_plugins.json
+      # under its own install dir's var/ at runtime
+      # (src/static/js/pluginfw/installer.ts uses __dirname, which
+      # resolves to an absolute path inside the read-only snap squashfs).
+      # snap layouts can't redirect __dirname-relative paths, so replace
+      # the shipped var/ dir with a symlink into $SNAP_COMMON instead;
+      # the kernel transparently resolves the symlink to writable storage
+      # that survives `snap refresh`. The wrapper mkdirs the target.
+      rm -rf "${APP_DIR}/var"
+      ln -s /var/snap/etherpad/common/etherpad-app-var "${APP_DIR}/var"
+
+      # -- 5. Install wrappers.
       install -Dm755 "${CRAFT_PROJECT_DIR}/snap/local/bin/etherpad-service" \
         "${CRAFT_PART_INSTALL}/bin/etherpad-service"
       install -Dm755 "${CRAFT_PROJECT_DIR}/snap/local/bin/etherpad-healthcheck-wrapper" \

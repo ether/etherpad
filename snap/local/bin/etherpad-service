@@ -21,7 +21,11 @@ export PATH="${SNAP}/opt/node/bin:${SNAP}/usr/bin:${SNAP}/bin:${PATH}"
 ETC_DIR="${SNAP_COMMON}/etc"
 VAR_DIR="${SNAP_COMMON}/var"
 LOG_DIR="${SNAP_COMMON}/logs"
-mkdir -p "${ETC_DIR}" "${VAR_DIR}" "${LOG_DIR}"
+# etherpad-app-var/ is the symlink target for ${APP_DIR}/var inside the
+# read-only snap mount — see snapcraft.yaml step 4. Etherpad writes its
+# plugin registry (installed_plugins.json) here.
+APP_VAR_DIR="${SNAP_COMMON}/etherpad-app-var"
+mkdir -p "${ETC_DIR}" "${VAR_DIR}" "${LOG_DIR}" "${APP_VAR_DIR}"
 
 SETTINGS="${ETC_DIR}/settings.json"
 if [ ! -f "${SETTINGS}" ]; then
@@ -52,11 +56,16 @@ IP_OVERRIDE="$(snapctl get ip || true)"
 export PORT="${PORT_OVERRIDE}"
 export IP="${IP_OVERRIDE}"
 
-cd "${APP_DIR}"
+# `tsx` lives in the `src` workspace's node_modules under pnpm's hoisting
+# layout, not at ${APP_DIR}/node_modules. Run from src/ so node's import
+# resolution finds it (mirrors the `dev` script in src/package.json).
+cd "${APP_DIR}/src"
 export NODE_ENV=production
 
 # Pass --settings explicitly; Etherpad's Settings loader reads argv only,
 # so exporting EP_SETTINGS is not enough to redirect the config file.
-exec "${NODE_BIN}" --import tsx/esm src/node/server.ts \
+# Use bare `tsx` (not `tsx/esm`) to match bin/cleanRun.sh — Etherpad's
+# source mixes CJS+ESM and the ESM-only loader trips ERR_REQUIRE_CYCLE.
+exec "${NODE_BIN}" --import tsx node/server.ts \
   --settings "${SETTINGS}" \
   "$@"
