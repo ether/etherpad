@@ -237,9 +237,10 @@ function Ace2Inner(editorInfo, cssManagers) {
     } else if (info.bgcolor) {
       let bgcolor = info.bgcolor;
       // padOptions.fadeInactiveAuthorColors (default true) controls whether the author
-      // background fades toward white as the author goes inactive. Integrators can set
-      // it to false server-side when users pick light colors that become indistinguishable
-      // from the faded variants.
+      // background fades toward white as the author goes inactive. Integrators set it to
+      // false on busy pads (each faded author is effectively a second on-screen color, so
+      // a 30-author pad becomes a 60-color pad), or when inactivity tracking is undesirable
+      // for whatever reason.
       const fadeEnabled = window.clientVars.padOptions == null ||
           window.clientVars.padOptions.fadeInactiveAuthorColors !== false;
       if (fadeEnabled && (typeof info.fade) === 'number') {
