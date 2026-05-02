@@ -57,7 +57,13 @@ test.describe('change user color', function () {
     });
 
   test('Own user color is shown when you enter a chat', {
-    tag: '@feature:chat',
+    // Asserts the user's colour appears as the chat <p> background. Plugins
+    // that re-render authorship as something other than a background (e.g.
+    // ep_author_neat2 swaps the colour-block for an underline) legitimately
+    // make this assertion stop holding, so they declare
+    // `@feature:authorship-bg-color` in their ep.json `disables` list and
+    // the test is excluded from their pass-1 regression run.
+    tag: ['@feature:chat', '@feature:authorship-bg-color'],
   }, async function ({page}) {
 
     const colorOption = page.locator('#options-colorscheck');
