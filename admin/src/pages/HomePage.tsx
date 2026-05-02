@@ -234,7 +234,8 @@ export const HomePage = () => {
                               {plugin.disables && plugin.disables.length > 0 && (
                                 <div
                                   className="plugin-disables"
-                                  title="This plugin intentionally removes the listed Etherpad features."
+                                  role="alert"
+                                  title={t('admin_plugins.disables.warning_title')}
                                   style={{
                                     marginTop: '0.25rem',
                                     padding: '0.2rem 0.5rem',
@@ -246,7 +247,7 @@ export const HomePage = () => {
                                     display: 'inline-block',
                                   }}
                                 >
-                                  <strong>Disables: </strong>
+                                  <strong><Trans i18nKey="admin_plugins.disables.label"/></strong>{' '}
                                   {plugin.disables
                                       .map((tag) => tag.replace(/^@feature:/, ''))
                                       .join(', ')}
