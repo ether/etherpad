@@ -229,7 +229,30 @@ export const HomePage = () => {
               filteredInstallablePlugins.map((plugin) => {
                         return <tr key={plugin.name}>
                             <td><a rel="noopener noreferrer" href={`https://npmjs.com/${plugin.name}`} target="_blank">{plugin.name}</a></td>
-                            <td>{plugin.description}</td>
+                            <td>
+                              {plugin.description}
+                              {plugin.disables && plugin.disables.length > 0 && (
+                                <div
+                                  className="plugin-disables"
+                                  title="This plugin intentionally removes the listed Etherpad features."
+                                  style={{
+                                    marginTop: '0.25rem',
+                                    padding: '0.2rem 0.5rem',
+                                    borderRadius: '4px',
+                                    fontSize: '0.85em',
+                                    background: 'rgba(180, 83, 9, 0.15)',
+                                    border: '1px solid rgba(180, 83, 9, 0.4)',
+                                    color: '#92400e',
+                                    display: 'inline-block',
+                                  }}
+                                >
+                                  <strong>Disables: </strong>
+                                  {plugin.disables
+                                      .map((tag) => tag.replace(/^@feature:/, ''))
+                                      .join(', ')}
+                                </div>
+                              )}
+                            </td>
                             <td>{plugin.version}</td>
                             <td>{plugin.time}</td>
                             <td>
