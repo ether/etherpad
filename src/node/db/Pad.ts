@@ -33,6 +33,7 @@ type PadViewSettings = {
   showLineNumbers: boolean;
   rtlIsTrue: boolean;
   padFontFamily: string;
+  fadeInactiveAuthorColors: boolean;
 };
 
 type PadSettings = {
@@ -103,6 +104,9 @@ class Pad {
           settings.padOptions.showLineNumbers !== false : !!rawView.showLineNumbers,
         rtlIsTrue: !!rawView.rtlIsTrue,
         padFontFamily: typeof rawView.padFontFamily === 'string' ? rawView.padFontFamily : '',
+        fadeInactiveAuthorColors: rawView.fadeInactiveAuthorColors == null ?
+          settings.padOptions.fadeInactiveAuthorColors !== false :
+          !!rawView.fadeInactiveAuthorColors,
       },
     };
   }

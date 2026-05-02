@@ -68,6 +68,11 @@ const padeditor = (() => {
       padutils.bindCheckboxChange($('#options-colorscheck'), () => {
         pad.setMyViewOption('showAuthorColors', padutils.getCheckbox($('#options-colorscheck')));
       });
+      padutils.bindCheckboxChange($('#options-fadeauthorcheck'), () => {
+        pad.setMyViewOption(
+            'fadeInactiveAuthorColors',
+            padutils.getCheckbox($('#options-fadeauthorcheck')));
+      });
       padutils.bindCheckboxChange($('#options-linenoscheck'), () => {
         pad.setMyViewOption('showLineNumbers', padutils.getCheckbox($('#options-linenoscheck')));
       });
@@ -106,6 +111,13 @@ const padeditor = (() => {
       padutils.bindCheckboxChange($('#padsettings-options-colorscheck'), () => {
         pad.changePadViewOption(
             'showAuthorColors', padutils.getCheckbox('#padsettings-options-colorscheck'));
+      });
+
+      // Fade inactive author colors
+      padutils.bindCheckboxChange($('#padsettings-options-fadeauthorcheck'), () => {
+        pad.changePadViewOption(
+            'fadeInactiveAuthorColors',
+            padutils.getCheckbox('#padsettings-options-fadeauthorcheck'));
       });
 
       // Right to left
@@ -247,6 +259,10 @@ const padeditor = (() => {
       $('#chattext').toggleClass('authorColors', v);
       $('iframe[name="ace_outer"]').contents().find('#sidedivinner').toggleClass('authorColors', v);
       padutils.setCheckbox($('#options-colorscheck'), v);
+
+      v = getOption('fadeInactiveAuthorColors', true);
+      self.ace.setProperty('fadeInactiveAuthorColors', v);
+      padutils.setCheckbox($('#options-fadeauthorcheck'), v);
 
       // Override from parameters if true
       if (settings.noColors !== false) {

@@ -75,7 +75,9 @@ const getParameters = [
     name: 'fadeInactiveAuthorColors',
     checkVal: 'false',
     callback: (val) => {
-      if (clientVars.padOptions) clientVars.padOptions.fadeInactiveAuthorColors = false;
+      if (!clientVars.initialOptions) return;
+      if (!clientVars.initialOptions.view) clientVars.initialOptions.view = {};
+      clientVars.initialOptions.view.fadeInactiveAuthorColors = false;
     },
   },
   {
@@ -221,6 +223,7 @@ const getMyViewOverrides = () => {
       showLineNumbers: padcookie.getPref('showLineNumbers'),
       rtlIsTrue: padcookie.getPref('rtlIsTrue'),
       padFontFamily: padcookie.getPref('padFontFamily'),
+      fadeInactiveAuthorColors: padcookie.getPref('fadeInactiveAuthorColors'),
     },
   };
   if (language == null) delete overrides.lang;
@@ -556,6 +559,8 @@ const pad = {
     $('#padsettings-options-stickychat').prop('checked', !!padOptions.alwaysShowChat);
     $('#padsettings-options-chatandusers').prop('checked', !!padOptions.chatAndUsers);
     $('#padsettings-options-colorscheck').prop('checked', view.showAuthorColors !== false);
+    $('#padsettings-options-fadeauthorcheck')
+        .prop('checked', view.fadeInactiveAuthorColors !== false);
     $('#padsettings-options-linenoscheck').prop('checked', view.showLineNumbers !== false);
     $('#padsettings-options-rtlcheck').prop('checked', !!view.rtlIsTrue);
     $('#padsettings-viewfontmenu').val(view.padFontFamily || '');
@@ -572,6 +577,8 @@ const pad = {
     $('#options-stickychat').prop('checked', !!effectiveOptions.alwaysShowChat);
     $('#options-chatandusers').prop('checked', !!effectiveOptions.chatAndUsers);
     $('#options-colorscheck').prop('checked', effectiveOptions.view?.showAuthorColors !== false);
+    $('#options-fadeauthorcheck')
+        .prop('checked', effectiveOptions.view?.fadeInactiveAuthorColors !== false);
     $('#options-linenoscheck').prop('checked', effectiveOptions.view?.showLineNumbers !== false);
     $('#options-rtlcheck').prop('checked', !!effectiveOptions.view?.rtlIsTrue);
     $('#viewfontmenu').val(effectiveOptions.view?.padFontFamily || '');

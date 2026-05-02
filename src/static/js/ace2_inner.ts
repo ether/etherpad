@@ -141,6 +141,8 @@ function Ace2Inner(editorInfo, cssManagers) {
   let doesWrap = true;
   let hasLineNumbers = true;
   let isStyled = true;
+  let fadeInactiveAuthorColors =
+      window.clientVars?.padOptions?.fadeInactiveAuthorColors !== false;
 
   let console = (DEBUG && window.console);
 
@@ -236,14 +238,13 @@ function Ace2Inner(editorInfo, cssManagers) {
       cssManagers.parent.removeSelectorStyle(authorSelector);
     } else if (info.bgcolor) {
       let bgcolor = info.bgcolor;
-      // padOptions.fadeInactiveAuthorColors (default true) controls whether the author
-      // background fades toward white as the author goes inactive. Integrators set it to
-      // false on busy pads (each faded author is effectively a second on-screen color, so
-      // a 30-author pad becomes a 60-color pad), or when inactivity tracking is undesirable
-      // for whatever reason.
-      const fadeEnabled = window.clientVars.padOptions == null ||
-          window.clientVars.padOptions.fadeInactiveAuthorColors !== false;
-      if (fadeEnabled && (typeof info.fade) === 'number') {
+      // The fade is controlled at runtime by the fadeInactiveAuthorColors flag (default
+      // true), which tracks padOptions.view.fadeInactiveAuthorColors and is updated by
+      // ace_setProperty when the user/pad-settings checkbox flips. Disabling it keeps
+      // each author's background at their chosen value — useful on busy pads where each
+      // faded author would otherwise count as a second on-screen color, or when
+      // inactivity tracking is undesirable for whatever reason.
+      if (fadeInactiveAuthorColors && (typeof info.fade) === 'number') {
         bgcolor = fadeColor(bgcolor, info.fade);
       }
       const textColor =
@@ -673,6 +674,15 @@ function Ace2Inner(editorInfo, cssManagers) {
         targetBody.classList.toggle('rtl', value);
         targetBody.classList.toggle('ltr', !value);
         document.documentElement.dir = value ? 'rtl' : 'ltr';
+      },
+      fadeinactiveauthorcolors: (value) => {
+        fadeInactiveAuthorColors = `${value}` !== 'false';
+        // Re-apply styles for every known author so that pre-faded backgrounds
+        // refresh immediately when the toggle flips, instead of waiting for the
+        // next fade tick (which only fires on join/leave).
+        for (const [author, info] of Object.entries(authorInfos)) {
+          if (info) setAuthorStyle(author, info);
+        }
       },
     };
 
