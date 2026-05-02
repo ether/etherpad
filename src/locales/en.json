@@ -7,6 +7,8 @@
   "admin_plugins.available_install.value": "Install",
   "admin_plugins.available_search.placeholder": "Search for plugins to install",
   "admin_plugins.description": "Description",
+  "admin_plugins.disables.label": "Disables:",
+  "admin_plugins.disables.warning_title": "This plugin intentionally removes the listed Etherpad features.",
   "admin_plugins.installed": "Installed plugins",
   "admin_plugins.installed_fetching": "Fetching installed plugins…",
   "admin_plugins.installed_nothing": "You haven't installed any plugins yet.",
