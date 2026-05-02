@@ -107,7 +107,11 @@ parts:
 
       export PATH="${CRAFT_PART_INSTALL}/opt/node/bin:${PATH}"
 
-      # -- 2. Install pnpm via corepack (bundled with Node 22).
+      # -- 2. Install pnpm via corepack. The corepack version bundled with
+      # Node 22.12 ships a stale signing-key list and rejects newer pnpm
+      # releases (nodejs/corepack#612), so refresh corepack itself first.
+      "${CRAFT_PART_INSTALL}/opt/node/bin/npm" install \
+        --prefix "${CRAFT_PART_INSTALL}/opt/node" -g corepack@latest
       corepack enable --install-directory "${CRAFT_PART_INSTALL}/opt/node/bin"
       corepack prepare pnpm@10.33.0 --activate
 
@@ -120,8 +124,13 @@ parts:
       pnpm install --frozen-lockfile --prod=false
       pnpm run build:etherpad
 
-      # Strip dev deps to shrink the payload.
-      pnpm prune --prod || true
+      # Strip dev deps to shrink the payload. `pnpm prune --prod` walks
+      # every workspace symlink and can deadlock on cross-referenced
+      # packages — wipe node_modules and reinstall prod-only instead;
+      # pnpm resolves the smaller graph from cache in a fraction of the
+      # time and the result is byte-identical to a clean prod install.
+      find . -type d -name node_modules -prune -exec rm -rf {} +
+      pnpm install --prod --frozen-lockfile --ignore-scripts
 
       rm -rf .git tests/frontend-new/.cache \
              src/tests/frontend-new/test-results || true
