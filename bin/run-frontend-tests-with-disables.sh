@@ -105,12 +105,25 @@ echo "=== Pass 1: regression — tests NOT tagged with disabled features must pa
 pnpm exec playwright test --grep-invert "($GREP_PATTERN)" "${PLAYWRIGHT_ARGS[@]}"
 
 echo
-echo "=== Pass 2: honesty — tests tagged with $DISABLES must FAIL (feature is disabled) ==="
-# Run with --reporter=list so we get test names but suppress the noisy
-# default reporter output for expected failures. Capture the exit code
-# without `set -e` aborting.
+echo "=== Pass 2: honesty — at least one test tagged with $DISABLES must FAIL (feature is disabled) ==="
+# Pass 2 only needs evidence that the disabled feature is genuinely
+# absent — *one* failing tagged test is sufficient proof. Without
+# --max-failures, every tagged test runs to completion (each failing
+# at the per-test timeout, e.g. 90s) which can take 10+ minutes for
+# a busy tag like @feature:chat. --max-failures=1 stops on the first
+# failure (~30s) and --timeout=30000 caps any single test at 30s, so
+# the worst case stays bounded even if the first tagged test
+# unexpectedly passes and we have to wait for the next one to fail.
+# --retries=0 matters too: default CI retries (up to 5 with
+# WITH_PLUGINS=1) would retry an "expected failure" several times.
 set +e
-pnpm exec playwright test --grep "($GREP_PATTERN)" --reporter=list --retries=0 "${PLAYWRIGHT_ARGS[@]}"
+pnpm exec playwright test \
+  --grep "($GREP_PATTERN)" \
+  --reporter=list \
+  --retries=0 \
+  --max-failures=1 \
+  --timeout=30000 \
+  "${PLAYWRIGHT_ARGS[@]}"
 PASS2_EXIT=$?
 set -e
 
