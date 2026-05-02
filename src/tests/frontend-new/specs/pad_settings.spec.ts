@@ -143,7 +143,9 @@ test.describe('creator-owned pad settings', () => {
         await expect(page.locator('#options-colorscheck')).not.toBeChecked();
       });
 
-  test('disabling chat suppresses chat gritter notifications', async ({page, browser}) => {
+  test('disabling chat suppresses chat gritter notifications', {
+    tag: '@feature:chat',
+  }, async ({page, browser}) => {
     const padId = await goToNewPad(page);
     const context2 = await browser.newContext();
     const page2 = await context2.newPage();
@@ -164,7 +166,9 @@ test.describe('creator-owned pad settings', () => {
   // #7592: ticking "Disable chat" must visibly disable the dependent
   // "Chat always on screen" / "Show Chat and Users" toggles, not just
   // make the underlying inputs non-interactive.
-  test('disabling chat disables and visually greys the dependent chat toggles', async ({page}) => {
+  test('disabling chat disables and visually greys the dependent chat toggles', {
+    tag: '@feature:chat',
+  }, async ({page}) => {
     await goToNewPad(page);
     await showSettings(page);
 
