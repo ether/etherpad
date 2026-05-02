@@ -1,0 +1,71 @@
+# Snap build verification — runs on every PR (and on develop) that
+# touches snap/ or this workflow. Catches breakage in the wrappers and
+# the build recipe before it reaches a release tag.
+#
+# Two jobs:
+#   wrapper-tests — runs the bash unit tests under snap/tests/. Fast
+#     (~5s); no snapd / sudo / network needed. Always runs first.
+#   snap-pack — builds the actual snap with `snapcraft pack
+#     --destructive-mode` (no LXD). Faster than the publish workflow
+#     because it skips container provisioning and store auth. Uploads
+#     the .snap as an artifact so reviewers can sideload it.
+#
+# Production publishing lives in `snap-publish.yml` (tag-triggered).
+name: Snap build (PR)
+on:
+  pull_request:
+    paths:
+      - 'snap/**'
+      - 'settings.json.template'
+      - '.github/workflows/snap-build.yml'
+  push:
+    branches: [develop]
+    paths:
+      - 'snap/**'
+      - 'settings.json.template'
+      - '.github/workflows/snap-build.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  wrapper-tests:
+    name: Wrapper unit tests
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+      - name: Run snap/tests/run-all.sh
+        run: bash snap/tests/run-all.sh
+
+  snap-pack:
+    name: Build snap (destructive-mode)
+    needs: wrapper-tests
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install snapcraft
+        run: sudo snap install --classic snapcraft
+
+      - name: Pack snap
+        run: sudo snapcraft pack --destructive-mode --verbose
+
+      - name: Locate built artifact
+        id: artifact
+        run: |
+          set -e
+          SNAP=$(ls etherpad_*.snap | head -1)
+          if [ -z "${SNAP}" ]; then
+            echo "::error::no .snap file produced"
+            exit 1
+          fi
+          echo "snap=${SNAP}" >> "${GITHUB_OUTPUT}"
+
+      - name: Upload .snap artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: etherpad-snap-pr-${{ github.event.pull_request.number || github.run_id }}
+          path: ${{ steps.artifact.outputs.snap }}
+          if-no-files-found: error
+          retention-days: 7
