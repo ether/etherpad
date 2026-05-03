@@ -76,8 +76,21 @@ policy, contact for erasure requests, etc.
 }
 ```
 
-The banner is rendered from plain text (HTML is escaped) with one
-paragraph per line. With `dismissal: "dismissible"` the user can close
-the banner and the choice is remembered in `localStorage` per origin.
-`dismissal: "sticky"` removes the close button so the notice is shown
-on every pad load.
+The banner is rendered as a persistent gritter notification at the
+bottom of the page (it inherits the same look as every other gritter
+on the pad — no custom skin needed). The body is plain text (HTML is
+escaped); each line becomes its own paragraph.
+
+`dismissal` controls how the close (×) is handled:
+
+- `"dismissible"` (default) — when the user closes the gritter, the
+  choice is persisted in `localStorage` per origin and the banner is
+  not shown again on subsequent pad loads.
+- `"sticky"` — closing the gritter only hides it for the current
+  session; the next pad load shows it again. (The close control is
+  not removed; for an operator-enforced non-closable notice, render
+  the policy out-of-band — e.g., a skin override or a reverse-proxy
+  ribbon.)
+
+Unknown `dismissal` values are coerced to `"dismissible"` with a
+`logger.warn` at settings load.

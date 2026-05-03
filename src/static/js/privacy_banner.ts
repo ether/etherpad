@@ -98,6 +98,9 @@ export const showPrivacyBannerIfEnabled = (config: BannerConfig | undefined) => 
 // the Playwright spec at src/tests/frontend-new/specs/privacy_banner.spec.ts
 // has no other way to reach into the real showPrivacyBannerIfEnabled — without
 // this it can only toy with the DOM and never proves the config-to-DOM wiring.
-// Namespaced under __etherpad_privacyBanner__ so it can't collide with site
-// code.
-(globalThis as any).__etherpad_privacyBanner__ = {show: showPrivacyBannerIfEnabled};
+// Gated on navigator.webdriver so the global is invisible in real browsers
+// (Playwright/ChromeDriver/Selenium set webdriver=true; humans don't), keeping
+// the disabled-by-default feature genuinely zero-side-effect in production.
+if (typeof navigator !== 'undefined' && (navigator as any).webdriver) {
+  (globalThis as any).__etherpad_privacyBanner__ = {show: showPrivacyBannerIfEnabled};
+}
