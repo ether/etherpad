@@ -30,7 +30,27 @@ const logLevel = logger.level;
 
 // Mocha doesn't monitor unhandled Promise rejections, so convert them to uncaught exceptions.
 // https://github.com/mochajs/mocha/issues/2640
-process.on('unhandledRejection', (reason: string) => { throw reason; });
+//
+// Log via process.stderr.write before throwing: when the rethrown rejection
+// kills mocha between specs, the runner exits with code 1 and no summary.
+// Without this, the rejection reason is lost (worst on Windows runners,
+// where stderr is not always flushed before abrupt exit) and CI shows a
+// silent ELIFECYCLE with no clue what rejected.
+process.on('unhandledRejection', (reason: any) => {
+  process.stderr.write(`[backend tests] unhandledRejection: ${
+    reason && reason.stack ? reason.stack : String(reason)}\n`);
+  throw reason;
+});
+
+// Surface uncaught exceptions for the same reason. Node's default behavior
+// (exit non-zero) is preserved by the explicit process.exit below — without
+// the handler, Node would write to stderr and exit; with the handler we have
+// to do it ourselves.
+process.on('uncaughtException', (err: any) => {
+  process.stderr.write(`[backend tests] uncaughtException: ${
+    err && err.stack ? err.stack : String(err)}\n`);
+  process.exit(1);
+});
 
 before(async function () {
   this.timeout(60000);
