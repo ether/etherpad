@@ -53,6 +53,7 @@ import {randomString} from "./pad_utils";
 const socketio = require('./socketio');
 
 const hooks = require('./pluginfw/hooks');
+import {showPrivacyBannerIfEnabled} from './privacy_banner';
 
 import './pad_version_badge';
 
@@ -717,6 +718,7 @@ const pad = {
       }
 
       showDeletionTokenModalIfPresent();
+      showPrivacyBannerIfEnabled((clientVars as any).privacyBanner);
 
       hooks.aCallAll('postAceInit', {ace: padeditor.ace, clientVars, pad});
     };

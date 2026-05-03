@@ -176,6 +176,13 @@ export type SettingsType = {
   enableDarkMode: boolean,
   enablePadWideSettings: boolean,
   allowPadDeletionByAllUsers: boolean,
+  privacyBanner: {
+    enabled: boolean,
+    title: string,
+    body: string,
+    learnMoreUrl: string | null,
+    dismissal: 'dismissible' | 'sticky',
+  },
   skinName: string | null,
   skinVariants: string,
   ip: string,
@@ -313,7 +320,7 @@ export type SettingsType = {
     requireAdminForStatus: boolean,
   },
   adminEmail: string | null,
-  getPublicSettings: () => Pick<SettingsType, "title" | "skinVariants"|"randomVersionString"|"skinName"|"toolbar"| "exposeVersion"| "gitVersion" | "enablePadWideSettings">,
+  getPublicSettings: () => Pick<SettingsType, "title" | "skinVariants"|"randomVersionString"|"skinName"|"toolbar"| "exposeVersion"| "gitVersion" | "enablePadWideSettings" | "privacyBanner">,
 }
 
 const settings: SettingsType = {
@@ -361,6 +368,14 @@ const settings: SettingsType = {
   enableDarkMode: true,
   enablePadWideSettings: false,
   allowPadDeletionByAllUsers: false,
+  privacyBanner: {
+    enabled: false,
+    title: 'Privacy notice',
+    body: 'This instance processes pad content on our servers. ' +
+        'See the linked policy for retention and how to request erasure.',
+    learnMoreUrl: null,
+    dismissal: 'dismissible',
+  },
   /*
  * Skin name.
  *
@@ -718,10 +733,24 @@ const settings: SettingsType = {
       skinName: settings.skinName,
       skinVariants: settings.skinVariants,
       enablePadWideSettings: settings.enablePadWideSettings,
+      privacyBanner: getPublicPrivacyBanner(),
     }
   },
   gitVersion: getGitCommit(),
 }
+
+// Build the wire-shape of `privacyBanner` for clientVars / getPublicSettings().
+// The settings file is operator-controlled and `_.defaults()` (used by
+// storeSettings) preserves unknown nested keys at runtime. Returning a literal
+// instead of `settings.privacyBanner` itself stops a typo or copy-paste from
+// shipping arbitrary extra keys to every browser.
+export const getPublicPrivacyBanner = () => ({
+  enabled: settings.privacyBanner.enabled,
+  title: settings.privacyBanner.title,
+  body: settings.privacyBanner.body,
+  learnMoreUrl: settings.privacyBanner.learnMoreUrl,
+  dismissal: settings.privacyBanner.dismissal,
+});
 
 export default settings;
 // CJS compatibility: plugins use require('ep_etherpad-lite/node/utils/Settings')
@@ -1031,6 +1060,21 @@ export const reloadSettings = () => {
           `ipLogging="${settings.ipLogging}" is not one of ` +
           `${validIpLogging.join(', ')}; falling back to "anonymous".`);
       settings.ipLogging = 'anonymous';
+    }
+
+    // Validate `privacyBanner.dismissal`. The client treats every value other
+    // than the exact strings 'dismissible' and 'sticky' as "no special
+    // handling", which silently degrades a misconfigured 'sticky' to a
+    // dismissible-shaped notice (and vice versa). Coerce to the safer default
+    // and warn so the operator sees the typo.
+    const validDismissal = ['dismissible', 'sticky'];
+    if (settings.privacyBanner != null
+        && !validDismissal.includes(settings.privacyBanner.dismissal as any)) {
+      logger.warn(
+          `privacyBanner.dismissal="${settings.privacyBanner.dismissal}" is ` +
+          `not one of ${validDismissal.join(', ')}; falling back to ` +
+          `"dismissible".`);
+      settings.privacyBanner.dismissal = 'dismissible';
     }
 
     // Init logging config

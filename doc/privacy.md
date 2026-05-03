@@ -59,3 +59,38 @@ See
 [`docs/superpowers/specs/2026-04-18-gdpr-pr1-deletion-controls-design.md`](https://github.com/ether/etherpad/blob/develop/docs/superpowers/specs/2026-04-18-gdpr-pr1-deletion-controls-design.md)
 for the deletion-token mechanism. Full author erasure is tracked as a
 follow-up in [ether/etherpad#6701](https://github.com/ether/etherpad/issues/6701).
+
+## Privacy banner (optional)
+
+The `privacyBanner` block in `settings.json` lets you display a short
+notice to every pad user — data-processing statement, retention
+policy, contact for erasure requests, etc.
+
+```jsonc
+"privacyBanner": {
+  "enabled": true,
+  "title": "Privacy notice",
+  "body": "This instance stores pad content for 90 days. Contact privacy@example.com to request erasure.",
+  "learnMoreUrl": "https://example.com/privacy",
+  "dismissal": "dismissible"
+}
+```
+
+The banner is rendered as a persistent gritter notification at the
+bottom of the page (it inherits the same look as every other gritter
+on the pad — no custom skin needed). The body is plain text (HTML is
+escaped); each line becomes its own paragraph.
+
+`dismissal` controls how the close (×) is handled:
+
+- `"dismissible"` (default) — when the user closes the gritter, the
+  choice is persisted in `localStorage` per origin and the banner is
+  not shown again on subsequent pad loads.
+- `"sticky"` — closing the gritter only hides it for the current
+  session; the next pad load shows it again. (The close control is
+  not removed; for an operator-enforced non-closable notice, render
+  the policy out-of-band — e.g., a skin override or a reverse-proxy
+  ribbon.)
+
+Unknown `dismissal` values are coerced to `"dismissible"` with a
+`logger.warn` at settings load.

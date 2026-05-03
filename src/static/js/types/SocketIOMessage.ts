@@ -62,6 +62,13 @@ export type ClientVarPayload = {
   userColor: number,
   hideChat?: boolean,
   padOptions: PadOption,
+  privacyBanner?: {
+    enabled: boolean,
+    title: string,
+    body: string,
+    learnMoreUrl: string | null,
+    dismissal: 'dismissible' | 'sticky',
+  },
   padId: string,
   colorPalette: string[],
   accountPrivs: {
