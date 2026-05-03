@@ -150,7 +150,12 @@ test('chat icon click reveals chatbox after a disable → enable cycle', {
 
 // Title-bar layout / glyph regressions from #7590 review.
 test('chat title bar lays out as a centred flex row with underscore minimize', {
-  tag: '@feature:chat',
+  // `@feature:rtl-toggle` because the symmetric leftGap/rightGap
+  // assertion is only valid in LTR — the colibris #titlebar padding
+  // rule ships a one-sided pad that flips under `body[dir=rtl]`,
+  // throwing the gap apart by ~170px. A plugin that forces RTL on
+  // (e.g. ep_right_to_left) declares this in its disables list.
+  tag: ['@feature:chat', '@feature:rtl-toggle'],
 }, async ({page}) => {
   await showChat(page);
 

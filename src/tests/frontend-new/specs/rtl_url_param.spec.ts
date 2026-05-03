@@ -13,7 +13,7 @@ test.describe('RTL URL parameter', function () {
     await expect(page.locator('#options-rtlcheck')).toBeChecked();
   });
 
-  test('rtl=false disables RTL mode after rtl=true', async function ({page}) {
+  test('rtl=false disables RTL mode after rtl=true', {tag: '@feature:rtl-toggle'}, async function ({page}) {
     // First enable RTL via URL
     await appendQueryParams(page, {rtl: 'true'});
     await expect(page.locator('#options-rtlcheck')).toBeChecked();
@@ -23,7 +23,7 @@ test.describe('RTL URL parameter', function () {
     await expect(page.locator('#options-rtlcheck')).not.toBeChecked();
   });
 
-  test('no rtl param falls back to the pad setting after an RTL URL override', async function ({page}) {
+  test('no rtl param falls back to the pad setting after an RTL URL override', {tag: '@feature:rtl-toggle'}, async function ({page}) {
     // Enable RTL via URL for the current page load only
     await appendQueryParams(page, {rtl: 'true'});
     await expect(page.locator('#options-rtlcheck')).toBeChecked();
