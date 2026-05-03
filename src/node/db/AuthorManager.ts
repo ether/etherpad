@@ -196,19 +196,15 @@ exports.createAuthorIfNotExistsFor = async (authorMapper: string, name: string) 
  * @param {String} name The name of the author
  */
 exports.createAuthor = async (name: string) => {
-  // create the new author name
   const author = `a.${randomString(16)}`;
-
-  // create the globalAuthors db entry
+  const now = Date.now();
   const authorObj = {
     colorId: Math.floor(Math.random() * (exports.getColorPalette().length)),
     name,
-    timestamp: Date.now(),
+    timestamp: now,
+    lastSeen: now,
   };
-
-  // set the global author db entry
   await db.set(`globalAuthor:${author}`, authorObj);
-
   return {authorID: author};
 };
 
@@ -229,8 +225,10 @@ exports.getAuthorColorId = async (author: string) => await db.getSub(`globalAuth
  * @param {String} author The id of the author
  * @param {String} colorId The color id of the author
  */
-exports.setAuthorColorId = async (author: string, colorId: string) => await db.setSub(
-    `globalAuthor:${author}`, ['colorId'], colorId);
+exports.setAuthorColorId = async (author: string, colorId: string) => {
+  await db.setSub(`globalAuthor:${author}`, ['colorId'], colorId);
+  await db.setSub(`globalAuthor:${author}`, ['lastSeen'], Date.now());
+};
 
 /**
  * Returns the name of the author
@@ -243,8 +241,10 @@ exports.getAuthorName = async (author: string) => await db.getSub(`globalAuthor:
  * @param {String} author The id of the author
  * @param {String} name The name of the author
  */
-exports.setAuthorName = async (author: string, name: string) => await db.setSub(
-    `globalAuthor:${author}`, ['name'], name);
+exports.setAuthorName = async (author: string, name: string) => {
+  await db.setSub(`globalAuthor:${author}`, ['name'], name);
+  await db.setSub(`globalAuthor:${author}`, ['lastSeen'], Date.now());
+};
 
 /**
  * Returns an array of all pads this author contributed to

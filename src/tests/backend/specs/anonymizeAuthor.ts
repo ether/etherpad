@@ -90,4 +90,26 @@ describe(__filename, function () {
         const record = await DB.db.get(`globalAuthor:${authorID}`);
         assert.equal(record.erased, true);
       });
+
+  it('lastSeen is stamped when an author is created and on identity writes',
+      async function () {
+        const before = Date.now();
+        const {authorID} = await authorManager.createAuthorIfNotExistsFor(
+            `mapper-${Date.now()}-${Math.random().toString(36).slice(2)}`, 'Dora');
+        const created = await DB.db.get(`globalAuthor:${authorID}`);
+        assert.ok(typeof created.lastSeen === 'number',
+            `lastSeen=${created.lastSeen}`);
+        assert.ok(created.lastSeen >= before);
+
+        await new Promise((r) => setTimeout(r, 5));
+        await authorManager.setAuthorName(authorID, 'Dora2');
+        const renamed = await DB.db.get(`globalAuthor:${authorID}`);
+        assert.ok(renamed.lastSeen > created.lastSeen,
+            `renamed=${renamed.lastSeen} created=${created.lastSeen}`);
+
+        await new Promise((r) => setTimeout(r, 5));
+        await authorManager.setAuthorColorId(authorID, '12');
+        const recolored = await DB.db.get(`globalAuthor:${authorID}`);
+        assert.ok(recolored.lastSeen > renamed.lastSeen);
+      });
 });
