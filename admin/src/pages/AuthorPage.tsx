@@ -266,14 +266,19 @@ export const AuthorPage = () => {
         setCurrentPage(currentPage - 1);
         setSearchParams((p) => ({...p,
             offset: (currentPage - 1) * searchParams.limit}));
-      }}><ChevronLeft/><span>Previous Page</span></button>
-      <span>{currentPage + 1} out of {pages}</span>
+      }}><ChevronLeft/><span>
+        <Trans i18nKey="ep_admin_authors:prev-page" ns="ep_admin_authors"/>
+      </span></button>
+      <span>{t('ep_admin_authors:page-counter',
+          {current: currentPage + 1, total: pages})}</span>
       <button disabled={pages === 0 || pages === currentPage + 1} onClick={() => {
         const next = currentPage + 1;
         setCurrentPage(next);
         setSearchParams((p) => ({...p,
             offset: next * searchParams.limit}));
-      }}><span>Next Page</span><ChevronRight/></button>
+      }}><span>
+        <Trans i18nKey="ep_admin_authors:next-page" ns="ep_admin_authors"/>
+      </span><ChevronRight/></button>
     </div>
   </div>;
 };

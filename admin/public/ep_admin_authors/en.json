@@ -23,5 +23,8 @@
   "ep_admin_authors:erase-success-toast": "Author {{authorID}} erased.",
   "ep_admin_authors:erase-error-toast": "Erase failed: {{error}}",
   "ep_admin_authors:no-mappers": "—",
-  "ep_admin_authors:never-seen": "—"
+  "ep_admin_authors:never-seen": "—",
+  "ep_admin_authors:prev-page": "Previous Page",
+  "ep_admin_authors:next-page": "Next Page",
+  "ep_admin_authors:page-counter": "{{current}} out of {{total}}"
 }
