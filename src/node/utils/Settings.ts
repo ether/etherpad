@@ -1049,6 +1049,21 @@ export const reloadSettings = () => {
       settings.ipLogging = 'anonymous';
     }
 
+    // Validate `privacyBanner.dismissal`. The client treats every value other
+    // than the exact strings 'dismissible' and 'sticky' as "no special
+    // handling", which silently degrades a misconfigured 'sticky' to a
+    // dismissible-shaped notice (and vice versa). Coerce to the safer default
+    // and warn so the operator sees the typo.
+    const validDismissal = ['dismissible', 'sticky'];
+    if (settings.privacyBanner != null
+        && !validDismissal.includes(settings.privacyBanner.dismissal as any)) {
+      logger.warn(
+          `privacyBanner.dismissal="${settings.privacyBanner.dismissal}" is ` +
+          `not one of ${validDismissal.join(', ')}; falling back to ` +
+          `"dismissible".`);
+      settings.privacyBanner.dismissal = 'dismissible';
+    }
+
     // Init logging config
     settings.logconfig = defaultLogConfig(
       settings.loglevel ? settings.loglevel : defaultLogLevel,

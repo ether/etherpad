@@ -79,7 +79,7 @@ test.describe('privacy banner (gritter-based)', () => {
         await expect(paragraphs.nth(1)).toHaveText('Second paragraph.');
         const link = item.locator('a');
         await expect(link).toHaveAttribute('href', 'https://example.com/privacy');
-        await expect(link).toHaveAttribute('rel', 'noopener');
+        await expect(link).toHaveAttribute('rel', 'noreferrer noopener');
         await expect(link).toHaveAttribute('target', '_blank');
       });
 
@@ -183,6 +183,29 @@ test.describe('privacy banner (gritter-based)', () => {
     });
     await expect(page.locator(`${NOTICE} a`)).toHaveCount(0);
   });
+
+  test('unknown dismissal value is treated as dismissible (defense-in-depth)',
+      async ({page}) => {
+        // Server-side reloadSettings() coerces unknown strings to
+        // 'dismissible' with a warn, but the client guards too in case a
+        // hot-reload or custom build path skips that validation.
+        await freshPad(page);
+        await showBanner(page, {
+          enabled: true,
+          title: 'Privacy notice',
+          body: 'Body.',
+          learnMoreUrl: null,
+          dismissal: 'wat' as any,
+        });
+        const item = page.locator(NOTICE);
+        await expect(item).toBeVisible();
+        await item.locator('.gritter-close').click();
+        await expect(page.locator(NOTICE)).toHaveCount(0);
+        const flag = await page.evaluate(
+            (prefix) => localStorage.getItem(`${prefix}${location.origin}`),
+            STORAGE_PREFIX);
+        expect(flag).toBe('1');
+      });
 
   test('mailto: learnMoreUrl is allowed', async ({page}) => {
     await freshPad(page);

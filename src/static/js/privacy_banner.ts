@@ -44,11 +44,15 @@ const buildBody = (config: BannerConfig): JQuery => {
   }
   const safeHref = safeUrl(config.learnMoreUrl);
   if (safeHref != null) {
+    // `noreferrer` matches the existing pattern in pad_utils.ts so the pad
+    // URL doesn't leak to the operator-configured external policy site as a
+    // Referer header. `noopener` keeps target=_blank from sharing the
+    // window.opener handle.
     wrap.append($('<p>').append(
         $('<a>')
             .attr('href', safeHref)
             .attr('target', '_blank')
-            .attr('rel', 'noopener')
+            .attr('rel', 'noreferrer noopener')
             .text('Learn more')));
   }
   return wrap;
@@ -59,7 +63,14 @@ export const showPrivacyBannerIfEnabled = (config: BannerConfig | undefined) => 
   const $ = (window as any).$;
   if (!$ || !$.gritter || typeof $.gritter.add !== 'function') return;
 
-  if (config.dismissal === 'dismissible') {
+  // Server-side reloadSettings() coerces unknown values to 'dismissible' with a
+  // warn, but if a custom build / hot-reload path skips that validation we
+  // still must not fall through to "treats unknown as sticky" (which is the
+  // less safe interpretation — an operator who fat-fingered "dismisable"
+  // probably meant the dismissable mode they wrote).
+  const dismissal = config.dismissal === 'sticky' ? 'sticky' : 'dismissible';
+
+  if (dismissal === 'dismissible') {
     try {
       if (localStorage.getItem(storageKey(location.href)) === '1') return;
     } catch (_e) { /* proceed without persistence */ }
@@ -75,7 +86,7 @@ export const showPrivacyBannerIfEnabled = (config: BannerConfig | undefined) => 
     position: 'bottom',
     class_name: 'privacy-notice',
     before_close: () => {
-      if (config.dismissal !== 'dismissible') return;
+      if (dismissal !== 'dismissible') return;
       try {
         localStorage.setItem(storageKey(location.href), '1');
       } catch (_e) { /* best-effort */ }
