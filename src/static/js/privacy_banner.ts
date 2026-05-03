@@ -22,8 +22,6 @@ const storageKey = (url: string): string => {
 const SAFE_URL_SCHEMES = new Set(['http:', 'https:', 'mailto:']);
 const safeUrl = (href: string | null | undefined): string | null => {
   if (typeof href !== 'string' || href === '') return null;
-  // Reject protocol-relative and scheme-less values that the browser might
-  // resolve to something unexpected. Require an explicit scheme.
   let parsed: URL;
   try {
     parsed = new URL(href, location.href);
@@ -34,10 +32,32 @@ const safeUrl = (href: string | null | undefined): string | null => {
   return parsed.href;
 };
 
+// Build a jQuery DOM fragment for the gritter `text` parameter. Each line of
+// the body becomes its own <p> (mirrors what the original config supports), and
+// an optional "Learn more" anchor is appended only after the URL has passed
+// through safeUrl().
+const buildBody = (config: BannerConfig): JQuery => {
+  const $ = (window as any).$;
+  const wrap = $('<div>');
+  for (const line of (config.body || '').split(/\r?\n/)) {
+    wrap.append($('<p>').text(line));
+  }
+  const safeHref = safeUrl(config.learnMoreUrl);
+  if (safeHref != null) {
+    wrap.append($('<p>').append(
+        $('<a>')
+            .attr('href', safeHref)
+            .attr('target', '_blank')
+            .attr('rel', 'noopener')
+            .text('Learn more')));
+  }
+  return wrap;
+};
+
 export const showPrivacyBannerIfEnabled = (config: BannerConfig | undefined) => {
   if (!config || !config.enabled) return;
-  const banner = document.getElementById('privacy-banner');
-  if (banner == null) return;
+  const $ = (window as any).$;
+  if (!$ || !$.gritter || typeof $.gritter.add !== 'function') return;
 
   if (config.dismissal === 'dismissible') {
     try {
@@ -45,47 +65,28 @@ export const showPrivacyBannerIfEnabled = (config: BannerConfig | undefined) => 
     } catch (_e) { /* proceed without persistence */ }
   }
 
-  const titleEl = banner.querySelector('.privacy-banner-title') as HTMLElement | null;
-  if (titleEl) titleEl.textContent = config.title || '';
-
-  const bodyEl = banner.querySelector('.privacy-banner-body') as HTMLElement | null;
-  if (bodyEl) {
-    bodyEl.textContent = '';
-    for (const line of (config.body || '').split(/\r?\n/)) {
-      const p = document.createElement('p');
-      p.textContent = line;
-      bodyEl.appendChild(p);
-    }
-  }
-
-  const linkEl = banner.querySelector('.privacy-banner-link') as HTMLElement | null;
-  if (linkEl) {
-    linkEl.replaceChildren();
-    const safeHref = safeUrl(config.learnMoreUrl);
-    if (safeHref != null) {
-      const a = document.createElement('a');
-      a.href = safeHref;
-      a.target = '_blank';
-      a.rel = 'noopener';
-      a.textContent = 'Learn more';
-      linkEl.appendChild(a);
-    }
-  }
-
-  const closeBtn = banner.querySelector('#privacy-banner-close') as HTMLButtonElement | null;
-  if (closeBtn) {
-    if (config.dismissal === 'dismissible') {
-      closeBtn.hidden = false;
-      closeBtn.onclick = () => {
-        banner.hidden = true;
-        try {
-          localStorage.setItem(storageKey(location.href), '1');
-        } catch (_e) { /* best-effort */ }
-      };
-    } else {
-      closeBtn.hidden = true;
-    }
-  }
-
-  banner.hidden = false;
+  // Reused class lets the Playwright spec target this specific gritter without
+  // affecting its appearance — the gritter looks like every other gritter on
+  // the page.
+  $.gritter.add({
+    title: config.title || '',
+    text: buildBody(config),
+    sticky: true,
+    position: 'bottom',
+    class_name: 'privacy-notice',
+    before_close: () => {
+      if (config.dismissal !== 'dismissible') return;
+      try {
+        localStorage.setItem(storageKey(location.href), '1');
+      } catch (_e) { /* best-effort */ }
+    },
+  });
 };
+
+// End-to-end test hook. The privacy_banner module is bundled into pad.js so
+// the Playwright spec at src/tests/frontend-new/specs/privacy_banner.spec.ts
+// has no other way to reach into the real showPrivacyBannerIfEnabled — without
+// this it can only toy with the DOM and never proves the config-to-DOM wiring.
+// Namespaced under __etherpad_privacyBanner__ so it can't collide with site
+// code.
+(globalThis as any).__etherpad_privacyBanner__ = {show: showPrivacyBannerIfEnabled};
