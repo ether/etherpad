@@ -33,6 +33,7 @@ import padutils from '../../static/js/pad_utils';
 import readOnlyManager from '../db/ReadOnlyManager';
 import settings, {
   exportAvailable,
+  getPublicPrivacyBanner,
   sofficeAvailable
 } from '../utils/Settings';
 import {anonymizeIp} from '../utils/anonymizeIp';
@@ -1157,7 +1158,10 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
       enableDarkMode: settings.enableDarkMode,
       enablePadWideSettings: settings.enablePadWideSettings,
       padDeletionToken,
-      privacyBanner: settings.privacyBanner,
+      // Allow-listed copy — settings.privacyBanner could carry extra nested
+      // keys from a hand-edited settings.json; sending those by reference
+      // would leak them to every browser. See getPublicPrivacyBanner().
+      privacyBanner: getPublicPrivacyBanner(),
       automaticReconnectionTimeout: settings.automaticReconnectionTimeout,
       initialRevisionList: [],
       initialOptions: pad.getPadSettings(),

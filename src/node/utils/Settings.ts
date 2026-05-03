@@ -733,11 +733,24 @@ const settings: SettingsType = {
       skinName: settings.skinName,
       skinVariants: settings.skinVariants,
       enablePadWideSettings: settings.enablePadWideSettings,
-      privacyBanner: settings.privacyBanner,
+      privacyBanner: getPublicPrivacyBanner(),
     }
   },
   gitVersion: getGitCommit(),
 }
+
+// Build the wire-shape of `privacyBanner` for clientVars / getPublicSettings().
+// The settings file is operator-controlled and `_.defaults()` (used by
+// storeSettings) preserves unknown nested keys at runtime. Returning a literal
+// instead of `settings.privacyBanner` itself stops a typo or copy-paste from
+// shipping arbitrary extra keys to every browser.
+export const getPublicPrivacyBanner = () => ({
+  enabled: settings.privacyBanner.enabled,
+  title: settings.privacyBanner.title,
+  body: settings.privacyBanner.body,
+  learnMoreUrl: settings.privacyBanner.learnMoreUrl,
+  dismissal: settings.privacyBanner.dismissal,
+});
 
 export default settings;
 // CJS compatibility: plugins use require('ep_etherpad-lite/node/utils/Settings')
