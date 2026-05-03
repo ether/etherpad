@@ -325,13 +325,16 @@ exports.removePad = async (authorID: string, padID: string) => {
  * Idempotent: once `erased: true` is set on the author record, subsequent
  * calls short-circuit and return zero counters.
  */
-exports.anonymizeAuthor = async (authorID: string): Promise<{
+exports.anonymizeAuthor = async (
+    authorID: string,
+    opts: {dryRun?: boolean} = {},
+): Promise<{
   affectedPads: number,
   removedTokenMappings: number,
   removedExternalMappings: number,
   clearedChatMessages: number,
 }> => {
-  // Lazy-require to dodge the AuthorManager ↔ PadManager ↔ Pad cycle.
+  const dryRun = opts.dryRun === true;
   const padManager = require('./PadManager');
   const existing = await db.get(`globalAuthor:${authorID}`);
   if (existing == null || existing.erased) {
@@ -343,16 +346,11 @@ exports.anonymizeAuthor = async (authorID: string): Promise<{
     };
   }
 
-  // Drop the token/mapper mappings first, before touching anything else, so
-  // a concurrent getAuthorId() can no longer resolve this author through
-  // its old bindings mid-erasure. These operations are independently
-  // idempotent — rerunning a failed call later still produces the same
-  // final state, just with zero counters for anything already done.
   let removedTokenMappings = 0;
   const tokenKeys: string[] = await db.findKeys('token2author:*', null);
   for (const key of tokenKeys) {
     if (await db.get(key) === authorID) {
-      await db.remove(key);
+      if (!dryRun) await db.remove(key);
       removedTokenMappings++;
     }
   }
@@ -360,24 +358,20 @@ exports.anonymizeAuthor = async (authorID: string): Promise<{
   const mapperKeys: string[] = await db.findKeys('mapper2author:*', null);
   for (const key of mapperKeys) {
     if (await db.get(key) === authorID) {
-      await db.remove(key);
+      if (!dryRun) await db.remove(key);
       removedExternalMappings++;
     }
   }
 
-  // Zero the display identity now — without the `erased` sentinel — so a
-  // partial run still hides the name. The sentinel itself is only set at
-  // the end (below) so a failure in chat scrub lets the next call resume.
-  await db.set(`globalAuthor:${authorID}`, {
-    colorId: 0,
-    name: null,
-    timestamp: Date.now(),
-    padIDs: existing.padIDs || {},
-  });
+  if (!dryRun) {
+    await db.set(`globalAuthor:${authorID}`, {
+      colorId: 0,
+      name: null,
+      timestamp: Date.now(),
+      padIDs: existing.padIDs || {},
+    });
+  }
 
-  // Null authorship on chat messages the author posted. If this throws
-  // partway through, the function re-runs the loop on the next call
-  // because `erased: true` is not set yet.
   const padIDs = Object.keys(existing.padIDs || {});
   let clearedChatMessages = 0;
   for (const padID of padIDs) {
@@ -389,24 +383,25 @@ exports.anonymizeAuthor = async (authorID: string): Promise<{
       const chatKey = `pad:${padID}:chat:${i}`;
       const msg = await db.get(chatKey);
       if (msg != null && msg.authorId === authorID) {
-        msg.authorId = null;
-        await db.set(chatKey, msg);
+        if (!dryRun) {
+          msg.authorId = null;
+          await db.set(chatKey, msg);
+        }
         clearedChatMessages++;
       }
     }
   }
 
-  // Everything succeeded — stamp the sentinel so subsequent calls
-  // short-circuit. Merge with the zeroed record we just wrote so padIDs
-  // and timestamp persist.
-  await db.set(`globalAuthor:${authorID}`, {
-    colorId: 0,
-    name: null,
-    timestamp: Date.now(),
-    padIDs: existing.padIDs || {},
-    erased: true,
-    erasedAt: new Date().toISOString(),
-  });
+  if (!dryRun) {
+    await db.set(`globalAuthor:${authorID}`, {
+      colorId: 0,
+      name: null,
+      timestamp: Date.now(),
+      padIDs: existing.padIDs || {},
+      erased: true,
+      erasedAt: new Date().toISOString(),
+    });
+  }
 
   return {
     affectedPads: padIDs.length,
