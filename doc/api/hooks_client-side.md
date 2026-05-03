@@ -354,6 +354,34 @@ Context properties:
 
 * `message`: The message object that will be sent to the Etherpad server.
 
+## `chatPrefillFromUser`
+
+Called from: `src/static/js/pad_userlist.ts`
+
+Called when the user clicks an entry in the user list. The default behavior is to
+open the chat panel and prefill the input with `@<name> `, where `<name>` is that
+user's display name (with whitespace replaced by underscores). Plugins can return
+a different prefill string from their callback — the first non-empty string
+returned wins.
+
+Typical use is by AI/bot plugins whose author display name (e.g. "AI Assistant")
+isn't a useful @-mention; the plugin can substitute its trigger string instead.
+
+Context properties:
+
+* `authorId`: The clicked user's author id.
+* `name`: The clicked user's display name.
+* `prefill`: The default prefill string Etherpad would otherwise use.
+
+Example:
+
+```javascript
+exports.chatPrefillFromUser = (hookName, {authorId, name}, cb) => {
+  if (authorId === window.clientVars.ep_my_bot.authorId) return cb('@bot ');
+  return cb();
+};
+```
+
 ## collectContentPre
 
 Called from: `src/static/js/contentcollector.js`
