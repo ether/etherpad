@@ -448,8 +448,8 @@ exports.anonymizeAuthor = async (
  * @param query.limit           pagination limit
  * @param query.sortBy          'name' | 'lastSeen'
  * @param query.ascending       sort direction
- * @param query.includeErased   when false (default), hides records with
- *                              erased: true
+ * @param query.includeErased   when false, hides records with erased: true.
+ *                              Required (the function does not default).
  */
 exports.searchAuthors = async (query: {
   pattern: string,
@@ -528,6 +528,11 @@ exports.searchAuthors = async (query: {
     }
     if (av < bv) return query.ascending ? -1 : 1;
     if (av > bv) return query.ascending ? 1 : -1;
+    // Tie-break on authorID ascending so pagination is stable across
+    // requests when the primary sort key collides (common on lastSeen
+    // for authors created in the same millisecond).
+    if (a.authorID < b.authorID) return -1;
+    if (a.authorID > b.authorID) return 1;
     return 0;
   });
 
