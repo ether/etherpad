@@ -56,7 +56,15 @@ test.describe('change user color', function () {
       expect(await $colorPickerPreview.getAttribute('style')).toContain(await $userSwatch.getAttribute('style'));
     });
 
-  test('Own user color is shown when you enter a chat', async function ({page}) {
+  test('Own user color is shown when you enter a chat', {
+    // Asserts the user's colour appears as the chat <p> background. Plugins
+    // that re-render authorship as something other than a background (e.g.
+    // ep_author_neat2 swaps the colour-block for an underline) legitimately
+    // make this assertion stop holding, so they declare
+    // `@feature:authorship-bg-color` in their ep.json `disables` list and
+    // the test is excluded from their pass-1 regression run.
+    tag: ['@feature:chat', '@feature:authorship-bg-color'],
+  }, async function ({page}) {
 
     const colorOption = page.locator('#options-colorscheck');
     if (!(await colorOption.isChecked())) {
@@ -84,6 +92,11 @@ test.describe('change user color', function () {
 
 
     await $colorPickerSave.click();
+    // Close the users popup so it stops intercepting pointer events on #chaticon.
+    // Without this, in the with-plugins matrix the popup overlaps the chat icon
+    // and showChat() retries clicks until it times out.
+    await $userButton.click();
+    await expect(page.locator('#users')).not.toHaveClass(/popup-show/);
     // click on the chat button to make chat visible
     await showChat(page)
     await sendChatMessage(page, 'O hi');

@@ -1,15 +1,21 @@
 # Docker
 
-The official Docker image is available on https://hub.docker.com/r/etherpad/etherpad.
+The official Docker image is published to two registries with identical tags:
 
-## Downloading from Docker Hub
-If you are ok downloading a [prebuilt image from Docker Hub](https://hub.docker.com/r/etherpad/etherpad), these are the commands:
+- Docker Hub (canonical): https://hub.docker.com/r/etherpad/etherpad
+- GitHub Container Registry (mirror): https://github.com/ether/etherpad/pkgs/container/etherpad
+
+The GHCR mirror is useful if you are hitting Docker Hub anonymous pull rate limits (for example on Kubernetes clusters).
+
+## Downloading a prebuilt image
 ```bash
-# gets the latest published version
+# from Docker Hub
 docker pull etherpad/etherpad
-
-# gets a specific version
 docker pull etherpad/etherpad:2.6.1
+
+# from GHCR (same image, same tags)
+docker pull ghcr.io/ether/etherpad
+docker pull ghcr.io/ether/etherpad:2.6.1
 ```
 
 ## Build a personalized container
@@ -109,6 +115,8 @@ If your database needs additional settings, you will have to use a personalized 
 | `PAD_OPTIONS_ALWAYS_SHOW_CHAT`   |             | `false` |
 | `PAD_OPTIONS_CHAT_AND_USERS`     |             | `false` |
 | `PAD_OPTIONS_LANG`               |             | `null`  |
+| `PAD_OPTIONS_FADE_INACTIVE_AUTHOR_COLORS` | Fade each author's caret/background toward white as they go inactive. Set to `false` on busy pads (every faded author counts as a second on-screen color, so 30 contributors visually become 60), when users pick light colors that fade into the background, or whenever inactivity tracking is undesirable. | `true`  |
+| `PAD_OPTIONS_ENFORCE_READABLE_AUTHOR_COLORS` | Lighten/darken author bg colours at render time so text contrast meets WCAG 2.1 AA. | `true` |
 
 
 ### Shortcuts

@@ -14,32 +14,32 @@ Etherpad runs on your server, under your governance. No telemetry. No upsells. A
 
 The code is Apache 2.0. The data format is open. It [scales to thousands of simultaneous editors per pad](http://scale.etherpad.org/). Translated into 105 languages. Extended through hundreds of plugins. Used by Wikimedia, governments, public-sector institutions, and self-hosters worldwide since 2009.
 
-[Full data export](https://github.com/ether/etherpad-lite/wiki/Understanding-Etherpad's-Full-Data-Export-capabilities) is built in. The history is yours.
+[Full data export](https://github.com/ether/etherpad/wiki/Understanding-Etherpad's-Full-Data-Export-capabilities) is built in. The history is yours.
 
 ## Try it out
 
-[Try out a public Etherpad instance](https://github.com/ether/etherpad-lite/wiki/Sites-That-Run-Etherpad#sites-that-run-etherpad)
+[Try out a public Etherpad instance](https://github.com/ether/etherpad/wiki/Sites-That-Run-Etherpad#sites-that-run-etherpad)
 
 ## Project Status
 
 Etherpad has been doing the same thing — well — since 2009. No pivots, no acquisitions, no enshittification. Maintained by a small volunteer team.
 
-**We are actively looking for maintainers.** If you have experience with Node.js, real-time systems, or institutional collaboration tooling and you want to work on infrastructure that thousands of organisations quietly depend on, please [open an issue](https://github.com/ether/etherpad-lite/issues) or contact [John McLear](https://github.com/JohnMcLear).
+**We are actively looking for maintainers.** If you have experience with Node.js, real-time systems, or institutional collaboration tooling and you want to work on infrastructure that thousands of organisations quietly depend on, please [open an issue](https://github.com/ether/etherpad/issues) or contact [John McLear](https://github.com/JohnMcLear).
 
 ### Code Quality
 
-[![Code Quality](https://github.com/ether/etherpad-lite/actions/workflows/codeql-analysis.yml/badge.svg?color=%2344b492)](https://github.com/ether/etherpad-lite/actions/workflows/codeql-analysis.yml)
+[![Code Quality](https://github.com/ether/etherpad/actions/workflows/codeql-analysis.yml/badge.svg?color=%2344b492)](https://github.com/ether/etherpad/actions/workflows/codeql-analysis.yml)
 
 ### Testing
 
-[![Backend tests](https://github.com/ether/etherpad-lite/actions/workflows/backend-tests.yml/badge.svg?color=%2344b492)](https://github.com/ether/etherpad-lite/actions/workflows/backend-tests.yml)
-[![Simulated Load](https://github.com/ether/etherpad-lite/actions/workflows/load-test.yml/badge.svg?color=%2344b492)](https://github.com/ether/etherpad-lite/actions/workflows/load-test.yml)
-[![Rate Limit](https://github.com/ether/etherpad-lite/actions/workflows/rate-limit.yml/badge.svg?color=%2344b492)](https://github.com/ether/etherpad-lite/actions/workflows/rate-limit.yml)
-[![Docker file](https://github.com/ether/etherpad-lite/actions/workflows/dockerfile.yml/badge.svg?color=%2344b492)](https://github.com/ether/etherpad-lite/actions/workflows/dockerfile.yml)
-[![Frontend admin tests powered by Sauce Labs](https://github.com/ether/etherpad-lite/actions/workflows/frontend-admin-tests.yml/badge.svg?color=%2344b492)](https://github.com/ether/etherpad-lite/actions/workflows/frontend-admin-tests.yml)
-[![Frontend tests powered by Sauce Labs](https://github.com/ether/etherpad-lite/actions/workflows/frontend-tests.yml/badge.svg?color=%2344b492)](https://github.com/ether/etherpad-lite/actions/workflows/frontend-tests.yml)
+[![Backend tests](https://github.com/ether/etherpad/actions/workflows/backend-tests.yml/badge.svg?color=%2344b492)](https://github.com/ether/etherpad/actions/workflows/backend-tests.yml)
+[![Simulated Load](https://github.com/ether/etherpad/actions/workflows/load-test.yml/badge.svg?color=%2344b492)](https://github.com/ether/etherpad/actions/workflows/load-test.yml)
+[![Rate Limit](https://github.com/ether/etherpad/actions/workflows/rate-limit.yml/badge.svg?color=%2344b492)](https://github.com/ether/etherpad/actions/workflows/rate-limit.yml)
+[![Docker file](https://github.com/ether/etherpad/actions/workflows/docker.yml/badge.svg?color=%2344b492)](https://github.com/ether/etherpad/actions/workflows/docker.yml)
+[![Frontend admin tests powered by Sauce Labs](https://github.com/ether/etherpad/actions/workflows/frontend-admin-tests.yml/badge.svg?color=%2344b492)](https://github.com/ether/etherpad/actions/workflows/frontend-admin-tests.yml)
+[![Frontend tests powered by Sauce Labs](https://github.com/ether/etherpad/actions/workflows/frontend-tests.yml/badge.svg?color=%2344b492)](https://github.com/ether/etherpad/actions/workflows/frontend-tests.yml)
 [![Sauce Test Status](https://saucelabs.com/buildstatus/etherpad.svg)](https://saucelabs.com/u/etherpad)
-[![Windows Build](https://github.com/ether/etherpad-lite/actions/workflows/windows.yml/badge.svg?color=%2344b492)](https://github.com/ether/etherpad-lite/actions/workflows/windows.yml)
+[![Windows Build](https://github.com/ether/etherpad/actions/workflows/windows.yml/badge.svg?color=%2344b492)](https://github.com/ether/etherpad/actions/workflows/windows.yml)
 
 ### Engagement
 
@@ -60,24 +60,24 @@ For more than a decade, Etherpad has quietly underpinned the documents that matt
 - **Newsrooms and investigative journalism teams** — where authorship and editing history matter for legal and editorial integrity.
 - **Tens of thousands of self-hosted instances** worldwide, run by IT teams who chose Etherpad because it is theirs.
 
-If your organisation runs Etherpad and would be willing to be listed publicly, please [add it to the wiki](https://github.com/ether/etherpad-lite/wiki/Sites-That-Run-Etherpad).
+If your organisation runs Etherpad and would be willing to be listed publicly, please [add it to the wiki](https://github.com/ether/etherpad/wiki/Sites-That-Run-Etherpad).
 
 ## Installation
 
 ### Quick install (one-liner)
 
-The fastest way to get Etherpad running. Requires `git` and Node.js >= 20.
+The fastest way to get Etherpad running. Requires `git` and Node.js >= 22.
 
 **macOS / Linux / WSL:**
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/ether/etherpad-lite/master/bin/installer.sh | sh
+curl -fsSL https://raw.githubusercontent.com/ether/etherpad/master/bin/installer.sh | sh
 ```
 
 **Windows (PowerShell):**
 
 ```powershell
-irm https://raw.githubusercontent.com/ether/etherpad-lite/master/bin/installer.ps1 | iex
+irm https://raw.githubusercontent.com/ether/etherpad/master/bin/installer.ps1 | iex
 ```
 
 Both installers clone Etherpad into `./etherpad-lite`, install dependencies, and
@@ -93,21 +93,23 @@ To install and start in one go:
 
 ```sh
 # macOS / Linux / WSL
-ETHERPAD_RUN=1 sh -c "$(curl -fsSL https://raw.githubusercontent.com/ether/etherpad-lite/master/bin/installer.sh)"
+ETHERPAD_RUN=1 sh -c "$(curl -fsSL https://raw.githubusercontent.com/ether/etherpad/master/bin/installer.sh)"
 ```
 
 ```powershell
 # Windows
-$env:ETHERPAD_RUN=1; irm https://raw.githubusercontent.com/ether/etherpad-lite/master/bin/installer.ps1 | iex
+$env:ETHERPAD_RUN=1; irm https://raw.githubusercontent.com/ether/etherpad/master/bin/installer.ps1 | iex
 ```
 
 ### Docker-Compose
+
+The official image is published to both Docker Hub (`etherpad/etherpad`) and GitHub Container Registry (`ghcr.io/ether/etherpad`) with identical tags. Use whichever suits your environment; GHCR avoids Docker Hub's anonymous pull rate limits.
 
 ```yaml
 services:
   app:
     user: "0:0"
-    image: etherpad/etherpad:latest
+    image: etherpad/etherpad:latest  # or: ghcr.io/ether/etherpad:latest
     tty: true
     stdin_open: true
     volumes:
@@ -158,7 +160,7 @@ volumes:
 
 ### Requirements
 
-[Node.js](https://nodejs.org/) >= 20.
+[Node.js](https://nodejs.org/) >= 22.12.
 
 ### Windows, macOS, Linux
 
@@ -200,7 +202,7 @@ pnpm run plugins i ep_${plugin_name}
 ```
 
 Also see [the plugin wiki
-article](https://github.com/ether/etherpad-lite/wiki/Available-Plugins).
+article](https://github.com/ether/etherpad/wiki/Available-Plugins).
 
 ### Suggested Plugins
 
@@ -297,7 +299,7 @@ playing!
 
 ## Helpful resources
 
-The [wiki](https://github.com/ether/etherpad-lite/wiki) is your one-stop
+The [wiki](https://github.com/ether/etherpad/wiki) is your one-stop
 resource for Tutorials and How-to's.
 
 Documentation can be found in `doc/`.
@@ -315,21 +317,21 @@ dependency or upgrading version.
 
 If you want to find out how Etherpad's `Easysync` works (the library that makes
 it really realtime), start with this
-[PDF](https://github.com/ether/etherpad-lite/raw/master/doc/easysync/easysync-full-description.pdf)
+[PDF](https://github.com/ether/etherpad/raw/master/doc/easysync/easysync-full-description.pdf)
 (complex, but worth reading).
 
 ### Contributing
 
 Read our [**Developer
-Guidelines**](https://github.com/ether/etherpad-lite/blob/master/CONTRIBUTING.md)
+Guidelines**](https://github.com/ether/etherpad/blob/master/CONTRIBUTING.md)
 
 ### HTTP API
 
 Etherpad is designed to be easily embeddable and provides a [HTTP
-API](https://github.com/ether/etherpad-lite/wiki/HTTP-API) that allows your web
+API](https://github.com/ether/etherpad/wiki/HTTP-API) that allows your web
 application to manage pads, users and groups. It is recommended to use the
 [available client
-implementations](https://github.com/ether/etherpad-lite/wiki/HTTP-API-client-libraries)
+implementations](https://github.com/ether/etherpad/wiki/HTTP-API-client-libraries)
 in order to interact with this API.
 
 OpenAPI (previously swagger) definitions for the API are exposed under
@@ -357,12 +359,12 @@ send pull request to each plugin individually.
 
 ## FAQ
 
-Visit the **[FAQ](https://github.com/ether/etherpad-lite/wiki/FAQ)**.
+Visit the **[FAQ](https://github.com/ether/etherpad/wiki/FAQ)**.
 
 ## Get in touch
 
 The official channel for contacting the development team is via the [GitHub
-issues](https://github.com/ether/etherpad-lite/issues).
+issues](https://github.com/ether/etherpad/issues).
 
 For **responsible disclosure of vulnerabilities**, please write a mail to the
 maintainers (a.mux@inwind.it and contact@etherpad.org).

@@ -6,7 +6,7 @@
 # Optional environment variables:
 #   $env:ETHERPAD_DIR     Directory to install into (default: .\etherpad-lite)
 #   $env:ETHERPAD_BRANCH  Branch / tag to clone (default: master)
-#   $env:ETHERPAD_REPO    Repo URL (default: https://github.com/ether/etherpad-lite.git)
+#   $env:ETHERPAD_REPO    Repo URL (default: https://github.com/ether/etherpad.git)
 #   $env:ETHERPAD_RUN     If "1", start Etherpad after install
 #   $env:NO_COLOR         If set, disables coloured output
 
@@ -37,8 +37,8 @@ function Test-Cmd([string]$name) {
 # ---------- defaults ----------
 $EtherpadDir    = if ($env:ETHERPAD_DIR)    { $env:ETHERPAD_DIR }    else { 'etherpad-lite' }
 $EtherpadBranch = if ($env:ETHERPAD_BRANCH) { $env:ETHERPAD_BRANCH } else { 'master' }
-$EtherpadRepo   = if ($env:ETHERPAD_REPO)   { $env:ETHERPAD_REPO }   else { 'https://github.com/ether/etherpad-lite.git' }
-$RequiredNodeMajor = 20
+$EtherpadRepo   = if ($env:ETHERPAD_REPO)   { $env:ETHERPAD_REPO }   else { 'https://github.com/ether/etherpad.git' }
+$RequiredNodeMajor = 22
 
 Write-Step 'Etherpad installer'
 

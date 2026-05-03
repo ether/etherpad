@@ -1,3 +1,87 @@
+# 2.7.3
+
+### Breaking changes
+
+- **Minimum required Node.js version is now 22.12.** Node.js 20 is reaching end-of-life (see https://nodejs.org/en/about/previous-releases) and the docs build's `oxc-minify` peer requires `^20.19.0 || >=22.12.0`. The CI matrix now targets Node 22, 24, and 25. Upgrading should be straightforward — install a current Node.js release before updating Etherpad.
+
+### Notable enhancements
+
+- New built-in self-update subsystem (Tier 1: notify).
+  - Periodic check against the GitHub Releases API for the configured repo (default `ether/etherpad`). Configurable via the new `updates.*` settings block, default tier `"notify"`. Set `updates.tier` to `"off"` to disable entirely.
+  - The admin UI shows a banner and a dedicated "Etherpad updates" page with the current version, latest version, install method, and changelog.
+  - Pad users see a discreet footer badge **only** when the running version is severely outdated (one or more major versions behind) or flagged as vulnerable in a recent release manifest. The public endpoint that drives this never leaks the version string itself.
+  - New top-level `adminEmail` setting. When set, the updater emails the admin on first detection of severe / vulnerable status, with escalating cadence (weekly while vulnerable, monthly while severely outdated). PR 1 ships the dedupe + cadence logic; real SMTP wiring lands in a follow-up PR.
+  - Tier 1 ships in this release. Tiers 2 (manual click), 3 (auto with grace window) and 4 (autonomous in maintenance window) are designed and will land in subsequent releases.
+  - See `doc/admin/updates.md` for full configuration.
+
+# 2.7.2
+
+### Notable enhancements and fixes
+
+- Accessibility pass: corrected dialog semantics, improved focus management, added missing icon labels, and set the `html lang` attribute correctly.
+- Chat: clicking the chat icon works again, disabled toggles render properly, and the username layout no longer overflows.
+- `/export/etherpad` now honors the `:rev` URL segment, so revision-specific exports return the requested revision instead of the latest.
+- Undo / redo now scrolls the viewport to follow the caret, so reverted edits stay in view.
+- Page Down / Page Up now scrolls by viewport height instead of a fixed line count, matching standard editor behavior on tall and short windows alike.
+- Editbar: caret is restored to the pad after changing a toolbar select, so typing continues in the document instead of falling through to the toolbar.
+- Admin: i18n is restored on `/admin` so the admin UI is translated again.
+
+# 2.7.1
+
+### Notable enhancements and fixes
+
+- fixed stop harcoding lang=en, letting the client auto detect locale
+- Stop mutating the shared plugin registry during sanitization
+- Preserve non-breaking space
+
+# 2.7.0
+
+### Breaking changes
+
+- **Abiword has been replaced with LibreOffice for document import/export.** If you were using Abiword for DOCX/ODT/PDF conversion, update your `settings.json` to point `soffice` at your LibreOffice binary. DOCX export is now supported out of the box.
+
+### Notable enhancements
+
+- Added line numbers to the timeslider so you can follow along with specific lines while replaying a pad's history.
+- Added a playback speed setting to the timeslider — you can now scrub through history faster (or slower) than real time.
+- Creator-owned pad settings defaults: the user who creates a pad now seeds its default settings, giving pad creators more control over initial configuration.
+- Cookie names are now configurable via a prefix setting. Useful when running multiple Etherpads on the same domain and you need to keep their session cookies from colliding.
+- Added a new `aceRegisterLineAttributes` hook so plugins can preserve custom line attributes across Enter / line-split operations. Documentation for the hook is included.
+- Added a one-line installer script for getting Etherpad running quickly on a fresh machine.
+- Docker images are now published to GitHub Container Registry (GHCR) in addition to Docker Hub.
+- npm publishing of core and plugins has been migrated to OIDC trusted publishing for stronger supply-chain security.
+
+### Notable fixes
+
+- Database drivers are now bundled with Etherpad again, so fresh installs no longer fail to connect to Postgres, MySQL, and friends out of the box. A regression test has been added to prevent this from breaking again.
+- Pending changesets are now flushed immediately after a reconnect instead of being silently dropped, and users are warned when a pending edit is not accepted by the server.
+- Head revision and atext are now captured atomically, preventing the occasional "mismatched apply" errors on busy pads.
+- Clearing authorship colors can now be undone without forcing a client disconnect.
+- Added periodic cleanup of expired/stale sessions from the database, and fixed a race condition in the session cleanup timeout.
+- Error messages returned to clients are now sanitized by default with deduplication, so internal details no longer leak through error responses.
+- Raised the maximum socket.io message size to 10 MB so large pastes no longer get rejected.
+- Dev mode entrypoint paths now respect the `x-proxy-path` header, fixing reverse-proxy setups in development.
+- Numerous list-related fixes: numbered list wrapped lines now indent correctly, ordered list numbering is preserved across bullet interruptions during export, consecutive numbering survives indented sub-bullets, switching from unordered to ordered resets numbering, and line attributes are preserved across drag-and-drop.
+- Bold (and other) formatting is now retained after copy-paste.
+- Dead-key / compose-key input no longer eats the preceding space.
+- `POST` API requests with a JSON body no longer time out.
+- `appendText` now correctly attributes the new text to the specified author.
+- `createDiffHTML` no longer fails with `Not a changeset: undefined`.
+- Added `padId` to the `padUpdate` / `padCreate` hook context.
+- Fixed `numConnectedUsers` to include the joining user in its count.
+- Accessibility improvements: keyboard trap fix, better screen reader support, and `aria-live` announcements.
+- RTL URL parameter `rtl=false` now correctly disables RTL mode.
+- Language dropdown is now sorted alphabetically by native name.
+- PageDown now advances the caret by a full page of lines.
+- ESM/CJS interop issues in the Settings module that had been breaking plugin compatibility have been resolved, with setters added to the CJS compatibility layer and regression tests in place.
+- Several Docker build fixes: git submodule handling, `hardlink` package-import-method for ZFS, and production-only workspace config.
+
+### Other
+
+- Many occurrences of "etherpad-lite" have been renamed to "etherpad" across the codebase and documentation.
+- Pinned 33 transitive dependencies to patched versions to clear out Dependabot security alerts.
+- Restricted `GITHUB_TOKEN` permissions in the update-plugins workflow.
+
 # 2.6.1
 
 For those wondering where the new updates are and why it was very quite throughout the last 1 1/2 years – I've been working on a new implementation of Etherpad from scratch in Go. It's called Etherpad-Go and you can find it here: `https://github.com/ether/etherpad-go`

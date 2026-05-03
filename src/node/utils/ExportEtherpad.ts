@@ -21,12 +21,21 @@ const authorManager = require('../db/AuthorManager');
 const hooks = require('../../static/js/pluginfw/hooks');
 const padManager = require('../db/PadManager');
 
-exports.getPadRaw = async (padId:string, readOnlyId:string) => {
+exports.getPadRaw = async (padId:string, readOnlyId:string, revNum?: number) => {
   const dstPfx = `pad:${readOnlyId || padId}`;
   const [pad, customPrefixes] = await Promise.all([
     padManager.getPad(padId),
     hooks.aCallAll('exportEtherpadAdditionalContent'),
   ]);
+  // If a rev limit was supplied, clamp to it and also clamp chat to the
+  // timestamp-ordered window that ended at that rev. Without this, a rev=5
+  // export on a pad with head=100 would still ship all 95 later revisions
+  // (and leak their content via the exported .etherpad file) — which is
+  // precisely what issue #5071 reported.
+  const padHead: number = pad.head;
+  const effectiveHead: number = (revNum == null || revNum > padHead) ? padHead : revNum;
+  const isRevBound = revNum != null && revNum < padHead;
+  const boundAtext = isRevBound ? await pad.getInternalRevisionAText(effectiveHead) : null;
   const pluginRecords = await Promise.all(customPrefixes.map(async (customPrefix:string) => {
     const srcPfx = `${customPrefix}:${padId}`;
     const dstPfx = `${customPrefix}:${readOnlyId || padId}`;
@@ -49,11 +58,18 @@ exports.getPadRaw = async (padId:string, readOnlyId:string) => {
         return authorEntry;
       })()];
     }
-    for (let i = 0; i <= pad.head; ++i) yield [`${dstPfx}:revs:${i}`, pad.getRevision(i)];
+    for (let i = 0; i <= effectiveHead; ++i) yield [`${dstPfx}:revs:${i}`, pad.getRevision(i)];
     for (let i = 0; i <= pad.chatHead; ++i) yield [`${dstPfx}:chat:${i}`, pad.getChatMessage(i)];
     for (const gen of pluginRecords) yield* gen;
   })();
-  const data = {[dstPfx]: pad};
+  // When rev-bound, serialize a shallow-cloned pad object with head/atext
+  // rewritten so the import side reconstructs the pad at the requested rev.
+  // toJSON() returns a plain object suitable for spreading; the live Pad
+  // instance is kept for the exportEtherpad hook below.
+  const serializedPad = isRevBound
+      ? {...(pad.toJSON()), head: effectiveHead, atext: boundAtext}
+      : pad;
+  const data = {[dstPfx]: serializedPad};
   for (const [dstKey, p] of new Stream(records).batch(100).buffer(99)) data[dstKey] = await p;
   await hooks.aCallAll('exportEtherpad', {
     pad,

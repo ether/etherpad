@@ -4,6 +4,12 @@ export type PluginDef = {
   version: string,
   time: string,
   official: boolean,
+  /**
+   * `@feature:*` Playwright tags for core specs the plugin intentionally
+   * disables. See doc/PLUGIN_FEATURE_DISABLES.md. May be undefined for
+   * plugins without a disables list, which is the common case.
+   */
+  disables?: string[],
 }
 
 

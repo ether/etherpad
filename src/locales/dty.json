@@ -50,7 +50,6 @@
 	"pad.importExport.exportword": "माइक्रोसफ्ट वर्ड",
 	"pad.importExport.exportpdf": "पिडिएफ",
 	"pad.importExport.exportopen": "ओडिएफ (खुल्ला कागजात ढाँचा)",
-	"pad.importExport.abiword.innerHTML": "तम सादा पाठ या HTML ढाँचा बठेइ मात्तरी आयात अरीसकन्छऽ। विस्तारित आयात विशेषता खिलाई कृपया <a href=\"https://github.com/ether/etherpad-lite/wiki/How-to-enable-importing-and-exporting-different-file-formats-in-Ubuntu-or-OpenSuse-or-SLES-with-AbiWord\">abiword स्थापना अरऽ</a>।",
 	"pad.modals.connected": "जोडीयाको।",
 	"pad.modals.reconnecting": "तमरा प्याडमि दोबरा जडान अद्‍दाछ़..",
 	"pad.modals.forcereconnect": "बलात् पुन:जडान",

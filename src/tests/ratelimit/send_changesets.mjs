@@ -1,13 +1,11 @@
-'use strict';
+import {connect} from 'etherpad-cli-client';
 
-const etherpad = require('etherpad-cli-client');
-
-const pad = etherpad.connect(process.argv[2]);
+const pad = connect(process.argv[2]);
 pad.on('connected', () => {
   setTimeout(() => {
     setInterval(() => {
       pad.append('1');
-    }, process.argv[3]);
+    }, Number(process.argv[3]));
   }, 500); // wait because CLIENT_READY message is included in ratelimit
 
   setTimeout(() => {

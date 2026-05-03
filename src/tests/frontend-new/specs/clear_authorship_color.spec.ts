@@ -14,7 +14,9 @@ test.beforeEach(async ({ page })=>{
   await goToNewPad(page);
 })
 
-test('clear authorship color', async ({page}) => {
+test('clear authorship color', {
+  tag: '@feature:clear-authorship',
+}, async ({page}) => {
   const padBody = await getPadBody(page);
 
   // type some text
@@ -35,7 +37,9 @@ test('clear authorship color', async ({page}) => {
 })
 
 
-test("clear authorship colors can be undone to restore author colors", async function ({page}) {
+test("clear authorship colors can be undone to restore author colors", {
+  tag: '@feature:clear-authorship',
+}, async function ({page}) {
   // Fix for https://github.com/ether/etherpad-lite/issues/2802
   // Previously, undo of clear authorship was blocked as a workaround.
   // Now the server properly allows it, so undo should restore author colors.
@@ -70,7 +74,9 @@ test("clear authorship colors can be undone to restore author colors", async fun
 
 
 // Test for https://github.com/ether/etherpad-lite/issues/5128
-test('clears authorship when first line has line attributes', async function ({page}) {
+test('clears authorship when first line has line attributes', {
+  tag: '@feature:clear-authorship',
+}, async function ({page}) {
   // Make sure there is text with author info. The first line must have a line attribute.
   const padBody = await getPadBody(page);
   // Accept confirm dialogs before any action that might trigger one

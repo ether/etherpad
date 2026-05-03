@@ -3,6 +3,7 @@
 import {strict as assert} from 'assert';
 
 const common = require('../../common');
+const settings = require('../../../../node/utils/Settings');
 
 let agent: any;
 let apiVersion = 1;
@@ -18,11 +19,20 @@ const callApi = async (point: string, query: Record<string, string> = {}) => {
 };
 
 describe(__filename, function () {
+  let originalErasureFlag: boolean | undefined;
+
   before(async function () {
     this.timeout(60000);
     agent = await common.init();
     const res = await agent.get('/api/').expect(200);
     apiVersion = res.body.currentVersion;
+    settings.gdprAuthorErasure = settings.gdprAuthorErasure || {enabled: false};
+    originalErasureFlag = settings.gdprAuthorErasure.enabled;
+    settings.gdprAuthorErasure.enabled = true;
+  });
+
+  after(function () {
+    settings.gdprAuthorErasure.enabled = originalErasureFlag;
   });
 
   it('anonymizeAuthor zeroes the author and returns counters', async function () {
@@ -48,4 +58,16 @@ describe(__filename, function () {
     assert.equal(res.body.code, 1);
     assert.match(res.body.message, /authorID is required/);
   });
+
+  it('anonymizeAuthor returns an apierror when gdprAuthorErasure is disabled',
+      async function () {
+        settings.gdprAuthorErasure.enabled = false;
+        try {
+          const res = await callApi('anonymizeAuthor', {authorID: 'a.dummy'});
+          assert.equal(res.body.code, 1);
+          assert.match(res.body.message, /gdprAuthorErasure\.enabled/);
+        } finally {
+          settings.gdprAuthorErasure.enabled = true;
+        }
+      });
 });

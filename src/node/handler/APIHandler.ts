@@ -53,7 +53,7 @@ version['1'] = {
   setHTML: ['padID', 'html'],
   getRevisionsCount: ['padID'],
   getLastEdited: ['padID'],
-  deletePad: ['padID'],
+  deletePad: ['padID', 'deletionToken'],
   getReadOnlyID: ['padID'],
   setPublicStatus: ['padID', 'publicStatus'],
   getPublicStatus: ['padID'],
@@ -142,9 +142,9 @@ version['1.3.0'] = {
   setText: ['padID', 'text', 'authorId'],
 };
 
-
 version['1.3.1'] = {
   ...version['1.3.0'],
+  compactPad: ['padID', 'keepRevisions'],
   anonymizeAuthor: ['authorID'],
 };
 

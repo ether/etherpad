@@ -12,12 +12,15 @@ on:
       - 'v?[0-9]+.[0-9]+.[0-9]+'
 env:
   TEST_TAG: etherpad/etherpad:test
+
 permissions:
   contents: read
 
 jobs:
-  docker:
+  build-test:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     env:
       PNPM_HOME: ~/.pnpm-store
     steps:
@@ -26,11 +29,6 @@ jobs:
         uses: actions/checkout@v6
         with:
           path: etherpad
-
-      -
-        name: Set up QEMU
-        if: github.event_name == 'push'
-        uses: docker/setup-qemu-action@v4
       -
         name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
@@ -45,21 +43,23 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
       - uses: actions/cache@v5
-        name: Setup gnpm cache
-        if: always()
+        name: Cache pnpm store
         with:
-          path: |
-            ${{ env.PNPM_HOME }}
-            ~/.local/share/gnpm
-            /usr/local/bin/gnpm
-            /usr/local/bin/gnpm-0.0.12
-          key: ${{ runner.os }}-gnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          path: ${{ env.PNPM_HOME }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
-            ${{ runner.os }}-gnpm-store-
-      - name: Setup gnpm
-        uses: SamTV12345/gnpm-setup@main
+            ${{ runner.os }}-pnpm-store-
+      - uses: pnpm/action-setup@v6
+        name: Install pnpm
         with:
-          version: 0.0.12
+          version: 10.33.2
+          run_install: false
+      - name: Use Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: etherpad/pnpm-lock.yaml
       -
         name: Test
         working-directory: etherpad
@@ -76,15 +76,162 @@ jobs:
               *) printf %s\\n "unexpected status: ${status}" >&2; exit 1;;
             esac
           done
-          (cd src && gnpm run test-container)
+          (cd src && pnpm run test-container)
           git clean -dxf .
+
+  build-test-db-drivers:
+    # Spinning up MySQL + Postgres + cross-driver smoke is expensive; only
+    # run it on pushes to develop (and tagged release pushes), not on every
+    # feature-branch PR.
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    services:
+      mysql:
+        image: mysql:8
+        env:
+          MYSQL_ROOT_PASSWORD: password
+          MYSQL_DATABASE: etherpad
+          MYSQL_USER: etherpad
+          MYSQL_PASSWORD: password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -ppassword"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: etherpad
+          POSTGRES_USER: etherpad
+          POSTGRES_PASSWORD: password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U etherpad -d etherpad"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    steps:
+      -
+        name: Check out
+        uses: actions/checkout@v6
+        with:
+          path: etherpad
+      -
+        name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+      -
+        name: Build production image
+        uses: docker/build-push-action@v7
+        with:
+          context: ./etherpad
+          target: production
+          load: true
+          tags: ${{ env.TEST_TAG }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      -
+        name: Driver presence test (all 10 ueberdb2 drivers must resolve)
+        run: |
+          docker run --rm -w /opt/etherpad-lite/src "$TEST_TAG" node -e "
+            const mods = [
+              '@elastic/elasticsearch','cassandra-driver','mongodb','mssql',
+              'mysql2','nano','pg','redis','rethinkdb','surrealdb'
+            ];
+            let fail = false;
+            for (const m of mods) {
+              try { require(m); console.log('ok', m); }
+              catch (e) { console.error('MISSING', m, e.message); fail = true; }
+            }
+            if (fail) process.exit(1);
+          "
+      -
+        name: MySQL smoke — start Etherpad against mysql service
+        run: |
+          docker run --rm -d \
+            --network host \
+            -e NODE_ENV=production \
+            -e ADMIN_PASSWORD=admin \
+            -e DB_TYPE=mysql \
+            -e DB_HOST=127.0.0.1 \
+            -e DB_PORT=3306 \
+            -e DB_NAME=etherpad \
+            -e DB_USER=etherpad \
+            -e DB_PASS=password \
+            -e DB_CHARSET=utf8mb4 \
+            -e DEFAULT_PAD_TEXT="Test " \
+            --name et-mysql "$TEST_TAG"
+          for i in $(seq 1 60); do
+            if curl -sf http://127.0.0.1:9001/ >/dev/null; then
+              echo "mysql smoke: Etherpad is serving /"
+              docker rm -f et-mysql
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "mysql smoke: timed out waiting for Etherpad"
+          docker logs et-mysql || true
+          docker rm -f et-mysql || true
+          exit 1
+      -
+        name: Postgres smoke — start Etherpad against postgres service
+        run: |
+          docker run --rm -d \
+            --network host \
+            -e NODE_ENV=production \
+            -e ADMIN_PASSWORD=admin \
+            -e DB_TYPE=postgres \
+            -e DB_HOST=127.0.0.1 \
+            -e DB_PORT=5432 \
+            -e DB_NAME=etherpad \
+            -e DB_USER=etherpad \
+            -e DB_PASS=password \
+            -e DEFAULT_PAD_TEXT="Test " \
+            --name et-postgres "$TEST_TAG"
+          for i in $(seq 1 60); do
+            if curl -sf http://127.0.0.1:9001/ >/dev/null; then
+              echo "postgres smoke: Etherpad is serving /"
+              docker rm -f et-postgres
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "postgres smoke: timed out waiting for Etherpad"
+          docker logs et-postgres || true
+          docker rm -f et-postgres || true
+          exit 1
+
+  publish:
+    needs: [build-test, build-test-db-drivers]
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      -
+        name: Check out
+        uses: actions/checkout@v6
+        with:
+          path: etherpad
+      -
+        name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
+      -
+        name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
       -
         name: Docker meta
-        if: github.event_name == 'push'
         id: meta
         uses: docker/metadata-action@v6
         with:
-          images: etherpad/etherpad
+          images: |
+            etherpad/etherpad
+            ghcr.io/ether/etherpad
           tags: |
             type=ref,event=branch
             type=semver,pattern={{version}}
@@ -92,15 +239,20 @@ jobs:
             type=semver,pattern={{major}}
       -
         name: Log in to Docker Hub
-        if: github.event_name == 'push'
         uses: docker/login-action@v4
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       -
+        name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      -
         name: Build and push
         id: build-docker
-        if: github.event_name == 'push'
         uses: docker/build-push-action@v7
         with:
           context: ./etherpad
@@ -109,6 +261,7 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
       - name: Update repo description
         uses: peter-evans/dockerhub-description@v5
         if: github.ref == 'refs/heads/master'
@@ -118,8 +271,8 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
           repository: etherpad/etherpad
           enable-url-completion: true
-      - name: Check out
-        if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+      - name: Check out ether-charts
+        if: github.ref == 'refs/heads/develop'
         uses: actions/checkout@v6
         with:
           path: ether-charts

@@ -23,7 +23,7 @@ test.describe('indentation button', function () {
 
   test('indent text with button', async function ({page}) {
     const padBody = await getPadBody(page);
-    await page.locator('.buttonicon-indent').click()
+    await page.locator('.buttonicon-indent').click({force: true})
 
     const uls = padBody.locator('div').first().locator('ul')
     await expect(uls).toHaveCount(1);
@@ -35,14 +35,13 @@ test.describe('indentation button', function () {
     await padBody.click()
     await clearPadContent(page)
 
-    await page.locator('.buttonicon-indent').click()
+    await page.locator('.buttonicon-indent').click({force: true})
 
-    // type a bit, make a line break and type again
+    // type a bit, make a line break and type again. writeToPad uses
+    // insertText (one input event per line) which is reliable in
+    // Firefox under WITH_PLUGINS load.
     await padBody.focus()
-    await page.keyboard.type('line 1')
-    await page.keyboard.press('Enter');
-    await page.keyboard.type('line 2')
-    await page.keyboard.press('Enter');
+    await writeToPad(page, 'line 1\nline 2\n');
 
     const $newSecondLine = padBody.locator('div span').nth(1)
 
@@ -77,7 +76,7 @@ test.describe('indentation button', function () {
     const $lineWithCurlyBraces = padBody.locator('div').nth(3)
     await $lineWithCurlyBraces.click();
     await page.keyboard.press('End');
-    await page.keyboard.type('{{');
+    await page.keyboard.insertText('{{');
 
     // cannot use sendkeys('{enter}') here, browser does not read the command properly
     await page.keyboard.press('Enter');
@@ -90,7 +89,7 @@ test.describe('indentation button', function () {
     const $lineWithParenthesis = padBody.locator('div').nth(2)
     await $lineWithParenthesis.click();
     await page.keyboard.press('End');
-    await page.keyboard.type('(');
+    await page.keyboard.insertText('(');
     await page.keyboard.press('Enter');
     const $lineAfterParenthesis = padBody.locator('div').nth(3)
     expect(await $lineAfterParenthesis.textContent()).toMatch(/\s{4}/);
@@ -99,7 +98,7 @@ test.describe('indentation button', function () {
     const $lineWithBracket = padBody.locator('div').nth(1)
     await $lineWithBracket.click();
     await page.keyboard.press('End');
-    await page.keyboard.type('[');
+    await page.keyboard.insertText('[');
     await page.keyboard.press('Enter');
     const $lineAfterBracket = padBody.locator('div').nth(2);
     expect(await $lineAfterBracket.textContent()).toMatch(/\s{4}/);
@@ -108,7 +107,7 @@ test.describe('indentation button', function () {
     const $lineWithColon = padBody.locator('div').first();
     await $lineWithColon.click();
     await page.keyboard.press('End');
-    await page.keyboard.type(':');
+    await page.keyboard.insertText(':');
     await page.keyboard.press('Enter');
     const $lineAfterColon = padBody.locator('div').nth(1);
     expect(await $lineAfterColon.textContent()).toMatch(/\s{4}/);
@@ -128,7 +127,7 @@ test.describe('indentation button', function () {
     const $lineWithColon = padBody.locator('div').first();
     await $lineWithColon.click();
     await page.keyboard.press('End');
-    await page.keyboard.type(':');
+    await page.keyboard.insertText(':');
     await page.keyboard.press('Enter');
 
     const $lineAfterColon = padBody.locator('div').nth(1);
@@ -146,17 +145,15 @@ test.describe('indentation button', function () {
     const inner = padBody.locator('div').first();
     // make sure pad has more than one line
     await inner.click()
-    await page.keyboard.type('First');
-    await page.keyboard.press('Enter');
-    await page.keyboard.type('Second');
+    await writeToPad(page, 'First\nSecond');
 
 
     // indent first 2 lines
     await padBody.locator('div').nth(0).selectText();
-    await page.locator('.buttonicon-indent').click()
+    await page.locator('.buttonicon-indent').click({force: true})
 
     await padBody.locator('div').nth(1).selectText();
-    await page.locator('.buttonicon-indent').click()
+    await page.locator('.buttonicon-indent').click({force: true})
 
 
     await expect(padBody.locator('ul li')).toHaveCount(2);
@@ -164,19 +161,19 @@ test.describe('indentation button', function () {
 
     // apply bold
     await padBody.locator('div').nth(0).selectText();
-    await page.locator('.buttonicon-bold').click()
+    await page.locator('.buttonicon-bold').click({force: true})
 
     await padBody.locator('div').nth(1).selectText();
-    await page.locator('.buttonicon-bold').click()
+    await page.locator('.buttonicon-bold').click({force: true})
 
     await expect(padBody.locator('div b')).toHaveCount(2);
 
     // outdent first 2 lines
     await padBody.locator('div').nth(0).selectText();
-    await page.locator('.buttonicon-outdent').click()
+    await page.locator('.buttonicon-outdent').click({force: true})
 
     await padBody.locator('div').nth(1).selectText();
-    await page.locator('.buttonicon-outdent').click()
+    await page.locator('.buttonicon-outdent').click({force: true})
 
     await expect(padBody.locator('ul li')).toHaveCount(0);
 
@@ -197,7 +194,7 @@ test.describe('indentation button', function () {
     await firstTextElement.selectText()
 
     // get the indentation button and click it
-    await page.locator('.buttonicon-indent').click()
+    await page.locator('.buttonicon-indent').click({force: true})
 
     let newFirstTextElement = padBody.locator('div').first();
 
@@ -207,7 +204,7 @@ test.describe('indentation button', function () {
     await expect(newFirstTextElement.locator('li')).toHaveCount(1);
 
     // indent again
-    await page.locator('.buttonicon-indent').click()
+    await page.locator('.buttonicon-indent').click({force: true})
 
     newFirstTextElement = padBody.locator('div').first();
 
@@ -227,8 +224,8 @@ test.describe('indentation button', function () {
     // get the unindentation button and click it twice
     newFirstTextElement = padBody.locator('div').first();
     await newFirstTextElement.selectText()
-    await page.locator('.buttonicon-outdent').click()
-    await page.locator('.buttonicon-outdent').click()
+    await page.locator('.buttonicon-outdent').click({force: true})
+    await page.locator('.buttonicon-outdent').click({force: true})
 
     newFirstTextElement = padBody.locator('div').first();
 

@@ -7,9 +7,12 @@ const fsp = fs.promises;
 const toolbar = require('../../utils/toolbar');
 const hooks = require('../../../static/js/pluginfw/hooks');
 import settings, {getEpVersion} from '../../utils/Settings';
+import {ensureAuthorTokenCookie} from '../../utils/ensureAuthorTokenCookie';
 import util from 'node:util';
 const webaccess = require('./webaccess');
 const plugins = require('../../../static/js/pluginfw/plugin_defs');
+const i18n = require('../i18n');
+import {renderSocialMeta} from '../../utils/socialMeta';
 
 import {build, buildSync} from 'esbuild'
 import {ArgsExpressType} from "../../types/ArgsExpressType";
@@ -172,7 +175,10 @@ const handleLiveReload = async (args: ArgsExpressType, padString: string, timeSl
       })
       setRouteHandler('/', (req: any, res: any) => {
         const proxyPath = sanitizeProxyPath(req);
-        res.send(eejs.require('ep_etherpad-lite/templates/index.html', {req, entrypoint: proxyPath + '/watch/index?hash=' + hash, settings}));
+        const socialMetaHtml = renderSocialMeta({
+          req, settings, availableLangs: i18n.availableLangs, locales: i18n.locales, kind: 'home',
+        });
+        res.send(eejs.require('ep_etherpad-lite/templates/index.html', {req, entrypoint: proxyPath + '/watch/index?hash=' + hash, settings, socialMetaHtml}));
       })
     })
 
@@ -187,6 +193,7 @@ const handleLiveReload = async (args: ArgsExpressType, padString: string, timeSl
 
 
       setRouteHandler("/p/:pad", (req: any, res: any, next: Function) => {
+        ensureAuthorTokenCookie(req, res, settings);
         // The below might break for pads being rewritten
         const isReadOnly = !webaccess.userCanModify(req.params.pad, req);
 
@@ -196,12 +203,16 @@ const handleLiveReload = async (args: ArgsExpressType, padString: string, timeSl
         });
 
         const proxyPath = sanitizeProxyPath(req);
+        const socialMetaHtml = renderSocialMeta({
+          req, settings, availableLangs: i18n.availableLangs, locales: i18n.locales, kind: 'pad', padName: req.params.pad,
+        });
         const content = eejs.require('ep_etherpad-lite/templates/pad.html', {
           req,
           toolbar,
           isReadOnly,
           entrypoint: proxyPath + '/watch/pad?hash=' + hash,
-          settings: settings.getPublicSettings()
+          settings: settings.getPublicSettings(),
+          socialMetaHtml,
         })
         res.send(content);
       })
@@ -217,6 +228,7 @@ const handleLiveReload = async (args: ArgsExpressType, padString: string, timeSl
       })
 
       setRouteHandler("/p/:pad/timeslider", (req: any, res: any, next: Function) => {
+        ensureAuthorTokenCookie(req, res, settings);
         console.log("Reloading pad")
         // The below might break for pads being rewritten
         const isReadOnly = !webaccess.userCanModify(req.params.pad, req);
@@ -227,12 +239,16 @@ const handleLiveReload = async (args: ArgsExpressType, padString: string, timeSl
         });
 
         const proxyPath = sanitizeProxyPath(req);
+        const socialMetaHtml = renderSocialMeta({
+          req, settings, availableLangs: i18n.availableLangs, locales: i18n.locales, kind: 'timeslider', padName: req.params.pad,
+        });
         const content = eejs.require('ep_etherpad-lite/templates/timeslider.html', {
           req,
           toolbar,
           isReadOnly,
           entrypoint: proxyPath + '/watch/timeslider?hash=' + hash,
-          settings: settings.getPublicSettings()
+          settings: settings.getPublicSettings(),
+          socialMetaHtml,
         })
         res.send(content);
       })
@@ -342,12 +358,16 @@ exports.expressCreateServer = async (_hookName: string, args: ArgsExpressType, c
 
     // serve index.html under /
     args.app.get('/', (req: any, res: any) => {
-      res.send(eejs.require('ep_etherpad-lite/templates/index.html', {req, settings, entrypoint: "./"+fileNameIndex}));
+      const socialMetaHtml = renderSocialMeta({
+        req, settings, availableLangs: i18n.availableLangs, locales: i18n.locales, kind: 'home',
+      });
+      res.send(eejs.require('ep_etherpad-lite/templates/index.html', {req, settings, entrypoint: "./"+fileNameIndex, socialMetaHtml}));
     });
 
 
     // serve pad.html under /p
     args.app.get('/p/:pad', (req: any, res: any, next: Function) => {
+      ensureAuthorTokenCookie(req, res, settings);
       // The below might break for pads being rewritten
       const isReadOnly = !webaccess.userCanModify(req.params.pad, req);
 
@@ -356,27 +376,36 @@ exports.expressCreateServer = async (_hookName: string, args: ArgsExpressType, c
         isReadOnly
       });
 
+      const socialMetaHtml = renderSocialMeta({
+        req, settings, availableLangs: i18n.availableLangs, locales: i18n.locales, kind: 'pad', padName: req.params.pad,
+      });
       const content = eejs.require('ep_etherpad-lite/templates/pad.html', {
         req,
         toolbar,
         isReadOnly,
         entrypoint: "../"+fileNamePad,
-        settings: settings.getPublicSettings()
+        settings: settings.getPublicSettings(),
+        socialMetaHtml,
       })
       res.send(content);
     });
 
     // serve timeslider.html under /p/$padname/timeslider
     args.app.get('/p/:pad/timeslider', (req: any, res: any, next: Function) => {
+      ensureAuthorTokenCookie(req, res, settings);
       hooks.callAll('padInitToolbar', {
         toolbar,
       });
 
+      const socialMetaHtml = renderSocialMeta({
+        req, settings, availableLangs: i18n.availableLangs, locales: i18n.locales, kind: 'timeslider', padName: req.params.pad,
+      });
       res.send(eejs.require('ep_etherpad-lite/templates/timeslider.html', {
         req,
         toolbar,
         entrypoint: "../../"+fileNameTimeSlider,
-        settings: settings.getPublicSettings()
+        settings: settings.getPublicSettings(),
+        socialMetaHtml,
       }));
     });
   } else {

@@ -34,8 +34,13 @@ exports.chat = (() => {
   let chatMentions = 0;
   return {
     show() {
+      if (pad.settings.hideChat) return;
       $('#chaticon').removeClass('visible');
-      $('#chatbox').addClass('visible');
+      // Clear any inline `display: none` left by applyShowChat(false)'s
+      // jQuery .hide() — without this, re-enabling chat then clicking the
+      // icon would only add the .visible class while the box stayed hidden
+      // by the inline style. The .visible class only flips visibility.
+      $('#chatbox').css('display', '').addClass('visible');
       this.scrollDown(true);
       chatMentions = 0;
       Tinycon.setBubble(0);
@@ -49,7 +54,7 @@ exports.chat = (() => {
       }, 100);
     },
     // Make chat stick to right hand side of screen
-    stickToScreen(fromInitialCall) {
+    stickToScreen(fromInitialCall, persistPreference = true) {
       if ($('#options-stickychat').prop('checked')) {
         $('#options-stickychat').prop('checked', false);
       }
@@ -65,13 +70,13 @@ exports.chat = (() => {
         $('#chatbox').css('display', 'flex');
       }, 0);
 
-      padcookie.setPref('chatAlwaysVisible', isStuck);
+      if (persistPreference) padcookie.setPref('chatAlwaysVisible', isStuck);
       $('#options-stickychat').prop('checked', isStuck);
     },
-    chatAndUsers(fromInitialCall) {
+    chatAndUsers(fromInitialCall, persistPreference = true) {
       const toEnable = $('#options-chatandusers').is(':checked');
       if (toEnable || !userAndChat || fromInitialCall) {
-        this.stickToScreen(true);
+        this.stickToScreen(true, persistPreference);
         $('#options-stickychat').prop('checked', true);
         $('#options-chatandusers').prop('checked', true);
         $('#options-stickychat').prop('disabled', true);
@@ -80,7 +85,7 @@ exports.chat = (() => {
         $('#options-stickychat').prop('disabled', false);
         userAndChat = false;
       }
-      padcookie.setPref('chatAndUsers', userAndChat);
+      if (persistPreference) padcookie.setPref('chatAndUsers', userAndChat);
       $('#users, .sticky-container')
           .toggleClass('chatAndUsers popup-show stickyUsers', userAndChat);
       $('#chatbox').toggleClass('chatAndUsersChat', userAndChat);
@@ -204,7 +209,7 @@ exports.chat = (() => {
         count++;
         $('#chatcounter').text(count);
 
-        if (!chatOpen && ctx.duration > 0) {
+        if (!pad.settings.hideChat && !chatOpen && ctx.duration > 0) {
           const text = $('<p>')
               .append($('<span>').addClass('author-name').text(ctx.authorName))
               // ctx.text was HTML-escaped before calling the hook. Hook functions are trusted
@@ -261,6 +266,19 @@ exports.chat = (() => {
       });
 
       // initial messages are loaded in pad.js' _afterHandshake
+
+      $('#chaticon').on('click', (e) => {
+        e.preventDefault();
+        this.show();
+      });
+      $('#titlecross').on('click', (e) => {
+        e.preventDefault();
+        this.hide();
+      });
+      $('#titlesticky').on('click', (e) => {
+        e.preventDefault();
+        this.stickToScreen(true);
+      });
 
       $('#chatcounter').text(0);
       $('#chatloadmessagesbutton').on('click', () => {

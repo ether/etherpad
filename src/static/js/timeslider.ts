@@ -27,14 +27,45 @@
 // assigns to the global `$` and augments it with plugins.
 require('./vendors/jquery');
 
-import {randomString, Cookies} from "./pad_utils";
+import {Cookies} from "./pad_utils";
 const hooks = require('./pluginfw/hooks');
 import padutils from './pad_utils'
 const socketio = require('./socketio');
 import html10n from '../js/vendors/html10n'
-let token, padId, exportLinks, socket, changesetLoader, BroadcastSlider;
+let padId, exportLinks, socket, changesetLoader, BroadcastSlider;
 let cp = '';
 const playbackSpeedCookie = 'timesliderPlaybackSpeed';
+
+const getPrefsCookieName = () => `${cp}${window.location.protocol === 'https:' ? 'prefs' : 'prefsHttp'}`;
+
+const readPadPrefs = () => {
+  try {
+    let json = Cookies.get(getPrefsCookieName());
+    if (json == null) {
+      const unprefixed = window.location.protocol === 'https:' ? 'prefs' : 'prefsHttp';
+      if (unprefixed !== getPrefsCookieName()) json = Cookies.get(unprefixed);
+    }
+    return json == null ? {} : JSON.parse(json);
+  } catch (err) {
+    return {};
+  }
+};
+
+const writePadPrefs = (prefs) => {
+  Cookies.set(getPrefsCookieName(), JSON.stringify(prefs), {expires: 365 * 100});
+};
+
+const setPadPref = (prefName, value) => {
+  const prefs = readPadPrefs();
+  prefs[prefName] = value;
+  writePadPrefs(prefs);
+};
+
+const applyShowLineNumbers = (showLineNumbers) => {
+  padutils.setCheckbox($('#options-linenoscheck'), showLineNumbers);
+  $('body').toggleClass('line-numbers-hidden', !showLineNumbers);
+  window.requestAnimationFrame(() => $(window).trigger('resize'));
+};
 
 const init = () => {
   padutils.setupGlobalExceptionHandler();
@@ -49,13 +80,10 @@ const init = () => {
     // set the title
     document.title = `${padId.replace(/_+/g, ' ')} | ${document.title}`;
 
-    // ensure we have a token
+    // The author token is an HttpOnly cookie set by the server on
+    // /p/:pad/timeslider (ether/etherpad#6701 PR3). The browser never reads
+    // or writes it; the server picks it up from the socket.io handshake.
     cp = (window as any).clientVars?.cookiePrefix || '';
-    token = Cookies.get(`${cp}token`) || Cookies.get('token');
-    if (token == null) {
-      token = `t.${randomString()}`;
-      Cookies.set(`${cp}token`, token, {expires: 60});
-    }
 
     socket = socketio.connect(exports.baseURL, '/', {query: {padId}});
 
@@ -103,7 +131,6 @@ const sendSocketMsg = (type, data) => {
     type,
     data,
     padId,
-    token,
     sessionID: Cookies.get(`${cp}sessionID`) || Cookies.get('sessionID'),
   });
 };
@@ -113,7 +140,7 @@ const fireWhenAllScriptsAreLoaded = [];
 const handleClientVars = (message) => {
   // save the client Vars
   window.clientVars = message.data;
-  cp = window.clientVars.cookiePrefix || '';
+  cp = (window as any).clientVars?.cookiePrefix || '';
 
   if (window.clientVars.sessionRefreshInterval) {
     const ping =
@@ -169,6 +196,12 @@ const handleClientVars = (message) => {
   $('#playpause_button_icon').attr('title', html10n.get('timeslider.playPause'));
   $('#leftstep').attr('title', html10n.get('timeslider.backRevision'));
   $('#rightstep').attr('title', html10n.get('timeslider.forwardRevision'));
+  padutils.bindCheckboxChange($('#options-linenoscheck'), () => {
+    const showLineNumbers = padutils.getCheckbox('#options-linenoscheck');
+    setPadPref('showLineNumbers', showLineNumbers);
+    applyShowLineNumbers(showLineNumbers);
+  });
+  applyShowLineNumbers(readPadPrefs().showLineNumbers !== false);
 
   // font family change
   $('#viewfontmenu').on('change', function () {

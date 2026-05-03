@@ -50,7 +50,6 @@
 	"pad.importExport.exportword": "مایکروسافت وورد",
 	"pad.importExport.exportpdf": "پی دی اف",
 	"pad.importExport.exportopen": " (قالب سند باز)ODF",
-	"pad.importExport.abiword.innerHTML": "شما تنها می‌توانید از قالب متن ساده یا اچ‌تی‌ام‌ال درون‌ریزی کنید. برای بیشتر شدن ویژگی‌های درون‌ریزی پیشرفته <a href=\"https://github.com/ether/etherpad-lite/wiki/How-to-enable-importing-and-exporting-different-file-formats-in-Ubuntu-or-OpenSuse-or-SLES-with-AbiWord\">AbiWord</a> را نصب کنید.",
 	"pad.modals.connected": "وصل بیۀ",
 	"pad.modals.reconnecting": "..در حال اتصال دوباره به دفترچه یادداشت شما",
 	"pad.modals.forcereconnect": "واداشتن به اتصال دوباره",

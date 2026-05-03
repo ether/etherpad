@@ -231,12 +231,15 @@ domline.createDomLine = (nonEmpty, doesWrap, optBrowser, optDocument) => {
 domline.processSpaces = (s, doesWrap) => {
   if (s.indexOf('<') < 0 && !doesWrap) {
     // short-cut
-    return s.replace(/ /g, '&nbsp;');
+    return s.replace(/[ \u00a0]/g, '&nbsp;');
   }
   const parts = [];
-  s.replace(/<[^>]*>?| |[^ <]+/g, (m) => {
+  s.replace(/<[^>]*>?|[ \u00a0]|[^ \u00a0<]+/g, (m) => {
     parts.push(m);
   });
+  // U+00A0 is content for run-bookkeeping - it terminates a space run
+  // just like a word character would, so runs of regular spaces adjacent
+  // to a nbsp are not miscounted as one long run (issue #3037).
   if (doesWrap) {
     let endOfLine = true;
     let beforeSpace = false;
@@ -270,6 +273,9 @@ domline.processSpaces = (s, doesWrap) => {
         parts[i] = '&nbsp;';
       }
     }
+  }
+  for (let i = 0; i < parts.length; i++) {
+    if (parts[i] === '\u00a0') parts[i] = '&nbsp;';
   }
   return parts.join('');
 };

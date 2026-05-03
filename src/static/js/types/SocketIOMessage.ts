@@ -33,7 +33,6 @@ export type HistoricalAuthorData = MapArrayType<{
 
 export type ServerVar = {
   rev: number
-  clientIp: string
   padId: string
   historicalAuthorData?: HistoricalAuthorData,
   initialAttributedText: {
@@ -63,8 +62,14 @@ export type ClientVarPayload = {
   userColor: number,
   hideChat?: boolean,
   padOptions: PadOption,
+  privacyBanner?: {
+    enabled: boolean,
+    title: string,
+    body: string,
+    learnMoreUrl: string | null,
+    dismissal: 'dismissible' | 'sticky',
+  },
   padId: string,
-  clientIp: string,
   colorPalette: string[],
   accountPrivs: {
     maxRevisions: number,
@@ -73,8 +78,10 @@ export type ClientVarPayload = {
   chatHead: number,
   readonly: boolean,
   serverTimestamp: number,
-  initialOptions: MapArrayType<string>,
+  initialOptions: PadOption,
   userId: string,
+  canEditPadSettings?: boolean,
+  enablePadWideSettings?: boolean,
   mode: string,
   randomVersionString: string,
   skinName: string
@@ -87,6 +94,8 @@ export type ClientVarPayload = {
   initialTitle: string,
   opts: {}
   numConnectedUsers: number
+  canDeletePad?: boolean,
+  padDeletionToken?: string | null,
   sofficeAvailable: string
   plugins: {
     plugins:  MapArrayType<any>
@@ -184,6 +193,7 @@ export type ClientReadyMessage = {
   sessionID: string,
   token: string,
   userInfo: UserInfo,
+  padSettingsDefaults?: PadOption,
   reconnect?: boolean
   client_rev?: number
 }
@@ -197,6 +207,7 @@ export type PadDeleteMessage = {
   type: 'PAD_DELETE'
   data: {
     padId: string
+    deletionToken?: string
   }
 }
 
@@ -249,7 +260,7 @@ export type PadOption = {
   "alwaysShowChat"?:   boolean,
   "chatAndUsers"?:     boolean,
   "lang"?:             null|string,
-  view? : MapArrayType<boolean>
+  view? : MapArrayType<boolean|string>
 }
 
 
@@ -322,4 +333,3 @@ export type SocketClientReadyMessage = {
   reconnect?: boolean
   client_rev?: number
 }
-

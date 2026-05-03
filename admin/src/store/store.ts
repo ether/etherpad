@@ -3,6 +3,23 @@ import {Socket} from "socket.io-client";
 import {PadSearchResult} from "../utils/PadSearch.ts";
 import {InstalledPlugin} from "../pages/Plugin.ts";
 
+export interface UpdateStatusPayload {
+  currentVersion: string;
+  latest: null | {
+    version: string;
+    tag: string;
+    body: string;
+    publishedAt: string;
+    prerelease: boolean;
+    htmlUrl: string;
+  };
+  lastCheckAt: string | null;
+  installMethod: string;
+  tier: string;
+  policy: null | {canNotify: boolean; canManual: boolean; canAuto: boolean; canAutonomous: boolean; reason: string};
+  vulnerableBelow: Array<{announcedBy: string; threshold: string}>;
+}
+
 type ToastState = {
   description?:string,
   title: string,
@@ -25,7 +42,9 @@ type StoreState = {
   pads: PadSearchResult|undefined,
   setPads: (pads: PadSearchResult)=>void,
   installedPlugins: InstalledPlugin[],
-  setInstalledPlugins: (plugins: InstalledPlugin[])=>void
+  setInstalledPlugins: (plugins: InstalledPlugin[])=>void,
+  updateStatus: UpdateStatusPayload | null,
+  setUpdateStatus: (s: UpdateStatusPayload) => void,
 }
 
 
@@ -48,5 +67,7 @@ export const useStore = create<StoreState>()((set) => ({
   pads: undefined,
   setPads: (pads)=>set({pads}),
   installedPlugins: [],
-  setInstalledPlugins: (plugins)=>set({installedPlugins: plugins})
+  setInstalledPlugins: (plugins)=>set({installedPlugins: plugins}),
+  updateStatus: null,
+  setUpdateStatus: (s) => set({updateStatus: s}),
 }));

@@ -22,45 +22,57 @@ jobs:
         name: Checkout repository
         uses: actions/checkout@v6
       - uses: actions/cache@v5
-        name: Setup gnpm cache
-        if: always()
+        name: Cache pnpm store
         with:
-          path: |
-            ${{ env.PNPM_HOME }}
-            ~/.cache/ms-playwright
-            ~/.local/share/gnpm
-            /usr/local/bin/gnpm
-            /usr/local/bin/gnpm-0.0.12
-          key: ${{ runner.os }}-gnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          path: ${{ env.PNPM_HOME }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
-            ${{ runner.os }}-gnpm-store-
-      - name: Setup gnpm
-        uses: SamTV12345/gnpm-setup@main
+            ${{ runner.os }}-pnpm-store-
+      - uses: actions/cache@v5
+        name: Cache Playwright browsers
         with:
-          version: 0.0.12
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('src/package.json', 'pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-
+      - uses: pnpm/action-setup@v6
+        name: Install pnpm
+        with:
+          version: 10.33.2
+          run_install: false
+      - name: Use Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
       -
         name: Install all dependencies and symlink for ep_etherpad-lite
-        run: gnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile
       -
         name: Create settings.json
         run: cp ./src/tests/settings.json settings.json
       - name: Run the frontend tests
         shell: bash
         run: |
-          gnpm run prod > /tmp/etherpad-server.log 2>&1 &
-          connected=false
-          can_connect() {
-          curl -sSfo /dev/null http://localhost:9001/ || return 1
-          connected=true
-          }
-          now() { date +%s; }
-          start=$(now)
-          while [ $(($(now) - $start)) -le 15 ] && ! can_connect; do
-          sleep 1
-          done
+          set -euo pipefail
+          pnpm run prod > /tmp/etherpad-server.log 2>&1 &
+          # Generous 90s budget so a slow runner (or, in the with-plugins
+          # variant, plugin boot) doesn't lose the race against the test
+          # phase. Fail loudly on timeout rather than silently falling
+          # through to tests against a half-started server.
+          # --max-time bounds each probe so a stuck server can't make a
+          # single curl call eat the whole 90s budget.
+          can_connect() { curl --max-time 3 -sSfo /dev/null http://localhost:9001/; }
+          for i in $(seq 1 90); do can_connect && break; sleep 1; done
+          if ! can_connect; then
+            echo "::error::Etherpad did not respond on :9001 within 90s"
+            echo "----- server log -----"
+            tail -n 200 /tmp/etherpad-server.log || true
+            exit 1
+          fi
           cd src
-          gnpm exec playwright install chromium  --with-deps
-          gnpm run test-ui --project=chromium
+          pnpm exec playwright install chromium  --with-deps
+          pnpm run test-ui --project=chromium
       - name: Upload server log on failure
         uses: actions/upload-artifact@v7
         if: failure()
@@ -83,43 +95,55 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
       - uses: actions/cache@v5
-        name: Setup gnpm cache
-        if: always()
+        name: Cache pnpm store
         with:
-          path: |
-            ${{ env.PNPM_HOME }}
-            ~/.local/share/gnpm
-            ~/.cache/ms-playwright
-            /usr/local/bin/gnpm
-            /usr/local/bin/gnpm-0.0.12
-          key: ${{ runner.os }}-gnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          path: ${{ env.PNPM_HOME }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
-            ${{ runner.os }}-gnpm-store-
-      - name: Setup gnpm
-        uses: SamTV12345/gnpm-setup@main
+            ${{ runner.os }}-pnpm-store-
+      - uses: actions/cache@v5
+        name: Cache Playwright browsers
         with:
-          version: 0.0.12
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('src/package.json', 'pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-
+      - uses: pnpm/action-setup@v6
+        name: Install pnpm
+        with:
+          version: 10.33.2
+          run_install: false
+      - name: Use Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
       - name: Install all dependencies and symlink for ep_etherpad-lite
-        run: gnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile
       - name: Create settings.json
         run: cp ./src/tests/settings.json settings.json
       - name: Run the frontend tests
         shell: bash
         run: |
-          gnpm run prod > /tmp/etherpad-server.log 2>&1 &
-          connected=false
-          can_connect() {
-          curl -sSfo /dev/null http://localhost:9001/ || return 1
-          connected=true
-          }
-          now() { date +%s; }
-          start=$(now)
-          while [ $(($(now) - $start)) -le 15 ] && ! can_connect; do
-          sleep 1
-          done
+          set -euo pipefail
+          pnpm run prod > /tmp/etherpad-server.log 2>&1 &
+          # Generous 90s budget so a slow runner (or, in the with-plugins
+          # variant, plugin boot) doesn't lose the race against the test
+          # phase. Fail loudly on timeout rather than silently falling
+          # through to tests against a half-started server.
+          # --max-time bounds each probe so a stuck server can't make a
+          # single curl call eat the whole 90s budget.
+          can_connect() { curl --max-time 3 -sSfo /dev/null http://localhost:9001/; }
+          for i in $(seq 1 90); do can_connect && break; sleep 1; done
+          if ! can_connect; then
+            echo "::error::Etherpad did not respond on :9001 within 90s"
+            echo "----- server log -----"
+            tail -n 200 /tmp/etherpad-server.log || true
+            exit 1
+          fi
           cd src
-          gnpm exec playwright install firefox  --with-deps
-          gnpm run test-ui --project=firefox
+          pnpm exec playwright install firefox  --with-deps
+          pnpm run test-ui --project=firefox
       - name: Upload server log on failure
         uses: actions/upload-artifact@v7
         if: failure()
@@ -131,5 +155,202 @@ jobs:
         if: always()
         with:
           name: playwright-report-firefox
+          path: src/playwright-report/
+          retention-days: 30
+
+  # Frontend tests with the same /ether plugin set that backend-tests.yml
+  # exercises, so a core change that breaks plugin UX is caught in PR CI
+  # rather than after release. Re-introduces coverage that was lost when
+  # the workflows were nuked & rebuilt in 2023 (commit cc80db2d3) and the
+  # backend equivalent was restored without the frontend half.
+  playwright-chrome-with-plugins:
+    env:
+      PNPM_HOME: ~/.pnpm-store
+    name: Playwright Chrome with plugins
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+      - uses: actions/cache@v5
+        name: Cache pnpm store
+        with:
+          path: ${{ env.PNPM_HOME }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+      - uses: actions/cache@v5
+        name: Cache Playwright browsers
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('src/package.json', 'pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-
+      - uses: pnpm/action-setup@v6
+        name: Install pnpm
+        with:
+          version: 10.33.2
+          run_install: false
+      - name: Use Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install all dependencies and symlink for ep_etherpad-lite
+        run: pnpm install --frozen-lockfile
+      - name: Install Etherpad plugins
+        # Same plugin set as backend-tests.yml's withpluginsLinux job,
+        # MINUS ep_cursortrace.
+        #
+        # ep_cursortrace's `aceEditEvent` hook fires on every keyboard
+        # event (handleClick, handleKeyEvent, idleWorkTimer) and sends a
+        # cursor-position socket message per call. Under the test
+        # harness's `writeToPad` bursts (insertText + Enter loops) that
+        # stream of socket messages saturates the editor's input
+        # pipeline in Firefox specifically, causing intermittent
+        # keystroke drops and a long tail of test flakiness.
+        #
+        # Bisected via a 4-iteration probe on this branch — see commit
+        # history of .github/workflows/frontend-tests.yml around the
+        # PR-7630 timeframe. Tracked for a follow-up fix
+        # (debounce / throttle in ep_cursortrace's main.js).
+        run: >
+          pnpm add -w
+          ep_align
+          ep_author_hover
+          ep_font_color
+          ep_font_size
+          ep_hash_auth
+          ep_headings2
+          ep_markdown
+          ep_readonly_guest
+          ep_set_title_on_pad
+          ep_spellcheck
+          ep_subscript_and_superscript
+          ep_table_of_contents
+      - name: Create settings.json
+        run: cp ./src/tests/settings.json settings.json
+      - name: Run the frontend tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm run prod > /tmp/etherpad-server.log 2>&1 &
+          # Generous 90s budget so a slow runner (or, in the with-plugins
+          # variant, plugin boot) doesn't lose the race against the test
+          # phase. Fail loudly on timeout rather than silently falling
+          # through to tests against a half-started server.
+          # --max-time bounds each probe so a stuck server can't make a
+          # single curl call eat the whole 90s budget.
+          can_connect() { curl --max-time 3 -sSfo /dev/null http://localhost:9001/; }
+          for i in $(seq 1 90); do can_connect && break; sleep 1; done
+          if ! can_connect; then
+            echo "::error::Etherpad did not respond on :9001 within 90s"
+            echo "----- server log -----"
+            tail -n 200 /tmp/etherpad-server.log || true
+            exit 1
+          fi
+          cd src
+          pnpm exec playwright install chromium  --with-deps
+          WITH_PLUGINS=1 pnpm run test-ui --project=chromium
+      - name: Upload server log on failure
+        uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: server-log-chrome-with-plugins
+          path: /tmp/etherpad-server.log
+          retention-days: 7
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: playwright-report-chrome-with-plugins
+          path: src/playwright-report/
+          retention-days: 30
+
+  playwright-firefox-with-plugins:
+    env:
+      PNPM_HOME: ~/.pnpm-store
+    name: Playwright Firefox with plugins
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+      - uses: actions/cache@v5
+        name: Cache pnpm store
+        with:
+          path: ${{ env.PNPM_HOME }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+      - uses: actions/cache@v5
+        name: Cache Playwright browsers
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('src/package.json', 'pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-
+      - uses: pnpm/action-setup@v6
+        name: Install pnpm
+        with:
+          version: 10.33.2
+          run_install: false
+      - name: Use Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install all dependencies and symlink for ep_etherpad-lite
+        run: pnpm install --frozen-lockfile
+      - name: Install Etherpad plugins
+        # See sibling Playwright Chrome with plugins job for the full
+        # rationale on why ep_cursortrace is excluded from the test
+        # plugin set.
+        run: >
+          pnpm add -w
+          ep_align
+          ep_author_hover
+          ep_font_color
+          ep_font_size
+          ep_hash_auth
+          ep_headings2
+          ep_markdown
+          ep_readonly_guest
+          ep_set_title_on_pad
+          ep_spellcheck
+          ep_subscript_and_superscript
+          ep_table_of_contents
+      - name: Create settings.json
+        run: cp ./src/tests/settings.json settings.json
+      - name: Run the frontend tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm run prod > /tmp/etherpad-server.log 2>&1 &
+          # Generous 90s budget so a slow runner (or, in the with-plugins
+          # variant, plugin boot) doesn't lose the race against the test
+          # phase. Fail loudly on timeout rather than silently falling
+          # through to tests against a half-started server.
+          # --max-time bounds each probe so a stuck server can't make a
+          # single curl call eat the whole 90s budget.
+          can_connect() { curl --max-time 3 -sSfo /dev/null http://localhost:9001/; }
+          for i in $(seq 1 90); do can_connect && break; sleep 1; done
+          if ! can_connect; then
+            echo "::error::Etherpad did not respond on :9001 within 90s"
+            echo "----- server log -----"
+            tail -n 200 /tmp/etherpad-server.log || true
+            exit 1
+          fi
+          cd src
+          pnpm exec playwright install firefox  --with-deps
+          WITH_PLUGINS=1 pnpm run test-ui --project=firefox
+      - name: Upload server log on failure
+        uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: server-log-firefox-with-plugins
+          path: /tmp/etherpad-server.log
+          retention-days: 7
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: playwright-report-firefox-with-plugins
           path: src/playwright-report/
           retention-days: 30

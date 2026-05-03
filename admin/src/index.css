@@ -895,3 +895,30 @@ input, button, select, optgroup, textarea {
 .manage-pads-header {
   display: flex;
 }
+
+/* Update banner — shown on every admin page when a new version is available. */
+.update-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  margin: 0 0 12px 0;
+  background: #fff3cd;
+  color: #664d03;
+  border: 1px solid #ffe69c;
+  border-radius: 4px;
+  font-size: 14px;
+}
+.update-banner a {
+  color: inherit;
+  text-decoration: underline;
+  font-weight: 500;
+}
+
+/* Update page layout. */
+.update-page { padding: 16px 0; }
+.update-page h1 { margin-bottom: 16px; }
+.update-page dl { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 0 0 24px; }
+.update-page dt { font-weight: 600; color: #555; }
+.update-page dd { margin: 0; }
+.update-page pre { background: #f6f8fa; border: 1px solid #d0d7de; border-radius: 4px; padding: 12px; font-size: 13px; max-height: 400px; overflow: auto; }

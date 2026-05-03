@@ -16,6 +16,7 @@ const assert = require('assert').strict;
 const db = require('./DB');
 import settings from '../utils/Settings';
 const authorManager = require('./AuthorManager');
+const padDeletionManager = require('./PadDeletionManager');
 const padManager = require('./PadManager');
 const padMessageHandler = require('../handler/PadMessageHandler');
 const groupManager = require('./GroupManager');
@@ -27,6 +28,23 @@ import pad_utils from "../../static/js/pad_utils";
 import {SmartOpAssembler} from "../../static/js/SmartOpAssembler";
 import {timesLimit} from "async";
 
+type PadViewSettings = {
+  showAuthorColors: boolean;
+  showLineNumbers: boolean;
+  rtlIsTrue: boolean;
+  padFontFamily: string;
+  fadeInactiveAuthorColors: boolean;
+};
+
+type PadSettings = {
+  enforceSettings: boolean;
+  showChat: boolean;
+  alwaysShowChat: boolean;
+  chatAndUsers: boolean;
+  lang: string | null;
+  view: PadViewSettings;
+};
+
 /**
  * Copied from the Etherpad source code. It converts Windows line breaks to Unix
  * line breaks and convert Tabs to spaces
@@ -35,8 +53,7 @@ import {timesLimit} from "async";
  */
 exports.cleanText = (txt:string): string => txt.replace(/\r\n/g, '\n')
     .replace(/\r/g, '\n')
-    .replace(/\t/g, '        ')
-    .replace(/\xa0/g, ' ');
+    .replace(/\t/g, '        ');
 
 class Pad {
   private db: Database;
@@ -47,6 +64,7 @@ class Pad {
     private publicStatus: boolean;
     private id: string;
     private savedRevisions: any[];
+    private padSettings: PadSettings;
   /**
    * @param id
    * @param [database] - Database object to access this pad's records (and only this pad's records;
@@ -64,6 +82,33 @@ class Pad {
     this.publicStatus = false;
     this.id = id;
     this.savedRevisions = [];
+    this.padSettings = Pad.normalizePadSettings();
+  }
+
+  static normalizePadSettings(rawPadSettings: any = {}): PadSettings {
+    const rawView = rawPadSettings.view ?? {};
+    return {
+      enforceSettings: !!rawPadSettings.enforceSettings,
+      showChat: rawPadSettings.showChat == null ? settings.padOptions.showChat !== false :
+        !!rawPadSettings.showChat,
+      alwaysShowChat: !!rawPadSettings.alwaysShowChat,
+      chatAndUsers: !!rawPadSettings.chatAndUsers,
+      // Default to null (not 'en') so the client's l10n auto-detect chain
+      // (cookie -> navigator.language -> 'en' fallback) runs. Hardcoding 'en'
+      // forces English on every pad regardless of the browser's Accept-Language
+      // and broke #7586 (German system saw English pad UI in v2.7.0).
+      lang: typeof rawPadSettings.lang === 'string' ? rawPadSettings.lang : null,
+      view: {
+        showAuthorColors: rawView.showAuthorColors == null ? true : !!rawView.showAuthorColors,
+        showLineNumbers: rawView.showLineNumbers == null ?
+          settings.padOptions.showLineNumbers !== false : !!rawView.showLineNumbers,
+        rtlIsTrue: !!rawView.rtlIsTrue,
+        padFontFamily: typeof rawView.padFontFamily === 'string' ? rawView.padFontFamily : '',
+        fadeInactiveAuthorColors: rawView.fadeInactiveAuthorColors == null ?
+          settings.padOptions.fadeInactiveAuthorColors !== false :
+          !!rawView.fadeInactiveAuthorColors,
+      },
+    };
   }
 
   apool() {
@@ -86,6 +131,22 @@ class Pad {
 
   getPublicStatus() {
     return this.publicStatus;
+  }
+
+  getPadSettings() {
+    return Pad.normalizePadSettings(this.padSettings);
+  }
+
+  setPadSettings(rawPadSettings: any) {
+    const nextPadSettings = {
+      ...this.getPadSettings(),
+      ...rawPadSettings,
+      view: {
+        ...this.getPadSettings().view,
+        ...(rawPadSettings?.view ?? {}),
+      },
+    };
+    this.padSettings = Pad.normalizePadSettings(nextPadSettings);
   }
 
   /**
@@ -400,6 +461,7 @@ class Pad {
       const firstChangeset = makeSplice('\n', 0, 0, text, firstAttribs, this.pool);
       await this.appendRevision(firstChangeset, authorId);
     }
+    this.padSettings = Pad.normalizePadSettings(this.padSettings);
     await hooks.aCallAll('padLoad', {pad: this});
   }
 
@@ -607,6 +669,7 @@ class Pad {
 
     // delete the pad entry and delete pad from padManager
     p.push(padManager.removePad(padID));
+    p.push(padDeletionManager.removeDeletionToken(padID));
     p.push(hooks.aCallAll('padRemove', {
       get padID() {
         pad_utils.warnDeprecated('padRemove padID context property is deprecated; use pad.id instead');

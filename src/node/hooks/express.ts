@@ -65,7 +65,7 @@ const closeServer = async () => {
 };
 
 exports.createServer = async () => {
-  console.log('Report bugs at https://github.com/ether/etherpad-lite/issues');
+  console.log('Report bugs at https://github.com/ether/etherpad/issues');
 
   serverName = `Etherpad ${getGitCommit()} (https://etherpad.org)`;
 

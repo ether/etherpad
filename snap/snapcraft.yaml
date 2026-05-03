@@ -1,0 +1,161 @@
+# snap/snapcraft.yaml — Snap recipe for Etherpad
+#
+# Design notes:
+# - base: core24 chosen because Etherpad requires Node.js >= 20 and
+#   core24 (Ubuntu 24.04 LTS) ships glibc/OpenSSL versions matching modern
+#   Node 20/22 binaries. core22 also works but ships older TLS/CA bundles.
+# - confinement: strict. Etherpad is a pure Node.js HTTP service. The only
+#   native Node module (`rusty-store-kv`) ships as a prebuilt napi-rs
+#   binary, so no node-gyp compile is performed at install time and
+#   strict confinement works cleanly.
+# - We use `dump` + a manual override-build (rather than the npm plugin)
+#   because this repo is a pnpm workspace and we pin Node.js 22 manually.
+name: etherpad
+title: Etherpad
+summary: Real-time collaborative document editor
+description: |
+  Etherpad is a highly customizable open-source online editor providing
+  collaborative editing in real-time. This snap bundles Etherpad with a
+  pinned Node.js 22 runtime. On first launch a default `settings.json`
+  is copied into `$SNAP_COMMON/etc` where it can be edited. Pad data is
+  stored in `$SNAP_COMMON/var` and survives snap refreshes.
+
+  Default listen port: 9001.
+
+  Upstream: https://etherpad.org
+  Source:   https://github.com/ether/etherpad
+license: Apache-2.0
+website: https://etherpad.org
+source-code: https://github.com/ether/etherpad
+issues: https://github.com/ether/etherpad/issues
+contact: https://etherpad.org/#community
+
+adopt-info: etherpad
+grade: stable
+confinement: strict
+base: core24
+compression: lzo
+
+platforms:
+  amd64:
+  arm64:
+
+apps:
+  # Bare app name matches the snap name → users invoke it as plain `etherpad`.
+  etherpad:
+    command: bin/etherpad-service
+    daemon: simple
+    install-mode: enable
+    restart-condition: on-failure
+    plugs:
+      - network
+      - network-bind
+    environment:
+      HOME: $SNAP_DATA
+      NODE_ENV: production
+      # PORT/IP are env-substituted into settings.json on first run and
+      # overridden by the wrapper from `snap set etherpad port=…` / `ip=…`.
+      PORT: "9001"
+      IP: "0.0.0.0"
+
+  healthcheck:
+    command: bin/etherpad-healthcheck-wrapper
+    plugs:
+      - network
+
+  cli:
+    command: bin/etherpad-cli
+    plugs:
+      - network
+      - network-bind
+
+parts:
+  etherpad:
+    plugin: dump
+    source: .
+    source-type: local
+    build-packages:
+      - curl
+      - ca-certificates
+      - git
+      - python3
+      - build-essential
+    stage-packages:
+      - ca-certificates
+      - libstdc++6
+      - openssl
+    override-pull: |
+      craftctl default
+      VERSION="$(grep -m1 '"version"' src/package.json | sed -E 's/.*"([^"]+)".*/\1/')"
+      craftctl set version="${VERSION}"
+    override-build: |
+      set -eu
+
+      # -- 1. Install Node.js 22 from the official tarball.
+      NODE_VERSION=22.12.0
+      ARCH="$(dpkg --print-architecture)"
+      case "${ARCH}" in
+        amd64) NODE_ARCH=x64 ;;
+        arm64) NODE_ARCH=arm64 ;;
+        *) echo "Unsupported arch ${ARCH}"; exit 1 ;;
+      esac
+      NODE_TGZ="node-v${NODE_VERSION}-linux-${NODE_ARCH}.tar.xz"
+      curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/${NODE_TGZ}" \
+        -o "/tmp/${NODE_TGZ}"
+      mkdir -p "${CRAFT_PART_INSTALL}/opt/node"
+      tar -xJf "/tmp/${NODE_TGZ}" -C "${CRAFT_PART_INSTALL}/opt/node" \
+        --strip-components=1
+
+      export PATH="${CRAFT_PART_INSTALL}/opt/node/bin:${PATH}"
+
+      # -- 2. Install pnpm via corepack. The corepack version bundled with
+      # Node 22.12 ships a stale signing-key list and rejects newer pnpm
+      # releases (nodejs/corepack#612), so refresh corepack itself first.
+      "${CRAFT_PART_INSTALL}/opt/node/bin/npm" install \
+        --prefix "${CRAFT_PART_INSTALL}/opt/node" -g corepack@latest
+      corepack enable --install-directory "${CRAFT_PART_INSTALL}/opt/node/bin"
+      corepack prepare pnpm@10.33.0 --activate
+
+      # -- 3. Copy source into install dir and build.
+      APP_DIR="${CRAFT_PART_INSTALL}/opt/etherpad"
+      mkdir -p "${APP_DIR}"
+      cp -a "${CRAFT_PART_SRC}/." "${APP_DIR}/"
+      cd "${APP_DIR}"
+
+      pnpm install --frozen-lockfile --prod=false
+      pnpm run build:etherpad
+
+      # Strip dev deps to shrink the payload. `pnpm prune --prod` walks
+      # every workspace symlink and can deadlock on cross-referenced
+      # packages — wipe node_modules and reinstall prod-only instead;
+      # pnpm resolves the smaller graph from cache in a fraction of the
+      # time and the result is byte-identical to a clean prod install.
+      find . -type d -name node_modules -prune -exec rm -rf {} +
+      pnpm install --prod --frozen-lockfile --ignore-scripts
+
+      rm -rf .git tests/frontend-new/.cache \
+             src/tests/frontend-new/test-results || true
+
+      # -- 4. Etherpad's plugin installer writes installed_plugins.json
+      # under its own install dir's var/ at runtime
+      # (src/static/js/pluginfw/installer.ts uses __dirname, which
+      # resolves to an absolute path inside the read-only snap squashfs).
+      # snap layouts can't redirect __dirname-relative paths, so replace
+      # the shipped var/ dir with a symlink into $SNAP_COMMON instead;
+      # the kernel transparently resolves the symlink to writable storage
+      # that survives `snap refresh`. The wrapper mkdirs the target.
+      rm -rf "${APP_DIR}/var"
+      ln -s /var/snap/etherpad/common/etherpad-app-var "${APP_DIR}/var"
+
+      # -- 5. Install wrappers.
+      install -Dm755 "${CRAFT_PROJECT_DIR}/snap/local/bin/etherpad-service" \
+        "${CRAFT_PART_INSTALL}/bin/etherpad-service"
+      install -Dm755 "${CRAFT_PROJECT_DIR}/snap/local/bin/etherpad-healthcheck-wrapper" \
+        "${CRAFT_PART_INSTALL}/bin/etherpad-healthcheck-wrapper"
+      install -Dm755 "${CRAFT_PROJECT_DIR}/snap/local/bin/etherpad-cli" \
+        "${CRAFT_PART_INSTALL}/bin/etherpad-cli"
+
+hooks:
+  configure:
+    plugs:
+      - network

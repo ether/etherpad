@@ -52,7 +52,6 @@
 	"pad.importExport.exportword": "Microsoft Word",
 	"pad.importExport.exportpdf": "PDF",
 	"pad.importExport.exportopen": "ODF (Open Document Format)",
-	"pad.importExport.abiword.innerHTML": "Anda hanya boleh mengimport dari format teks biasa atau html. Untuk ciri-ciri import yang lebih maju, sila <a href=\"https://github.com/ether/etherpad-lite/wiki/How-to-enable-importing-and-exporting-different-file-formats-in-Ubuntu-or-OpenSuse-or-SLES-with-AbiWord\">memasang abiword</a>.",
 	"pad.modals.connected": "Bersambung.",
 	"pad.modals.reconnecting": "Bersambung semula dengan pad anda...",
 	"pad.modals.forcereconnect": "Sambung semula secara paksa",

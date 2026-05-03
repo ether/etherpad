@@ -22,7 +22,10 @@ test.describe('numbered list wrapped line indentation', function () {
     // the line divs (which can detach locators and make `selectText()` flaky
     // in CI when many lines of text have just been typed).
     await selectAllText(page);
-    await page.locator('.buttonicon-insertorderedlist').first().click();
+    // force:true bypasses #toolbar-overlay (intercepts pointer events
+    // after a text selection); same pattern as clearAuthorship.
+    await page.locator('.buttonicon-insertorderedlist').first()
+        .click({force: true});
 
     // Verify the list item has padding-left applied (not text-indent)
     const ol = padBody.locator('ol').first();

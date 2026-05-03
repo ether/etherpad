@@ -23,7 +23,7 @@ test.describe('font select', function () {
     // commenting out above will break safari test
     const dropdown = page.locator('.dropdowns-container .dropdown-line .current').nth(0)
     await dropdown.click()
-    await page.locator('li:text("RobotoMono")').click()
+    await page.locator('.nice-select.open li:text("RobotoMono")').click()
 
     await viewFontMenu.dispatchEvent('change');
     const padBody = await getPadBody(page)

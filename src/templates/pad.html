@@ -1,14 +1,25 @@
 <%
   var langs = require("ep_etherpad-lite/node/hooks/i18n").availableLangs
     , pluginUtils = require('ep_etherpad-lite/static/js/pluginfw/shared')
+    , skinColors = require('ep_etherpad-lite/node/utils/SkinColors')
     ;
+  var renderLang = (req && typeof req.acceptsLanguages === 'function'
+    && req.acceptsLanguages(Object.keys(langs))) || 'en';
+  var renderDir = (langs[renderLang] && langs[renderLang].direction === 'rtl') ? 'rtl' : 'ltr';
+  // theme-color matches the configured toolbar so mobile address bars don't
+  // paint a mismatched system color above the toolbar on first paint. We do
+  // not emit a prefers-color-scheme: dark variant: the client-side dark-mode
+  // auto-switch is gated on enableDarkMode, matchMedia, and a localStorage
+  // white-mode override, none of which a media query can express.
+  var configuredColor = skinColors.configuredToolbarColor(settings.skinName, settings.skinVariants);
 %>
 <!doctype html>
-<html translate="no" class="pad <%=pluginUtils.clientPluginNames().join(' '); %> <%=settings.skinVariants%>">
+<html lang="<%=renderLang%>" dir="<%=renderDir%>" translate="no" class="pad <%=pluginUtils.clientPluginNames().join(' '); %> <%=settings.skinVariants%>">
 <head>
   <% e.begin_block("htmlHead"); %>
   <% e.end_block(); %>
   <title><%=settings.title%></title>
+<%- typeof socialMetaHtml !== 'undefined' ? socialMetaHtml : '' %>
   <link rel="manifest" href="../../manifest.json" />
   <script>
     /*
@@ -38,6 +49,7 @@
   <meta name="robots" content="noindex, nofollow">
   <meta name="referrer" content="no-referrer">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
+  <% if (configuredColor) { %><meta name="theme-color" content="<%=configuredColor%>"><% } %>
   <link rel="shortcut icon" href="../favicon.ico">
 
   <% e.begin_block("styles"); %>
@@ -71,7 +83,7 @@
           <%- toolbar.menu(settings.toolbar.right, isReadOnly, 'right', 'pad') %>
           <% e.end_block(); %>
       </ul>
-      <span class="show-more-icon-btn"></span> <!-- use on small screen to display hidden toolbar buttons -->
+      <button type="button" class="show-more-icon-btn" aria-label="Show more toolbar buttons" aria-expanded="false"></button> <!-- use on small screen to display hidden toolbar buttons -->
   </div>
 
   <% e.begin_block("afterEditbar"); %><% e.end_block(); %>
@@ -114,81 +126,184 @@
       <!-- SETTINGS POPUP (change font, language, chat parameters) -->
       <!------------------------------------------------------------->
 
-      <div id="settings" class="popup"><div class="popup-content">
-          <h1 data-l10n-id="pad.settings.padSettings"></h1>
-          <% e.begin_block("mySettings"); %>
-          <h2 data-l10n-id="pad.settings.myView"></h2>
-          <p class="hide-for-mobile">
-              <input type="checkbox" id="options-stickychat">
-              <label for="options-stickychat" data-l10n-id="pad.settings.stickychat"></label>
-          </p>
-          <p class="hide-for-mobile">
-              <input type="checkbox" id="options-chatandusers" onClick="chat.chatAndUsers();">
-              <label for="options-chatandusers" data-l10n-id="pad.settings.chatandusers"></label>
-          </p>
-          <p>
-              <input type="checkbox" id="options-colorscheck">
-              <label for="options-colorscheck" data-l10n-id="pad.settings.colorcheck"></label>
-          </p>
-          <p>
-              <input type="checkbox" id="options-linenoscheck" checked>
-              <label for="options-linenoscheck" data-l10n-id="pad.settings.linenocheck"></label>
-          </p>
-          <p>
-              <input type="checkbox" id="options-rtlcheck">
-              <label for="options-rtlcheck" data-l10n-id="pad.settings.rtlcheck"></label>
-          </p>
-          <% e.end_block(); %>
-
-          <div class="dropdowns-container">
-            <% e.begin_block("mySettings.dropdowns"); %>
-            <p class="dropdown-line">
-              <label for="viewfontmenu" data-l10n-id="pad.settings.fontType">Font type:</label>
-              <select id="viewfontmenu">
-                <option value="" data-l10n-id="pad.settings.fontType.normal">Normal</option>
-                <%= fonts = ["Quicksand", "Roboto", "Alegreya", "PlayfairDisplay", "Montserrat", "OpenDyslexic", "RobotoMono"] %>
-                <% for(var i=0; i < fonts.length; i++) { %>
-                  <option value="<%=fonts[i]%>"><%=fonts[i]%></option>
-                <% } %>
-              </select>
+      <div id="settings" class="popup" role="dialog" aria-modal="true" aria-labelledby="settings-title"><div class="popup-content">
+          <% if (settings.enablePadWideSettings) { %>
+          <h1 id="settings-title" data-l10n-id="pad.settings.title">Settings</h1>
+          <% } else { %>
+          <h1 id="settings-title" data-l10n-id="pad.settings.padSettings">Pad Settings</h1>
+          <% } %>
+          <div class="settings-sections">
+            <div id="user-settings-section" class="settings-section">
+            <% e.begin_block("mySettings"); %>
+            <% if (settings.enablePadWideSettings) { %>
+            <h2 data-l10n-id="pad.settings.userSettings"></h2>
+            <% } else { %>
+            <h2 data-l10n-id="pad.settings.myView"></h2>
+            <% } %>
+            <p class="hide-for-mobile">
+                <input type="checkbox" id="options-disablechat">
+                <label for="options-disablechat" data-l10n-id="pad.settings.disablechat">Disable Chat</label>
             </p>
-
-            <p class="dropdown-line">
-              <label for="languagemenu" data-l10n-id="pad.settings.language">Language:</label>
-              <select id="languagemenu">
-                  <% for (lang in langs) { %>
-                  <option value="<%=lang%>"><%=langs[lang].nativeName%></option>
-                  <% } %>
-              </select>
+            <p class="hide-for-mobile">
+                <input type="checkbox" id="options-stickychat">
+                <label for="options-stickychat" data-l10n-id="pad.settings.stickychat"></label>
             </p>
+            <p class="hide-for-mobile">
+                <input type="checkbox" id="options-chatandusers">
+                <label for="options-chatandusers" data-l10n-id="pad.settings.chatandusers"></label>
+            </p>
+            <p>
+                <input type="checkbox" id="options-colorscheck">
+                <label for="options-colorscheck" data-l10n-id="pad.settings.colorcheck"></label>
+            </p>
+            <p>
+                <input type="checkbox" id="options-fadeauthorcheck" checked>
+                <label for="options-fadeauthorcheck" data-l10n-id="pad.settings.fadeInactiveAuthorColors"></label>
+            </p>
+            <p>
+                <input type="checkbox" id="options-linenoscheck" checked>
+                <label for="options-linenoscheck" data-l10n-id="pad.settings.linenocheck"></label>
+            </p>
+            <p>
+                <input type="checkbox" id="options-rtlcheck">
+                <label for="options-rtlcheck" data-l10n-id="pad.settings.rtlcheck"></label>
+            </p>
+            <p id="theme-toggle-row" hidden>
+                <input type="checkbox" id="options-darkmode">
+                <label for="options-darkmode" data-l10n-id="pad.settings.darkMode">Dark mode</label>
+            </p>
+            <% if (settings.enablePadWideSettings) { %><p id="enforce-settings-notice" class="settings-notice" hidden
+               data-l10n-id="pad.settings.enforcedNotice">
+              These settings are locked for you by this pad's creator. Ask the pad creator if you need them changed.
+            </p><% } %>
             <% e.end_block(); %>
-          </div>
-          <button data-l10n-id="pad.settings.deletePad" id="delete-pad">Delete pad</button>
-        <div id="theme-switcher" style="display: none;">
-          <svg width="2rem" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z" />
-          </svg>
-          <div>
-            <span aria-label="theme-switcher-knob"></span>
-          </div>
-          <svg width="2rem" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z" />
-          </svg>
-        </div>
 
+            <div class="dropdowns-container">
+              <% e.begin_block("mySettings.dropdowns"); %>
+              <p class="dropdown-line">
+                <label for="viewfontmenu" data-l10n-id="pad.settings.fontType">Font type:</label>
+                <select id="viewfontmenu">
+                  <option value="" data-l10n-id="pad.settings.fontType.normal">Normal</option>
+                  <%= fonts = ["Quicksand", "Roboto", "Alegreya", "PlayfairDisplay", "Montserrat", "OpenDyslexic", "RobotoMono"] %>
+                  <% for(var i=0; i < fonts.length; i++) { %>
+                    <option value="<%=fonts[i]%>"><%=fonts[i]%></option>
+                  <% } %>
+                </select>
+              </p>
 
+              <p class="dropdown-line">
+                <label for="languagemenu" data-l10n-id="pad.settings.language">Language:</label>
+                <select id="languagemenu">
+                    <% for (lang in langs) { %>
+                    <option value="<%=lang%>"><%=langs[lang].nativeName%></option>
+                    <% } %>
+                </select>
+              </p>
+              <% e.end_block(); %>
+            </div>
+            </div>
+            <% if (settings.enablePadWideSettings) { %><div id="pad-settings-section" class="settings-section" hidden>
+              <% e.begin_block("padSettings"); %>
+              <h2 data-l10n-id="pad.settings.padSettings"></h2>
+              <p class="hide-for-mobile">
+                  <input type="checkbox" id="padsettings-options-disablechat">
+                  <label for="padsettings-options-disablechat" data-l10n-id="pad.settings.disablechat">Disable Chat</label>
+              </p>
+              <p class="hide-for-mobile">
+                  <input type="checkbox" id="padsettings-options-stickychat">
+                  <label for="padsettings-options-stickychat" data-l10n-id="pad.settings.stickychat"></label>
+              </p>
+              <p class="hide-for-mobile">
+                  <input type="checkbox" id="padsettings-options-chatandusers">
+                  <label for="padsettings-options-chatandusers" data-l10n-id="pad.settings.chatandusers"></label>
+              </p>
+              <p>
+                  <input type="checkbox" id="padsettings-options-colorscheck">
+                  <label for="padsettings-options-colorscheck" data-l10n-id="pad.settings.colorcheck"></label>
+              </p>
+              <p>
+                  <input type="checkbox" id="padsettings-options-fadeauthorcheck" checked>
+                  <label for="padsettings-options-fadeauthorcheck" data-l10n-id="pad.settings.fadeInactiveAuthorColors"></label>
+              </p>
+              <p>
+                  <input type="checkbox" id="padsettings-options-linenoscheck" checked>
+                  <label for="padsettings-options-linenoscheck" data-l10n-id="pad.settings.linenocheck"></label>
+              </p>
+              <p>
+                  <input type="checkbox" id="padsettings-options-rtlcheck">
+                  <label for="padsettings-options-rtlcheck" data-l10n-id="pad.settings.rtlcheck"></label>
+              </p>
+              <p>
+                  <input type="checkbox" id="padsettings-enforcecheck">
+                  <label for="padsettings-enforcecheck" data-l10n-id="pad.settings.enforceSettings">Enforce settings for other users</label>
+              </p>
+              <% e.end_block(); %>
+              <div class="dropdowns-container">
+                <% e.begin_block("padSettings.dropdowns"); %>
+                <p class="dropdown-line">
+                  <label for="padsettings-viewfontmenu" data-l10n-id="pad.settings.fontType">Font type:</label>
+                  <select id="padsettings-viewfontmenu">
+                    <option value="" data-l10n-id="pad.settings.fontType.normal">Normal</option>
+                    <% for(var i=0; i < fonts.length; i++) { %>
+                      <option value="<%=fonts[i]%>"><%=fonts[i]%></option>
+                    <% } %>
+                  </select>
+                </p>
+                <p class="dropdown-line">
+                  <label for="padsettings-languagemenu" data-l10n-id="pad.settings.language">Language:</label>
+                  <select id="padsettings-languagemenu">
+                      <% for (lang in langs) { %>
+                      <option value="<%=lang%>"><%=langs[lang].nativeName%></option>
+                      <% } %>
+                  </select>
+                </p>
+                <% e.end_block(); %>
+              </div>
+              <button class="btn btn-danger" data-l10n-id="pad.settings.deletePad" id="delete-pad">Delete pad</button>
+            </div><% } %>
+          </div>
+          <% if (!settings.requireAuthentication) { %>
+          <details id="delete-pad-with-token">
+            <summary data-l10n-id="pad.deletionToken.deleteWithToken">Delete with token</summary>
+            <label for="delete-pad-token-input" data-l10n-id="pad.deletionToken.tokenFieldLabel">Pad deletion token</label>
+            <input type="password" id="delete-pad-token-input" autocomplete="off" spellcheck="false">
+            <button id="delete-pad-token-submit" type="button" class="btn btn-danger"
+                    data-l10n-id="pad.settings.deletePad">Delete pad</button>
+          </details>
+          <% } %>
         <h2 data-l10n-id="pad.settings.about">About</h2>
           <span data-l10n-id="pad.settings.poweredBy">Powered by</span>
           <a href="https://etherpad.org" target="_blank" referrerpolicy="no-referrer" rel="noopener">Etherpad</a>
         <% if (settings.exposeVersion) { %>(commit <%= settings.gitVersion %>)<% } %>      </div></div>
 
+      <!--------------------------------------------------->
+      <!-- PAD DELETION TOKEN MODAL (shown once on create) -->
+      <!--------------------------------------------------->
+
+      <div id="deletiontoken-modal" class="popup" role="dialog" aria-modal="true"
+           aria-labelledby="deletiontoken-modal-title" aria-describedby="deletiontoken-modal-body" hidden>
+          <div class="popup-content">
+          <h1 id="deletiontoken-modal-title" data-l10n-id="pad.deletionToken.modalTitle">Save your pad deletion token</h1>
+          <p id="deletiontoken-modal-body" data-l10n-id="pad.deletionToken.modalBody">
+            This token is the only way to delete this pad if you lose your browser session or switch device. Save it somewhere safe — it is shown here exactly once.
+          </p>
+          <div class="deletiontoken-row">
+            <label for="deletiontoken-value" class="sr-only"
+                   data-l10n-id="pad.deletionToken.tokenValueLabel">Your pad deletion token (read-only)</label>
+            <input type="text" id="deletiontoken-value" readonly>
+            <button id="deletiontoken-copy" type="button" aria-live="polite"
+                    data-l10n-id="pad.deletionToken.copy">Copy</button>
+          </div>
+          <button id="deletiontoken-ack" type="button" class="btn btn-primary"
+                  data-l10n-id="pad.deletionToken.acknowledge">I've saved it</button>
+      </div></div>
 
       <!------------------------->
       <!-- IMPORT EXPORT POPUP -->
       <!------------------------->
 
-      <div id="import_export" class="popup"><div class="popup-content">
-          <h1 data-l10n-id="pad.importExport.import_export"></h1>
+      <div id="import_export" class="popup" role="dialog" aria-modal="true" aria-labelledby="importexport-title"><div class="popup-content">
+          <h1 id="importexport-title" data-l10n-id="pad.importExport.import_export"></h1>
           <div class="acl-write">
               <% e.begin_block("importColumn"); %>
               <h2 data-l10n-id="pad.importExport.import"></h2>
@@ -239,7 +354,7 @@
       <!-- CONNECTIVITY POPUP (when you get disconnected) -->
       <!---------------------------------------------------->
 
-      <div id="connectivity" class="popup"><div class="popup-content">
+      <div id="connectivity" class="popup" role="dialog" aria-modal="true" aria-label="Connection status"><div class="popup-content">
           <% e.begin_block("modals"); %>
           <div class="connected visible">
             <h2 data-l10n-id="pad.modals.connected"></h2>
@@ -322,9 +437,9 @@
       <!-- EMBED POPUP (Share, embed) -->
       <!-------------------------------->
 
-      <div id="embed" class="popup"><div class="popup-content">
+      <div id="embed" class="popup" role="dialog" aria-modal="true" aria-labelledby="embed-title"><div class="popup-content">
           <% e.begin_block("embedPopup"); %>
-          <h1 data-l10n-id="pad.share"></h1>
+          <h1 id="embed-title" data-l10n-id="pad.share"></h1>
           <div id="embedreadonly" class="acl-write">
               <input type="checkbox" id="readonlyinput">
               <label for="readonlyinput" data-l10n-id="pad.share.readonly"></label>
@@ -346,11 +461,11 @@
         <!-- USERS POPUP (set username, color, see other users names & color) -->
         <!---------------------------------------------------------------------->
 
-        <div id="users" class="popup"><div class="popup-content">
+        <div id="users" class="popup" role="dialog" aria-modal="true" aria-label="Users on this pad"><div class="popup-content">
             <% e.begin_block("userlist"); %>
             <div id="connectionstatus"></div>
             <div id="myuser">
-                <div id="mycolorpicker" class="popup"><div class="popup-content">
+                <div id="mycolorpicker" class="popup" role="dialog" aria-modal="true" aria-label="Choose your author color"><div class="popup-content">
                     <div id="colorpicker"></div>
                     <div class="btn-container">
                       <button id="mycolorpickersave" data-l10n-id="pad.colorpicker.save" class="btn btn-primary"></button>
@@ -363,7 +478,7 @@
                   <input type="text" id="myusernameedit" disabled="disabled" data-l10n-id="pad.userlist.entername">
                 </div>
             </div>
-            <div id="otherusers" role="document">
+            <div id="otherusers" role="region" aria-live="polite" aria-label="Active users on this pad">
                 <table id="otheruserstable" cellspacing="0" cellpadding="0" border="0">
                     <tr><td></td></tr>
                 </table>
@@ -377,18 +492,18 @@
         <!----------- CHAT ------------>
         <!----------------------------->
 
-        <div id="chaticon" class="visible" onclick="chat.show();return false;" title="Chat (Alt C)">
+        <button type="button" id="chaticon" class="visible" title="Chat (Alt C)" data-l10n-id="pad.chat.title">
             <span id="chatlabel" data-l10n-id="pad.chat"></span>
-            <span class="buttonicon buttonicon-chat"></span>
-            <span id="chatcounter">0</span>
-        </div>
+            <span class="buttonicon buttonicon-chat" aria-hidden="true"></span>
+            <span id="chatcounter" aria-label="Unread messages">0</span>
+        </button>
 
         <div id="chatbox">
           <div class="chat-content">
             <div id="titlebar">
               <h1 id ="titlelabel" data-l10n-id="pad.chat"></h1>
-              <a id="titlecross" class="hide-reduce-btn" onClick="chat.hide();return false;">-&nbsp;</a>
-              <a id="titlesticky" class="stick-to-screen-btn" onClick="chat.stickToScreen(true);return false;" data-l10n-id="pad.chat.stick.title">█&nbsp;&nbsp;</a>
+              <button type="button" id="titlecross" class="hide-reduce-btn" aria-label="Close chat">_</button>
+              <button type="button" id="titlesticky" class="stick-to-screen-btn" data-l10n-id="pad.chat.stick.title">&#9608;</button>
             </div>
             <div id="chattext" class="thin-scrollbar" aria-live="polite" aria-relevant="additions removals text" role="log" aria-atomic="false">
                 <div alt="loading.." id="chatloadmessagesball" class="chatloadmessages loadingAnimation" align="top"></div>
@@ -407,8 +522,8 @@
       <!-- SKIN VARIANTS BUILDER (Customize rendering, only for admins) -->
       <!------------------------------------------------------------------>
       <% if (settings.skinName == 'colibris') { %>
-      <div id="skin-variants" class="popup"><div class="popup-content">
-        <h1>Skin Builder</h1>
+      <div id="skin-variants" class="popup" role="dialog" aria-modal="true" aria-labelledby="skin-variants-title"><div class="popup-content">
+        <h1 id="skin-variants-title">Skin Builder</h1>
 
         <div class="dropdowns-container">
         <% containers = [ "toolbar", "background", "editor" ]; %>
@@ -439,6 +554,7 @@
 
       <% e.end_block(); %>
 
+    <div id="version-badge" role="status" aria-live="polite" style="display:none"></div>
   </div> <!-- End of #editorcontainerbox -->
 
   <% e.end_block(); %>

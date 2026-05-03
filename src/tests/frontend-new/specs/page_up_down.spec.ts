@@ -84,6 +84,65 @@ test.describe('Page Up / Page Down', function () {
     expect(selection).toBeLessThan(50);
   });
 
+  // Regression test for #4562: consecutive very long wrapped lines should not
+  // cause PageDown/PageUp to skip too many or too few logical lines.  The
+  // pixel-based calculation must account for lines that occupy far more visual
+  // rows than the viewport height.
+  test('PageDown with consecutive long wrapped lines moves by correct amount (#4562)', async function ({page}) {
+    const padBody = await getPadBody(page);
+    await clearPadContent(page);
+
+    // Build a pad with long lines interspersed with short ones via the inner
+    // document directly to avoid slow keyboard.type on Firefox.
+    const longLine = 'word '.repeat(300);
+    const innerFrame = page.frame('ace_inner')!;
+    await innerFrame.evaluate((text: string) => {
+      const body = document.getElementById('innerdocbody')!;
+      body.innerHTML = '';
+      for (let i = 0; i < 6; i++) {
+        const longDiv = document.createElement('div');
+        longDiv.textContent = text;
+        body.appendChild(longDiv);
+        const shortDiv = document.createElement('div');
+        shortDiv.textContent = `short ${i}`;
+        body.appendChild(shortDiv);
+      }
+    }, longLine);
+    // Wait for Etherpad to process the DOM changes
+    await page.waitForTimeout(2000);
+
+    // Move caret to the very top
+    await page.keyboard.down('Control');
+    await page.keyboard.press('Home');
+    await page.keyboard.up('Control');
+    await page.waitForTimeout(200);
+
+    // Press PageDown twice and verify caret advances each time
+    const getCaretLine = async () => {
+      return innerFrame.evaluate(() => {
+        const sel = document.getSelection();
+        if (!sel || !sel.focusNode) return -1;
+        let node = sel.focusNode as HTMLElement;
+        while (node && node.tagName !== 'DIV') node = node.parentElement!;
+        if (!node) return -1;
+        const divs = Array.from(document.getElementById('innerdocbody')!.children);
+        return divs.indexOf(node);
+      });
+    };
+
+    const lineBefore = await getCaretLine();
+
+    await page.keyboard.press('PageDown');
+    await page.waitForTimeout(1000);
+    const lineAfterFirst = await getCaretLine();
+    expect(lineAfterFirst).toBeGreaterThan(lineBefore);
+
+    await page.keyboard.press('PageDown');
+    await page.waitForTimeout(1000);
+    const lineAfterSecond = await getCaretLine();
+    expect(lineAfterSecond).toBeGreaterThan(lineAfterFirst);
+  });
+
   test('PageDown then PageUp returns to approximately same position', async function ({page}) {
     const padBody = await getPadBody(page);
     await clearPadContent(page);

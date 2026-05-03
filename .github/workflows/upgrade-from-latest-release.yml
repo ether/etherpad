@@ -28,7 +28,7 @@ jobs:
       fail-fast: false
       matrix:
         # PRs: single Node version. Push: full matrix.
-        node: ${{ github.event_name == 'pull_request' && fromJSON('[24]') || fromJSON('[20, 22, 24]') }}
+        node: ${{ github.event_name == 'pull_request' && fromJSON('[24]') || fromJSON('[22, 24, 25]') }}
     steps:
       -
         name: Check out latest release
@@ -36,22 +36,22 @@ jobs:
         with:
           ref: develop #FIXME change to master when doing release
       - uses: actions/cache@v5
-        name: Setup gnpm cache
-        if: always()
+        name: Cache pnpm store
         with:
-          path: |
-            ${{ env.STORE_PATH }}
-            ~/.local/share/gnpm
-            ~/.cache/ms-playwright
-            /usr/local/bin/gnpm
-            /usr/local/bin/gnpm-0.0.12
-          key: ${{ runner.os }}-gnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          path: ${{ env.PNPM_HOME }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
-            ${{ runner.os }}-gnpm-store-
-      - name: Setup gnpm
-        uses: SamTV12345/gnpm-setup@main
+            ${{ runner.os }}-pnpm-store-
+      - uses: pnpm/action-setup@v6
+        name: Install pnpm
         with:
-          version: 0.0.12
+          version: 10.33.2
+          run_install: false
+      - name: Use Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node }}
+          cache: pnpm
       - name: Install libreoffice
         uses: awalsh128/cache-apt-pkgs-action@v1.6.0
         with:
@@ -59,14 +59,14 @@ jobs:
           version: 1.0
       -
         name: Install all dependencies and symlink for ep_etherpad-lite
-        run: gnpm install --frozen-lockfile --runtimeVersion="${{ matrix.node }}"
+        run: pnpm install --frozen-lockfile
       - name: Build admin ui
         working-directory: admin
-        run: gnpm build --runtimeVersion="${{ matrix.node }}"
+        run: pnpm build
       -
         name: Install Etherpad plugins
         run: >
-          gnpm run install-plugins
+          pnpm run install-plugins
           ep_align
           ep_author_hover
           ep_cursortrace
@@ -78,13 +78,13 @@ jobs:
           ep_set_title_on_pad
           ep_spellcheck
           ep_subscript_and_superscript
-          ep_table_of_contents --runtimeVersion="${{ matrix.node }}"
+          ep_table_of_contents
       -
         name: Run the backend tests
-        run: gnpm run test --runtimeVersion="${{ matrix.node }}"
+        run: pnpm run test
       -
         name: Install all dependencies and symlink for ep_etherpad-lite
-        run: gnpm install --frozen-lockfile --runtimeVersion="${{ matrix.node }}"
+        run: pnpm install --frozen-lockfile
       # Because actions/checkout@v6 is called with "ref: master" and without
       # "fetch-depth: 0", the local clone does not have the ${GITHUB_SHA}
       # commit. Fetch ${GITHUB_REF} to get the ${GITHUB_SHA} commit. Note that a
@@ -101,4 +101,4 @@ jobs:
         # commit that merges the PR's source branch to its destination branch.
         run: git checkout "${GITHUB_SHA}"
       - name: Run the backend tests
-        run: gnpm run test --runtimeVersion="${{ matrix.node }}"
+        run: pnpm run test

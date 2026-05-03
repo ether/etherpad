@@ -141,6 +141,7 @@ const getCollabClient = (ace2editor, serverVars, initialUserInfo, options, _pad)
 
   const acceptCommit = () => {
     editor.applyPreparedChangesetToBase();
+    stateMessage = null;
     setStateIdle();
     try {
       callbacks.onInternalAction('commitAcceptedByServer');
@@ -488,6 +489,7 @@ const getCollabClient = (ace2editor, serverVars, initialUserInfo, options, _pad)
     sendMessage,
     getCurrentRevisionNumber,
     getMissedChanges,
+    hasUnacceptedCommit: () => stateMessage != null,
     callWhenNotCommitting,
     addHistoricalAuthors: tellAceAboutHistoricalAuthors,
     setChannelState,

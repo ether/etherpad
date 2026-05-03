@@ -13,7 +13,7 @@ test.describe('RTL URL parameter', function () {
     await expect(page.locator('#options-rtlcheck')).toBeChecked();
   });
 
-  test('rtl=false disables RTL mode after rtl=true', async function ({page}) {
+  test('rtl=false disables RTL mode after rtl=true', {tag: '@feature:rtl-toggle'}, async function ({page}) {
     // First enable RTL via URL
     await appendQueryParams(page, {rtl: 'true'});
     await expect(page.locator('#options-rtlcheck')).toBeChecked();
@@ -23,15 +23,15 @@ test.describe('RTL URL parameter', function () {
     await expect(page.locator('#options-rtlcheck')).not.toBeChecked();
   });
 
-  test('no rtl param preserves cookie-based RTL preference', async function ({page}) {
-    // Enable RTL via URL (which also sets the cookie)
+  test('no rtl param falls back to the pad setting after an RTL URL override', {tag: '@feature:rtl-toggle'}, async function ({page}) {
+    // Enable RTL via URL for the current page load only
     await appendQueryParams(page, {rtl: 'true'});
     await expect(page.locator('#options-rtlcheck')).toBeChecked();
 
-    // Reload without rtl param — cookie should preserve RTL
+    // Reload without rtl param — the pad setting remains authoritative
     const url = page.url().replace(/[?&]rtl=true/, '');
     await page.goto(url);
     await page.waitForSelector('#editorcontainer.initialized');
-    await expect(page.locator('#options-rtlcheck')).toBeChecked();
+    await expect(page.locator('#options-rtlcheck')).not.toBeChecked();
   });
 });
