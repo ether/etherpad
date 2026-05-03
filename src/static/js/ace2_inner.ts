@@ -247,6 +247,16 @@ function Ace2Inner(editorInfo, cssManagers) {
       if (fadeInactiveAuthorColors && (typeof info.fade) === 'number') {
         bgcolor = fadeColor(bgcolor, info.fade);
       }
+      // Clamp the rendered background to a WCAG-AA-compliant shade before
+      // picking text colour (issue #7377). Author's stored colour is not
+      // mutated — this is purely a viewer-side render adjustment. Opt-out
+      // via padOptions.enforceReadableAuthorColors: false.
+      const enforceReadable =
+          window.clientVars.padOptions == null ||
+          window.clientVars.padOptions.enforceReadableAuthorColors !== false;
+      if (enforceReadable) {
+        bgcolor = colorutils.ensureReadableBackground(bgcolor, window.clientVars.skinName);
+      }
       const textColor =
           colorutils.textColorFromBackgroundColor(bgcolor, window.clientVars.skinName);
       const styles = [

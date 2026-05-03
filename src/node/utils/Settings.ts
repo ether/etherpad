@@ -207,6 +207,7 @@ export type SettingsType = {
     chatAndUsers: boolean,
     lang: string | null,
     fadeInactiveAuthorColors: boolean,
+    enforceReadableAuthorColors: boolean,
   },
   enableMetrics: boolean,
   padShortcutEnabled: {
@@ -441,6 +442,7 @@ const settings: SettingsType = {
     chatAndUsers: false,
     lang: null,
     fadeInactiveAuthorColors: true,
+    enforceReadableAuthorColors: true,
   },
   /**
    * Wether to enable the /stats endpoint. The functionality in the admin menu is untouched for this.
