@@ -1,0 +1,22 @@
+/* src/admin/App.css */
+
+.settings {
+  font-family: "Fira Code", "Cascadia Code", "Source Code Pro", monospace;
+  font-size: 14px;
+  line-height: 1.5;
+  tab-size: 4; /* Prevents the 'messy' look of inconsistent spacing */
+  background-color: #1e1e1e; /* Standard 'Dark Mode' editor color */
+  color: #d4d4d4;
+  padding: 20px;
+  border-radius: 4px;
+  border: 1px solid #333;
+  width: 100%;
+  min-height: 500px;
+  resize: vertical;
+  white-space: pre; /* Essential for preserving the line structure */
+  overflow-x: auto;
+}
+
+.settings:focus {
+  outline: 2px solid #007acc; /* Give it that 'VS Code' focus feel */
+}
