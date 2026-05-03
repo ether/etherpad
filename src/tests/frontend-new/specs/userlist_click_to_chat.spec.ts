@@ -23,7 +23,13 @@ const setSecondUserName = async (page2: any, name: string) => {
   await page2.keyboard.press('Enter');
 };
 
-test.describe('userlist click → chat prefill', {tag: '@feature:chat'}, () => {
+// `@feature:username` because the entire flow depends on each user
+// having a settable, displayable username — clicking a userlist row
+// reads the user's display name, prefills `@<name>` in the chat
+// input, etc. Plugins that disable username changes (e.g.
+// ep_disable_change_author_name) genuinely break this and should
+// opt out via the disables contract.
+test.describe('userlist click → chat prefill', {tag: ['@feature:chat', '@feature:username']}, () => {
   test('clicking another user opens chat and prefills @<name>',
       async ({browser}) => {
         const padId = await goToNewPad(await browser.newPage());
