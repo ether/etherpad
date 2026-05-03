@@ -6,7 +6,7 @@ import {NavLink, Outlet, useNavigate} from "react-router-dom";
 import {useStore} from "./store/store.ts";
 import {LoadingScreen} from "./utils/LoadingScreen.tsx";
 import {Trans, useTranslation} from "react-i18next";
-import {Cable, Construction, Crown, NotepadText, Wrench, PhoneCall, LucideMenu, Bell} from "lucide-react";
+import {Cable, Construction, Crown, NotepadText, Wrench, PhoneCall, LucideMenu, Bell, Users} from "lucide-react";
 import {UpdateBanner} from "./components/UpdateBanner";
 
 const WS_URL = import.meta.env.DEV ? 'http://localhost:9001' : ''
@@ -61,14 +61,15 @@ export const App = () => {
       }
     });
 
-    settingSocket.on('settings', (settings) => {
-      /* Check whether the settings.json is authorized to be viewed */
+    settingSocket.on('settings', (settings: any) => {
+      if (settings && typeof settings.flags === 'object' && settings.flags) {
+        useStore.getState().setGdprAuthorErasureEnabled(
+            !!settings.flags.gdprAuthorErasure);
+      }
       if (settings.results === 'NOT_ALLOWED') {
         console.log('Not allowed to view settings.json')
         return;
       }
-
-      /* Check to make sure the JSON is clean before proceeding */
       if (isJSONClean(settings.results)) {
         setSettings(settings.results);
       } else {
@@ -105,6 +106,7 @@ export const App = () => {
           <li><NavLink to={"/help"}> <Construction/> <Trans i18nKey="admin_plugins_info"/></NavLink></li>
           <li><NavLink to={"/pads"}><NotepadText/><Trans
             i18nKey="ep_admin_pads:ep_adminpads2_manage-pads"/></NavLink></li>
+          <li><NavLink to={"/authors"}><Users/><Trans i18nKey="ep_admin_authors:title" ns="ep_admin_authors"/></NavLink></li>
           <li><NavLink to={"/shout"}><PhoneCall/>Communication</NavLink></li>
           <li><NavLink to={"/update"}><Bell/><Trans i18nKey="update.page.title"/></NavLink></li>
         </ul>
