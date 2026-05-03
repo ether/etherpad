@@ -286,6 +286,9 @@ export type SettingsType = {
     enabled: boolean,
     keepRevisions: number,
   },
+  gdprAuthorErasure: {
+    enabled: boolean,
+  },
   scrollWhenFocusLineIsOutOfViewport: {
     percentage: {
       editionAboveViewport: number,
@@ -638,6 +641,13 @@ const settings: SettingsType = {
   cleanup: {
     enabled: false,
     keepRevisions: 100,
+  },
+  /*
+   * GDPR Art. 17 author erasure REST endpoint (anonymizeAuthor).
+   * Disabled by default; operators must opt in.
+   */
+  gdprAuthorErasure: {
+    enabled: false,
   },
   /*
  * By default, when caret is moved out of viewport, it scrolls the minimum

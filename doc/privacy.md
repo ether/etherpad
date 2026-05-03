@@ -53,12 +53,47 @@ plugin, and is thrown away on server restart.
 
 See [`cookies.md`](cookies.md) for the full cookie list.
 
-## Right to erasure
+## Right to erasure (GDPR Art. 17)
 
-See
-[`docs/superpowers/specs/2026-04-18-gdpr-pr1-deletion-controls-design.md`](https://github.com/ether/etherpad/blob/develop/docs/superpowers/specs/2026-04-18-gdpr-pr1-deletion-controls-design.md)
-for the deletion-token mechanism. Full author erasure is tracked as a
-follow-up in [ether/etherpad#6701](https://github.com/ether/etherpad/issues/6701).
+Etherpad anonymises an author rather than deleting their changesets
+(deletion would corrupt every pad they contributed to). Operators
+trigger erasure via the admin REST API:
+
+```bash
+curl -X POST \
+  -H "Authorization: Bearer <admin JWT / apikey>" \
+  "https://<instance>/api/1.3.1/anonymizeAuthor?authorID=a.XXXXXXXXXXXXXX"
+```
+
+The endpoint is gated by the `gdprAuthorErasure` setting (see
+`settings.json`). It is **disabled by default**; set
+`"gdprAuthorErasure": { "enabled": true }` to expose it. While
+disabled, calls return HTTP 404 / API code 4 ("no such function").
+
+What the call does:
+
+- Zeros `name` and `colorId` on the `globalAuthor:<authorID>` record
+  (kept as an opaque stub so changeset references still resolve to
+  "an author" with no details).
+- Deletes every `token2author:<token>` and `mapper2author:<mapper>`
+  binding that pointed at this author. Once removed, a new session
+  with the same token starts a fresh anonymous identity.
+- Nulls `authorId` on chat messages the author posted; message text
+  and timestamps are unchanged.
+
+What it does not do:
+
+- Delete pad content, revisions, or the attribute pool. If a pad
+  itself should also be erased, use the pad-deletion token flow
+  (PR1, `deletePad`).
+- Touch other authors' edits.
+
+The call is idempotent: calling it twice on the same authorID
+short-circuits the second time and returns zero counters. Pad-level
+deletion is covered separately by the deletion-token mechanism in
+[`docs/superpowers/specs/2026-04-18-gdpr-pr1-deletion-controls-design.md`](https://github.com/ether/etherpad/blob/develop/docs/superpowers/specs/2026-04-18-gdpr-pr1-deletion-controls-design.md);
+the rest of the GDPR work is tracked in
+[ether/etherpad#6701](https://github.com/ether/etherpad/issues/6701).
 
 ## Privacy banner (optional)
 

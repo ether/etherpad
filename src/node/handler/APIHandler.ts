@@ -145,8 +145,8 @@ version['1.3.0'] = {
 version['1.3.1'] = {
   ...version['1.3.0'],
   compactPad: ['padID', 'keepRevisions'],
+  anonymizeAuthor: ['authorID'],
 };
-
 
 // set the latest available API version here
 exports.latestApiVersion = '1.3.1';

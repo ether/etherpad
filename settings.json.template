@@ -225,6 +225,18 @@
   },
 
   /*
+   * GDPR Art. 17 author erasure REST endpoint (anonymizeAuthor).
+   *
+   * Disabled by default — enable only when an operator process exists to
+   * authorise erasure requests. While disabled, calls to anonymizeAuthor
+   * return an apierror and the AuthorManager helper is not exposed via
+   * the public API.
+   */
+  "gdprAuthorErasure": {
+    "enabled": false
+  },
+
+  /*
    * Node native SSL support
    *
    * This is disabled by default.

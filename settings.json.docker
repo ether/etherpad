@@ -223,6 +223,16 @@
   },
 
   /*
+   * GDPR Art. 17 author erasure REST endpoint (anonymizeAuthor).
+   *
+   * Disabled by default — enable only when an operator process exists to
+   * authorise erasure requests.
+   */
+  "gdprAuthorErasure": {
+    "enabled": "${GDPR_AUTHOR_ERASURE_ENABLED:false}"
+  },
+
+  /*
     The authentication method used by the server.
     The default value is sso
     If you want to use the old authentication system, change this to apikey
