@@ -427,3 +427,121 @@ exports.anonymizeAuthor = async (
     clearedChatMessages,
   };
 };
+
+/**
+ * Admin-side author listing for the /admin/authors page. Enumerates
+ * `globalAuthor:*`, joins with `mapper2author:*` for the mapper column,
+ * applies in-memory filter/sort/pagination. Capped at 1000 rows pre-
+ * pagination so a runaway scan can't OOM the admin process — callers
+ * surface the cap via `cappedAt`.
+ *
+ * The pattern matches case-insensitively against the author's name,
+ * any of the author's mappers, OR the opaque authorID. Matching the
+ * authorID lets admins verify a specific erased record (the only
+ * remaining identifier on a Art. 17-erased stub) and is privacy-safe
+ * — the authorID is already exposed as a foreign key in changeset
+ * pools and elsewhere.
+ *
+ * @param query.pattern         substring match against name, mapper,
+ *                              or authorID (case-insensitive)
+ * @param query.offset          pagination offset
+ * @param query.limit           pagination limit
+ * @param query.sortBy          'name' | 'lastSeen'
+ * @param query.ascending       sort direction
+ * @param query.includeErased   when false (default), hides records with
+ *                              erased: true
+ */
+exports.searchAuthors = async (query: {
+  pattern: string,
+  offset: number,
+  limit: number,
+  sortBy: 'name' | 'lastSeen',
+  ascending: boolean,
+  includeErased: boolean,
+}): Promise<{
+  total: number,
+  cappedAt?: number,
+  results: Array<{
+    authorID: string,
+    name: string | null,
+    colorId: string | number | null,
+    mapper: string[],
+    lastSeen: number | null,
+    erased: boolean,
+  }>,
+}> => {
+  // Build a reverse index mapper -> authorID once. mapper2author values
+  // can be either a bare string (legacy) or an object {authorID}.
+  const mapperByAuthor = new Map<string, string[]>();
+  const mapperKeys: string[] = await db.findKeys('mapper2author:*', null);
+  for (const key of mapperKeys) {
+    const v = await db.get(key);
+    const authorID =
+        typeof v === 'string' ? v : (v && v.authorID) || null;
+    if (!authorID) continue;
+    const mapper = key.substring('mapper2author:'.length);
+    if (!mapperByAuthor.has(authorID)) mapperByAuthor.set(authorID, []);
+    mapperByAuthor.get(authorID)!.push(mapper);
+  }
+
+  const authorKeys: string[] = await db.findKeys('globalAuthor:*', null);
+  const pattern = (query.pattern || '').toLowerCase();
+  const rows: Array<{
+    authorID: string, name: string | null,
+    colorId: string | number | null, mapper: string[],
+    lastSeen: number | null, erased: boolean,
+  }> = [];
+
+  for (const key of authorKeys) {
+    const rec = await db.get(key);
+    if (rec == null) continue;
+    const erased = rec.erased === true;
+    if (erased && !query.includeErased) continue;
+    const authorID = key.substring('globalAuthor:'.length);
+    const mappers = mapperByAuthor.get(authorID) || [];
+    if (pattern) {
+      const nameMatch =
+          (rec.name || '').toLowerCase().includes(pattern);
+      const mapperMatch =
+          mappers.some((m) => m.toLowerCase().includes(pattern));
+      const idMatch =
+          authorID.toLowerCase().includes(pattern);
+      if (!nameMatch && !mapperMatch && !idMatch) continue;
+    }
+    rows.push({
+      authorID,
+      name: rec.name ?? null,
+      colorId: rec.colorId ?? null,
+      mapper: mappers,
+      lastSeen: typeof rec.lastSeen === 'number' ? rec.lastSeen : null,
+      erased,
+    });
+  }
+
+  rows.sort((a, b) => {
+    let av: any; let bv: any;
+    if (query.sortBy === 'lastSeen') {
+      av = a.lastSeen ?? 0; bv = b.lastSeen ?? 0;
+    } else {
+      av = (a.name || '').toLowerCase();
+      bv = (b.name || '').toLowerCase();
+    }
+    if (av < bv) return query.ascending ? -1 : 1;
+    if (av > bv) return query.ascending ? 1 : -1;
+    return 0;
+  });
+
+  const CAP = 1000;
+  let cappedAt: number | undefined;
+  let working = rows;
+  if (working.length > CAP) {
+    working = working.slice(0, CAP);
+    cappedAt = CAP;
+  }
+
+  const total = working.length;
+  const page = working.slice(query.offset, query.offset + query.limit);
+  const out: any = {total, results: page};
+  if (cappedAt != null) out.cappedAt = cappedAt;
+  return out;
+};
