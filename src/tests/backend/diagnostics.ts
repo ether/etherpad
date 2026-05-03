@@ -56,8 +56,11 @@ process.on('uncaughtException', (err: any) => {
   diag(`uncaughtException: ${
     err && err.stack ? err.stack : String(err)
   } (lastTest="${lastSeenTest}")`);
-  // Don't process.exit here — let mocha or the existing common.ts handler
-  // decide. We just want the diagnostic line out first.
+  // Force fail-fast. Specs that don't import common.ts only have THIS handler,
+  // and Node won't exit on its own once an uncaughtException listener is
+  // registered. Without the explicit exit a fatal error would be swallowed.
+  // common.ts has the same process.exit(1); whichever handler runs first wins.
+  process.exit(1);
 });
 
 process.on('beforeExit', (code: number) => {
