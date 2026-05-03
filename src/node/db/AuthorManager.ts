@@ -324,6 +324,8 @@ exports.removePad = async (authorID: string, padID: string) => {
  *
  * Idempotent: once `erased: true` is set on the author record, subsequent
  * calls short-circuit and return zero counters.
+ *
+ * When called with `{dryRun: true}` no records are written; the returned counters describe what a live call would have touched.
  */
 exports.anonymizeAuthor = async (
     authorID: string,
@@ -335,6 +337,7 @@ exports.anonymizeAuthor = async (
   clearedChatMessages: number,
 }> => {
   const dryRun = opts.dryRun === true;
+  // Lazy-require to dodge the AuthorManager ↔ PadManager ↔ Pad cycle.
   const padManager = require('./PadManager');
   const existing = await db.get(`globalAuthor:${authorID}`);
   if (existing == null || existing.erased) {
@@ -346,6 +349,11 @@ exports.anonymizeAuthor = async (
     };
   }
 
+  // Drop the token/mapper mappings first, before touching anything else, so
+  // a concurrent getAuthorId() can no longer resolve this author through
+  // its old bindings mid-erasure. These operations are independently
+  // idempotent — rerunning a failed call later still produces the same
+  // final state, just with zero counters for anything already done.
   let removedTokenMappings = 0;
   const tokenKeys: string[] = await db.findKeys('token2author:*', null);
   for (const key of tokenKeys) {
@@ -363,6 +371,9 @@ exports.anonymizeAuthor = async (
     }
   }
 
+  // Zero the display identity now — without the `erased` sentinel — so a
+  // partial run still hides the name. The sentinel itself is only set at
+  // the end (below) so a failure in chat scrub lets the next call resume.
   if (!dryRun) {
     await db.set(`globalAuthor:${authorID}`, {
       colorId: 0,
@@ -374,6 +385,9 @@ exports.anonymizeAuthor = async (
 
   const padIDs = Object.keys(existing.padIDs || {});
   let clearedChatMessages = 0;
+  // Null authorship on chat messages the author posted. If this throws
+  // partway through, the function re-runs the loop on the next call
+  // because `erased: true` is not set yet.
   for (const padID of padIDs) {
     if (!await padManager.doesPadExist(padID)) continue;
     const pad = await padManager.getPad(padID);
@@ -392,6 +406,9 @@ exports.anonymizeAuthor = async (
     }
   }
 
+  // Everything succeeded — stamp the sentinel so subsequent calls
+  // short-circuit. Merge with the zeroed record we just wrote so padIDs
+  // and timestamp persist.
   if (!dryRun) {
     await db.set(`globalAuthor:${authorID}`, {
       colorId: 0,
