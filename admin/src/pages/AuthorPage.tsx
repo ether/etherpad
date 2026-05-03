@@ -132,9 +132,10 @@ export const AuthorPage = () => {
 
   return <div>
     {!erasureEnabled && (
-      <div className="dialog-confirm-content"
+      <div role="alert"
            style={{margin: '0 0 12px', padding: '12px',
-                   background: '#fff8e1', border: '1px solid #f0c36d'}}>
+                   background: '#fff8e1', border: '1px solid #f0c36d',
+                   borderRadius: 4}}>
         <Trans i18nKey="ep_admin_authors:feature-disabled-banner"
                ns="ep_admin_authors"/>
       </div>
@@ -145,7 +146,7 @@ export const AuthorPage = () => {
         <Dialog.Overlay className="dialog-confirm-overlay"/>
         <Dialog.Content className="dialog-confirm-content">
           {dialog.phase === 'loading-preview' && <div>
-            <Trans i18nKey="ep_admin_authors:erasing" ns="ep_admin_authors"/>
+            <Trans i18nKey="ep_admin_authors:loading-preview" ns="ep_admin_authors"/>
           </div>}
           {(dialog.phase === 'preview' || dialog.phase === 'committing') && (() => {
             const p = dialog.preview;
@@ -176,6 +177,10 @@ export const AuthorPage = () => {
                          ns="ep_admin_authors"/>
                 </button>
               </div>
+              {dialog.phase === 'committing' && <p style={{marginTop: 8}}>
+                <Trans i18nKey="ep_admin_authors:erasing"
+                       ns="ep_admin_authors"/>
+              </p>}
             </div>;
           })()}
         </Dialog.Content>
@@ -246,14 +251,13 @@ export const AuthorPage = () => {
           <td>
             <div className="settings-button-bar">
               <IconButton icon={<Trash2/>}
-                          title={<Trans i18nKey="ep_admin_authors:erase"
-                                        ns="ep_admin_authors"/>}
+                          title={<Trans i18nKey={
+                              (!erasureEnabled || row.erased)
+                                  ? 'ep_admin_authors:erase-disabled-tooltip'
+                                  : 'ep_admin_authors:erase'}
+                              ns="ep_admin_authors"/>}
                           onClick={() => openErase(row)}
-                          {...(!erasureEnabled || row.erased
-                              ? {disabled: true,
-                                 'data-disabled-reason':
-                                     t('ep_admin_authors:erase-disabled-tooltip')}
-                              : {})}/>
+                          disabled={!erasureEnabled || row.erased}/>
             </div>
           </td>
         </tr>

@@ -19,6 +19,7 @@
   "ep_admin_authors:confirm-irreversible": "This cannot be undone.",
   "ep_admin_authors:cancel": "Cancel",
   "ep_admin_authors:continue": "Continue",
+  "ep_admin_authors:loading-preview": "Loading preview…",
   "ep_admin_authors:erasing": "Erasing…",
   "ep_admin_authors:erase-success-toast": "Author {{authorID}} erased.",
   "ep_admin_authors:erase-error-toast": "Erase failed: {{error}}",
