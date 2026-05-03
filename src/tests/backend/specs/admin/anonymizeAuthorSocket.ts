@@ -46,8 +46,10 @@ const adminSocket = async () => {
   });
 
   await new Promise<void>((res, rej) => {
-    socket.once('connect', () => res());
-    socket.once('connect_error', (err: any) => rej(err));
+    const onErr = (err: any) => { socket.off('connect', onConn); rej(err); };
+    const onConn = () => { socket.off('connect_error', onErr); res(); };
+    socket.once('connect', onConn);
+    socket.once('connect_error', onErr);
   });
 
   return socket;
@@ -79,6 +81,10 @@ describe(__filename, function () {
   after(function () {
     if (socket) socket.disconnect();
     settings.gdprAuthorErasure.enabled = originalFlag;
+    // savedUsers and settings.users point at the same object — restoring
+    // the reference is a no-op against the in-place mutation. Delete the
+    // injected test-admin key so subsequent tests see a clean users map.
+    if (settings.users) delete settings.users['test-admin'];
     settings.users = savedUsers;
     settings.requireAuthentication = savedRequireAuthentication;
   });
