@@ -295,11 +295,9 @@ const sendClientReady = (isReconnect) => {
   }
 
   const cp = (window as any).clientVars?.cookiePrefix || '';
-  let token = Cookies.get(`${cp}token`) || Cookies.get('token');
-  if (token == null || !padutils.isValidAuthorToken(token)) {
-    token = padutils.generateAuthorToken();
-    Cookies.set(`${cp}token`, token, {expires: 60});
-  }
+  // The author token lives in an HttpOnly cookie set by the server (GDPR PR3 /
+  // ether/etherpad#6701). The browser never reads or writes it; the server
+  // reads the cookie from the socket.io handshake inside handleClientReady.
 
   // If known, propagate the display name and color to the server in the CLIENT_READY message. This
   // allows the server to include the values in its reply CLIENT_VARS message (which avoids
@@ -316,7 +314,6 @@ const sendClientReady = (isReconnect) => {
     type: 'CLIENT_READY',
     padId,
     sessionID: Cookies.get(`${cp}sessionID`) || Cookies.get('sessionID'),
-    token,
     userInfo,
   };
   const overrides = getMyViewOverrides();

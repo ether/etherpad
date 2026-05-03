@@ -21,6 +21,9 @@ function handleTransferOfSession() {
     transferNowButton.innerHTML = `${checkmark}`;
     transferNowButton.disabled = true;
 
+    // The author token is HttpOnly (ether/etherpad#6701 PR3) so we cannot
+    // read it via document.cookie. Send only the JS-readable prefsHttp; the
+    // server reads the token off the request's own cookie jar.
     const responseWithId = await fetch("./tokenTransfer", {
       method: "POST",
       headers: {
@@ -28,7 +31,6 @@ function handleTransferOfSession() {
       },
       body: JSON.stringify({
         prefsHttp: getCookie(`${cp}prefsHttp`) || getCookie('prefsHttp'),
-        token: getCookie(`${cp}token`) || getCookie('token'),
       })
     })
 
