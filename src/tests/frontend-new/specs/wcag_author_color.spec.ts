@@ -50,7 +50,17 @@ const renderedAuthorContrast = async (page: Page) => {
   return result;
 };
 
-test.describe('WCAG author colour (issue #7377)', () => {
+// `@feature:authorship-bg-color` because every assertion here measures the
+// author span's `background-color` against its computed text colour. Plugins
+// that disable the author *background* colouring entirely — e.g.
+// ep_author_neat2, which switches to coloured underlines — can't satisfy the
+// WCAG bg/text contrast invariant (there's no background to measure). Those
+// plugins declare `disables: ["@feature:authorship-bg-color"]` and the
+// disables contract excludes this describe block from their pass-1 regression
+// run.
+test.describe('WCAG author colour (issue #7377)', {
+  tag: '@feature:authorship-bg-color',
+}, () => {
   test('issue scenario: #9AB3FA renders >= AA against the author text', async ({page}) => {
     await setUserColor(page, '#9AB3FA');
     const r = await renderedAuthorContrast(page);
