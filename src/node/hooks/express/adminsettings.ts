@@ -31,11 +31,14 @@ exports.socketio = (hookName: string, {io}: any) => {
       } catch (err) {
         return logger.error(`Error loading settings: ${err}`);
       }
-      // if showSettingsInAdminPage is set to false, then return NOT_ALLOWED in the result
+      const flags = {
+        gdprAuthorErasure: !!(settings.gdprAuthorErasure &&
+            settings.gdprAuthorErasure.enabled),
+      };
       if (settings.showSettingsInAdminPage === false) {
-        socket.emit('settings', {results: 'NOT_ALLOWED'});
+        socket.emit('settings', {results: 'NOT_ALLOWED', flags});
       } else {
-        socket.emit('settings', {results: data});
+        socket.emit('settings', {results: data, flags});
       }
     });
 
@@ -303,6 +306,66 @@ exports.socketio = (hookName: string, {io}: any) => {
       }
      }
     })
+
+    const authorManager = require('../../db/AuthorManager');
+
+    socket.on('authorLoad', async (query: any) => {
+      try {
+        const data = await authorManager.searchAuthors({
+          pattern: query.pattern || '',
+          offset: query.offset || 0,
+          limit: query.limit || 12,
+          sortBy: query.sortBy === 'lastSeen' ? 'lastSeen' : 'name',
+          ascending: query.ascending !== false,
+          includeErased: query.includeErased === true,
+        });
+        socket.emit('results:authorLoad', data);
+      } catch (err: any) {
+        logger.error(`authorLoad failed: ${err.stack || err}`);
+        socket.emit('results:authorLoad',
+            {total: 0, results: [], error: String(err.message || err)});
+      }
+    });
+
+    socket.on('anonymizeAuthorPreview', async ({authorID}: {authorID: string}) => {
+      try {
+        if (!authorID) {
+          socket.emit('results:anonymizeAuthorPreview',
+              {authorID, error: 'authorID is required'});
+          return;
+        }
+        const rec = await authorManager.getAuthor(authorID);
+        const counters =
+            await authorManager.anonymizeAuthor(authorID, {dryRun: true});
+        socket.emit('results:anonymizeAuthorPreview',
+            {authorID, name: rec ? rec.name : null, ...counters});
+      } catch (err: any) {
+        logger.error(`anonymizeAuthorPreview failed: ${err.stack || err}`);
+        socket.emit('results:anonymizeAuthorPreview',
+            {authorID, error: String(err.message || err)});
+      }
+    });
+
+    socket.on('anonymizeAuthor', async ({authorID}: {authorID: string}) => {
+      try {
+        if (!settings.gdprAuthorErasure || !settings.gdprAuthorErasure.enabled) {
+          socket.emit('results:anonymizeAuthor', {authorID, error: 'disabled'});
+          return;
+        }
+        if (!authorID) {
+          socket.emit('results:anonymizeAuthor',
+              {authorID, error: 'authorID is required'});
+          return;
+        }
+        const counters = await authorManager.anonymizeAuthor(authorID);
+        logger.info(`anonymizeAuthor (admin socket): ${authorID}`);
+        socket.emit('results:anonymizeAuthor', {authorID, ...counters});
+      } catch (err: any) {
+        logger.error(`anonymizeAuthor failed: ${err.stack || err}`);
+        socket.emit('results:anonymizeAuthor',
+            {authorID, error: String(err.message || err)});
+      }
+    });
 
     socket.on('restartServer', async () => {
       logger.info('Admin request to restart server through a socket on /admin/settings');
