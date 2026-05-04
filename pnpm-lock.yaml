@@ -277,8 +277,8 @@ importers:
         specifier: ^2.0.7
         version: 2.0.7
       rate-limiter-flexible:
-        specifier: ^11.0.1
-        version: 11.0.1
+        specifier: ^11.0.2
+        version: 11.0.2
       redis:
         specifier: ^5.12.1
         version: 5.12.1(@opentelemetry/api@1.9.0)
@@ -4690,8 +4690,8 @@ packages:
     resolution: {integrity: sha512-Hrgsx+orqoygnmhFbKaHE6c296J+HTAQXoxEF6gNupROmmGJRoyzfG3ccAveqCBrwr/2yxQ5BVd/GTl5agOwSg==}
     engines: {node: '>= 0.6'}
 
-  rate-limiter-flexible@11.0.1:
-    resolution: {integrity: sha512-hvyCUefjRund2N6hro2H8Dql7OvB6+B3Qv2FLWWbdsdyQScXf4+N0tM0Bryz11awTtNxx6C1QbHYb1rCiAx7pA==}
+  rate-limiter-flexible@11.0.2:
+    resolution: {integrity: sha512-KF/g/GrzzL8bm5K9ZZ8MM0ascA+8dUwv5xA6+/k/3TpT/5cfz3ab36sRUTZsWMd0zmkOOZBu5oXURsRvztjBhw==}
 
   raw-body@3.0.2:
     resolution: {integrity: sha512-K5zQjDllxWkf7Z5xJdV0/B0WTNqx6vxG70zJE4N0kBs4LovmEYWJzQGxC9bS9RAKu3bgM40lrd5zoLJ12MQ5BA==}
@@ -10146,7 +10146,7 @@ snapshots:
 
   range-parser@1.2.1: {}
 
-  rate-limiter-flexible@11.0.1: {}
+  rate-limiter-flexible@11.0.2: {}
 
   raw-body@3.0.2:
     dependencies:
