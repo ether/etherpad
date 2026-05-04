@@ -57,7 +57,7 @@ jobs:
       contents: read
     steps:
       - name: Download snap artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: etherpad-snap
 
@@ -79,7 +79,7 @@ jobs:
     environment: snap-store-stable
     steps:
       - name: Download snap artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: etherpad-snap
 
