@@ -12,7 +12,11 @@ const setErasureFlag = async (page: any, enabled: boolean) => {
   const settings = page.locator('.settings');
   await expect(settings).not.toHaveValue('', {timeout: 30000});
   const raw = await settings.inputValue();
-  const obj = JSON.parse(raw.replace(/\/\*[\s\S]*?\*\//g, ''));
+  // The textarea exposes the raw settings.json — JSONC with comments,
+  // trailing commas, and unquoted property names. JSON.parse rejects
+  // all three. Evaluating it as a JS object literal (which it always
+  // is) accepts everything Etherpad's own settings loader does.
+  const obj = new Function(`return (${raw})`)();
   obj.gdprAuthorErasure = {enabled};
   await settings.fill(JSON.stringify(obj));
   await saveSettings(page);
