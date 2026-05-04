@@ -309,8 +309,25 @@ exports.socketio = (hookName: string, {io}: any) => {
 
     const authorManager = require('../../db/AuthorManager');
 
-    socket.on('authorLoad', async (query: any) => {
+    // The admin author-erasure UI (PR #7667) is gated as a single
+    // feature: when gdprAuthorErasure.enabled is false, all three
+    // socket handlers refuse so the page is fully off by default per
+    // project rule "new features behind a feature flag, disabled by
+    // default" (Qodo Compliance ID 6). The destructive
+    // anonymizeAuthor stays gated as before; the read paths
+    // (authorLoad / preview) are also gated so listing data isn't
+    // exposed without an explicit opt-in.
+    const erasureEnabled = () =>
+        !!(settings.gdprAuthorErasure && settings.gdprAuthorErasure.enabled);
+
+    socket.on('authorLoad', async (payload: any) => {
       try {
+        if (!erasureEnabled()) {
+          socket.emit('results:authorLoad',
+              {total: 0, results: [], error: 'disabled'});
+          return;
+        }
+        const query = payload || {};
         const data = await authorManager.searchAuthors({
           pattern: query.pattern || '',
           offset: query.offset || 0,
@@ -327,8 +344,14 @@ exports.socketio = (hookName: string, {io}: any) => {
       }
     });
 
-    socket.on('anonymizeAuthorPreview', async ({authorID}: {authorID: string}) => {
+    socket.on('anonymizeAuthorPreview', async (payload: any) => {
+      const authorID = payload?.authorID;
       try {
+        if (!erasureEnabled()) {
+          socket.emit('results:anonymizeAuthorPreview',
+              {authorID, error: 'disabled'});
+          return;
+        }
         if (!authorID) {
           socket.emit('results:anonymizeAuthorPreview',
               {authorID, error: 'authorID is required'});
@@ -346,9 +369,10 @@ exports.socketio = (hookName: string, {io}: any) => {
       }
     });
 
-    socket.on('anonymizeAuthor', async ({authorID}: {authorID: string}) => {
+    socket.on('anonymizeAuthor', async (payload: any) => {
+      const authorID = payload?.authorID;
       try {
-        if (!settings.gdprAuthorErasure || !settings.gdprAuthorErasure.enabled) {
+        if (!erasureEnabled()) {
           socket.emit('results:anonymizeAuthor', {authorID, error: 'disabled'});
           return;
         }

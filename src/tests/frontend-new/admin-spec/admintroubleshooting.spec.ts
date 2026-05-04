@@ -14,8 +14,10 @@ test('Shows troubleshooting page manager', async ({page}) => {
   await page.goto('http://localhost:9001/admin/help')
   await page.waitForSelector('.menu')
   const menu =  page.locator('.menu');
-  // Sidebar nav: plugins, settings, help, pads, authors, shout, update.
-  await expect(menu.locator('li')).toHaveCount(7);
+  // Sidebar nav: plugins, settings, help, pads, shout, update.
+  // The Authors link only renders when gdprAuthorErasure.enabled = true,
+  // which the test environment leaves false by default.
+  await expect(menu.locator('li')).toHaveCount(6);
 })
 
 test('Shows a version number', async function ({page}) {

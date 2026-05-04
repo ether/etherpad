@@ -12,6 +12,7 @@ import {UpdateBanner} from "./components/UpdateBanner";
 const WS_URL = import.meta.env.DEV ? 'http://localhost:9001' : ''
 export const App = () => {
   const setSettings = useStore(state => state.setSettings);
+  const erasureEnabled = useStore(state => state.gdprAuthorErasureEnabled)
   const {t} = useTranslation()
   const navigate = useNavigate()
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(true)
@@ -106,7 +107,9 @@ export const App = () => {
           <li><NavLink to={"/help"}> <Construction/> <Trans i18nKey="admin_plugins_info"/></NavLink></li>
           <li><NavLink to={"/pads"}><NotepadText/><Trans
             i18nKey="ep_admin_pads:ep_adminpads2_manage-pads"/></NavLink></li>
-          <li><NavLink to={"/authors"}><Users/><Trans i18nKey="ep_admin_authors:title" ns="ep_admin_authors"/></NavLink></li>
+          {erasureEnabled && (
+            <li><NavLink to={"/authors"}><Users/><Trans i18nKey="ep_admin_authors:title" ns="ep_admin_authors"/></NavLink></li>
+          )}
           <li><NavLink to={"/shout"}><PhoneCall/>Communication</NavLink></li>
           <li><NavLink to={"/update"}><Bell/><Trans i18nKey="update.page.title"/></NavLink></li>
         </ul>

@@ -144,8 +144,12 @@ describe(__filename, function () {
         }
       });
 
-  it('anonymizeAuthorPreview still works when flag is off (read-only)',
+  it('anonymizeAuthorPreview returns {error: "disabled"} when flag is off',
       async function () {
+        // Per Qodo Compliance ID 6 ('new features behind a feature flag,
+        // disabled by default') the preview event is also gated, not just
+        // the live anonymizeAuthor. The page renders its disabled banner
+        // off the socket reply when this fires.
         settings.gdprAuthorErasure.enabled = false;
         try {
           const tag = `prev-off-${Date.now()}`;
@@ -153,9 +157,41 @@ describe(__filename, function () {
               `m-${tag}`, `PrevOff ${tag}`);
           const preview = await ask(socket, 'anonymizeAuthorPreview',
               {authorID}, 'results:anonymizeAuthorPreview');
-          assert.ok(preview.removedExternalMappings >= 1);
+          assert.equal(preview.error, 'disabled');
+          assert.equal(preview.removedExternalMappings, undefined,
+              'no counters should leak when the flag is off');
         } finally {
           settings.gdprAuthorErasure.enabled = true;
         }
+      });
+
+  it('authorLoad returns {error: "disabled"} when flag is off',
+      async function () {
+        settings.gdprAuthorErasure.enabled = false;
+        try {
+          const res = await ask(socket, 'authorLoad',
+              {pattern: '', offset: 0, limit: 12, sortBy: 'name',
+               ascending: true, includeErased: false},
+              'results:authorLoad');
+          assert.equal(res.error, 'disabled');
+          assert.deepEqual(res.results, []);
+        } finally {
+          settings.gdprAuthorErasure.enabled = true;
+        }
+      });
+
+  it('handlers do not crash on payload-less emits',
+      async function () {
+        // Pre-Qodo-fix the destructure `({authorID}: ...)` threw before
+        // try/catch when client emitted with no payload. Both gated
+        // handlers now accept `payload: any` and read defensively.
+        const previewRes = await ask(socket, 'anonymizeAuthorPreview',
+            undefined, 'results:anonymizeAuthorPreview');
+        assert.ok(previewRes.error,
+            `expected error, got ${JSON.stringify(previewRes)}`);
+        const eraseRes = await ask(socket, 'anonymizeAuthor',
+            undefined, 'results:anonymizeAuthor');
+        assert.ok(eraseRes.error,
+            `expected error, got ${JSON.stringify(eraseRes)}`);
       });
 });

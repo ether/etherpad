@@ -130,8 +130,11 @@ const mapAuthorWithDBKey = async (mapperkey: string, mapper:string) => {
   }
 
   // there is an author with this mapper
-  // update the timestamp of this author
-  await db.setSub(`globalAuthor:${author}`, ['timestamp'], Date.now());
+  // update the timestamp + lastSeen of this author so the admin
+  // /authors "Last seen" column reflects the most recent connect
+  const now = Date.now();
+  await db.setSub(`globalAuthor:${author}`, ['timestamp'], now);
+  await db.setSub(`globalAuthor:${author}`, ['lastSeen'], now);
 
   // return the author
   return {authorID: author};
@@ -374,11 +377,15 @@ exports.anonymizeAuthor = async (
   // Zero the display identity now — without the `erased` sentinel — so a
   // partial run still hides the name. The sentinel itself is only set at
   // the end (below) so a failure in chat scrub lets the next call resume.
+  // Preserve `lastSeen` so the admin /authors UI's column stays accurate
+  // for erased records (the operator can still see when the author was
+  // last active before erasure).
   if (!dryRun) {
     await db.set(`globalAuthor:${authorID}`, {
       colorId: 0,
       name: null,
       timestamp: Date.now(),
+      lastSeen: existing.lastSeen ?? existing.timestamp ?? null,
       padIDs: existing.padIDs || {},
     });
   }
@@ -414,6 +421,7 @@ exports.anonymizeAuthor = async (
       colorId: 0,
       name: null,
       timestamp: Date.now(),
+      lastSeen: existing.lastSeen ?? existing.timestamp ?? null,
       padIDs: existing.padIDs || {},
       erased: true,
       erasedAt: new Date().toISOString(),
@@ -513,7 +521,11 @@ exports.searchAuthors = async (query: {
       name: rec.name ?? null,
       colorId: rec.colorId ?? null,
       mapper: mappers,
-      lastSeen: typeof rec.lastSeen === 'number' ? rec.lastSeen : null,
+      // Prefer lastSeen; fall back to timestamp for legacy records that
+      // pre-date the new field so the admin /authors column isn't blank.
+      lastSeen: typeof rec.lastSeen === 'number'
+          ? rec.lastSeen
+          : (typeof rec.timestamp === 'number' ? rec.timestamp : null),
       erased,
     });
   }
