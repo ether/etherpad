@@ -1,5 +1,5 @@
 import {expect, test} from "@playwright/test";
-import {loginToAdmin, saveSettings} from "../helper/adminhelper";
+import {loginToAdmin, saveSettings, restartEtherpad} from "../helper/adminhelper";
 
 // /admin tests run serially because they mutate global server state.
 test.describe.configure({mode: 'serial'});
@@ -20,6 +20,13 @@ const setErasureFlag = async (page: any, enabled: boolean) => {
   obj.gdprAuthorErasure = {enabled};
   await settings.fill(JSON.stringify(obj));
   await saveSettings(page);
+  // settings.json save does not hot-reload — the server keeps the prior
+  // in-memory `settings.gdprAuthorErasure.enabled` until restart, so a
+  // subsequent navigation would still see the old flag value pushed via
+  // the `flags` field on the connect-time settings reply. Restart so
+  // tests observing the flag flip see the new value.
+  await restartEtherpad(page);
+  await loginToAdmin(page, 'admin', 'changeme1');
 };
 
 test.describe('admin authors page', () => {

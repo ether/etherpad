@@ -59,6 +59,14 @@ export const AuthorPage = () => {
     if (!settingsSocket) return;
     const onLoad = (data: AuthorSearchResult) => setAuthors(data);
     const onPreview = (data: AnonymizePreview) => {
+      if (data.error) {
+        useStore.getState().setToastState({
+          open: true, success: false,
+          title: t('ep_admin_authors:erase-error-toast', {error: data.error}),
+        });
+        setDialog({phase: 'closed'});
+        return;
+      }
       setDialog((cur) =>
           cur.phase === 'loading-preview' && cur.authorID === data.authorID
               ? {phase: 'preview', preview: data}
@@ -151,8 +159,10 @@ export const AuthorPage = () => {
           {(dialog.phase === 'preview' || dialog.phase === 'committing') && (() => {
             const p = dialog.preview;
             return <div>
-              <h3>{t('ep_admin_authors:confirm-preview-title',
-                  {name: p.name || p.authorID})}</h3>
+              <Dialog.Title asChild>
+                <h3>{t('ep_admin_authors:confirm-preview-title',
+                    {name: p.name || p.authorID})}</h3>
+              </Dialog.Title>
               <p>{t('ep_admin_authors:confirm-preview-counters', {
                 tokenMappings: p.removedTokenMappings,
                 externalMappings: p.removedExternalMappings,
@@ -251,11 +261,8 @@ export const AuthorPage = () => {
           <td>
             <div className="settings-button-bar">
               <IconButton icon={<Trash2/>}
-                          title={<Trans i18nKey={
-                              (!erasureEnabled || row.erased)
-                                  ? 'ep_admin_authors:erase-disabled-tooltip'
-                                  : 'ep_admin_authors:erase'}
-                              ns="ep_admin_authors"/>}
+                          title={<Trans i18nKey="ep_admin_authors:erase"
+                                        ns="ep_admin_authors"/>}
                           onClick={() => openErase(row)}
                           disabled={!erasureEnabled || row.erased}/>
             </div>
