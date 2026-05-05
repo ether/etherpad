@@ -3,6 +3,7 @@
 ### Breaking changes
 
 - **Minimum required Node.js version is now 22.12.** Node.js 20 is reaching end-of-life (see https://nodejs.org/en/about/previous-releases) and the docs build's `oxc-minify` peer requires `^20.19.0 || >=22.12.0`. The CI matrix now targets Node 22, 24, and 25. Upgrading should be straightforward — install a current Node.js release before updating Etherpad.
+- **The official Docker image no longer ships `curl`, `npm`, or `npx`.** These were dropped to remove transitive CVEs (curl/libcurl SMB advisories, npm's bundled picomatch 4.0.3 and brace-expansion 2.0.2). The container's healthcheck now uses `wget` (busybox built-in, always present), and Etherpad provisions `pnpm` via `corepack` for all runtime package operations. If you exec into the container and rely on `curl` or `npm` for ad-hoc tasks, install them on demand with `apk add curl` or use the busybox `wget` / `pnpm` already present.
 
 ### Notable enhancements
 
