@@ -7,10 +7,13 @@
 #   docker build --build-arg BUILD_ENV=copy .
 ARG BUILD_ENV=git
 
-ARG PnpmVersion=10.28.2
+ARG PnpmVersion=10.33.2
 
 FROM node:22-alpine AS adminbuild
-RUN npm install -g pnpm@${PnpmVersion}
+# Use corepack to provision pnpm and drop the bundled npm — its older
+# transitives (picomatch, brace-expansion) carry CVEs we don't otherwise need.
+RUN corepack enable && corepack prepare pnpm@${PnpmVersion} --activate && \
+    rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
 WORKDIR /opt/etherpad-lite
 COPY . .
 RUN pnpm install
@@ -96,11 +99,11 @@ RUN mkdir -p "${EP_DIR}" && chown etherpad:etherpad "${EP_DIR}"
 # https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=863199
 RUN  \
     mkdir -p /usr/share/man/man1 && \
-    npm install pnpm@${PnpmVersion} -g  && \
+    corepack enable && corepack prepare pnpm@${PnpmVersion} --activate && \
+    rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx && \
     apk update && apk upgrade && \
     apk add --no-cache \
         ca-certificates \
-        curl \
         git \
         ${INSTALL_SOFFICE:+libreoffice openjdk8-jre libreoffice-common} && \
     rm -rf /var/cache/apk/*
@@ -191,7 +194,7 @@ COPY --chown=etherpad:etherpad ${SETTINGS} "${EP_DIR}"/settings.json
 USER etherpad
 
 HEALTHCHECK --interval=5s --timeout=3s \
-  CMD curl --silent http://localhost:9001/health | grep -E "pass|ok|up" > /dev/null || exit 1
+  CMD wget -qO- http://127.0.0.1:9001/health | grep -E "pass|ok|up" > /dev/null || exit 1
 
 EXPOSE 9001
 CMD ["pnpm", "run", "prod"]
