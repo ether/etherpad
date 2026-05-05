@@ -733,9 +733,12 @@
 
     /**
     * Enable creator-owned Pad-wide Settings and new-pad default seeding from My View.
-    * Disabled by default to preserve the legacy single-settings behavior.
+    * The pad creator (revision-0 author) gets the "Pad-wide Settings" section,
+    * which lets them set defaults and optionally enforce them for other users.
+    * Other users see only "User Settings" (their own view options).
+    * Set to false to revert to the legacy single-settings behavior.
     **/
-    "enablePadWideSettings": "${ENABLE_PAD_WIDE_SETTINGS:false}",
+    "enablePadWideSettings": "${ENABLE_PAD_WIDE_SETTINGS:true}",
 
   /*
    * Optional privacy banner shown once the pad loads. Disabled by default.
