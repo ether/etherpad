@@ -239,22 +239,32 @@ exports.handleDisconnect = async (socket:any) => {
                     ` authorID:${session.author}` +
                     (user && user.username ? ` username:${user.username}` : ''));
   /* eslint-enable prefer-template */
-  socket.broadcast.to(session.padId).emit('message', {
-    type: 'COLLABROOM',
-    data: {
-      type: 'USER_LEAVE',
-      userInfo: {
-        colorId: await authorManager.getAuthorColorId(session.author),
-        userId: session.author,
+  // Client presence is keyed by authorID. With the #7656 fix, multiple sockets
+  // can share an authorID (same authenticated identity across windows/devices),
+  // so emitting USER_LEAVE on every socket disconnect would drop the author
+  // from presence even when another socket of theirs is still connected. Only
+  // broadcast — and only run the userLeave hook — when the *last* socket for
+  // this author leaves the pad.
+  const isLastSocketForAuthor = !_getRoomSockets(session.padId).some(
+      (s: any) => sessioninfos[s.id]?.author === session.author);
+  if (isLastSocketForAuthor) {
+    socket.broadcast.to(session.padId).emit('message', {
+      type: 'COLLABROOM',
+      data: {
+        type: 'USER_LEAVE',
+        userInfo: {
+          colorId: await authorManager.getAuthorColorId(session.author),
+          userId: session.author,
+        },
       },
-    },
-  });
-  await hooks.aCallAll('userLeave', {
-    ...session, // For backwards compatibility.
-    authorId: session.author,
-    readOnly: session.readonly,
-    socket,
-  });
+    });
+    await hooks.aCallAll('userLeave', {
+      ...session, // For backwards compatibility.
+      authorId: session.author,
+      readOnly: session.readonly,
+      socket,
+    });
+  }
 };
 
 
