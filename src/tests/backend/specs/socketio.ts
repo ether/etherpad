@@ -324,6 +324,56 @@ describe(__filename, function () {
     });
   });
 
+  describe('Duplicate-author handling (#7656)', function () {
+    let socketA: any;
+    let socketB: any;
+
+    afterEach(async function () {
+      for (const s of [socketA, socketB]) if (s) s.close();
+      socketA = null;
+      socketB = null;
+      // The outer afterEach only knows about the singleton `socket`. Null it so
+      // it doesn't try to close one of ours twice.
+      socket = null;
+    });
+
+    // Records `{disconnect: ...}` payloads delivered to a socket so a test can
+    // assert whether the userdup kick fired.
+    const watchDisconnects = (s: any): string[] => {
+      const seen: string[] = [];
+      s.on('message', (msg: any) => { if (msg && msg.disconnect) seen.push(msg.disconnect); });
+      return seen;
+    };
+
+    it('cookie identity: same-author second socket kicks the first (regression)', async function () {
+      const res = await agent.get('/p/pad').expect(200);
+      socketA = await common.connect(res);
+      assert.equal((await common.handshake(socketA, 'pad')).type, 'CLIENT_VARS');
+      const seen = watchDisconnects(socketA);
+
+      // Same cookie => same author token => same authorID. This is the original
+      // "stale tab in the same browser" case the kick was designed for.
+      socketB = await common.connect(res);
+      assert.equal((await common.handshake(socketB, 'pad')).type, 'CLIENT_VARS');
+      // Let the kick emit drain.
+      await new Promise((r) => setTimeout(r, 200));
+      assert.deepEqual(seen, ['userdup']);
+    });
+
+    it('authenticated identity: second socket does NOT kick the first', async function () {
+      settings.requireAuthentication = true;
+      const res = await agent.get('/p/pad').auth('user', 'user-password').expect(200);
+      socketA = await common.connect(res);
+      assert.equal((await common.handshake(socketA, 'pad')).type, 'CLIENT_VARS');
+      const seen = watchDisconnects(socketA);
+
+      socketB = await common.connect(res);
+      assert.equal((await common.handshake(socketB, 'pad')).type, 'CLIENT_VARS');
+      await new Promise((r) => setTimeout(r, 200));
+      assert.deepEqual(seen, []);
+    });
+  });
+
   describe('SocketIORouter.js', function () {
     const Module = class {
       setSocketIO(io:any) {}

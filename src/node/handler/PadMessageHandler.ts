@@ -1020,22 +1020,29 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
   // Check if the user has disconnected during any of the above awaits.
   if (sessionInfo !== sessioninfos[socket.id]) throw new Error('client disconnected');
 
-  // Check if this author is already on the pad, if yes, kick the other sessions!
-  const roomSockets = _getRoomSockets(pad.id);
+  const {session: {user} = {}} = socket.client.request as SocketClientRequest;
 
-  for (const otherSocket of roomSockets) {
-    // The user shouldn't have joined the room yet, but check anyway just in case.
-    if (otherSocket.id === socket.id) continue;
-    const sinfo = sessioninfos[otherSocket.id];
-    if (sinfo && sinfo.author === sessionInfo.author) {
-      // fix user's counter, works on page refresh or if user closes browser window and then rejoins
-      sessioninfos[otherSocket.id] = {};
-      otherSocket.leave(sessionInfo.padId);
-      otherSocket.emit('message', {disconnect: 'userdup'});
+  // The duplicate-author kick exists because cookie-derived authorIDs are
+  // per-browser, so "same authorID, same pad" historically meant "stale tab in
+  // the same browser" — see #7656. Authenticated sessions (req.session.user
+  // set, e.g. via basic auth, SSO, or a getAuthorId plugin hook) carry a
+  // stable identity across windows and devices, so concurrent same-author
+  // sessions are legitimate and must not be kicked.
+  const roomSockets = _getRoomSockets(pad.id);
+  if (user == null) {
+    for (const otherSocket of roomSockets) {
+      // The user shouldn't have joined the room yet, but check anyway just in case.
+      if (otherSocket.id === socket.id) continue;
+      const sinfo = sessioninfos[otherSocket.id];
+      if (sinfo && sinfo.author === sessionInfo.author) {
+        // fix user's counter, works on page refresh or if user closes browser window and then rejoins
+        sessioninfos[otherSocket.id] = {};
+        otherSocket.leave(sessionInfo.padId);
+        otherSocket.emit('message', {disconnect: 'userdup'});
+      }
     }
   }
 
-  const {session: {user} = {}} = socket.client.request as SocketClientRequest;
   /* eslint-disable prefer-template -- it doesn't support breaking across multiple lines */
   accessLogger.info(`[${pad.head > 0 ? 'ENTER' : 'CREATE'}]` +
                     ` pad:${sessionInfo.padId}` +
