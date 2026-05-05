@@ -11,8 +11,12 @@ ARG PnpmVersion=10.33.2
 
 FROM node:22-alpine AS adminbuild
 # Use corepack to provision pnpm and drop the bundled npm — its older
-# transitives (picomatch, brace-expansion) carry CVEs we don't otherwise need.
-RUN corepack enable && corepack prepare pnpm@${PnpmVersion} --activate && \
+# transitives (picomatch, brace-expansion) carry CVEs we don't otherwise
+# need. Refresh corepack first: the version bundled with Node 22 ships a
+# stale signing-key list and rejects newer pnpm releases
+# (nodejs/corepack#612). Mirrors the workaround in snap/snapcraft.yaml.
+RUN npm install -g corepack@latest && \
+    corepack enable && corepack prepare pnpm@${PnpmVersion} --activate && \
     rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
 WORKDIR /opt/etherpad-lite
 COPY . .
@@ -99,6 +103,7 @@ RUN mkdir -p "${EP_DIR}" && chown etherpad:etherpad "${EP_DIR}"
 # https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=863199
 RUN  \
     mkdir -p /usr/share/man/man1 && \
+    npm install -g corepack@latest && \
     corepack enable && corepack prepare pnpm@${PnpmVersion} --activate && \
     rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx && \
     apk update && apk upgrade && \
