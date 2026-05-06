@@ -23,6 +23,7 @@ import {MapArrayType} from "../types/MapType";
 
 import AttributeMap from '../../static/js/AttributeMap';
 const padManager = require('../db/PadManager');
+const padDeletionManager = require('../db/PadDeletionManager');
 import {checkRep, cloneAText, compose, deserializeOps, follow, identity, inverse, makeAText, makeSplice, moveOpsToNewPool, mutateAttributionLines, mutateTextLines, oldLen, prepareForWire, splitAttributionLines, splitTextLines, unpack} from '../../static/js/Changeset';
 import ChatMessage from '../../static/js/ChatMessage';
 import AttributePool from '../../static/js/AttributePool';
@@ -32,8 +33,11 @@ import padutils from '../../static/js/pad_utils';
 import readOnlyManager from '../db/ReadOnlyManager';
 import settings, {
   exportAvailable,
+  getPublicPrivacyBanner,
   sofficeAvailable
 } from '../utils/Settings';
+import {anonymizeIp} from '../utils/anonymizeIp';
+const logIp = (ip: string | null | undefined) => anonymizeIp(ip, settings.ipLogging);
 const securityManager = require('../db/SecurityManager');
 const plugins = require('../../static/js/pluginfw/plugin_defs');
 import log4js from 'log4js';
@@ -231,65 +235,84 @@ exports.handleDisconnect = async (socket:any) => {
   accessLogger.info('[LEAVE]' +
                     ` pad:${session.padId}` +
                     ` socket:${socket.id}` +
-                    ` IP:${settings.disableIPlogging ? 'ANONYMOUS' : socket.request.ip}` +
+                    ` IP:${logIp(socket.request.ip)}` +
                     ` authorID:${session.author}` +
                     (user && user.username ? ` username:${user.username}` : ''));
   /* eslint-enable prefer-template */
-  socket.broadcast.to(session.padId).emit('message', {
-    type: 'COLLABROOM',
-    data: {
-      type: 'USER_LEAVE',
-      userInfo: {
-        colorId: await authorManager.getAuthorColorId(session.author),
-        userId: session.author,
+  // Client presence is keyed by authorID. With the #7656 fix, multiple sockets
+  // can share an authorID (same authenticated identity across windows/devices),
+  // so emitting USER_LEAVE on every socket disconnect would drop the author
+  // from presence even when another socket of theirs is still connected. Only
+  // broadcast — and only run the userLeave hook — when the *last* socket for
+  // this author leaves the pad.
+  const isLastSocketForAuthor = !_getRoomSockets(session.padId).some(
+      (s: any) => sessioninfos[s.id]?.author === session.author);
+  if (isLastSocketForAuthor) {
+    socket.broadcast.to(session.padId).emit('message', {
+      type: 'COLLABROOM',
+      data: {
+        type: 'USER_LEAVE',
+        userInfo: {
+          colorId: await authorManager.getAuthorColorId(session.author),
+          userId: session.author,
+        },
       },
-    },
-  });
-  await hooks.aCallAll('userLeave', {
-    ...session, // For backwards compatibility.
-    authorId: session.author,
-    readOnly: session.readonly,
-    socket,
-  });
+    });
+    await hooks.aCallAll('userLeave', {
+      ...session, // For backwards compatibility.
+      authorId: session.author,
+      readOnly: session.readonly,
+      socket,
+    });
+  }
 };
 
 
 const handlePadDelete = async (socket: any, padDeleteMessage: PadDeleteMessage) => {
   const session = sessioninfos[socket.id];
   if (!session || !session.author || !session.padId) throw new Error('session not ready');
-  if (await padManager.doesPadExist(padDeleteMessage.data.padId)) {
-    const retrievedPad = await padManager.getPad(padDeleteMessage.data.padId)
-    // Only the one doing the first revision can delete the pad, otherwise people could troll a lot
-    const firstContributor = await retrievedPad.getRevisionAuthor(0)
-    if (session.author === firstContributor) {
-      await retrievedPad.remove()
-    } else {
+  const padId = padDeleteMessage.data.padId;
+  if (session.padId !== padId) throw new Error('refusing cross-pad delete');
+  if (!await padManager.doesPadExist(padId)) return;
 
-      type ShoutMessage = {
-        message: string,
-        sticky: boolean,
-      }
+  const retrievedPad = await padManager.getPad(padId);
+  const firstContributor = await retrievedPad.getRevisionAuthor(0);
+  const isCreator = session.author === firstContributor;
+  const suppliedToken = padDeleteMessage.data.deletionToken;
+  const tokenSupplied = typeof suppliedToken === 'string' && suppliedToken !== '';
+  const tokenOk = tokenSupplied &&
+      await padDeletionManager.isValidDeletionToken(padId, suppliedToken);
+  // When a token is supplied it must validate. We deliberately do NOT fall
+  // back to the creator-cookie path, otherwise a creator pasting a wrong
+  // recovery token into the disclosure field would still succeed — masking a
+  // typo and contradicting the UI.
+  const creatorOk = !tokenSupplied && isCreator;
+  const flagOk = !tokenSupplied && !isCreator && settings.allowPadDeletionByAllUsers;
 
-      const messageToShout: ShoutMessage = {
-        message: 'You are not the creator of this pad, so you cannot delete it',
-        sticky: false
-      }
-      const messageToSend = {
-        type: "COLLABROOM",
-        data: {
-          type: "shoutMessage",
-          payload: {
-            message: messageToShout,
-            timestamp: Date.now()
-          }
-        }
-      }
-      socket.emit('shout',
-        messageToSend
-      )
-    }
+  if (creatorOk || tokenOk || flagOk) {
+    await retrievedPad.remove();
+    return;
   }
-}
+
+  // tokenSupplied-but-invalid is a different user-facing message from
+  // not-the-creator. The client localizes via the l10n key.
+  const messageKey = tokenSupplied
+      ? 'pad.deletionToken.invalid'
+      : 'pad.deletionToken.notCreator';
+  socket.emit('shout', {
+    type: 'COLLABROOM',
+    data: {
+      type: 'shoutMessage',
+      payload: {
+        message: {
+          messageKey,
+          sticky: false,
+        },
+        timestamp: Date.now(),
+      },
+    },
+  });
+};
 
 const isPadCreator = async (pad: any, authorId: string) => authorId === await pad.getRevisionAuthor(0);
 
@@ -339,7 +362,7 @@ exports.handleMessage = async (socket:any, message: ClientVarMessage) => {
     try {
       await rateLimiter.consume(socket.request.ip); // consume 1 point per event from IP
     } catch (err) {
-      messageLogger.warn(`Rate limited IP ${socket.request.ip}. To reduce the amount of rate ` +
+      messageLogger.warn(`Rate limited IP ${logIp(socket.request.ip)}. To reduce the amount of rate ` +
                          'limiting that happens edit the rateLimit values in settings.json');
       stats.meter('rateLimited').mark();
       socket.emit('message', {disconnect: 'rateLimited'});
@@ -354,13 +377,34 @@ exports.handleMessage = async (socket:any, message: ClientVarMessage) => {
   if (!thisSession) throw new Error('message from an unknown connection');
 
   if (message.type === 'CLIENT_READY') {
+    // Prefer the HttpOnly author-token cookie over the in-message token (GDPR
+    // PR3). Legacy clients (pre-PR3 browsers or API consumers) still send
+    // `token` in the CLIENT_READY payload — honour it one more release, warn
+    // once so the migration is visible in logs. The socket.io handshake does
+    // not run cookie-parser, so pull the cookie directly from the Cookie
+    // header.
+    const cookiePrefix = settings.cookie?.prefix || '';
+    const cookieHeader: string = socket.request?.headers?.cookie || '';
+    const cookieName = `${cookiePrefix}token`;
+    const cookieMatch = cookieHeader.split(/;\s*/).find(
+        (c) => c.split('=')[0] === cookieName);
+    const cookieToken = cookieMatch ? decodeURIComponent(cookieMatch.split('=').slice(1).join('=')) : null;
+    const legacyToken = typeof message.token === 'string' ? message.token : null;
+    const resolvedToken = cookieToken || legacyToken;
+    if (!cookieToken && legacyToken && !thisSession.legacyTokenWarned) {
+      messageLogger.warn(
+          'client sent author token via CLIENT_READY message; cookie migration ' +
+          'will take effect on next HTTP response. ' +
+          'See docs/superpowers/specs/2026-04-19-gdpr-pr3-anon-identity-design.md');
+      thisSession.legacyTokenWarned = true;
+    }
     // Remember this information since we won't have the cookie in further socket.io messages. This
     // information will be used to check if the sessionId of this connection is still valid since it
     // could have been deleted by the API.
     thisSession.auth = {
       sessionID: message.sessionID,
       padID: message.padId,
-      token: message.token,
+      token: resolvedToken,
     };
 
     // Pad does not exist, so we need to sanitize the id
@@ -384,7 +428,7 @@ exports.handleMessage = async (socket:any, message: ClientVarMessage) => {
 
   const auth = thisSession.auth;
   if (!auth) {
-    const ip = settings.disableIPlogging ? 'ANONYMOUS' : (socket.request.ip || '<unknown>');
+    const ip = logIp(socket.request.ip);
     const msg = JSON.stringify(message, null, 2);
     throw new Error(`pre-CLIENT_READY message from IP ${ip}: ${msg}`);
   }
@@ -401,7 +445,7 @@ exports.handleMessage = async (socket:any, message: ClientVarMessage) => {
     throw new Error([
       'Author ID changed mid-session. Bad or missing token or sessionID?',
       `socket:${socket.id}`,
-      `IP:${settings.disableIPlogging ? 'ANONYMOUS' : socket.request.ip}`,
+      `IP:${logIp(socket.request.ip)}`,
       `originalAuthorID:${thisSession.author}`,
       `newAuthorID:${authorID}`,
       ...(user && user.username) ? [`username:${user.username}`] : [],
@@ -986,27 +1030,34 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
   // Check if the user has disconnected during any of the above awaits.
   if (sessionInfo !== sessioninfos[socket.id]) throw new Error('client disconnected');
 
-  // Check if this author is already on the pad, if yes, kick the other sessions!
-  const roomSockets = _getRoomSockets(pad.id);
+  const {session: {user} = {}} = socket.client.request as SocketClientRequest;
 
-  for (const otherSocket of roomSockets) {
-    // The user shouldn't have joined the room yet, but check anyway just in case.
-    if (otherSocket.id === socket.id) continue;
-    const sinfo = sessioninfos[otherSocket.id];
-    if (sinfo && sinfo.author === sessionInfo.author) {
-      // fix user's counter, works on page refresh or if user closes browser window and then rejoins
-      sessioninfos[otherSocket.id] = {};
-      otherSocket.leave(sessionInfo.padId);
-      otherSocket.emit('message', {disconnect: 'userdup'});
+  // The duplicate-author kick exists because cookie-derived authorIDs are
+  // per-browser, so "same authorID, same pad" historically meant "stale tab in
+  // the same browser" — see #7656. Authenticated sessions (req.session.user
+  // set, e.g. via basic auth, SSO, or a getAuthorId plugin hook) carry a
+  // stable identity across windows and devices, so concurrent same-author
+  // sessions are legitimate and must not be kicked.
+  const roomSockets = _getRoomSockets(pad.id);
+  if (user == null) {
+    for (const otherSocket of roomSockets) {
+      // The user shouldn't have joined the room yet, but check anyway just in case.
+      if (otherSocket.id === socket.id) continue;
+      const sinfo = sessioninfos[otherSocket.id];
+      if (sinfo && sinfo.author === sessionInfo.author) {
+        // fix user's counter, works on page refresh or if user closes browser window and then rejoins
+        sessioninfos[otherSocket.id] = {};
+        otherSocket.leave(sessionInfo.padId);
+        otherSocket.emit('message', {disconnect: 'userdup'});
+      }
     }
   }
 
-  const {session: {user} = {}} = socket.client.request as SocketClientRequest;
   /* eslint-disable prefer-template -- it doesn't support breaking across multiple lines */
   accessLogger.info(`[${pad.head > 0 ? 'ENTER' : 'CREATE'}]` +
                     ` pad:${sessionInfo.padId}` +
                     ` socket:${socket.id}` +
-                    ` IP:${settings.disableIPlogging ? 'ANONYMOUS' : socket.request.ip}` +
+                    ` IP:${logIp(socket.request.ip)}` +
                     ` authorID:${sessionInfo.author}` +
                     (user && user.username ? ` username:${user.username}` : ''));
   /* eslint-enable prefer-template */
@@ -1097,6 +1148,19 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
     }
 
     const pluginsSanitized = sanitizePluginsForWire(plugins.plugins);
+
+    // Only the original creator of the pad (revision 0 author) receives the
+    // deletion token, and only on their first arrival — subsequent visits get
+    // null because createDeletionTokenIfAbsent() only emits a plaintext token
+    // once. Readonly sessions never see it.
+    const isCreator =
+        !sessionInfo.readonly && sessionInfo.author === await pad.getRevisionAuthor(0);
+    // Skip token issuance when requireAuthentication is on: every creator has a
+    // stable identity so the cookie/identity path is sufficient.
+    const padDeletionToken = isCreator && !settings.requireAuthentication
+        ? await padDeletionManager.createDeletionTokenIfAbsent(sessionInfo.padId)
+        : null;
+
     // Warning: never ever send sessionInfo.padId to the client. If the client is read only you
     // would open a security hole 1 swedish mile wide...
     const canEditPadSettings = settings.enablePadWideSettings &&
@@ -1110,13 +1174,17 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
       },
       enableDarkMode: settings.enableDarkMode,
       enablePadWideSettings: settings.enablePadWideSettings,
+      padDeletionToken,
+      // Allow-listed copy — settings.privacyBanner could carry extra nested
+      // keys from a hand-edited settings.json; sending those by reference
+      // would leak them to every browser. See getPublicPrivacyBanner().
+      privacyBanner: getPublicPrivacyBanner(),
       automaticReconnectionTimeout: settings.automaticReconnectionTimeout,
       initialRevisionList: [],
       initialOptions: pad.getPadSettings(),
       savedRevisions: pad.getSavedRevisions(),
       collab_client_vars: {
         initialAttributedText: atext,
-        clientIp: '127.0.0.1',
         padId: sessionInfo.auth.padID,
         historicalAuthorData,
         apool,
@@ -1124,7 +1192,6 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
         time: currentTime,
       },
       colorPalette: authorManager.getColorPalette(),
-      clientIp: '127.0.0.1',
       userColor: authorColorId,
       padId: sessionInfo.auth.padID,
       padOptions: settings.padOptions,

@@ -109,6 +109,21 @@
   "favicon": null,
 
   /*
+   * Canonical public origin of this Etherpad instance, e.g.
+   * "https://pad.example.com" (no trailing slash, must include scheme).
+   *
+   * When set, this is used to build absolute URLs in server-rendered output
+   * such as the Open Graph / Twitter Card link-preview meta tags (og:url,
+   * og:image, ...). When null, those URLs fall back to the request's
+   * protocol+Host, which can reflect client-controlled headers if your
+   * reverse proxy passes them through unsanitized.
+   *
+   * Set this in production deployments to lock down the canonical origin
+   * advertised in shared link previews.
+   */
+  "publicURL": null,
+
+  /*
    * Skin name.
    *
    * Its value has to be an existing directory under src/static/skins.
@@ -176,11 +191,49 @@
    "enableMetrics": "${ENABLE_METRICS:true}",
 
   /*
+   * Self-update subsystem.
+   * tier: "off" | "notify" | "manual" | "auto" | "autonomous"
+   * Default "notify" shows a banner when an update is available. "off" disables the version check.
+   */
+  "updates": {
+    "tier": "notify",
+    "source": "github",
+    "channel": "stable",
+    "installMethod": "auto",
+    "checkIntervalHours": 6,
+    "githubRepo": "ether/etherpad",
+    /*
+     * Lock /admin/update/status to authenticated admins. Default false keeps the
+     * endpoint open (the version is already public via /health). Set true to hide
+     * full update detail from non-admins without turning the updater off.
+     */
+    "requireAdminForStatus": false
+  },
+
+  /*
+   * Contact address for admin notifications (updates, security advisories, future features).
+   * Set to null to disable outbound mail from the updater.
+   */
+  "adminEmail": null,
+
+  /*
    * Settings for cleanup of pads
    */
   "cleanup": {
     "enabled": false,
     "keepRevisions": 5
+  },
+
+  /*
+   * GDPR Art. 17 author erasure REST endpoint (anonymizeAuthor).
+   *
+   * Disabled by default — enable only when an operator process exists to
+   * authorise erasure requests. While disabled, calls to anonymizeAuthor
+   * return an apierror and the AuthorManager helper is not exposed via
+   * the public API.
+   */
+  "gdprAuthorErasure": {
+    "enabled": false
   },
 
   /*
@@ -261,7 +314,20 @@
     "rtl":              false,
     "alwaysShowChat":   false,
     "chatAndUsers":     false,
-    "lang":             null
+    "lang":             null,
+    /*
+     * When true (default), each author's caret/background color fades toward white
+     * as the author goes inactive. Set to false if users pick light colors and the
+     * faded variants become visually indistinguishable.
+     */
+    "fadeInactiveAuthorColors": true,
+    /*
+     * Clamp author background colors to a WCAG 2.1 AA contrast ratio (4.5:1)
+     * against the rendered text colour at render time. The author's stored
+     * colour is not modified — only the displayed shade is adjusted. Set to
+     * false to render exact author colours regardless of contrast.
+     */
+    "enforceReadableAuthorColors": true
   },
 
   /*
@@ -471,9 +537,31 @@
   },
 
   /*
-   * Privacy: disable IP logging
+   * Controls what Etherpad writes to its logs about client IP addresses.
+   *
+   *   "anonymous" — replace every IP with the literal "ANONYMOUS" (default)
+   *   "truncated" — zero the last octet of IPv4 (1.2.3.0); truncate IPv6 to
+   *                 the first /48 (2001:db8:1::). Keeps aggregate visibility.
+   *   "full"      — log the full IP (document a legal basis + retention
+   *                 policy before choosing this).
+   *
+   * In-memory rate-limiting always keys on the raw IP and is never persisted.
+   */
+  "ipLogging": "anonymous",
+
+  /*
+   * Deprecated — use `ipLogging` above instead. Still honoured for one release
+   * cycle: `true` maps to `ipLogging: "anonymous"`, `false` maps to `"full"`.
+   * A deprecation warning is emitted when only this legacy setting is present.
    */
   "disableIPlogging": false,
+
+  /*
+   * Allow any user who can edit a pad to delete it without the one-time pad
+   * deletion token. If false, only the original creator's author cookie or the
+   * deletion token can delete the pad.
+   */
+  "allowPadDeletionByAllUsers": false,
 
   /*
    * Time (in seconds) to automatically reconnect pad when a "Force reconnect"
@@ -648,6 +736,24 @@
     * Disabled by default to preserve the legacy single-settings behavior.
     **/
     "enablePadWideSettings": "${ENABLE_PAD_WIDE_SETTINGS:false}",
+
+  /*
+   * Optional privacy banner shown once the pad loads. Disabled by default.
+   *
+   *   enabled      — toggle the feature
+   *   title        — plain-text heading (HTML is escaped)
+   *   body         — plain-text body; newlines become paragraph breaks
+   *   learnMoreUrl — optional URL rendered as a "Learn more" link
+   *   dismissal    — "dismissible" (close button, stored in localStorage)
+   *                  or "sticky"  (always shown, no close button)
+   */
+  "privacyBanner": {
+    "enabled": false,
+    "title": "Privacy notice",
+    "body": "This instance processes pad content on our servers. See the linked policy for retention and how to request erasure.",
+    "learnMoreUrl": null,
+    "dismissal": "dismissible"
+  },
 
   /*
    * From Etherpad 1.8.5 onwards, when Etherpad is in production mode commits from individual users are rate limited

@@ -1,5 +1,6 @@
 {
   "devDependencies": {
+    "oxc-minify": "^0.129.0",
     "vitepress": "^2.0.0-alpha.17"
   },
   "scripts": {
@@ -9,8 +10,5 @@
   },
   "peerDependencies": {
     "search-insights": "^2.17.3"
-  },
-  "overrides": {
-    "vite": "npm:rolldown-vite@7.2.10"
   }
 }

@@ -136,6 +136,9 @@ exports.expressPreSession = async (hookName:string, {app}:any) => {
   const locales = getAllLocales();
   const localeIndex = generateLocaleIndex(locales);
   exports.availableLangs = getAvailableLangs(locales);
+  // Exported so server-rendered HTML (e.g. Open Graph meta tags) can look
+  // up translated strings without re-reading the locale files.
+  exports.locales = locales;
 
   app.get('/locales/:locale', (req:any, res:any) => {
     // works with /locale/en and /locale/en.json requests

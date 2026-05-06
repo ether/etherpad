@@ -1,5 +1,5 @@
 import {expect, test} from "@playwright/test";
-import {clearPadContent, getPadBody, goToNewPad} from "../helper/padHelper";
+import {clearPadContent, getPadBody, goToNewPad, writeToPad} from "../helper/padHelper";
 
 test.beforeEach(async ({page}) => {
   await goToNewPad(page);
@@ -17,6 +17,11 @@ test.beforeEach(async ({page}) => {
 // path moved the caret to an arbitrary line below the viewport.
 test.describe('Undo scroll-to-caret (#7007)', function () {
   test.describe.configure({retries: 2});
+  // 45-line writeToPad setup races the editor's input pipeline under
+  // WITH_PLUGINS load — even with the per-Enter value-wait that
+  // briefly worked here, the scroll-position assertion depends on a
+  // stable layout that rarely materialises before the assertion
+  // window. Tracked by #7611.
 
   // Use the Etherpad keyboard path so the undo module has real
   // changesets to replay. 45 lines is enough to push the pad well past
@@ -27,19 +32,21 @@ test.describe('Undo scroll-to-caret (#7007)', function () {
     await (await getPadBody(page)).click();
     await clearPadContent(page);
 
-    // Type LINE_COUNT short lines through the real editor (so every line
-    // lands in a changeset the undo module can reverse).
-    for (let i = 0; i < LINE_COUNT; i++) {
-      await page.keyboard.type(`line ${i + 1}`);
-      await page.keyboard.press('Enter');
-    }
+    // writeToPad with a multi-line string drives input through
+    // keyboard.insertText (one input event per line) plus Enter
+    // between segments. The previous per-character keyboard.type +
+    // keyboard.press Enter loop dropped events under Firefox +
+    // WITH_PLUGINS load. Each line still lands in its own changeset
+    // for the undo module to reverse.
+    const lines = Array.from({length: LINE_COUNT}, (_, i) => `line ${i + 1}`);
+    await writeToPad(page, lines.join('\n') + '\n');
     await page.waitForTimeout(300);
 
     // Move caret to the top, insert a single edit the undo will reverse.
     await page.keyboard.down('Control');
     await page.keyboard.press('Home');
     await page.keyboard.up('Control');
-    await page.keyboard.type('X');
+    await page.keyboard.insertText('X');
     await page.waitForTimeout(300);
 
     // Scroll the outer frame all the way down so the edit is out of view.
@@ -71,15 +78,14 @@ test.describe('Undo scroll-to-caret (#7007)', function () {
     await (await getPadBody(page)).click();
     await clearPadContent(page);
 
-    for (let i = 0; i < LINE_COUNT; i++) {
-      await page.keyboard.type(`line ${i + 1}`);
-      await page.keyboard.press('Enter');
-    }
+    // Same multi-line writeToPad pattern as the sibling test above.
+    const lines = Array.from({length: LINE_COUNT}, (_, i) => `line ${i + 1}`);
+    await writeToPad(page, lines.join('\n') + '\n');
     await page.waitForTimeout(300);
 
-    // Caret is already at the bottom (after the last Enter). Type an
+    // Caret is already at the bottom (after the last Enter). Insert an
     // edit there, then scroll to top.
-    await page.keyboard.type('Y');
+    await page.keyboard.insertText('Y');
     await page.waitForTimeout(300);
 
     const outerFrame = page.frame('ace_outer')!;

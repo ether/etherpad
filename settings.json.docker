@@ -118,6 +118,14 @@
   "favicon": "${FAVICON:null}",
 
   /*
+   * Canonical public origin of this Etherpad instance, e.g.
+   * "https://pad.example.com" (no trailing slash, must include scheme).
+   * Used to build absolute URLs in OG/Twitter link-preview meta tags.
+   * When null, falls back to the incoming request's protocol+Host.
+   */
+  "publicURL": "${PUBLIC_URL:null}",
+
+  /*
    * Skin name.
    *
    * Its value has to be an existing directory under src/static/skins.
@@ -185,11 +193,43 @@
   "enableMetrics": "${ENABLE_METRICS:true}",
 
   /*
+   * Self-update subsystem.
+   * tier: "off" | "notify" | "manual" | "auto" | "autonomous"
+   * Default "notify" shows a banner when an update is available.
+   * Docker installs are read-only — tiers above "notify" are not applied even if requested.
+   */
+  "updates": {
+    "tier": "notify",
+    "source": "github",
+    "channel": "stable",
+    "installMethod": "docker",
+    "checkIntervalHours": 6,
+    "githubRepo": "ether/etherpad",
+    "requireAdminForStatus": false
+  },
+
+  /*
+   * Contact address for admin notifications (updates, security advisories, future features).
+   * Set to null to disable outbound mail from the updater.
+   */
+  "adminEmail": null,
+
+  /*
    * Settings for cleanup of pads
    */
   "cleanup": {
     "enabled": false,
     "keepRevisions": 5
+  },
+
+  /*
+   * GDPR Art. 17 author erasure REST endpoint (anonymizeAuthor).
+   *
+   * Disabled by default — enable only when an operator process exists to
+   * authorise erasure requests.
+   */
+  "gdprAuthorErasure": {
+    "enabled": "${GDPR_AUTHOR_ERASURE_ENABLED:false}"
   },
 
   /*
@@ -210,6 +250,17 @@
   * Disabled by default to preserve the legacy single-settings behavior.
   **/
   "enablePadWideSettings": "${ENABLE_PAD_WIDE_SETTINGS:false}",
+
+  /*
+   * Optional privacy banner. See settings.json.template for full field docs.
+   */
+  "privacyBanner": {
+    "enabled": "${PRIVACY_BANNER_ENABLED:false}",
+    "title": "${PRIVACY_BANNER_TITLE:Privacy notice}",
+    "body": "${PRIVACY_BANNER_BODY:This instance processes pad content on our servers. See the linked policy for retention and how to request erasure.}",
+    "learnMoreUrl": "${PRIVACY_BANNER_LEARN_MORE_URL:null}",
+    "dismissal": "${PRIVACY_BANNER_DISMISSAL:dismissible}"
+  },
 
   /*
    * Node native SSL support
@@ -288,7 +339,9 @@
     "rtl":              "${PAD_OPTIONS_RTL:false}",
     "alwaysShowChat":   "${PAD_OPTIONS_ALWAYS_SHOW_CHAT:false}",
     "chatAndUsers":     "${PAD_OPTIONS_CHAT_AND_USERS:false}",
-    "lang":             "${PAD_OPTIONS_LANG:null}"
+    "lang":             "${PAD_OPTIONS_LANG:null}",
+    "fadeInactiveAuthorColors": "${PAD_OPTIONS_FADE_INACTIVE_AUTHOR_COLORS:true}",
+    "enforceReadableAuthorColors": "${PAD_OPTIONS_ENFORCE_READABLE_AUTHOR_COLORS:true}"
   },
 
   /*
@@ -480,9 +533,24 @@
   },
 
   /*
-   * Privacy: disable IP logging
+   * Controls what Etherpad writes to its logs about client IP addresses.
+   * Allowed values: "anonymous" (default), "truncated", "full".
+   * See settings.json.template for details.
+   */
+  "ipLogging": "${IP_LOGGING:anonymous}",
+
+  /*
+   * Deprecated — use `ipLogging` above. Still honoured for one release
+   * cycle: true → "anonymous", false → "full".
    */
   "disableIPlogging": "${DISABLE_IP_LOGGING:false}",
+
+  /*
+   * Allow any user who can edit a pad to delete it without the one-time pad
+   * deletion token. If false, only the original creator's author cookie or the
+   * deletion token can delete the pad.
+   */
+  "allowPadDeletionByAllUsers": "${ALLOW_PAD_DELETION_BY_ALL_USERS:false}",
 
   /*
    * Time (in seconds) to automatically reconnect pad when a "Force reconnect"

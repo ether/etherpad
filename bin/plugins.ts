@@ -1,7 +1,7 @@
 'use strict';
 
 import {linkInstaller, checkForMigration} from "ep_etherpad-lite/static/js/pluginfw/installer";
-import {persistInstalledPlugins} from "./commonPlugins";
+import {persistInstalledPlugins, filterUpdatablePluginNames} from "./commonPlugins";
 import fs from "node:fs";
 const settings = require('ep_etherpad-lite/node/utils/Settings');
 
@@ -19,7 +19,9 @@ const possibleActions = [
   "rm",
   "remove",
   "ls",
-  "list"
+  "list",
+  "up",
+  "update"
 ]
 
 const install = ()=> {
@@ -76,6 +78,40 @@ const list = ()=>{
   })();
 }
 
+// Re-install every plugin in installed_plugins.json without a version pin so
+// the registry-latest gets resolved and overwrites the existing pinned copy
+// in src/plugin_packages/. ep_etherpad-lite is the vendored core, never
+// installed via the plugin path. filterUpdatablePluginNames also enforces
+// the ep_ prefix so a corrupted manifest cannot coerce us into installing
+// arbitrary npm packages, and de-duplicates repeats.
+const update = ()=> {
+  (async () => {
+    const path = settings.root+"/var/installed_plugins.json";
+    let entries: Array<{name?: unknown}>;
+    try {
+      const parsed = JSON.parse(fs.readFileSync(path, "utf-8"));
+      entries = Array.isArray(parsed?.plugins) ? parsed.plugins : [];
+    } catch (err: any) {
+      if (err.code === 'ENOENT') {
+        console.log("No installed_plugins.json found — nothing to update");
+        return;
+      }
+      throw err;
+    }
+    const names = filterUpdatablePluginNames(entries);
+    if (names.length === 0) {
+      console.log("No plugins installed — nothing to update");
+      return;
+    }
+    console.log(`Updating plugins to latest from registry: ${names.join(', ')}`);
+    await checkForMigration();
+    for (const name of names) {
+      await linkInstaller.installPlugin(name);
+    }
+    await persistInstalledPlugins();
+  })();
+}
+
 const remove = (plugins: string[])=>{
   const walk =  async () => {
     for (const plugin of plugins) {
@@ -111,6 +147,12 @@ switch (action) {
     break;
   case "remove":
     remove(args.slice(1));
+    break;
+  case "up":
+    update();
+    break;
+  case "update":
+    update();
     break;
   default:
     console.error('Expected at least one argument!');

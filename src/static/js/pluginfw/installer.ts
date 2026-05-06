@@ -2,7 +2,6 @@
 
 import log4js from "log4js";
 
-import axios, {AxiosResponse} from "axios";
 import {PackageData, PackageInfo} from "../../../node/types/PackageInfo";
 import {MapArrayType} from "../../../node/types/MapType";
 
@@ -177,8 +176,11 @@ export const getAvailablePlugins = async (maxCacheAge: number | false) => {
     return availablePlugins;
   }
 
-  const pluginsLoaded: AxiosResponse<MapArrayType<PackageInfo>> = await axios.get(`${settings.updateServer}/plugins.json`, {headers})
-  const data = pluginsLoaded.data;
+  const pluginsLoaded = await fetch(`${settings.updateServer}/plugins.json`, {headers});
+  if (!pluginsLoaded.ok) {
+    throw new Error(`HTTP ${pluginsLoaded.status} ${pluginsLoaded.statusText}`);
+  }
+  const data = await pluginsLoaded.json() as MapArrayType<PackageInfo>;
   // Normalize: the registry may use numeric keys instead of plugin names
   const normalized: MapArrayType<PackageInfo> = {};
   for (const key in data) {

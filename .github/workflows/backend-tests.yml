@@ -28,7 +28,7 @@ jobs:
       fail-fast: false
       matrix:
         # PRs: test on latest Node only. Push to develop: full matrix.
-        node: ${{ github.event_name == 'pull_request' && fromJSON('[24]') || fromJSON('[20, 22, 24]') }}
+        node: ${{ github.event_name == 'pull_request' && fromJSON('[24]') || fromJSON('[22, 24, 25]') }}
     steps:
       -
         name: Checkout repository
@@ -43,7 +43,6 @@ jobs:
       - uses: pnpm/action-setup@v6
         name: Install pnpm
         with:
-          version: 10.33.2
           run_install: false
       - name: Use Node.js
         uses: actions/setup-node@v6
@@ -85,7 +84,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: ${{ github.event_name == 'pull_request' && fromJSON('[24]') || fromJSON('[20, 22, 24]') }}
+        node: ${{ github.event_name == 'pull_request' && fromJSON('[24]') || fromJSON('[22, 24, 25]') }}
     steps:
       -
         name: Checkout repository
@@ -100,7 +99,6 @@ jobs:
       - uses: pnpm/action-setup@v6
         name: Install pnpm
         with:
-          version: 10.33.2
           run_install: false
       - name: Use Node.js
         uses: actions/setup-node@v6
@@ -126,7 +124,9 @@ jobs:
           ep_align
           ep_author_hover
           ep_cursortrace
+          ep_font_color
           ep_font_size
+          ep_hash_auth
           ep_headings2
           ep_markdown
           ep_readonly_guest
@@ -150,7 +150,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: [20, 22, 24]
+        node: [22, 24, 25]
     name: Windows without plugins
     runs-on: windows-latest
     steps:
@@ -167,7 +167,6 @@ jobs:
       - uses: pnpm/action-setup@v6
         name: Install pnpm
         with:
-          version: 10.33.2
           run_install: false
       - name: Use Node.js
         uses: actions/setup-node@v6
@@ -201,7 +200,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: [20, 22, 24]
+        node: [22, 24, 25]
     name: Windows with Plugins
     runs-on: windows-latest
 
@@ -219,7 +218,6 @@ jobs:
       - uses: pnpm/action-setup@v6
         name: Install pnpm
         with:
-          version: 10.33.2
           run_install: false
       - name: Use Node.js
         uses: actions/setup-node@v6
@@ -238,7 +236,9 @@ jobs:
           ep_align
           ep_author_hover
           ep_cursortrace
+          ep_font_color
           ep_font_size
+          ep_hash_auth
           ep_headings2
           ep_markdown
           ep_readonly_guest

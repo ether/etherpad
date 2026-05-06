@@ -30,7 +30,27 @@ const logLevel = logger.level;
 
 // Mocha doesn't monitor unhandled Promise rejections, so convert them to uncaught exceptions.
 // https://github.com/mochajs/mocha/issues/2640
-process.on('unhandledRejection', (reason: string) => { throw reason; });
+//
+// Log via process.stderr.write before throwing: when the rethrown rejection
+// kills mocha between specs, the runner exits with code 1 and no summary.
+// Without this, the rejection reason is lost (worst on Windows runners,
+// where stderr is not always flushed before abrupt exit) and CI shows a
+// silent ELIFECYCLE with no clue what rejected.
+process.on('unhandledRejection', (reason: any) => {
+  process.stderr.write(`[backend tests] unhandledRejection: ${
+    reason && reason.stack ? reason.stack : String(reason)}\n`);
+  throw reason;
+});
+
+// Surface uncaught exceptions for the same reason. Node's default behavior
+// (exit non-zero) is preserved by the explicit process.exit below — without
+// the handler, Node would write to stderr and exit; with the handler we have
+// to do it ourselves.
+process.on('uncaughtException', (err: any) => {
+  process.stderr.write(`[backend tests] uncaughtException: ${
+    err && err.stack ? err.stack : String(err)}\n`);
+  process.exit(1);
+});
 
 before(async function () {
   this.timeout(60000);
@@ -111,7 +131,7 @@ export const init = async function () {
  * @param {string} event - The socket.io Socket event to listen for.
  * @returns The argument(s) passed to the event handler.
  */
-export const waitForSocketEvent = async (socket: any, event:string) => {
+export const waitForSocketEvent = async (socket: any, event:string, timeoutMs = 1000) => {
   const errorEvents = [
     'error',
     'connect_error',
@@ -126,7 +146,7 @@ export const waitForSocketEvent = async (socket: any, event:string) => {
       const timeout = setTimeout(() => {
         reject(new Error(`timed out waiting for ${event} event`));
         cancelTimeout = () => {};
-      }, 1000);
+      }, timeoutMs);
       cancelTimeout = () => {
         clearTimeout(timeout);
         resolve();
@@ -185,7 +205,9 @@ export const connect = async (res:any = null) => {
     query: {cookie: reqCookieHdr, padId},
   });
   try {
-    await waitForSocketEvent(socket, 'connect');
+    // Connect is a known slow path on loaded CI runners — give it a longer budget than the
+    // default per-message wait used elsewhere.
+    await waitForSocketEvent(socket, 'connect', 5000);
   } catch (e) {
     socket.close();
     throw e;
@@ -213,7 +235,9 @@ export const handshake = async (socket: any, padId:string, token = padutils.gene
     token,
   });
   logger.debug('waiting for CLIENT_VARS response...');
-  const msg = await waitForSocketEvent(socket, 'message');
+  // CLIENT_VARS is a known slow path on loaded CI runners (auth + pad load) — give it a longer
+  // budget than the default per-message wait used elsewhere.
+  const msg = await waitForSocketEvent(socket, 'message', 5000);
   logger.debug('received CLIENT_VARS message');
   return msg;
 };

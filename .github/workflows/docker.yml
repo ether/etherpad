@@ -52,8 +52,16 @@ jobs:
       - uses: pnpm/action-setup@v6
         name: Install pnpm
         with:
-          version: 10.33.2
           run_install: false
+          # Repo is checked out into ./etherpad, so the action can't find
+          # packageManager in a root package.json.
+          package_json_file: etherpad/package.json
+      - name: Use Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: etherpad/pnpm-lock.yaml
       -
         name: Test
         working-directory: etherpad
@@ -74,6 +82,10 @@ jobs:
           git clean -dxf .
 
   build-test-db-drivers:
+    # Spinning up MySQL + Postgres + cross-driver smoke is expensive; only
+    # run it on pushes to develop (and tagged release pushes), not on every
+    # feature-branch PR.
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:
       contents: read

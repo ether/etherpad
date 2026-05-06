@@ -5,7 +5,9 @@ test.beforeEach(async ({page}) => {
   await goToNewPad(page);
 });
 
-test.describe('error sanitization', () => {
+test.describe('error sanitization', {
+  tag: '@feature:error-gritter',
+}, () => {
 
   test('production mode hides error details from gritter popup', async ({page}) => {
     // The test server runs without NODE_ENV=development, so clientVars.mode

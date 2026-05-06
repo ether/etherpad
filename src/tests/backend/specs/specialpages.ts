@@ -54,4 +54,55 @@ describe(__filename, function () {
         .expect(200);
     });
   });
+
+  describe('theme-color meta', function () {
+    const backups:MapArrayType<any> = {};
+    beforeEach(function () {
+      backups.skinName = settings.skinName;
+      backups.skinVariants = settings.skinVariants;
+    });
+    afterEach(function () {
+      settings.skinName = backups.skinName;
+      settings.skinVariants = backups.skinVariants;
+    });
+
+    it('pad page emits theme-color matching the configured colibris toolbar', async function () {
+      settings.skinName = 'colibris';
+      settings.skinVariants = 'super-light-toolbar super-light-editor light-background';
+      const res = await agent.get('/p/testpad').expect(200);
+      assert.match(res.text, /<meta name="theme-color" content="#ffffff">/);
+      // No media-query variants — runtime dark-mode also depends on localStorage,
+      // which a server-rendered media query cannot account for.
+      assert.doesNotMatch(res.text, /prefers-color-scheme/);
+    });
+
+    it('pad page tracks an explicit dark toolbar variant', async function () {
+      settings.skinName = 'colibris';
+      settings.skinVariants = 'dark-toolbar dark-editor dark-background';
+      const res = await agent.get('/p/testpad').expect(200);
+      assert.match(res.text, /<meta name="theme-color" content="#576273">/);
+    });
+
+    it('pad page omits theme-color for non-colibris skins', async function () {
+      settings.skinName = 'no-skin';
+      settings.skinVariants = 'super-light-toolbar';
+      const res = await agent.get('/p/testpad').expect(200);
+      assert.doesNotMatch(res.text, /theme-color/);
+    });
+
+    it('timeslider page emits theme-color matching the configured toolbar', async function () {
+      settings.skinName = 'colibris';
+      settings.skinVariants = 'super-dark-toolbar super-dark-editor dark-background';
+      const res = await agent.get('/p/testpad/timeslider').expect(200);
+      assert.match(res.text, /<meta name="theme-color" content="#485365">/);
+      assert.doesNotMatch(res.text, /prefers-color-scheme/);
+    });
+
+    it('timeslider page omits theme-color for non-colibris skins', async function () {
+      settings.skinName = 'no-skin';
+      settings.skinVariants = 'super-light-toolbar';
+      const res = await agent.get('/p/testpad/timeslider').expect(200);
+      assert.doesNotMatch(res.text, /theme-color/);
+    });
+  });
 });

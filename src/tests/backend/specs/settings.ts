@@ -147,4 +147,54 @@ describe(__filename, function () {
       }
     });
   });
+
+  // Regression test for https://github.com/ether/etherpad/issues/7213.
+  // Pre-fix: randomVersionString was `randomString(4)`, regenerated on every
+  // boot — the padbootstrap-<hash>.min.js filename therefore differed across
+  // pods of the same build, producing 404s on any cross-pod request in a
+  // horizontally-scaled deployment. Post-fix: the token is a deterministic
+  // hash of version + gitVersion (or an explicit
+  // ETHERPAD_VERSION_STRING env var).
+  describe('randomVersionString determinism (issue #7213)', function () {
+    it('is a stable 8-hex-char sha256 prefix by default', function () {
+      const settings = require('../../../node/utils/Settings');
+      assert.match(settings.randomVersionString, /^[0-9a-f]{8}$/,
+          `expected 8-char hex, got ${settings.randomVersionString}`);
+    });
+
+    it('honours ETHERPAD_VERSION_STRING as an explicit override', function () {
+      const settingsMod = require('../../../node/utils/Settings');
+      const original = process.env.ETHERPAD_VERSION_STRING;
+      const savedSettingsFile = settingsMod.settingsFilename;
+      const savedCredsFile = settingsMod.credentialsFilename;
+      const savedToken = settingsMod.randomVersionString;
+      process.env.ETHERPAD_VERSION_STRING = 'integrator-1';
+      settingsMod.settingsFilename = path.join(__dirname, 'settings.json');
+      settingsMod.credentialsFilename = path.join(__dirname, 'credentials.json');
+      try {
+        // The token is set by reloadSettings, not by parseSettings alone.
+        // Re-run the full reload path so the env var is consulted.
+        settingsMod.reloadSettings();
+        assert.strictEqual(settingsMod.randomVersionString, 'integrator-1',
+            'ETHERPAD_VERSION_STRING should be used verbatim');
+      } finally {
+        if (original == null) delete process.env.ETHERPAD_VERSION_STRING;
+        else process.env.ETHERPAD_VERSION_STRING = original;
+        settingsMod.settingsFilename = savedSettingsFile;
+        settingsMod.credentialsFilename = savedCredsFile;
+        settingsMod.randomVersionString = savedToken;
+      }
+    });
+  });
+
+  // Regression test for ether/etherpad#7138.
+  // padOptions.fadeInactiveAuthorColors must default to true so existing
+  // installations keep the legacy fade-on-inactive behavior, and must be
+  // overridable via PAD_OPTIONS_FADE_INACTIVE_AUTHOR_COLORS in docker.
+  describe('padOptions.fadeInactiveAuthorColors (issue #7138)', function () {
+    it('defaults to true so existing deployments are unchanged', function () {
+      const settings = require('../../../node/utils/Settings');
+      assert.strictEqual(settings.padOptions.fadeInactiveAuthorColors, true);
+    });
+  });
 });

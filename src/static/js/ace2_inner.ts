@@ -141,6 +141,8 @@ function Ace2Inner(editorInfo, cssManagers) {
   let doesWrap = true;
   let hasLineNumbers = true;
   let isStyled = true;
+  let fadeInactiveAuthorColors =
+      window.clientVars?.padOptions?.fadeInactiveAuthorColors !== false;
 
   let console = (DEBUG && window.console);
 
@@ -236,8 +238,24 @@ function Ace2Inner(editorInfo, cssManagers) {
       cssManagers.parent.removeSelectorStyle(authorSelector);
     } else if (info.bgcolor) {
       let bgcolor = info.bgcolor;
-      if ((typeof info.fade) === 'number') {
+      // The fade is controlled at runtime by the fadeInactiveAuthorColors flag (default
+      // true), which tracks padOptions.view.fadeInactiveAuthorColors and is updated by
+      // ace_setProperty when the user/pad-settings checkbox flips. Disabling it keeps
+      // each author's background at their chosen value — useful on busy pads where each
+      // faded author would otherwise count as a second on-screen color, or when
+      // inactivity tracking is undesirable for whatever reason.
+      if (fadeInactiveAuthorColors && (typeof info.fade) === 'number') {
         bgcolor = fadeColor(bgcolor, info.fade);
+      }
+      // Clamp the rendered background to a WCAG-AA-compliant shade before
+      // picking text colour (issue #7377). Author's stored colour is not
+      // mutated — this is purely a viewer-side render adjustment. Opt-out
+      // via padOptions.enforceReadableAuthorColors: false.
+      const enforceReadable =
+          window.clientVars.padOptions == null ||
+          window.clientVars.padOptions.enforceReadableAuthorColors !== false;
+      if (enforceReadable) {
+        bgcolor = colorutils.ensureReadableBackground(bgcolor, window.clientVars.skinName);
       }
       const textColor =
           colorutils.textColorFromBackgroundColor(bgcolor, window.clientVars.skinName);
@@ -666,6 +684,15 @@ function Ace2Inner(editorInfo, cssManagers) {
         targetBody.classList.toggle('rtl', value);
         targetBody.classList.toggle('ltr', !value);
         document.documentElement.dir = value ? 'rtl' : 'ltr';
+      },
+      fadeinactiveauthorcolors: (value) => {
+        fadeInactiveAuthorColors = `${value}` !== 'false';
+        // Re-apply styles for every known author so that pre-faded backgrounds
+        // refresh immediately when the toggle flips, instead of waiting for the
+        // next fade tick (which only fires on join/leave).
+        for (const [author, info] of Object.entries(authorInfos)) {
+          if (info) setAuthorStyle(author, info);
+        }
       },
     };
 
@@ -2478,6 +2505,77 @@ function Ace2Inner(editorInfo, cssManagers) {
     }
   };
 
+  // --------------------------------------------------------------------------
+  // Line-oriented editing (issue #6433): IDE-style duplicate-line /
+  // delete-line shortcuts. Full multi-cursor support would require changes
+  // to the rep model; these single-cursor ops get users the highest-value
+  // behavior (duplicate, delete) without that architectural lift. Both
+  // helpers operate on the *line range* spanned by the current selection, so
+  // a user with three lines highlighted can duplicate or delete all three at
+  // once — matching VS Code's behavior.
+  // --------------------------------------------------------------------------
+
+  const selectedLineRange = (): [number, number] => {
+    if (!rep.selStart || !rep.selEnd) return [0, 0];
+    return [
+      Math.min(rep.selStart[0], rep.selEnd[0]),
+      Math.max(rep.selStart[0], rep.selEnd[0]),
+    ];
+  };
+
+  const doDuplicateSelectedLines = () => {
+    if (!rep.selStart || !rep.selEnd) return;
+    const [start, end] = selectedLineRange();
+    const lineTexts: string[] = [];
+    for (let i = start; i <= end; i++) {
+      lineTexts.push(rep.lines.atIndex(i).text);
+    }
+    // Insert the block at the start of the next line so the duplicate lands
+    // *below* the selection and the caret visually stays with the original
+    // content — same as the IDE convention.
+    //
+    // Known limitation: performDocumentReplaceRange assigns only the current
+    // author attribute to the inserted text, so character-level attributes
+    // (bold, italic, list, heading) on the source line are *not* carried over
+    // to the duplicate. A first attempt to rebuild this via a custom
+    // Builder + per-op `rep.alines[i]` iteration tripped over the
+    // "insertion-past-final-newline" edge case that
+    // performDocumentReplaceRange handles internally; getting both right
+    // together is beyond the scope of this PR. Tracked for follow-up — the
+    // plain-text duplicate is still a useful shortcut for unformatted text,
+    // which is the common case.
+    const inserted = `${lineTexts.join('\n')}\n`;
+    performDocumentReplaceRange([end + 1, 0], [end + 1, 0], inserted);
+  };
+
+  const doDeleteSelectedLines = () => {
+    if (!rep.selStart || !rep.selEnd) return;
+    const [start, end] = selectedLineRange();
+    const numLines = rep.lines.length();
+    if (end + 1 < numLines) {
+      // Strip the selected line(s) along with their trailing newline.
+      performDocumentReplaceRange([start, 0], [end + 1, 0], '');
+    } else if (start > 0) {
+      // The selection covers the final line(s) — also consume the preceding
+      // newline so the pad doesn't end up with a dangling empty line.
+      const prevLen = rep.lines.atIndex(start - 1).text.length;
+      const lastLen = rep.lines.atIndex(end).text.length;
+      performDocumentReplaceRange([start - 1, prevLen], [end, lastLen], '');
+    } else {
+      // Whole pad selected (or only line). Blank the selected range but keep
+      // an empty line behind — Etherpad always expects at least one line to
+      // exist. The range end must be [end, lastLen] so multi-line whole-pad
+      // selections are cleared completely; using [0, lastLen] here (with
+      // lastLen computed from `end`) would only partially blank line 0 and
+      // could produce an invalid range when lastLen exceeds line 0's width.
+      const lastLen = rep.lines.atIndex(end).text.length;
+      performDocumentReplaceRange([0, 0], [end, lastLen], '');
+    }
+  };
+
+  editorInfo.ace_doDuplicateSelectedLines = doDuplicateSelectedLines;
+  editorInfo.ace_doDeleteSelectedLines = doDeleteSelectedLines;
+
   const doDeleteKey = (optEvt) => {
     const evt = optEvt || {};
     let handled = false;
@@ -2860,6 +2958,26 @@ function Ace2Inner(editorInfo, cssManagers) {
           fastIncorp(9);
           evt.preventDefault();
           CMDS.clearauthorship();
+        }
+        if (!specialHandled && isTypeForCmdKey &&
+            // cmd-shift-D (duplicate line) — issue #6433
+            (evt.metaKey || evt.ctrlKey) && evt.shiftKey &&
+            String.fromCharCode(which).toLowerCase() === 'd' &&
+            padShortcutEnabled.cmdShiftD) {
+          fastIncorp(21);
+          evt.preventDefault();
+          doDuplicateSelectedLines();
+          specialHandled = true;
+        }
+        if (!specialHandled && isTypeForCmdKey &&
+            // cmd-shift-K (delete line) — issue #6433
+            (evt.metaKey || evt.ctrlKey) && evt.shiftKey &&
+            String.fromCharCode(which).toLowerCase() === 'k' &&
+            padShortcutEnabled.cmdShiftK) {
+          fastIncorp(22);
+          evt.preventDefault();
+          doDeleteSelectedLines();
+          specialHandled = true;
         }
         if (!specialHandled && isTypeForCmdKey &&
             // cmd-H (backspace)

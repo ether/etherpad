@@ -38,7 +38,7 @@ function Test-Cmd([string]$name) {
 $EtherpadDir    = if ($env:ETHERPAD_DIR)    { $env:ETHERPAD_DIR }    else { 'etherpad-lite' }
 $EtherpadBranch = if ($env:ETHERPAD_BRANCH) { $env:ETHERPAD_BRANCH } else { 'master' }
 $EtherpadRepo   = if ($env:ETHERPAD_REPO)   { $env:ETHERPAD_REPO }   else { 'https://github.com/ether/etherpad.git' }
-$RequiredNodeMajor = 20
+$RequiredNodeMajor = 22
 
 Write-Step 'Etherpad installer'
 

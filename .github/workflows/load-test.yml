@@ -35,14 +35,18 @@ jobs:
       - uses: pnpm/action-setup@v6
         name: Install pnpm
         with:
-          version: 10.33.2
           run_install: false
+      - name: Use Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
       -
         name: Install all dependencies and symlink for ep_etherpad-lite
         run: pnpm install --frozen-lockfile
       -
         name: Install etherpad-load-test
-        run: sudo npm install -g etherpad-load-test-socket-io
+        run: sudo npm install -g etherpad-load-test
       -
         name: Run load test
         run: src/tests/frontend/travis/runnerLoadTest.sh 25 50
@@ -69,11 +73,15 @@ jobs:
       - uses: pnpm/action-setup@v6
         name: Install pnpm
         with:
-          version: 10.33.2
           run_install: false
+      - name: Use Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
       -
         name: Install etherpad-load-test
-        run:  sudo npm install -g etherpad-load-test-socket-io
+        run:  sudo npm install -g etherpad-load-test
       -
         name: Install etherpad plugins
         run: >
@@ -128,14 +136,18 @@ jobs:
       - uses: pnpm/action-setup@v6
         name: Install pnpm
         with:
-          version: 10.33.2
           run_install: false
+      - name: Use Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
       -
         name: Install all dependencies and symlink for ep_etherpad-lite
         run: pnpm install --frozen-lockfile
       -
         name: Install etherpad-load-test
-        run: sudo npm install -g etherpad-load-test-socket-io
+        run: sudo npm install -g etherpad-load-test
       -
         name: Run load test
         run: src/tests/frontend/travis/runnerLoadTest.sh 5000 5

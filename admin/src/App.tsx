@@ -6,7 +6,8 @@ import {NavLink, Outlet, useNavigate} from "react-router-dom";
 import {useStore} from "./store/store.ts";
 import {LoadingScreen} from "./utils/LoadingScreen.tsx";
 import {Trans, useTranslation} from "react-i18next";
-import {Cable, Construction, Crown, NotepadText, Wrench, PhoneCall, LucideMenu} from "lucide-react";
+import {Cable, Construction, Crown, NotepadText, Wrench, PhoneCall, LucideMenu, Bell} from "lucide-react";
+import {UpdateBanner} from "./components/UpdateBanner";
 
 const WS_URL = import.meta.env.DEV ? 'http://localhost:9001' : ''
 export const App = () => {
@@ -105,6 +106,7 @@ export const App = () => {
           <li><NavLink to={"/pads"}><NotepadText/><Trans
             i18nKey="ep_admin_pads:ep_adminpads2_manage-pads"/></NavLink></li>
           <li><NavLink to={"/shout"}><PhoneCall/>Communication</NavLink></li>
+          <li><NavLink to={"/update"}><Bell/><Trans i18nKey="update.page.title"/></NavLink></li>
         </ul>
       </div>
     </div>
@@ -112,6 +114,7 @@ export const App = () => {
         setSidebarOpen(!sidebarOpen)
       }}><LucideMenu/></button>
     <div className="innerwrapper">
+      <UpdateBanner/>
       <Outlet/>
     </div>
   </div>

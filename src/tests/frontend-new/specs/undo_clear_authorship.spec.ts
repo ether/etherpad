@@ -24,7 +24,9 @@ import {
  * but the server rejects it because User B is submitting changes containing
  * User A's author ID.
  */
-test.describe('undo clear authorship colors with multiple authors (bug #2802)', function () {
+test.describe('undo clear authorship colors with multiple authors (bug #2802)', {
+  tag: '@feature:clear-authorship',
+}, function () {
   test.describe.configure({ retries: 2 });
   let padId: string;
 
@@ -57,7 +59,9 @@ test.describe('undo clear authorship colors with multiple authors (bug #2802)', 
     await body2.click();
     await page2.keyboard.press('End');
     await page2.keyboard.press('Enter');
-    await page2.keyboard.type('Hello from User B');
+    // insertText (one input event) instead of per-key keyboard.type —
+    // Firefox + WITH_PLUGINS load races and drops keystrokes; see #7625.
+    await page2.keyboard.insertText('Hello from User B');
 
     // Both users should see both lines
     await expect(body1.locator('div').nth(1)).toContainText('Hello from User B', {timeout: 15000});
@@ -90,7 +94,7 @@ test.describe('undo clear authorship colors with multiple authors (bug #2802)', 
     await body2.click();
     await page2.keyboard.press('End');
     await page2.keyboard.press('Enter');
-    await page2.keyboard.type('Still connected!');
+    await page2.keyboard.insertText('Still connected!');
 
     // The text should appear for User A too (proves User B is still connected and syncing)
     await expect(body1.locator('div').nth(2)).toContainText('Still connected!', {timeout: 15000});

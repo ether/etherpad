@@ -1,5 +1,5 @@
 import {expect, Page, test} from "@playwright/test";
-import {clearPadContent, getPadBody, getPadOuter, goToNewPad} from "../helper/padHelper";
+import {clearPadContent, getPadBody, getPadOuter, goToNewPad, writeToPad} from "../helper/padHelper";
 
 test.beforeEach(async ({ page })=>{
   // create a new pad before each test run
@@ -10,7 +10,6 @@ test.describe('All the alphabet works n stuff', () => {
   const expectedString = 'abcdefghijklmnopqrstuvwxyz';
 
   test('when you enter any char it appears right', async ({page}) => {
-
     // get the inner iframe
     const innerFrame =  await getPadBody(page!);
 
@@ -19,8 +18,10 @@ test.describe('All the alphabet works n stuff', () => {
     // delete possible old content
     await clearPadContent(page!);
 
-
-    await page.keyboard.type(expectedString);
+    // writeToPad uses keyboard.insertText which is reliable in Firefox
+    // under WITH_PLUGINS load (per-key keyboard.type races and drops
+    // characters); see #7625.
+    await writeToPad(page, expectedString);
     const text = await innerFrame.locator('div').innerText();
     expect(text).toBe(expectedString);
   });
