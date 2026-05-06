@@ -35,11 +35,8 @@
     "react-router-dom": "^7.15.0",
     "socket.io-client": "^4.8.3",
     "typescript": "^6.0.3",
-    "vite": "npm:rolldown-vite@7.2.10",
+    "vite": "^8.0.10",
     "vite-plugin-babel": "^1.6.0",
     "zustand": "^5.0.13"
-  },
-  "overrides": {
-    "vite": "npm:rolldown-vite@7.2.10"
   }
 }
