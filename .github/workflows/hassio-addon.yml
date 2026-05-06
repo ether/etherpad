@@ -1,0 +1,67 @@
+name: "HA Add-on Build"
+
+on:
+  push:
+    branches:
+      - develop
+    paths:
+      - "packaging/home-assistant/**"
+      - ".github/workflows/hassio-addon.yml"
+    tags:
+      - "v?[0-9]+.[0-9]+.[0-9]+"
+  pull_request:
+    paths:
+      - "packaging/home-assistant/**"
+      - ".github/workflows/hassio-addon.yml"
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  lint:
+    name: Lint add-on config
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Run hassio-addon-lint
+        uses: frenck/action-addon-linter@v2
+        with:
+          path: "./packaging/home-assistant/etherpad"
+
+  build:
+    name: Build ${{ matrix.arch }}
+    needs: lint
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+          - amd64
+          - aarch64
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Read add-on manifest
+        id: manifest
+        run: |
+          version=$(grep -m1 '^version:' packaging/home-assistant/etherpad/config.yaml | sed 's/version: *"\?\([^"]*\)"\?/\1/')
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to GHCR
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build (and push on non-PR)
+        uses: home-assistant/builder@master
+        with:
+          args: |
+            --${{ matrix.arch }} \
+            --target /data/packaging/home-assistant/etherpad \
+            --image "ghcr.io/ether/home-assistant-addon-etherpad-{arch}" \
+            --version "${{ steps.manifest.outputs.version }}" \
+            ${{ github.event_name == 'pull_request' && '--test' || '--docker-hub-check' }}
