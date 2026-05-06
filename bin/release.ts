@@ -204,7 +204,11 @@ try {
   run('git pull --ff-only', {cwd: '../ether.github.com/'});
   console.log('Committing documentation...');
   run(`cp -R out/doc/ ../ether.github.com/public/doc/v'${newVersion}'`);
-  run(`pnpm version ${newVersion}`, {cwd: '../ether.github.com'});
+  // --no-git-tag-version: just update package.json. The git add+commit below
+  // pick up both the bump and the freshly-copied docs in a single commit.
+  // pnpm 11 refuses `pnpm version` on a dirty tree, and the doc copy above
+  // dirties it, so we cannot let pnpm touch git here.
+  run(`pnpm version --no-git-tag-version ${newVersion}`, {cwd: '../ether.github.com'});
   run('git add .', {cwd: '../ether.github.com/'});
   run(`git commit -m '${newVersion} docs'`, {cwd: '../ether.github.com/'});
 } catch (err:any) {
