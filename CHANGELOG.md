@@ -2,18 +2,57 @@
 
 ### Breaking changes
 
-- **Minimum required Node.js version is now 22.12.** Node.js 20 is reaching end-of-life (see https://nodejs.org/en/about/previous-releases) and the docs build's `oxc-minify` peer requires `^20.19.0 || >=22.12.0`. The CI matrix now targets Node 22, 24, and 25. Upgrading should be straightforward — install a current Node.js release before updating Etherpad.
+- **Minimum required Node.js version is now 22.13.** Node.js 20 is reaching end-of-life (see https://nodejs.org/en/about/previous-releases) and pnpm 11 hard-rejects Node releases older than 22.13. The CI matrix targets Node 22, 24, and 25. Upgrading should be straightforward — install a current Node.js release before updating Etherpad.
 - **The official Docker image no longer ships `curl`, `npm`, or `npx`.** These were dropped to remove transitive CVEs (curl/libcurl SMB advisories, npm's bundled picomatch 4.0.3 and brace-expansion 2.0.2). The container's healthcheck now uses `wget` (busybox built-in, always present), and Etherpad provisions `pnpm` via `corepack` for all runtime package operations. If you exec into the container and rely on `curl` or `npm` for ad-hoc tasks, install them on demand with `apk add curl` or use the busybox `wget` / `pnpm` already present.
 
 ### Notable enhancements
 
-- New built-in self-update subsystem (Tier 1: notify).
+- **GDPR / privacy controls.** A multi-PR series adds the building blocks operators need to satisfy data-subject requests:
+  - Pad deletion controls (admin-driven and self-service).
+  - IP / privacy audit pass across the codebase.
+  - Author-token cookies are now `HttpOnly`, removing them from JavaScript reach.
+  - Configurable privacy banner shown on first visit.
+  - Author erasure: an authenticated path for purging an individual author's identity and contributions.
+- **Self-update subsystem (Tier 1: notify).**
   - Periodic check against the GitHub Releases API for the configured repo (default `ether/etherpad`). Configurable via the new `updates.*` settings block, default tier `"notify"`. Set `updates.tier` to `"off"` to disable entirely.
   - The admin UI shows a banner and a dedicated "Etherpad updates" page with the current version, latest version, install method, and changelog.
   - Pad users see a discreet footer badge **only** when the running version is severely outdated (one or more major versions behind) or flagged as vulnerable in a recent release manifest. The public endpoint that drives this never leaks the version string itself.
   - New top-level `adminEmail` setting. When set, the updater emails the admin on first detection of severe / vulnerable status, with escalating cadence (weekly while vulnerable, monthly while severely outdated). PR 1 ships the dedupe + cadence logic; real SMTP wiring lands in a follow-up PR.
   - Tier 1 ships in this release. Tiers 2 (manual click), 3 (auto with grace window) and 4 (autonomous in maintenance window) are designed and will land in subsequent releases.
   - See `doc/admin/updates.md` for full configuration.
+- **Pad compaction.** New `compactPad` HTTP API plus `bin/compactPad` and `bin/compactAllPads` CLIs to reclaim database space on long-lived pads with heavy edit history (issue #6194). `--keep N` retains the last N revisions; `--dry-run` previews per-pad rev counts before writing. Per-pad failures don't stop the bulk run.
+- **New packaging targets.**
+  - Etherpad is now published as a **Snap** package.
+  - **Debian (.deb)** packages are built via nfpm with a systemd unit, and a signed apt repository is published to `etherpad.org/apt`.
+- **Editor enhancements.**
+  - IDE-style line operations: keyboard shortcuts to duplicate or delete the current line.
+  - New `showMenuRight` URL parameter to hide the right-side toolbar — useful for embeds that need slimmer chrome.
+  - Click a user in the userlist to open chat with `@<name>` prefilled, making mentions discoverable.
+  - New `padOptions.fadeInactiveAuthorColors` setting plus a toolbar UI to fade the background colors of authors who have left the pad.
+- **Color contrast.** Author colors now pick the WCAG-higher-contrast text color for readability.
+- **Social / mobile metadata.** Pad, timeslider, and home views now emit Open Graph and Twitter Card tags (closes #7599) and a `theme-color` meta that matches the toolbar on mobile.
+- **Plugin admin UX.** The `/admin` plugin browser surfaces each plugin's `ep.json` `disables` declarations, so operators can see what a plugin will turn off before installing.
+
+### Notable fixes
+
+- **Socket.io: don't kick authenticated duplicate-author sessions.** A regression where two tabs from the same authenticated author could evict each other has been fixed (#7656 / #7678).
+- **Anchor scrolling.** Anchor-link navigation now waits for layout to settle, so jumping to a deep link no longer overshoots.
+- **Plugin updater.** `bin/updatePlugins.sh` actually updates installed plugins again (closes #6670).
+- **Settings: stable per-release version string.** `randomVersionString` is now derived from the release identity rather than regenerated on each boot, so caches behave correctly across restarts of the same version.
+
+### Internal / contributor-facing
+
+- The HTTP client in the backend has been migrated from `axios` to the built-in `fetch` API, dropping a dependency now that Node 22 ships a stable fetch.
+- `admin/` and `ui/` workspaces moved from `rolldown-vite` to upstream **Vite 8**.
+- Build and CI moved to **pnpm 11** (`packageManager: "pnpm@11.0.6"`); the `Dockerfile`, snap, and all GitHub workflows are aligned. pnpm overrides have been migrated from `package.json` to `pnpm-workspace.yaml` to match pnpm 11's expectations.
+- All client modules have been converted to ESM.
+- The CI matrix tests Node 22, 24, and 25; on PRs the matrix is reduced to a single Node version to keep feedback fast.
+- Frontend Playwright tests now run against the `/ether` plugin set, with feature-tag based skips so plugin-incompatible specs are excluded automatically.
+- Build hardening: signed apt repo publishing, frozen lockfile installs across CI, Node setup pinned in every workflow, and a Docker-image CVE sweep that bumps `npm`, `pnpm`, and `uuid`.
+
+### Localisation
+
+- Multiple updates from translatewiki.net.
 
 # 2.7.2
 
