@@ -44,6 +44,7 @@
   "engines": {
     "node": ">=22.12.0"
   },
+  "packageManager": "pnpm@11.0.6+sha512.l/kG4dor7aw9+DytrgS0dToTAJLdSdVc02glrT5iPp3z+XdU+PJZ5pkXKjYPrFaazy+Qjncyva4+3bLc9+Eh/Q==",
   "repository": {
     "type": "git",
     "url": "https://github.com/ether/etherpad.git"
