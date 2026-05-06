@@ -50,7 +50,7 @@
     "url": "https://github.com/ether/etherpad.git"
   },
   "engineStrict": true,
-  "version": "2.7.2",
+  "version": "2.7.3",
   "license": "Apache-2.0",
   "pnpm": {
     "onlyBuiltDependencies": [
