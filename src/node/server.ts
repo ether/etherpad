@@ -27,7 +27,7 @@ import {ErrorCaused} from "./types/ErrorCaused";
 import log4js from 'log4js';
 import pkg from '../package.json';
 import {checkForMigration} from "../static/js/pluginfw/installer";
-import axios from "axios";
+import {ProxyAgent, setGlobalDispatcher} from 'undici';
 
 import settings from './utils/Settings';
 
@@ -38,28 +38,10 @@ if (settings.dumpOnUncleanExit) {
   wtfnode = require('wtfnode');
 }
 
-
-const addProxyToAxios = (url: URL) => {
-  axios.defaults.proxy = {
-    host: url.hostname,
-    auth: {
-      username: url.username,
-      password: url.password,
-    },
-    port: Number(url.port),
-    protocol: url.protocol,
-  }
-}
-
-if(process.env['http_proxy']) {
-  console.log("Using proxy: " + process.env['http_proxy'])
-  addProxyToAxios(new URL(process.env['http_proxy']));
-}
-
-
-if (process.env['https_proxy']) {
-  console.log("Using proxy: " + process.env['https_proxy'])
-  addProxyToAxios(new URL(process.env['https_proxy']));
+const proxyUrl = process.env['https_proxy'] || process.env['http_proxy'];
+if (proxyUrl) {
+  console.log("Using proxy: " + proxyUrl);
+  setGlobalDispatcher(new ProxyAgent(proxyUrl));
 }
 
 
