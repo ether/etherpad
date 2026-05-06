@@ -1,0 +1,20 @@
+/* Enhanced Admin Settings Editor Styles */
+.settings {
+  font-family: "Fira Code", "Cascadia Code", "Source Code Pro", monospace;
+  font-size: 14px;
+  white-space: pre;
+  overflow-wrap: normal;
+  overflow-x: auto;
+}
+
+/* VS Code style focus ring requested by John */
+.settings:focus {
+  outline: 2px solid #007acc !important;
+  outline-offset: -1px;
+}
+
+.settings-button-bar {
+  display: flex;
+  gap: 10px;
+  margin-top: 15px;
+}
