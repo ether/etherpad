@@ -36,6 +36,11 @@ jobs:
         name: Install pnpm
         with:
           run_install: false
+      - name: Use Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
       - name: Install all dependencies and symlink for ep_etherpad-lite
         run: pnpm install --frozen-lockfile
       - name: Perform type check

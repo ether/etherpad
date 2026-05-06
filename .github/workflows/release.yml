@@ -58,6 +58,15 @@ jobs:
         name: Install pnpm
         with:
           run_install: false
+          # Repo is checked out into ./etherpad, so the action can't find
+          # packageManager in a root package.json.
+          package_json_file: etherpad/package.json
+      - name: Use Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: etherpad/pnpm-lock.yaml
       - name: Install dependencies ether.github.com
         run: pnpm install --frozen-lockfile
         working-directory: ether.github.com
