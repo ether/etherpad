@@ -54,7 +54,6 @@ jobs:
       - uses: pnpm/action-setup@v6
         name: Install pnpm
         with:
-          version: 11.0.6
           run_install: false
       # Pin Node so the build does not silently fall back to whatever the
       # runner image ships with. vite 8 requires Node ^20.19.0 || >=22.12.0;

@@ -35,7 +35,6 @@ jobs:
       - uses: pnpm/action-setup@v6
         name: Install pnpm
         with:
-          version: 11.0.6
           run_install: false
       - name: Use Node.js
         uses: actions/setup-node@v6
@@ -74,7 +73,6 @@ jobs:
       - uses: pnpm/action-setup@v6
         name: Install pnpm
         with:
-          version: 11.0.6
           run_install: false
       - name: Use Node.js
         uses: actions/setup-node@v6
@@ -138,7 +136,6 @@ jobs:
       - uses: pnpm/action-setup@v6
         name: Install pnpm
         with:
-          version: 11.0.6
           run_install: false
       - name: Use Node.js
         uses: actions/setup-node@v6
