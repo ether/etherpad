@@ -55,7 +55,7 @@
     "live-plugin-manager": "^1.1.0",
     "lodash.clonedeep": "4.5.0",
     "log4js": "^6.9.1",
-    "lru-cache": "^11.3.5",
+    "lru-cache": "^11.3.6",
     "measured-core": "^2.0.0",
     "mime-types": "^3.0.2",
     "mongodb": "^7.1.1",
