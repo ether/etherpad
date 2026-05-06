@@ -7,7 +7,7 @@
 #   docker build --build-arg BUILD_ENV=copy .
 ARG BUILD_ENV=git
 
-ARG PnpmVersion=10.33.2
+ARG PnpmVersion=11.0.6
 
 FROM node:22-alpine AS adminbuild
 # Use corepack to provision pnpm and drop the bundled npm — its older
