@@ -239,22 +239,32 @@ exports.handleDisconnect = async (socket:any) => {
                     ` authorID:${session.author}` +
                     (user && user.username ? ` username:${user.username}` : ''));
   /* eslint-enable prefer-template */
-  socket.broadcast.to(session.padId).emit('message', {
-    type: 'COLLABROOM',
-    data: {
-      type: 'USER_LEAVE',
-      userInfo: {
-        colorId: await authorManager.getAuthorColorId(session.author),
-        userId: session.author,
+  // Client presence is keyed by authorID. With the #7656 fix, multiple sockets
+  // can share an authorID (same authenticated identity across windows/devices),
+  // so emitting USER_LEAVE on every socket disconnect would drop the author
+  // from presence even when another socket of theirs is still connected. Only
+  // broadcast — and only run the userLeave hook — when the *last* socket for
+  // this author leaves the pad.
+  const isLastSocketForAuthor = !_getRoomSockets(session.padId).some(
+      (s: any) => sessioninfos[s.id]?.author === session.author);
+  if (isLastSocketForAuthor) {
+    socket.broadcast.to(session.padId).emit('message', {
+      type: 'COLLABROOM',
+      data: {
+        type: 'USER_LEAVE',
+        userInfo: {
+          colorId: await authorManager.getAuthorColorId(session.author),
+          userId: session.author,
+        },
       },
-    },
-  });
-  await hooks.aCallAll('userLeave', {
-    ...session, // For backwards compatibility.
-    authorId: session.author,
-    readOnly: session.readonly,
-    socket,
-  });
+    });
+    await hooks.aCallAll('userLeave', {
+      ...session, // For backwards compatibility.
+      authorId: session.author,
+      readOnly: session.readonly,
+      socket,
+    });
+  }
 };
 
 
@@ -1020,22 +1030,29 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
   // Check if the user has disconnected during any of the above awaits.
   if (sessionInfo !== sessioninfos[socket.id]) throw new Error('client disconnected');
 
-  // Check if this author is already on the pad, if yes, kick the other sessions!
-  const roomSockets = _getRoomSockets(pad.id);
+  const {session: {user} = {}} = socket.client.request as SocketClientRequest;
 
-  for (const otherSocket of roomSockets) {
-    // The user shouldn't have joined the room yet, but check anyway just in case.
-    if (otherSocket.id === socket.id) continue;
-    const sinfo = sessioninfos[otherSocket.id];
-    if (sinfo && sinfo.author === sessionInfo.author) {
-      // fix user's counter, works on page refresh or if user closes browser window and then rejoins
-      sessioninfos[otherSocket.id] = {};
-      otherSocket.leave(sessionInfo.padId);
-      otherSocket.emit('message', {disconnect: 'userdup'});
+  // The duplicate-author kick exists because cookie-derived authorIDs are
+  // per-browser, so "same authorID, same pad" historically meant "stale tab in
+  // the same browser" — see #7656. Authenticated sessions (req.session.user
+  // set, e.g. via basic auth, SSO, or a getAuthorId plugin hook) carry a
+  // stable identity across windows and devices, so concurrent same-author
+  // sessions are legitimate and must not be kicked.
+  const roomSockets = _getRoomSockets(pad.id);
+  if (user == null) {
+    for (const otherSocket of roomSockets) {
+      // The user shouldn't have joined the room yet, but check anyway just in case.
+      if (otherSocket.id === socket.id) continue;
+      const sinfo = sessioninfos[otherSocket.id];
+      if (sinfo && sinfo.author === sessionInfo.author) {
+        // fix user's counter, works on page refresh or if user closes browser window and then rejoins
+        sessioninfos[otherSocket.id] = {};
+        otherSocket.leave(sessionInfo.padId);
+        otherSocket.emit('message', {disconnect: 'userdup'});
+      }
     }
   }
 
-  const {session: {user} = {}} = socket.client.request as SocketClientRequest;
   /* eslint-disable prefer-template -- it doesn't support breaking across multiple lines */
   accessLogger.info(`[${pad.head > 0 ? 'ENTER' : 'CREATE'}]` +
                     ` pad:${sessionInfo.padId}` +

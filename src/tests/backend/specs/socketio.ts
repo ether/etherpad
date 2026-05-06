@@ -324,6 +324,114 @@ describe(__filename, function () {
     });
   });
 
+  describe('Duplicate-author handling (#7656)', function () {
+    let socketA: any;
+    let socketB: any;
+
+    afterEach(async function () {
+      for (const s of [socketA, socketB]) if (s) s.close();
+      socketA = null;
+      socketB = null;
+      // The outer afterEach only knows about the singleton `socket`. Null it so
+      // it doesn't try to close one of ours twice.
+      socket = null;
+    });
+
+    // Records `{disconnect: ...}` payloads delivered to a socket so a test can
+    // assert whether the userdup kick fired.
+    const watchDisconnects = (s: any): string[] => {
+      const seen: string[] = [];
+      s.on('message', (msg: any) => { if (msg && msg.disconnect) seen.push(msg.disconnect); });
+      return seen;
+    };
+
+    it('cookie identity: same-author second socket kicks the first (regression)', async function () {
+      const res = await agent.get('/p/pad').expect(200);
+      socketA = await common.connect(res);
+      assert.equal((await common.handshake(socketA, 'pad')).type, 'CLIENT_VARS');
+      const seen = watchDisconnects(socketA);
+
+      // Same cookie => same author token => same authorID. This is the original
+      // "stale tab in the same browser" case the kick was designed for.
+      socketB = await common.connect(res);
+      assert.equal((await common.handshake(socketB, 'pad')).type, 'CLIENT_VARS');
+      // Let the kick emit drain.
+      await new Promise((r) => setTimeout(r, 200));
+      assert.deepEqual(seen, ['userdup']);
+    });
+
+    it('authenticated identity: second socket does NOT kick the first', async function () {
+      settings.requireAuthentication = true;
+      const res = await agent.get('/p/pad').auth('user', 'user-password').expect(200);
+      socketA = await common.connect(res);
+      assert.equal((await common.handshake(socketA, 'pad')).type, 'CLIENT_VARS');
+      const seen = watchDisconnects(socketA);
+
+      socketB = await common.connect(res);
+      assert.equal((await common.handshake(socketB, 'pad')).type, 'CLIENT_VARS');
+      await new Promise((r) => setTimeout(r, 200));
+      assert.deepEqual(seen, []);
+    });
+
+    // Records USER_LEAVE userIds so a test can assert whether other clients
+    // were told the author went offline.
+    const watchUserLeaves = (s: any): string[] => {
+      const seen: string[] = [];
+      s.on('message', (msg: any) => {
+        if (msg?.type === 'COLLABROOM' && msg?.data?.type === 'USER_LEAVE') {
+          seen.push(msg.data.userInfo?.userId);
+        }
+      });
+      return seen;
+    };
+
+    it('authenticated identity: closing one socket does NOT remove the author for the other', async function () {
+      // Two authenticated sockets sharing one identity (same authorID). When
+      // socketA closes, presence-key clients keyed on authorID would drop the
+      // author entirely if USER_LEAVE were broadcast — but socketB is still
+      // online. The server must only emit USER_LEAVE when the *last* socket
+      // for that author leaves.
+      settings.requireAuthentication = true;
+      const res = await agent.get('/p/pad').auth('user', 'user-password').expect(200);
+      socketA = await common.connect(res);
+      const cvA: any = await common.handshake(socketA, 'pad');
+      const authorIdA = cvA.data.userId;
+      socketB = await common.connect(res);
+      const cvB: any = await common.handshake(socketB, 'pad');
+      assert.equal(cvB.data.userId, authorIdA, 'precondition: same author');
+
+      const leaves = watchUserLeaves(socketB);
+      socketA.close();
+      socketA = null;
+      // Give the server a beat to broadcast.
+      await new Promise((r) => setTimeout(r, 300));
+      assert.deepEqual(leaves, [],
+          'remaining same-author socket should not see USER_LEAVE for itself');
+    });
+
+    it('different authors: closing one socket DOES emit USER_LEAVE for the other (regression)', async function () {
+      // socketA and socketB are different anonymous browsers (separate cookie
+      // jars => separate authorIDs). Closing socketA must still tell socketB
+      // that authorA left.
+      const supertest = require('supertest');
+      const browserA = supertest(common.baseUrl);
+      const browserB = supertest(common.baseUrl);
+      const resA = await browserA.get('/p/pad').expect(200);
+      const resB = await browserB.get('/p/pad').expect(200);
+      socketA = await common.connect(resA);
+      const cvA: any = await common.handshake(socketA, 'pad');
+      socketB = await common.connect(resB);
+      const cvB: any = await common.handshake(socketB, 'pad');
+      assert.notEqual(cvA.data.userId, cvB.data.userId, 'precondition: different authors');
+
+      const leaves = watchUserLeaves(socketB);
+      socketA.close();
+      socketA = null;
+      await new Promise((r) => setTimeout(r, 300));
+      assert.deepEqual(leaves, [cvA.data.userId]);
+    });
+  });
+
   describe('SocketIORouter.js', function () {
     const Module = class {
       setSocketIO(io:any) {}
