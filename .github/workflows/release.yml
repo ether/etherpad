@@ -68,7 +68,11 @@ jobs:
           cache: pnpm
           cache-dependency-path: etherpad/pnpm-lock.yaml
       - name: Install dependencies ether.github.com
-        run: pnpm install --frozen-lockfile
+        # ether.github.com depends on sharp (Next.js image pipeline), whose
+        # install script must run to fetch the platform binary. pnpm 11
+        # turned ignored-builds into an error; allow all builds for this
+        # external repo since we don't control its pnpm-workspace.yaml.
+        run: pnpm install --frozen-lockfile --config.dangerously-allow-all-builds=true
         working-directory: ether.github.com
       - name: Set git user
         run: |
