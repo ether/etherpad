@@ -191,6 +191,35 @@ test.describe('creator-owned pad settings', () => {
     await expect(deletePad).toBeInViewport();
   });
 
+  // #7696 follow-up: the Pad-wide font/language nice-select dropdowns sit
+  // near the bottom of the popup, so opening one triggers the .reverse path
+  // (open upward). Floating the list with position:fixed must not pick up
+  // the default `.reverse { bottom: calc(100% + 5px) }` rule, which would
+  // resolve against the viewport and place the list off-screen.
+  test('Pad-wide font dropdown opens visibly when popup is scrolled to bottom', async ({page}) => {
+    await page.setViewportSize({width: 900, height: 500});
+    await goToNewPad(page);
+    await showSettings(page);
+
+    // Force the font dropdown into the lower portion of the viewport so
+    // .reverse triggers and the list opens upward.
+    await page.locator('#settings > .popup-content').evaluate((el) => {
+      el.scrollTop = el.scrollHeight;
+    });
+
+    const fontDropdown = page.locator('#padsettings-viewfontmenu + .nice-select');
+    await expect(fontDropdown).toBeInViewport();
+
+    await fontDropdown.click();
+    const list = fontDropdown.locator('.list');
+    await expect(list).toBeVisible();
+    await expect(list).toBeInViewport();
+
+    // The first option must be reachable so users can actually pick a font.
+    await fontDropdown.locator('.option').first().click();
+    await expect(fontDropdown).not.toHaveClass(/open/);
+  });
+
   // #7592: ticking "Disable chat" must visibly disable the dependent
   // "Chat always on screen" / "Show Chat and Users" toggles, not just
   // make the underlying inputs non-interactive.

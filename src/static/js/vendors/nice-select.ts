@@ -134,6 +134,9 @@
           var $list = $dropdown.find('.list');
           $list.css('left', rect.left);
           $list.css('min-width', $dropdown.outerWidth() + 'px');
+          // Clear .reverse's `bottom: calc(100% + 5px)` — with position:fixed
+          // it would resolve against the viewport and push the list offscreen.
+          $list.css('bottom', 'auto');
           $list.css('top', $dropdown.hasClass('reverse')
               ? rect.top - $maxListHeight - 5
               : rect.bottom);
