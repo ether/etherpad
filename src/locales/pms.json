@@ -1,7 +1,8 @@
 {
 	"@metadata": {
 		"authors": [
-			"Borichèt"
+			"Borichèt",
+			"Dragonòt"
 		]
 	},
 	"admin.page-title": "Cruscòt d'aministrator - Etherpad",
@@ -161,7 +162,7 @@
 	"timeslider.month.february": "Fërvé",
 	"timeslider.month.march": "Mars",
 	"timeslider.month.april": "Avril",
-	"timeslider.month.may": "Maj",
+	"timeslider.month.may": "Magg",
 	"timeslider.month.june": "Giugn",
 	"timeslider.month.july": "Luj",
 	"timeslider.month.august": "Ost",
