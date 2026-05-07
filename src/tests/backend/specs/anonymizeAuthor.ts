@@ -90,4 +90,61 @@ describe(__filename, function () {
         const record = await DB.db.get(`globalAuthor:${authorID}`);
         assert.equal(record.erased, true);
       });
+
+  it('dryRun returns the same counter shape but does not mutate the record',
+      async function () {
+        const mapper = `mapper-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        const {authorID} =
+            await authorManager.createAuthorIfNotExistsFor(mapper, 'Eve');
+        const before = await DB.db.get(`globalAuthor:${authorID}`);
+
+        const preview =
+            await authorManager.anonymizeAuthor(authorID, {dryRun: true});
+
+        assert.ok(preview.removedExternalMappings >= 1,
+            `removedExternalMappings=${preview.removedExternalMappings}`);
+        const after = await DB.db.get(`globalAuthor:${authorID}`);
+        assert.equal(after.name, 'Eve', 'name should be untouched');
+        assert.equal(after.erased, undefined,
+            'erased flag should not be set on dry run');
+        assert.equal(await DB.db.get(`mapper2author:${mapper}`), authorID,
+            'mapper binding should still resolve after dry run');
+        assert.deepEqual(
+            Object.keys(before.padIDs || {}).sort(),
+            Object.keys(after.padIDs || {}).sort());
+      });
+
+  it('dryRun on an unknown authorID returns zero counters without throwing',
+      async function () {
+        const res = await authorManager.anonymizeAuthor(
+            'a.does-not-exist-xxxxxxxxxxxx', {dryRun: true});
+        assert.deepEqual(res, {
+          affectedPads: 0,
+          removedTokenMappings: 0,
+          removedExternalMappings: 0,
+          clearedChatMessages: 0,
+        });
+      });
+
+  it('lastSeen is stamped when an author is created and on identity writes',
+      async function () {
+        const before = Date.now();
+        const {authorID} = await authorManager.createAuthorIfNotExistsFor(
+            `mapper-${Date.now()}-${Math.random().toString(36).slice(2)}`, 'Dora');
+        const created = await DB.db.get(`globalAuthor:${authorID}`);
+        assert.ok(typeof created.lastSeen === 'number',
+            `lastSeen=${created.lastSeen}`);
+        assert.ok(created.lastSeen >= before);
+
+        await new Promise((r) => setTimeout(r, 5));
+        await authorManager.setAuthorName(authorID, 'Dora2');
+        const renamed = await DB.db.get(`globalAuthor:${authorID}`);
+        assert.ok(renamed.lastSeen > created.lastSeen,
+            `renamed=${renamed.lastSeen} created=${created.lastSeen}`);
+
+        await new Promise((r) => setTimeout(r, 5));
+        await authorManager.setAuthorColorId(authorID, '12');
+        const recolored = await DB.db.get(`globalAuthor:${authorID}`);
+        assert.ok(recolored.lastSeen > renamed.lastSeen);
+      });
 });

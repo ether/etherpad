@@ -15,6 +15,8 @@ test('Shows troubleshooting page manager', async ({page}) => {
   await page.waitForSelector('.menu')
   const menu =  page.locator('.menu');
   // Sidebar nav: plugins, settings, help, pads, shout, update.
+  // The Authors link only renders when gdprAuthorErasure.enabled = true,
+  // which the test environment leaves false by default.
   await expect(menu.locator('li')).toHaveCount(6);
 })
 

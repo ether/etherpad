@@ -31,11 +31,14 @@ exports.socketio = (hookName: string, {io}: any) => {
       } catch (err) {
         return logger.error(`Error loading settings: ${err}`);
       }
-      // if showSettingsInAdminPage is set to false, then return NOT_ALLOWED in the result
+      const flags = {
+        gdprAuthorErasure: !!(settings.gdprAuthorErasure &&
+            settings.gdprAuthorErasure.enabled),
+      };
       if (settings.showSettingsInAdminPage === false) {
-        socket.emit('settings', {results: 'NOT_ALLOWED'});
+        socket.emit('settings', {results: 'NOT_ALLOWED', flags});
       } else {
-        socket.emit('settings', {results: data});
+        socket.emit('settings', {results: data, flags});
       }
     });
 
@@ -303,6 +306,90 @@ exports.socketio = (hookName: string, {io}: any) => {
       }
      }
     })
+
+    const authorManager = require('../../db/AuthorManager');
+
+    // The admin author-erasure UI (PR #7667) is gated as a single
+    // feature: when gdprAuthorErasure.enabled is false, all three
+    // socket handlers refuse so the page is fully off by default per
+    // project rule "new features behind a feature flag, disabled by
+    // default" (Qodo Compliance ID 6). The destructive
+    // anonymizeAuthor stays gated as before; the read paths
+    // (authorLoad / preview) are also gated so listing data isn't
+    // exposed without an explicit opt-in.
+    const erasureEnabled = () =>
+        !!(settings.gdprAuthorErasure && settings.gdprAuthorErasure.enabled);
+
+    socket.on('authorLoad', async (payload: any) => {
+      try {
+        if (!erasureEnabled()) {
+          socket.emit('results:authorLoad',
+              {total: 0, results: [], error: 'disabled'});
+          return;
+        }
+        const query = payload || {};
+        const data = await authorManager.searchAuthors({
+          pattern: query.pattern || '',
+          offset: query.offset || 0,
+          limit: query.limit || 12,
+          sortBy: query.sortBy === 'lastSeen' ? 'lastSeen' : 'name',
+          ascending: query.ascending !== false,
+          includeErased: query.includeErased === true,
+        });
+        socket.emit('results:authorLoad', data);
+      } catch (err: any) {
+        logger.error(`authorLoad failed: ${err.stack || err}`);
+        socket.emit('results:authorLoad',
+            {total: 0, results: [], error: String(err.message || err)});
+      }
+    });
+
+    socket.on('anonymizeAuthorPreview', async (payload: any) => {
+      const authorID = payload?.authorID;
+      try {
+        if (!erasureEnabled()) {
+          socket.emit('results:anonymizeAuthorPreview',
+              {authorID, error: 'disabled'});
+          return;
+        }
+        if (!authorID) {
+          socket.emit('results:anonymizeAuthorPreview',
+              {authorID, error: 'authorID is required'});
+          return;
+        }
+        const rec = await authorManager.getAuthor(authorID);
+        const counters =
+            await authorManager.anonymizeAuthor(authorID, {dryRun: true});
+        socket.emit('results:anonymizeAuthorPreview',
+            {authorID, name: rec ? rec.name : null, ...counters});
+      } catch (err: any) {
+        logger.error(`anonymizeAuthorPreview failed: ${err.stack || err}`);
+        socket.emit('results:anonymizeAuthorPreview',
+            {authorID, error: String(err.message || err)});
+      }
+    });
+
+    socket.on('anonymizeAuthor', async (payload: any) => {
+      const authorID = payload?.authorID;
+      try {
+        if (!erasureEnabled()) {
+          socket.emit('results:anonymizeAuthor', {authorID, error: 'disabled'});
+          return;
+        }
+        if (!authorID) {
+          socket.emit('results:anonymizeAuthor',
+              {authorID, error: 'authorID is required'});
+          return;
+        }
+        const counters = await authorManager.anonymizeAuthor(authorID);
+        logger.info(`anonymizeAuthor (admin socket): ${authorID}`);
+        socket.emit('results:anonymizeAuthor', {authorID, ...counters});
+      } catch (err: any) {
+        logger.error(`anonymizeAuthor failed: ${err.stack || err}`);
+        socket.emit('results:anonymizeAuthor',
+            {authorID, error: String(err.message || err)});
+      }
+    });
 
     socket.on('restartServer', async () => {
       logger.info('Admin request to restart server through a socket on /admin/settings');

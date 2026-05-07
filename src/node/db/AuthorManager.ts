@@ -130,8 +130,11 @@ const mapAuthorWithDBKey = async (mapperkey: string, mapper:string) => {
   }
 
   // there is an author with this mapper
-  // update the timestamp of this author
-  await db.setSub(`globalAuthor:${author}`, ['timestamp'], Date.now());
+  // update the timestamp + lastSeen of this author so the admin
+  // /authors "Last seen" column reflects the most recent connect
+  const now = Date.now();
+  await db.setSub(`globalAuthor:${author}`, ['timestamp'], now);
+  await db.setSub(`globalAuthor:${author}`, ['lastSeen'], now);
 
   // return the author
   return {authorID: author};
@@ -196,19 +199,15 @@ exports.createAuthorIfNotExistsFor = async (authorMapper: string, name: string) 
  * @param {String} name The name of the author
  */
 exports.createAuthor = async (name: string) => {
-  // create the new author name
   const author = `a.${randomString(16)}`;
-
-  // create the globalAuthors db entry
+  const now = Date.now();
   const authorObj = {
     colorId: Math.floor(Math.random() * (exports.getColorPalette().length)),
     name,
-    timestamp: Date.now(),
+    timestamp: now,
+    lastSeen: now,
   };
-
-  // set the global author db entry
   await db.set(`globalAuthor:${author}`, authorObj);
-
   return {authorID: author};
 };
 
@@ -229,8 +228,10 @@ exports.getAuthorColorId = async (author: string) => await db.getSub(`globalAuth
  * @param {String} author The id of the author
  * @param {String} colorId The color id of the author
  */
-exports.setAuthorColorId = async (author: string, colorId: string) => await db.setSub(
-    `globalAuthor:${author}`, ['colorId'], colorId);
+exports.setAuthorColorId = async (author: string, colorId: string) => {
+  await db.setSub(`globalAuthor:${author}`, ['colorId'], colorId);
+  await db.setSub(`globalAuthor:${author}`, ['lastSeen'], Date.now());
+};
 
 /**
  * Returns the name of the author
@@ -243,8 +244,10 @@ exports.getAuthorName = async (author: string) => await db.getSub(`globalAuthor:
  * @param {String} author The id of the author
  * @param {String} name The name of the author
  */
-exports.setAuthorName = async (author: string, name: string) => await db.setSub(
-    `globalAuthor:${author}`, ['name'], name);
+exports.setAuthorName = async (author: string, name: string) => {
+  await db.setSub(`globalAuthor:${author}`, ['name'], name);
+  await db.setSub(`globalAuthor:${author}`, ['lastSeen'], Date.now());
+};
 
 /**
  * Returns an array of all pads this author contributed to
@@ -324,13 +327,19 @@ exports.removePad = async (authorID: string, padID: string) => {
  *
  * Idempotent: once `erased: true` is set on the author record, subsequent
  * calls short-circuit and return zero counters.
+ *
+ * When called with `{dryRun: true}` no records are written; the returned counters describe what a live call would have touched.
  */
-exports.anonymizeAuthor = async (authorID: string): Promise<{
+exports.anonymizeAuthor = async (
+    authorID: string,
+    opts: {dryRun?: boolean} = {},
+): Promise<{
   affectedPads: number,
   removedTokenMappings: number,
   removedExternalMappings: number,
   clearedChatMessages: number,
 }> => {
+  const dryRun = opts.dryRun === true;
   // Lazy-require to dodge the AuthorManager ↔ PadManager ↔ Pad cycle.
   const padManager = require('./PadManager');
   const existing = await db.get(`globalAuthor:${authorID}`);
@@ -352,7 +361,7 @@ exports.anonymizeAuthor = async (authorID: string): Promise<{
   const tokenKeys: string[] = await db.findKeys('token2author:*', null);
   for (const key of tokenKeys) {
     if (await db.get(key) === authorID) {
-      await db.remove(key);
+      if (!dryRun) await db.remove(key);
       removedTokenMappings++;
     }
   }
@@ -360,7 +369,7 @@ exports.anonymizeAuthor = async (authorID: string): Promise<{
   const mapperKeys: string[] = await db.findKeys('mapper2author:*', null);
   for (const key of mapperKeys) {
     if (await db.get(key) === authorID) {
-      await db.remove(key);
+      if (!dryRun) await db.remove(key);
       removedExternalMappings++;
     }
   }
@@ -368,18 +377,24 @@ exports.anonymizeAuthor = async (authorID: string): Promise<{
   // Zero the display identity now — without the `erased` sentinel — so a
   // partial run still hides the name. The sentinel itself is only set at
   // the end (below) so a failure in chat scrub lets the next call resume.
-  await db.set(`globalAuthor:${authorID}`, {
-    colorId: 0,
-    name: null,
-    timestamp: Date.now(),
-    padIDs: existing.padIDs || {},
-  });
+  // Preserve `lastSeen` so the admin /authors UI's column stays accurate
+  // for erased records (the operator can still see when the author was
+  // last active before erasure).
+  if (!dryRun) {
+    await db.set(`globalAuthor:${authorID}`, {
+      colorId: 0,
+      name: null,
+      timestamp: Date.now(),
+      lastSeen: existing.lastSeen ?? existing.timestamp ?? null,
+      padIDs: existing.padIDs || {},
+    });
+  }
 
+  const padIDs = Object.keys(existing.padIDs || {});
+  let clearedChatMessages = 0;
   // Null authorship on chat messages the author posted. If this throws
   // partway through, the function re-runs the loop on the next call
   // because `erased: true` is not set yet.
-  const padIDs = Object.keys(existing.padIDs || {});
-  let clearedChatMessages = 0;
   for (const padID of padIDs) {
     if (!await padManager.doesPadExist(padID)) continue;
     const pad = await padManager.getPad(padID);
@@ -389,8 +404,10 @@ exports.anonymizeAuthor = async (authorID: string): Promise<{
       const chatKey = `pad:${padID}:chat:${i}`;
       const msg = await db.get(chatKey);
       if (msg != null && msg.authorId === authorID) {
-        msg.authorId = null;
-        await db.set(chatKey, msg);
+        if (!dryRun) {
+          msg.authorId = null;
+          await db.set(chatKey, msg);
+        }
         clearedChatMessages++;
       }
     }
@@ -399,14 +416,17 @@ exports.anonymizeAuthor = async (authorID: string): Promise<{
   // Everything succeeded — stamp the sentinel so subsequent calls
   // short-circuit. Merge with the zeroed record we just wrote so padIDs
   // and timestamp persist.
-  await db.set(`globalAuthor:${authorID}`, {
-    colorId: 0,
-    name: null,
-    timestamp: Date.now(),
-    padIDs: existing.padIDs || {},
-    erased: true,
-    erasedAt: new Date().toISOString(),
-  });
+  if (!dryRun) {
+    await db.set(`globalAuthor:${authorID}`, {
+      colorId: 0,
+      name: null,
+      timestamp: Date.now(),
+      lastSeen: existing.lastSeen ?? existing.timestamp ?? null,
+      padIDs: existing.padIDs || {},
+      erased: true,
+      erasedAt: new Date().toISOString(),
+    });
+  }
 
   return {
     affectedPads: padIDs.length,
@@ -414,4 +434,131 @@ exports.anonymizeAuthor = async (authorID: string): Promise<{
     removedExternalMappings,
     clearedChatMessages,
   };
+};
+
+/**
+ * Admin-side author listing for the /admin/authors page. Enumerates
+ * `globalAuthor:*`, joins with `mapper2author:*` for the mapper column,
+ * applies in-memory filter/sort/pagination. Capped at 1000 rows pre-
+ * pagination so a runaway scan can't OOM the admin process — callers
+ * surface the cap via `cappedAt`.
+ *
+ * The pattern matches case-insensitively against the author's name,
+ * any of the author's mappers, OR the opaque authorID. Matching the
+ * authorID lets admins verify a specific erased record (the only
+ * remaining identifier on a Art. 17-erased stub) and is privacy-safe
+ * — the authorID is already exposed as a foreign key in changeset
+ * pools and elsewhere.
+ *
+ * @param query.pattern         substring match against name, mapper,
+ *                              or authorID (case-insensitive)
+ * @param query.offset          pagination offset
+ * @param query.limit           pagination limit
+ * @param query.sortBy          'name' | 'lastSeen'
+ * @param query.ascending       sort direction
+ * @param query.includeErased   when false, hides records with erased: true.
+ *                              Required (the function does not default).
+ */
+exports.searchAuthors = async (query: {
+  pattern: string,
+  offset: number,
+  limit: number,
+  sortBy: 'name' | 'lastSeen',
+  ascending: boolean,
+  includeErased: boolean,
+}): Promise<{
+  total: number,
+  cappedAt?: number,
+  results: Array<{
+    authorID: string,
+    name: string | null,
+    colorId: string | number | null,
+    mapper: string[],
+    lastSeen: number | null,
+    erased: boolean,
+  }>,
+}> => {
+  // Build a reverse index mapper -> authorID once. mapper2author values
+  // can be either a bare string (legacy) or an object {authorID}.
+  const mapperByAuthor = new Map<string, string[]>();
+  const mapperKeys: string[] = await db.findKeys('mapper2author:*', null);
+  for (const key of mapperKeys) {
+    const v = await db.get(key);
+    const authorID =
+        typeof v === 'string' ? v : (v && v.authorID) || null;
+    if (!authorID) continue;
+    const mapper = key.substring('mapper2author:'.length);
+    if (!mapperByAuthor.has(authorID)) mapperByAuthor.set(authorID, []);
+    mapperByAuthor.get(authorID)!.push(mapper);
+  }
+
+  const authorKeys: string[] = await db.findKeys('globalAuthor:*', null);
+  const pattern = (query.pattern || '').toLowerCase();
+  const rows: Array<{
+    authorID: string, name: string | null,
+    colorId: string | number | null, mapper: string[],
+    lastSeen: number | null, erased: boolean,
+  }> = [];
+
+  for (const key of authorKeys) {
+    const rec = await db.get(key);
+    if (rec == null) continue;
+    const erased = rec.erased === true;
+    if (erased && !query.includeErased) continue;
+    const authorID = key.substring('globalAuthor:'.length);
+    const mappers = mapperByAuthor.get(authorID) || [];
+    if (pattern) {
+      const nameMatch =
+          (rec.name || '').toLowerCase().includes(pattern);
+      const mapperMatch =
+          mappers.some((m) => m.toLowerCase().includes(pattern));
+      const idMatch =
+          authorID.toLowerCase().includes(pattern);
+      if (!nameMatch && !mapperMatch && !idMatch) continue;
+    }
+    rows.push({
+      authorID,
+      name: rec.name ?? null,
+      colorId: rec.colorId ?? null,
+      mapper: mappers,
+      // Prefer lastSeen; fall back to timestamp for legacy records that
+      // pre-date the new field so the admin /authors column isn't blank.
+      lastSeen: typeof rec.lastSeen === 'number'
+          ? rec.lastSeen
+          : (typeof rec.timestamp === 'number' ? rec.timestamp : null),
+      erased,
+    });
+  }
+
+  rows.sort((a, b) => {
+    let av: any; let bv: any;
+    if (query.sortBy === 'lastSeen') {
+      av = a.lastSeen ?? 0; bv = b.lastSeen ?? 0;
+    } else {
+      av = (a.name || '').toLowerCase();
+      bv = (b.name || '').toLowerCase();
+    }
+    if (av < bv) return query.ascending ? -1 : 1;
+    if (av > bv) return query.ascending ? 1 : -1;
+    // Tie-break on authorID ascending so pagination is stable across
+    // requests when the primary sort key collides (common on lastSeen
+    // for authors created in the same millisecond).
+    if (a.authorID < b.authorID) return -1;
+    if (a.authorID > b.authorID) return 1;
+    return 0;
+  });
+
+  const CAP = 1000;
+  let cappedAt: number | undefined;
+  let working = rows;
+  if (working.length > CAP) {
+    working = working.slice(0, CAP);
+    cappedAt = CAP;
+  }
+
+  const total = working.length;
+  const page = working.slice(query.offset, query.offset + query.limit);
+  const out: any = {total, results: page};
+  if (cappedAt != null) out.cappedAt = cappedAt;
+  return out;
 };

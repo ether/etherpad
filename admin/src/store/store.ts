@@ -1,6 +1,7 @@
 import {create} from "zustand";
 import {Socket} from "socket.io-client";
 import {PadSearchResult} from "../utils/PadSearch.ts";
+import {AuthorSearchResult} from "../utils/AuthorSearch.ts";
 import {InstalledPlugin} from "../pages/Plugin.ts";
 
 export interface UpdateStatusPayload {
@@ -45,6 +46,10 @@ type StoreState = {
   setInstalledPlugins: (plugins: InstalledPlugin[])=>void,
   updateStatus: UpdateStatusPayload | null,
   setUpdateStatus: (s: UpdateStatusPayload) => void,
+  authors: AuthorSearchResult|undefined,
+  setAuthors: (authors: AuthorSearchResult)=>void,
+  gdprAuthorErasureEnabled: boolean,
+  setGdprAuthorErasureEnabled: (enabled: boolean)=>void,
 }
 
 
@@ -70,4 +75,8 @@ export const useStore = create<StoreState>()((set) => ({
   setInstalledPlugins: (plugins)=>set({installedPlugins: plugins}),
   updateStatus: null,
   setUpdateStatus: (s) => set({updateStatus: s}),
+  authors: undefined,
+  setAuthors: (authors)=>set({authors}),
+  gdprAuthorErasureEnabled: false,
+  setGdprAuthorErasureEnabled: (gdprAuthorErasureEnabled)=>set({gdprAuthorErasureEnabled}),
 }));
