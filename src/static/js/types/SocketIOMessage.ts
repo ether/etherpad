@@ -260,7 +260,12 @@ export type PadOption = {
   "alwaysShowChat"?:   boolean,
   "chatAndUsers"?:     boolean,
   "lang"?:             null|string,
-  view? : MapArrayType<boolean|string>
+  view? : MapArrayType<boolean|string>,
+  // Plugin-namespaced pad-wide options (gated by settings.enablePluginPadOptions).
+  // The runtime regex is /^ep_[a-z0-9_]+$/ — TypeScript template literals
+  // can't constrain that exactly, so this signature accepts any ep_-prefixed
+  // string and applyPadSettings/normalizePadSettings reject the rest.
+  [k: `ep_${string}`]: unknown,
 }
 
 

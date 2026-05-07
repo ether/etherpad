@@ -761,6 +761,17 @@
     "enablePadWideSettings": "${ENABLE_PAD_WIDE_SETTINGS:true}",
 
   /*
+    * Allow plugins to ride the existing padoptions COLLABROOM rail by
+    * accepting pad-wide values under plugin-namespaced keys matching
+    * /^ep_[a-z0-9_]+$/ (e.g. ep_table_of_contents). Values are validated
+    * (JSON-safe, 64 KB per key, 256 KB total) and broadcast to every
+    * connected client just like native pad-wide toggles. Disabled by
+    * default; flip to true once your plugins (e.g. ep_plugin_helpers'
+    * padToggle) require it. See doc/plugins.md.
+    **/
+    "enablePluginPadOptions": "${ENABLE_PLUGIN_PAD_OPTIONS:false}",
+
+  /*
    * Optional privacy banner shown once the pad loads. Disabled by default.
    *
    *   enabled      — toggle the feature

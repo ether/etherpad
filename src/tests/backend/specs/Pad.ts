@@ -180,37 +180,101 @@ describe(__filename, function () {
   });
 
   describe('normalizePadSettings plugin passthrough (ep_* keys)', function () {
-    it('preserves ep_* keys verbatim so plugins can ride padoptions', function () {
-      const ps: any = Pad.Pad.normalizePadSettings({
-        ep_table_of_contents: {enabled: true, depth: 3},
-        ep_font_color: 'red',
+    let originalFlag: boolean;
+    let warnSpy: any;
+    let warnings: string[];
+
+    before(function () { originalFlag = settings.enablePluginPadOptions; });
+    after(function () { settings.enablePluginPadOptions = originalFlag; });
+    beforeEach(function () {
+      warnings = [];
+      warnSpy = console.warn;
+      console.warn = (msg: string) => { warnings.push(msg); };
+    });
+    afterEach(function () { console.warn = warnSpy; });
+
+    describe('with enablePluginPadOptions = true', function () {
+      before(function () { settings.enablePluginPadOptions = true; });
+
+      it('preserves ep_* keys verbatim so plugins can ride padoptions', function () {
+        const ps: any = Pad.Pad.normalizePadSettings({
+          ep_table_of_contents: {enabled: true, depth: 3},
+          ep_font_color: 'red',
+        });
+        assert.deepEqual(ps.ep_table_of_contents, {enabled: true, depth: 3});
+        assert.equal(ps.ep_font_color, 'red');
       });
-      assert.deepEqual(ps.ep_table_of_contents, {enabled: true, depth: 3});
-      assert.equal(ps.ep_font_color, 'red');
+
+      it('drops keys that do not match the ep_<lowercase> pattern', function () {
+        const ps: any = Pad.Pad.normalizePadSettings({
+          EP_SHOUTY: 1,        // uppercase rejected
+          ep_: 1,              // empty suffix rejected
+          'ep-dashy': 1,       // dash rejected
+          somethingElse: 1,    // no prefix rejected
+        });
+        assert.equal(ps.EP_SHOUTY, undefined);
+        assert.equal(ps.ep_, undefined);
+        assert.equal(ps['ep-dashy'], undefined);
+        assert.equal(ps.somethingElse, undefined);
+      });
+
+      it('does not overwrite reserved core keys when an ep_<core> alias is sent', function () {
+        // Core keys (showChat etc.) come first; ep_* loop runs after. A plugin
+        // key like ep_showchat is namespaced separately and cannot collide.
+        const ps: any = Pad.Pad.normalizePadSettings({
+          showChat: false,
+          ep_showchat: 'plugin-value',
+        });
+        assert.equal(ps.showChat, false);
+        assert.equal(ps.ep_showchat, 'plugin-value');
+      });
+
+      it('drops a non-JSON-serializable value with a warn-log', function () {
+        const ps: any = Pad.Pad.normalizePadSettings({
+          ep_bad: () => 'function values are not JSON-safe',
+        });
+        assert.equal(ps.ep_bad, undefined);
+        assert.ok(warnings.some((w) => w.includes('ep_bad')),
+            `expected warn mentioning ep_bad, got: ${JSON.stringify(warnings)}`);
+      });
+
+      it('drops a value larger than the 64 KB per-key cap', function () {
+        const oversized = 'x'.repeat(70 * 1024); // ~70 KB string
+        const ps: any = Pad.Pad.normalizePadSettings({
+          ep_huge: oversized,
+        });
+        assert.equal(ps.ep_huge, undefined);
+        assert.ok(warnings.some((w) => w.includes('ep_huge') && w.includes('per-key cap')),
+            `expected per-key cap warning, got: ${JSON.stringify(warnings)}`);
+      });
+
+      it('drops keys that would exceed the cumulative 256 KB cap', function () {
+        // Each value is well under the per-key cap but together they exceed
+        // the total cap. The first few must survive; the overflowing key
+        // must be dropped.
+        const big = 'y'.repeat(60 * 1024); // ~60 KB each
+        const input: any = {};
+        for (let i = 0; i < 6; i++) input[`ep_chunk${i}`] = big;
+        const ps: any = Pad.Pad.normalizePadSettings(input);
+        const survivors = Object.keys(ps).filter((k) => k.startsWith('ep_chunk'));
+        assert.ok(survivors.length < 6,
+            `at least one chunk must be dropped to keep total <= 256 KB, but all ${survivors.length}/6 survived`);
+        assert.ok(warnings.some((w) => w.includes('combined ep_* size')),
+            `expected combined-cap warning, got: ${JSON.stringify(warnings)}`);
+      });
     });
 
-    it('drops keys that do not match the ep_<lowercase> pattern', function () {
-      const ps: any = Pad.Pad.normalizePadSettings({
-        EP_SHOUTY: 1,        // uppercase rejected
-        ep_: 1,              // empty suffix rejected
-        'ep-dashy': 1,       // dash rejected
-        somethingElse: 1,    // no prefix rejected
-      });
-      assert.equal(ps.EP_SHOUTY, undefined);
-      assert.equal(ps.ep_, undefined);
-      assert.equal(ps['ep-dashy'], undefined);
-      assert.equal(ps.somethingElse, undefined);
-    });
+    describe('with enablePluginPadOptions = false (default)', function () {
+      before(function () { settings.enablePluginPadOptions = false; });
 
-    it('does not overwrite reserved core keys when an ep_<core> alias is sent', function () {
-      // Core keys (showChat etc.) come first; ep_* loop runs after. A plugin
-      // key like ep_showchat is namespaced separately and cannot collide.
-      const ps: any = Pad.Pad.normalizePadSettings({
-        showChat: false,
-        ep_showchat: 'plugin-value',
+      it('drops every ep_* key — feature flag is opt-in', function () {
+        const ps: any = Pad.Pad.normalizePadSettings({
+          ep_table_of_contents: {enabled: true},
+          ep_font_color: 'red',
+        });
+        assert.equal(ps.ep_table_of_contents, undefined);
+        assert.equal(ps.ep_font_color, undefined);
       });
-      assert.equal(ps.showChat, false);
-      assert.equal(ps.ep_showchat, 'plugin-value');
     });
   });
 });

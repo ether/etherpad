@@ -875,10 +875,14 @@ const pad = {
       }
     }
     // Plugin-namespaced keys (ep_*) are passed through verbatim so plugins
-    // can ride the existing padoptions broadcast/persist rail. Server-side
-    // normalizePadSettings preserves the same keys symmetrically.
-    for (const [k, v] of Object.entries(opts)) {
-      if (/^ep_[a-z0-9_]+$/.test(k)) pad.padOptions[k] = v;
+    // can ride the existing padoptions broadcast/persist rail. Gated on
+    // settings.enablePluginPadOptions (mirrored to clientVars by
+    // getPublicSettings). Server-side normalizePadSettings preserves the
+    // same keys symmetrically.
+    if (clientVars.enablePluginPadOptions) {
+      for (const [k, v] of Object.entries(opts)) {
+        if (/^ep_[a-z0-9_]+$/.test(k)) pad.padOptions[k] = v;
+      }
     }
     normalizeChatOptions(pad.padOptions);
     pad.refreshPadSettingsControls();
