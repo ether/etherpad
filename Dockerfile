@@ -99,12 +99,21 @@ RUN groupadd --system ${EP_GID:+--gid "${EP_GID}" --non-unique} etherpad && \
 ARG EP_DIR=/opt/etherpad-lite
 RUN mkdir -p "${EP_DIR}" && chown etherpad:etherpad "${EP_DIR}"
 
+# Share corepack's cache between root (which activates pnpm here) and
+# the `etherpad` user (which invokes pnpm later via the corepack shim).
+# $COREPACK_HOME defaults to ~/.cache/node/corepack and is per-user;
+# without this pin the etherpad user finds an empty cache, re-resolves
+# pnpm, and corepack can fall back to "latest" from the registry. See
+# https://github.com/ether/etherpad/issues/7687.
+ENV COREPACK_HOME=/opt/corepack
+
 # the mkdir is needed for configuration of openjdk-11-jre-headless, see
 # https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=863199
 RUN  \
-    mkdir -p /usr/share/man/man1 && \
+    mkdir -p /usr/share/man/man1 /opt/corepack && \
     npm install -g corepack@latest && \
     corepack enable && corepack prepare pnpm@${PnpmVersion} --activate && \
+    chown -R etherpad:etherpad /opt/corepack && \
     rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx && \
     apk update && apk upgrade && \
     apk add --no-cache \
