@@ -57,14 +57,23 @@ assert_exit() {
 }
 
 # assert_grep cmd needle name — fail if cmd's combined output doesn't match
+#
+# Uses a here-string instead of `printf | grep -q` because `set -o pipefail`
+# (declared at the top of this file) propagates SIGPIPE failures: when grep
+# -q matches early it closes its stdin, printf gets SIGPIPE on its next
+# write, and pipefail makes the whole pipeline exit non-zero — even though
+# the grep itself succeeded. The failure mode is timing-dependent, only
+# tripping when the captured output is large enough that printf hasn't
+# flushed before grep matches and exits. A here-string feeds grep its input
+# in one shot with no pipe in between.
 assert_grep() {
   local needle="$1" name="$2"; shift 2
   local out
   out=$("$@" 2>&1 || true)
-  if printf '%s' "$out" | grep -q -F -- "$needle"; then
+  if grep -q -F -- "$needle" <<<"$out"; then
     pass "$name"
   else
-    fail "$name" "expected output to contain: $needle; got: $(printf '%s' "$out" | head -3)"
+    fail "$name" "expected output to contain: $needle; got: $(head -3 <<<"$out")"
   fi
 }
 
