@@ -43,7 +43,14 @@ type PadSettings = {
   chatAndUsers: boolean;
   lang: string | null;
   view: PadViewSettings;
+  // Plugin-namespaced pad-wide options ride alongside the core keys.
+  // Anything matching /^ep_[a-z0-9_]+$/ is preserved verbatim by
+  // normalizePadSettings so plugins can use the existing padoptions
+  // broadcast/persist rail without forking their own transport.
+  [pluginKey: string]: any;
 };
+
+const PLUGIN_KEY_RE = /^ep_[a-z0-9_]+$/;
 
 /**
  * Copied from the Etherpad source code. It converts Windows line breaks to Unix
@@ -87,7 +94,7 @@ class Pad {
 
   static normalizePadSettings(rawPadSettings: any = {}): PadSettings {
     const rawView = rawPadSettings.view ?? {};
-    return {
+    const result: PadSettings = {
       enforceSettings: !!rawPadSettings.enforceSettings,
       showChat: rawPadSettings.showChat == null ? settings.padOptions.showChat !== false :
         !!rawPadSettings.showChat,
@@ -109,6 +116,10 @@ class Pad {
           !!rawView.fadeInactiveAuthorColors,
       },
     };
+    for (const [k, v] of Object.entries(rawPadSettings)) {
+      if (PLUGIN_KEY_RE.test(k)) result[k] = v;
+    }
+    return result;
   }
 
   apool() {

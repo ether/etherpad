@@ -178,4 +178,39 @@ describe(__filename, function () {
       }
     });
   });
+
+  describe('normalizePadSettings plugin passthrough (ep_* keys)', function () {
+    it('preserves ep_* keys verbatim so plugins can ride padoptions', function () {
+      const ps: any = Pad.Pad.normalizePadSettings({
+        ep_table_of_contents: {enabled: true, depth: 3},
+        ep_font_color: 'red',
+      });
+      assert.deepEqual(ps.ep_table_of_contents, {enabled: true, depth: 3});
+      assert.equal(ps.ep_font_color, 'red');
+    });
+
+    it('drops keys that do not match the ep_<lowercase> pattern', function () {
+      const ps: any = Pad.Pad.normalizePadSettings({
+        EP_SHOUTY: 1,        // uppercase rejected
+        ep_: 1,              // empty suffix rejected
+        'ep-dashy': 1,       // dash rejected
+        somethingElse: 1,    // no prefix rejected
+      });
+      assert.equal(ps.EP_SHOUTY, undefined);
+      assert.equal(ps.ep_, undefined);
+      assert.equal(ps['ep-dashy'], undefined);
+      assert.equal(ps.somethingElse, undefined);
+    });
+
+    it('does not overwrite reserved core keys when an ep_<core> alias is sent', function () {
+      // Core keys (showChat etc.) come first; ep_* loop runs after. A plugin
+      // key like ep_showchat is namespaced separately and cannot collide.
+      const ps: any = Pad.Pad.normalizePadSettings({
+        showChat: false,
+        ep_showchat: 'plugin-value',
+      });
+      assert.equal(ps.showChat, false);
+      assert.equal(ps.ep_showchat, 'plugin-value');
+    });
+  });
 });
