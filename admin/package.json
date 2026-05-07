@@ -4,13 +4,13 @@
   "version": "2.7.3",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "pnpm gen:api && vite",
     "gen:api": "node scripts/gen-api.mjs",
     "build": "pnpm gen:api && tsc && vite build",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "build-copy": "pnpm gen:api && tsc && vite build --outDir ../src/templates/admin --emptyOutDir",
     "preview": "vite preview",
-    "test": "tsx --test src/api/__tests__/client.test.ts"
+    "test": "pnpm gen:api && tsx --test src/api/__tests__/client.test.ts"
   },
   "dependencies": {
     "@radix-ui/react-switch": "^1.2.6",
