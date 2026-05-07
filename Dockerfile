@@ -110,10 +110,10 @@ ENV COREPACK_HOME=/opt/corepack
 # the mkdir is needed for configuration of openjdk-11-jre-headless, see
 # https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=863199
 RUN  \
-    mkdir -p /usr/share/man/man1 /opt/corepack && \
+    mkdir -p /usr/share/man/man1 "${COREPACK_HOME}" && \
     npm install -g corepack@latest && \
     corepack enable && corepack prepare pnpm@${PnpmVersion} --activate && \
-    chown -R etherpad:etherpad /opt/corepack && \
+    chown -R etherpad:etherpad "${COREPACK_HOME}" && \
     rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx && \
     apk update && apk upgrade && \
     apk add --no-cache \
