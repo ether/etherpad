@@ -1,6 +1,12 @@
 import {expect, test} from '@playwright/test';
 import {goToNewPad} from '../helper/padHelper';
 
+// Pin browser locale so html10n picks the English bundle. Several
+// assertions in this file compare against specific English strings
+// (e.g. "Close chat", "Export as Etherpad"); without this, translatewiki
+// updates would localise those strings and break the suite.
+test.use({locale: 'en-US'});
+
 test.beforeEach(async ({page}) => {
   await goToNewPad(page);
 });
@@ -74,21 +80,20 @@ test('export links have a localized aria-label and matching title', async ({page
   // expands into both `title` and `aria-label` from the same translation
   // (e.g. "Export as Etherpad"). The inner icon span is aria-hidden so a
   // screen reader announces the anchor's label once, not twice.
-  const ids = [
-    '#exportetherpada',
-    '#exporthtmla',
-    '#exportplaina',
-    '#exportworda',
-    '#exportpdfa',
-    '#exportopena',
+  const cases: Array<[string, string]> = [
+    ['#exportetherpada', 'Export as Etherpad'],
+    ['#exporthtmla', 'Export as HTML'],
+    ['#exportplaina', 'Export as plain text'],
+    ['#exportworda', 'Export as Microsoft Word'],
+    ['#exportpdfa', 'Export as PDF'],
+    ['#exportopena', 'Export as ODF (Open Document Format)'],
   ];
-  for (const id of ids) {
+  for (const [id, expected] of cases) {
     const locator = page.locator(id);
     if ((await locator.count()) === 0) continue;
-    const ariaLabel = (await locator.getAttribute('aria-label')) ?? '';
-    expect(ariaLabel.startsWith('Export ')).toBe(true);
-    const title = await locator.getAttribute('title');
-    expect(title).toBe(ariaLabel);
+    await expect(locator).toHaveAttribute('aria-label', expected);
+    await expect(locator).toHaveAttribute('title', expected);
+    await expect(locator).toHaveAttribute('rel', 'noopener');
     const innerSpan = locator.locator('span.exporttype');
     await expect(innerSpan).toHaveAttribute('aria-hidden', 'true');
   }
