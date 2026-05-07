@@ -167,6 +167,29 @@ test.describe('creator-owned pad settings', () => {
     await context2.close();
   });
 
+  // #7696: on a short viewport the settings popup must scroll so items in
+  // Pad-wide Settings (notably "Delete pad") stay reachable instead of being
+  // cropped off-screen with no scrollbar.
+  test('settings popup stays scrollable when the viewport is short', async ({page}) => {
+    await page.setViewportSize({width: 900, height: 500});
+    await goToNewPad(page);
+    await showSettings(page);
+
+    const popupContent = page.locator('#settings > .popup-content');
+    await expect(popupContent).toBeVisible();
+    await expect(page.locator('#pad-settings-section')).toBeVisible();
+
+    const dims = await popupContent.evaluate((el) => ({
+      overflowY: getComputedStyle(el).overflowY,
+      scrolls: el.scrollHeight > el.clientHeight,
+    }));
+    expect(dims.overflowY).toBe('auto');
+    expect(dims.scrolls).toBe(true);
+
+    await page.locator('#delete-pad').scrollIntoViewIfNeeded();
+    await expect(page.locator('#delete-pad')).toBeInViewport();
+  });
+
   // #7592: ticking "Disable chat" must visibly disable the dependent
   // "Chat always on screen" / "Show Chat and Users" toggles, not just
   // make the underlying inputs non-interactive.
