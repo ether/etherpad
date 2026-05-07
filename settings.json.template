@@ -124,6 +124,26 @@
   "publicURL": null,
 
   /*
+   * Open Graph / Twitter Card metadata, served on the homepage, pad pages and
+   * timeslider for nicer previews when a pad URL is shared in chat apps
+   * (WhatsApp, Signal, Slack, ...).
+   *
+   * - description: when set to a non-empty string, this exact text is used as
+   *   og:description / twitter:description regardless of the visitor's
+   *   negotiated language. Most link-preview crawlers don't send an
+   *   Accept-Language header, so without an override they always see the
+   *   English fallback. Set this if your instance serves a non-English
+   *   audience and you want a fixed blurb in shared previews.
+   *
+   * Leave description as null to use Etherpad's i18n catalog (key
+   * `pad.social.description`), which honours Accept-Language and can be
+   * overridden per-language via `customLocaleStrings` further down.
+   */
+  "socialMeta": {
+    "description": null
+  },
+
+  /*
    * Skin name.
    *
    * Its value has to be an existing directory under src/static/skins.
@@ -820,7 +840,19 @@
    */
    "logLayoutType": "colored",
 
-  /* Override any strings found in locale directories */
+  /*
+   * Override any strings found in locale directories.
+   *
+   * Format: { "<lang>": { "<key>": "<text>", ... }, ... }
+   * Example, per-language Open Graph description for link previews:
+   *   "customLocaleStrings": {
+   *     "en": { "pad.social.description": "Our team's collaborative pads." },
+   *     "de": { "pad.social.description": "Kollaborative Notizblöcke." }
+   *   }
+   * For a single description regardless of language, prefer
+   * `socialMeta.description` above — link-preview crawlers usually don't
+   * send Accept-Language and otherwise hit the English fallback.
+   */
   "customLocaleStrings": {},
 
   /* Disable Admin UI tests */

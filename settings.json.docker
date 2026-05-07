@@ -126,6 +126,19 @@
   "publicURL": "${PUBLIC_URL:null}",
 
   /*
+   * Open Graph / Twitter Card metadata for link previews.
+   *
+   * SOCIAL_META_DESCRIPTION: when set, this exact text is used as
+   * og:description regardless of negotiated language. Most preview crawlers
+   * (WhatsApp, Signal, Slack, ...) don't send Accept-Language, so without an
+   * override they always hit the English fallback in the i18n catalog.
+   * Leave unset (null) to use the catalog (key `pad.social.description`).
+   */
+  "socialMeta": {
+    "description": "${SOCIAL_META_DESCRIPTION:null}"
+  },
+
+  /*
    * Skin name.
    *
    * Its value has to be an existing directory under src/static/skins.
