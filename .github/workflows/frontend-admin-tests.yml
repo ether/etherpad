@@ -68,6 +68,16 @@ jobs:
         name: Disable import/export rate limiting
         run: |
           sed -e '/^ *"importExportRateLimiting":/,/^ *\}/ s/"max":.*/"max": 100000000/' -i settings.json
+      - name: Verify admin OpenAPI schema is up to date
+        working-directory: admin
+        run: |
+          pnpm gen:api
+          if ! git diff --exit-code src/api/schema.d.ts src/api/version.ts; then
+            echo ""
+            echo "::error::admin/src/api/schema.d.ts or version.ts is out of date."
+            echo "Run \`pnpm --filter admin gen:api\` and commit the result."
+            exit 1
+          fi
       - name: Build admin frontend
         working-directory: admin
         run: |
