@@ -132,10 +132,22 @@ select, .nice-select {
   bottom: calc(100% + 5px);
   top: auto;
 }
-.toolbar .nice-select .list {
+.toolbar .nice-select .list,
+/* Popups are scroll containers (see popup.css), which would otherwise clip the
+   absolutely-positioned dropdown list. Float it above the popup with fixed
+   positioning, matching how the toolbar dropdowns escape their container. */
+.popup .nice-select .list {
   position: fixed;
   top: auto;
   left: auto;
+}
+/* The default .reverse rule above sets bottom: calc(100% + 5px) so an
+   absolutely-positioned list opens upward inside its parent. Once the list is
+   position:fixed, that percentage resolves against the viewport instead and
+   would push the list off-screen, so we let JS place it via `top` only. */
+.toolbar .nice-select.reverse .list,
+.popup .nice-select.reverse .list {
+  bottom: auto;
 }
 .nice-select .list:hover .option:not(:hover) {
   background-color: transparent !important;
