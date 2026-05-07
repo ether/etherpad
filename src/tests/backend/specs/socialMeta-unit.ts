@@ -253,14 +253,12 @@ describe(__filename, function () {
     it('numeric override is stringified (env-var coercion safety)', function () {
       // Settings.ts coerceValue() turns numeric-looking env vars into numbers,
       // so SOCIAL_META_DESCRIPTION="2026" arrives here as the number 2026.
-      // Without this branch the resolver would silently fall back to i18n.
+      // Without stringification the resolver would silently fall back to i18n.
       const html = renderSocialMeta({
         req: fakeReq(),
-        // Cast through unknown — the public type is string|null, but at
-        // runtime Settings hands us the coerced value.
         settings: {
           title: 'Etherpad', favicon: null,
-          socialMeta: {description: 2026 as unknown as string},
+          socialMeta: {description: 2026},
         },
         availableLangs: {en: {}}, locales: enLocales,
         kind: 'pad', padName: 'P',
@@ -276,7 +274,7 @@ describe(__filename, function () {
         req: fakeReq(),
         settings: {
           title: 'Etherpad', favicon: null,
-          socialMeta: {description: true as unknown as string},
+          socialMeta: {description: true},
         },
         availableLangs: {en: {}}, locales: enLocales,
         kind: 'pad', padName: 'P',

@@ -166,7 +166,13 @@ export type SettingsType = {
   favicon: string | null,
   publicURL: string | null,
   socialMeta: {
-    description: string | null,
+    // Runtime type is wider than what an operator writes by hand: when
+    // `socialMeta.description` is sourced from an env var (e.g.
+    // `"${SOCIAL_META_DESCRIPTION:null}"` in settings.json.docker), the
+    // settings loader's `coerceValue()` turns numeric-looking strings into
+    // numbers and "true"/"false" into booleans. Downstream code stringifies
+    // before use; the wider type stops callers (and tests) needing casts.
+    description: string | number | boolean | null,
   },
   ttl: {
     AccessToken: number,

@@ -102,7 +102,11 @@ type SocialMetaSettings = {
   favicon?: string | null,
   publicURL?: string | null,
   socialMeta?: {
-    description?: string | null,
+    // Wider than the operator-facing type: env-var-driven settings get
+    // pre-coerced by Settings.coerceValue(), so we may receive number/boolean
+    // even though "the value an operator types" is a string. Stringified at
+    // resolve time.
+    description?: string | number | boolean | null,
   },
 };
 
@@ -168,13 +172,11 @@ export type RenderOpts = {
 // as unset — an accidental "" in settings would otherwise silently blank out
 // og:description and break previews entirely.
 const resolveDescriptionWithOverride = (
-  override: unknown,
+  override: string | number | boolean | null | undefined,
   locales: {[lang: string]: {[key: string]: string}} | undefined,
   renderLang: string,
 ): string => {
-  if (override !== null && override !== undefined &&
-      (typeof override === 'string' || typeof override === 'number' ||
-       typeof override === 'boolean')) {
+  if (override !== null && override !== undefined) {
     const s = String(override);
     if (s.trim() !== '') return s;
   }
