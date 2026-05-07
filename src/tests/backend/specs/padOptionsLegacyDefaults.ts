@@ -7,9 +7,11 @@ describe(__filename, function () {
   // assert the mapping without rebooting the whole server in this spec.
   // Keep this in lockstep with the production block — if you change the
   // shim there, change it here too.
-  const applyShim = (padOptions: Record<string, any>) => {
-    for (const key of ['userName', 'userColor']) {
-      if (padOptions[key] === false) padOptions[key] = null;
+  const applyShim = (padOptions: any) => {
+    if (padOptions != null && typeof padOptions === 'object' && !Array.isArray(padOptions)) {
+      for (const key of ['userName', 'userColor']) {
+        if (padOptions[key] === false) padOptions[key] = null;
+      }
     }
     return padOptions;
   };
@@ -71,6 +73,26 @@ describe(__filename, function () {
       const out = applyShim({userName: 'false', userColor: 'false'});
       assert.strictEqual(out.userName, 'false');
       assert.strictEqual(out.userColor, 'false');
+    });
+
+    it('skips the shim if padOptions is null', function () {
+      // storeSettings() overwrites settings.padOptions raw if settings.json
+      // declares it as a non-object — the shim must not throw on that.
+      assert.doesNotThrow(() => applyShim(null));
+      assert.strictEqual(applyShim(null), null);
+    });
+
+    it('skips the shim if padOptions is a primitive', function () {
+      assert.doesNotThrow(() => applyShim(false));
+      assert.doesNotThrow(() => applyShim('not an object'));
+      assert.doesNotThrow(() => applyShim(42));
+    });
+
+    it('skips the shim if padOptions is an array', function () {
+      const arr: any = [false, false];
+      assert.doesNotThrow(() => applyShim(arr));
+      // Arrays pass through untouched — index 0/1 (numeric) are not coerced.
+      assert.deepEqual(applyShim(arr), [false, false]);
     });
   });
 });

@@ -1094,14 +1094,20 @@ export const reloadSettings = () => {
     // applying it, which then propagates as the user's name and color and
     // triggers `malformed color: false` on the server (#7686). Normalize
     // legacy booleans to null at the boundary so downstream code sees the
-    // expected sentinel.
-    for (const key of ['userName', 'userColor'] as const) {
-      if ((settings.padOptions as any)[key] === false) {
-        logger.warn(
-            `padOptions.${key}=false is a legacy default (pre-2021) and is ` +
-            `now treated as null. Update settings.json to use null instead ` +
-            `to silence this warning.`);
-        (settings.padOptions as any)[key] = null;
+    // expected sentinel. Guard against a malformed padOptions (null, array,
+    // primitive) — storeSettings() will overwrite it raw if settings.json
+    // declares it as anything other than a plain object.
+    if (settings.padOptions != null
+        && typeof settings.padOptions === 'object'
+        && !Array.isArray(settings.padOptions)) {
+      for (const key of ['userName', 'userColor'] as const) {
+        if ((settings.padOptions as any)[key] === false) {
+          logger.warn(
+              `padOptions.${key}=false is a legacy default (pre-2021) and is ` +
+              `now treated as null. Update settings.json to use null instead ` +
+              `to silence this warning.`);
+          (settings.padOptions as any)[key] = null;
+        }
       }
     }
 
