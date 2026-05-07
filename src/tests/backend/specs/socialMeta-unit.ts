@@ -249,6 +249,40 @@ describe(__filename, function () {
       });
       assert.equal(ogTag(html, 'og:description'), 'Catalog');
     });
+
+    it('numeric override is stringified (env-var coercion safety)', function () {
+      // Settings.ts coerceValue() turns numeric-looking env vars into numbers,
+      // so SOCIAL_META_DESCRIPTION="2026" arrives here as the number 2026.
+      // Without this branch the resolver would silently fall back to i18n.
+      const html = renderSocialMeta({
+        req: fakeReq(),
+        // Cast through unknown — the public type is string|null, but at
+        // runtime Settings hands us the coerced value.
+        settings: {
+          title: 'Etherpad', favicon: null,
+          socialMeta: {description: 2026 as unknown as string},
+        },
+        availableLangs: {en: {}}, locales: enLocales,
+        kind: 'pad', padName: 'P',
+      });
+      assert.equal(ogTag(html, 'og:description'), '2026');
+    });
+
+    it('boolean override is stringified (covers "true"/"false" env-var coercion)', function () {
+      // Less likely than the numeric case but possible: setting
+      // SOCIAL_META_DESCRIPTION="true" yields a boolean. Treat it like the
+      // operator wrote that literal string rather than silently dropping it.
+      const html = renderSocialMeta({
+        req: fakeReq(),
+        settings: {
+          title: 'Etherpad', favicon: null,
+          socialMeta: {description: true as unknown as string},
+        },
+        availableLangs: {en: {}}, locales: enLocales,
+        kind: 'pad', padName: 'P',
+      });
+      assert.equal(ogTag(html, 'og:description'), 'true');
+    });
   });
 
   describe('renderSocialMeta — image URL', function () {

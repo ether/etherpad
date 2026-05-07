@@ -161,16 +161,23 @@ export type RenderOpts = {
   padName?: string,
 };
 
-// Operator override wins, but only when it's a non-empty string. An empty
-// string from settings would silently blank out og:description / twitter:
-// description and break previews, so we treat empty/whitespace-only as unset
-// and fall back to the i18n catalog.
+// Operator override wins when set. Settings.ts coerces env-var strings to
+// their typed form (e.g. SOCIAL_META_DESCRIPTION="123" arrives as the number
+// 123 and ="true" as the boolean true), so we accept string | number | boolean
+// and stringify before comparing. Empty / whitespace-only values are treated
+// as unset — an accidental "" in settings would otherwise silently blank out
+// og:description and break previews entirely.
 const resolveDescriptionWithOverride = (
-  override: string | null | undefined,
+  override: unknown,
   locales: {[lang: string]: {[key: string]: string}} | undefined,
   renderLang: string,
 ): string => {
-  if (typeof override === 'string' && override.trim() !== '') return override;
+  if (override !== null && override !== undefined &&
+      (typeof override === 'string' || typeof override === 'number' ||
+       typeof override === 'boolean')) {
+    const s = String(override);
+    if (s.trim() !== '') return s;
+  }
   return resolveDescription(locales, renderLang);
 };
 
