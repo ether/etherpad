@@ -1087,6 +1087,24 @@ export const reloadSettings = () => {
       settings.privacyBanner.dismissal = 'dismissible';
     }
 
+    // Settings.json files generated before December 2021 used `false` as the
+    // default for these string options. The client treats the boolean `false`
+    // as a sentinel meaning "no enforced value", but the dispatch in
+    // pad.ts:getParams() coerces the boolean to the string "false" before
+    // applying it, which then propagates as the user's name and color and
+    // triggers `malformed color: false` on the server (#7686). Normalize
+    // legacy booleans to null at the boundary so downstream code sees the
+    // expected sentinel.
+    for (const key of ['userName', 'userColor'] as const) {
+      if ((settings.padOptions as any)[key] === false) {
+        logger.warn(
+            `padOptions.${key}=false is a legacy default (pre-2021) and is ` +
+            `now treated as null. Update settings.json to use null instead ` +
+            `to silence this warning.`);
+        (settings.padOptions as any)[key] = null;
+      }
+    }
+
     // Init logging config
     settings.logconfig = defaultLogConfig(
       settings.loglevel ? settings.loglevel : defaultLogLevel,

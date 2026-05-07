@@ -136,6 +136,14 @@ const getParameters = [
     name: 'userName',
     checkVal: null,
     callback: (val) => {
+      // The default for globalUserName/globalUserColor is the boolean `false`
+      // (sentinel meaning "no enforced value"). Older settings.json files used
+      // boolean `false` for these options too, which getParams() coerces to
+      // the string "false" — that fooled the !== false sentinel checks at
+      // _afterHandshake and shipped the literal string "false" as the user's
+      // name and color (#7686). Reject the sentinel string here so URL
+      // parameters like ?userName=false also no-op.
+      if (!val || val === 'false') return;
       settings.globalUserName = val;
       clientVars.userName = val;
     },
@@ -144,6 +152,7 @@ const getParameters = [
     name: 'userColor',
     checkVal: null,
     callback: (val) => {
+      if (!val || val === 'false') return;
       settings.globalUserColor = val;
       clientVars.userColor = val;
     },
