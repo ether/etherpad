@@ -141,6 +141,12 @@
   "pad.importExport.exportword": "Microsoft Word",
   "pad.importExport.exportpdf": "PDF",
   "pad.importExport.exportopen": "ODF (Open Document Format)",
+  "pad.importExport.exportetherpada.title": "Export as Etherpad",
+  "pad.importExport.exporthtmla.title": "Export as HTML",
+  "pad.importExport.exportplaina.title": "Export as plain text",
+  "pad.importExport.exportworda.title": "Export as Microsoft Word",
+  "pad.importExport.exportpdfa.title": "Export as PDF",
+  "pad.importExport.exportopena.title": "Export as ODF (Open Document Format)",
   "pad.importExport.noConverter.innerHTML": "You can only import from plain text or HTML formats. For more advanced import features, please <a href=\"https://github.com/ether/etherpad-lite/wiki/How-to-enable-importing-and-exporting-different-file-formats-with-AbiWord\">install LibreOffice</a>.",
 
   "pad.modals.connected": "Connected.",

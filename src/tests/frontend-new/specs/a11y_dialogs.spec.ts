@@ -1,6 +1,12 @@
 import {expect, test} from '@playwright/test';
 import {goToNewPad} from '../helper/padHelper';
 
+// Pin browser locale so html10n picks the English bundle. Several
+// assertions in this file compare against specific English strings
+// (e.g. "Close chat", "Export as Etherpad"); without this, translatewiki
+// updates would localise those strings and break the suite.
+test.use({locale: 'en-US'});
+
 test.beforeEach(async ({page}) => {
   await goToNewPad(page);
 });
@@ -65,28 +71,31 @@ test('users popup closes on Escape even when focus is outside the popup', async 
   await expect(dialog).not.toHaveClass(/popup-show/);
 });
 
-test('export links have an accessible name from their localized content', async ({page}) => {
+test('export links have a localized aria-label and matching title', async ({page}) => {
   await page.locator('button[data-l10n-id="pad.toolbar.import_export.title"]').click();
   // The Word/PDF/ODF export links are removed client-side by pad_impexp.ts
   // when soffice is not configured, so only assert on links that the
-  // environment actually renders. For the ones that are present, their
-  // accessible name comes from the localized child span (data-l10n-id
-  // pad.importExport.exportetherpad etc.), not a hard-coded English
-  // aria-label. Assert the visible text is non-empty, which is what a
-  // screen reader will announce.
-  const ids = [
-    '#exportetherpada',
-    '#exporthtmla',
-    '#exportplaina',
-    '#exportworda',
-    '#exportpdfa',
-    '#exportopena',
+  // environment actually renders. Each anchor carries
+  // data-l10n-id="pad.importExport.export<format>a.title", which html10n
+  // expands into both `title` and `aria-label` from the same translation
+  // (e.g. "Export as Etherpad"). The inner icon span is aria-hidden so a
+  // screen reader announces the anchor's label once, not twice.
+  const cases: Array<[string, string]> = [
+    ['#exportetherpada', 'Export as Etherpad'],
+    ['#exporthtmla', 'Export as HTML'],
+    ['#exportplaina', 'Export as plain text'],
+    ['#exportworda', 'Export as Microsoft Word'],
+    ['#exportpdfa', 'Export as PDF'],
+    ['#exportopena', 'Export as ODF (Open Document Format)'],
   ];
-  for (const id of ids) {
+  for (const [id, expected] of cases) {
     const locator = page.locator(id);
     if ((await locator.count()) === 0) continue;
-    const text = (await locator.innerText()).trim();
-    expect(text.length).toBeGreaterThan(0);
+    await expect(locator).toHaveAttribute('aria-label', expected);
+    await expect(locator).toHaveAttribute('title', expected);
+    await expect(locator).toHaveAttribute('rel', 'noopener');
+    const innerSpan = locator.locator('span.exporttype');
+    await expect(innerSpan).toHaveAttribute('aria-hidden', 'true');
   }
 });
 
