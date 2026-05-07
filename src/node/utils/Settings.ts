@@ -369,7 +369,7 @@ const settings: SettingsType = {
   },
   updateServer: "https://static.etherpad.org",
   enableDarkMode: true,
-  enablePadWideSettings: false,
+  enablePadWideSettings: true,
   allowPadDeletionByAllUsers: false,
   privacyBanner: {
     enabled: false,

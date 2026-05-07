@@ -34,7 +34,7 @@ describe(__filename, function () {
       plugins.hooks[hookName] = [];
     }
     backups.settings = {};
-    for (const setting of ['editOnly', 'requireAuthentication', 'requireAuthorization', 'users']) {
+    for (const setting of ['editOnly', 'requireAuthentication', 'requireAuthorization', 'users', 'enablePadWideSettings']) {
       // @ts-ignore
       backups.settings[setting] = settings[setting];
     }
@@ -429,6 +429,66 @@ describe(__filename, function () {
       socketA = null;
       await new Promise((r) => setTimeout(r, 300));
       assert.deepEqual(leaves, [cvA.data.userId]);
+    });
+  });
+
+  describe('Pad-wide settings creator gate', function () {
+    let socketA: any;
+    let socketB: any;
+
+    const removeIfExists = async (padId: string) => {
+      if (await padManager.doesPadExist(padId)) {
+        const p = await padManager.getPad(padId);
+        await p.remove();
+      }
+    };
+
+    beforeEach(async function () {
+      // @ts-ignore - test toggles a public setting
+      settings.enablePadWideSettings = true;
+      await removeIfExists('foo');
+    });
+
+    afterEach(async function () {
+      for (const s of [socketA, socketB]) if (s) s.close();
+      socketA = null;
+      socketB = null;
+      socket = null;
+      await removeIfExists('foo');
+    });
+
+    it('different browsers (separate cookie jars): only the creator gets canEditPadSettings', async function () {
+      const supertest = require('supertest');
+      const browserA = supertest(common.baseUrl);
+      const browserB = supertest(common.baseUrl);
+
+      const resA = await browserA.get('/p/foo').expect(200);
+      socketA = await common.connect(resA);
+      const cvA = await common.handshake(socketA, 'foo');
+      assert.equal(cvA.data.canEditPadSettings, true,
+          'first joiner (creator) should see Pad-wide Settings');
+
+      const resB = await browserB.get('/p/foo').expect(200);
+      socketB = await common.connect(resB);
+      const cvB = await common.handshake(socketB, 'foo');
+      assert.equal(cvB.data.canEditPadSettings, false,
+          'non-creator joiner must NOT see Pad-wide Settings');
+    });
+
+    it('same browser two tabs (shared cookie jar): BOTH get canEditPadSettings=true', async function () {
+      // Reusing the same response (and its set-cookie header) for both
+      // connects is the backend equivalent of two browser tabs sharing the
+      // same HttpOnly token cookie — same authorID, same creator.
+      const res = await agent.get('/p/foo').expect(200);
+
+      socketA = await common.connect(res);
+      const cvA = await common.handshake(socketA, 'foo');
+      assert.equal(cvA.data.canEditPadSettings, true);
+
+      socketB = await common.connect(res);
+      const cvB = await common.handshake(socketB, 'foo');
+      assert.equal(cvB.data.canEditPadSettings, true,
+          'same author across tabs is one identity, both are the creator');
     });
   });
 
