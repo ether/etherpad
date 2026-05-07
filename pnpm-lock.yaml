@@ -326,8 +326,8 @@ importers:
         specifier: 1.13.8
         version: 1.13.8
       undici:
-        specifier: ^7.16.0
-        version: 7.25.0
+        specifier: ^8.2.0
+        version: 8.2.0
       unorm:
         specifier: 1.6.0
         version: 1.6.0
@@ -5446,6 +5446,10 @@ packages:
   undici@7.25.0:
     resolution: {integrity: sha512-xXnp4kTyor2Zq+J1FfPI6Eq3ew5h6Vl0F/8d9XU5zZQf1tX9s2Su1/3PiMmUANFULpmksxkClamIZcaUqryHsQ==}
     engines: {node: '>=20.18.1'}
+
+  undici@8.2.0:
+    resolution: {integrity: sha512-Z+4Hx9GE26Lh9Upwfnc8C7SsrpBPGaM/Gm6kMFtiG7c+5IvQKlXi/t+9x9DrrCh29cww5TSP9YdVaBcnLDs5fQ==}
+    engines: {node: '>=22.19.0'}
 
   unified@11.0.5:
     resolution: {integrity: sha512-xKvGhPWw3k84Qjh8bI3ZeJjqnyadK+GEFtazSfZv/rKeTkTjOJho6mFqh2SM96iIcZokxiOpg78GazTSg8+KHA==}
@@ -11080,6 +11084,8 @@ snapshots:
   undici-types@7.24.5: {}
 
   undici@7.25.0: {}
+
+  undici@8.2.0: {}
 
   unified@11.0.5:
     dependencies:
