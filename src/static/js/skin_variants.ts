@@ -4,6 +4,34 @@
 const containers = ['editor', 'background', 'toolbar'];
 const colors = ['super-light', 'light', 'dark', 'super-dark'];
 
+// Mirrors src/node/utils/SkinColors.ts: toolbar variants in CSS source order
+// from src/static/skins/colibris/src/pad-variants.css. The last matching token
+// wins, so iterate in source order.
+const TOOLBAR_COLORS_IN_CSS_ORDER: Array<[string, string]> = [
+  ['super-light-toolbar', '#ffffff'],
+  ['light-toolbar', '#f2f3f4'],
+  ['super-dark-toolbar', '#485365'],
+  ['dark-toolbar', '#576273'],
+];
+
+// Keep <meta name="theme-color"> in sync with the toolbar the user actually
+// sees. The server emits a baseline derived from settings.skinVariants, but
+// pad.ts may flip the toolbar to super-dark on first paint (enableDarkMode
+// + prefers-color-scheme:dark + no localStorage white-mode override) and
+// the user can toggle via #options-darkmode. Without this, dark-mode users
+// keep the light meta and see a white address bar above a dark toolbar
+// (issue #7606 follow-up).
+const updateThemeColorMeta = (newClasses: string[]) => {
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (!meta) return;
+  const tokens = new Set(newClasses.join(' ').split(/\s+/).filter(Boolean));
+  let color = '#ffffff';
+  for (const [variant, c] of TOOLBAR_COLORS_IN_CSS_ORDER) {
+    if (tokens.has(variant)) color = c;
+  }
+  meta.setAttribute('content', color);
+};
+
 // add corresponding classes when config change
 const updateSkinVariantsClasses = (newClasses) => {
   const domsToUpdate = [
@@ -21,6 +49,8 @@ const updateSkinVariantsClasses = (newClasses) => {
   domsToUpdate.forEach((el) => { el.removeClass('full-width-editor'); });
 
   domsToUpdate.forEach((el) => { el.addClass(newClasses.join(' ')); });
+
+  updateThemeColorMeta(newClasses);
 };
 
 
