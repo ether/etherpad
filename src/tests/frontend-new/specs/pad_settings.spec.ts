@@ -179,15 +179,16 @@ test.describe('creator-owned pad settings', () => {
     await expect(popupContent).toBeVisible();
     await expect(page.locator('#pad-settings-section')).toBeVisible();
 
-    const dims = await popupContent.evaluate((el) => ({
-      overflowY: getComputedStyle(el).overflowY,
-      scrolls: el.scrollHeight > el.clientHeight,
-    }));
-    expect(dims.overflowY).toBe('auto');
-    expect(dims.scrolls).toBe(true);
+    // The popup must declare scrollable overflow (otherwise the previous bug
+    // recurs even if content happens to fit by coincidence).
+    await expect(popupContent).toHaveCSS('overflow-y', 'auto');
 
-    await page.locator('#delete-pad').scrollIntoViewIfNeeded();
-    await expect(page.locator('#delete-pad')).toBeInViewport();
+    // Delete pad sits at the bottom of Pad-wide Settings; on a short viewport
+    // it starts off-screen and must become reachable by scrolling the popup.
+    const deletePad = page.locator('#delete-pad');
+    await expect(deletePad).not.toBeInViewport();
+    await deletePad.scrollIntoViewIfNeeded();
+    await expect(deletePad).toBeInViewport();
   });
 
   // #7592: ticking "Disable chat" must visibly disable the dependent

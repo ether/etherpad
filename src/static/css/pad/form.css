@@ -132,7 +132,11 @@ select, .nice-select {
   bottom: calc(100% + 5px);
   top: auto;
 }
-.toolbar .nice-select .list {
+.toolbar .nice-select .list,
+/* Popups are scroll containers (see popup.css), which would otherwise clip the
+   absolutely-positioned dropdown list. Float it above the popup with fixed
+   positioning, matching how the toolbar dropdowns escape their container. */
+.popup .nice-select .list {
   position: fixed;
   top: auto;
   left: auto;
