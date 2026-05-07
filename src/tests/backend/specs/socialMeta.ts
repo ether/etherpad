@@ -24,11 +24,15 @@ describe(__filename, function () {
   beforeEach(async function () {
     backup.title = settings.title;
     backup.favicon = settings.favicon;
+    backup.socialMeta = settings.socialMeta;
+    // Default shape — every test starts with no override.
+    settings.socialMeta = {description: null};
   });
 
   afterEach(async function () {
     settings.title = backup.title;
     settings.favicon = backup.favicon;
+    settings.socialMeta = backup.socialMeta;
   });
 
   describe('pad page', function () {
@@ -119,6 +123,47 @@ describe(__filename, function () {
     it('og:title equals settings.title', async function () {
       const res = await agent.get('/').expect(200);
       assert.equal(ogTag(res.text, 'og:title'), settings.title);
+    });
+  });
+
+  describe('settings.socialMeta.description override', function () {
+    it('overrides og:description and twitter:description', async function () {
+      settings.socialMeta = {description: 'Custom blurb for issue 7599'};
+      const res = await agent.get('/p/TestPad7599').expect(200);
+      assert.equal(ogTag(res.text, 'og:description'), 'Custom blurb for issue 7599');
+      assert.equal(ogTag(res.text, 'twitter:description'), 'Custom blurb for issue 7599');
+    });
+
+    it('override beats Accept-Language negotiation', async function () {
+      // Crawlers (WhatsApp/Signal/etc.) typically send no Accept-Language and
+      // would otherwise always hit the English fallback. Operator override
+      // wins regardless of the negotiated locale.
+      settings.socialMeta = {description: 'Operator wins'};
+      const res = await agent.get('/p/TestPad7599')
+          .set('Accept-Language', 'de').expect(200);
+      assert.equal(ogTag(res.text, 'og:description'), 'Operator wins');
+    });
+
+    it('blank override falls back to i18n catalog (does not silence preview)', async function () {
+      settings.socialMeta = {description: '   '};
+      const res = await agent.get('/p/TestPad7599')
+          .set('Accept-Language', 'en').expect(200);
+      const desc = ogTag(res.text, 'og:description');
+      assert.ok(desc && desc.length > 0,
+          'blank override should not blank out og:description');
+      assert.match(desc!, /collaborative/i);
+    });
+
+    it('HTML-escapes the override', async function () {
+      settings.socialMeta = {description: 'A & B <c> "d"'};
+      const res = await agent.get('/p/TestPad7599').expect(200);
+      // The HTML body contains the *escaped* form; the parsed attribute value
+      // (what ogTag returns) is the unescaped logical string the meta tag
+      // exposes — assert both: no raw <c> in the served HTML, and the logical
+      // value round-trips correctly.
+      assert.ok(!/content="[^"]*<c>/.test(res.text),
+          'raw "<c>" must not appear inside content="..."');
+      assert.equal(ogTag(res.text, 'og:description'), 'A &amp; B &lt;c&gt; &quot;d&quot;');
     });
   });
 });

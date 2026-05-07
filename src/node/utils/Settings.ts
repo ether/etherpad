@@ -165,6 +165,9 @@ export type SettingsType = {
   showRecentPads: boolean,
   favicon: string | null,
   publicURL: string | null,
+  socialMeta: {
+    description: string | null,
+  },
   ttl: {
     AccessToken: number,
     AuthorizationCode: number,
@@ -360,6 +363,24 @@ const settings: SettingsType = {
    * No trailing slash. Must include scheme.
    */
   publicURL: null,
+
+  /**
+   * Open Graph / Twitter Card metadata, served on the homepage, pad pages and
+   * timeslider for nicer previews when a pad URL is shared in chat apps.
+   *
+   * description: when non-null, this exact string is used as og:description /
+   *   twitter:description regardless of the visitor's negotiated language. Most
+   *   crawlers (WhatsApp, Signal, Telegram, Slack, Facebook) don't send an
+   *   Accept-Language header, so without an override they always see the
+   *   English fallback — set this if your instance serves a non-English
+   *   audience and you want a fixed blurb. Leave null to use Etherpad's
+   *   built-in i18n catalog (key `pad.social.description`), which honours the
+   *   visitor's Accept-Language and can be overridden per-language via the
+   *   standard `customLocaleStrings` mechanism below.
+   */
+  socialMeta: {
+    description: null,
+  },
   ttl: {
     AccessToken: 1 * 60 * 60, // 1 hour in seconds
     AuthorizationCode: 10 * 60, // 10 minutes in seconds
