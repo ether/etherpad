@@ -1,8 +1,8 @@
-import {expect, test} from '@playwright/test';
+import {expect, test, Page} from '@playwright/test';
 import {goToNewPad} from '../helper/padHelper';
 
-const themeColor = (page: import('@playwright/test').Page) =>
-    page.locator('meta[name="theme-color"]').getAttribute('content');
+const themeColor = (page: Page) =>
+  page.locator('meta[name="theme-color"]').getAttribute('content');
 
 test.describe('light color scheme', () => {
   test.use({colorScheme: 'light'});
@@ -31,12 +31,12 @@ test.describe('dark color scheme', () => {
   test.use({colorScheme: 'dark'});
 
   test('theme-color meta follows the auto dark-mode switch on dark-OS clients',
-      async ({page}) => {
-    await goToNewPad(page);
-    // pad.ts auto-switches to super-dark-toolbar when enableDarkMode is on,
-    // matchMedia(prefers-color-scheme:dark) matches, and no localStorage
-    // white-mode override is set. The meta must follow the applied class —
-    // this is the case stffen reported on issue #7606.
-    await expect.poll(() => themeColor(page)).toBe('#485365');
-  });
+    async ({page}) => {
+      await goToNewPad(page);
+      // pad.ts auto-switches to super-dark-toolbar when enableDarkMode is on,
+      // matchMedia(prefers-color-scheme:dark) matches, and no localStorage
+      // white-mode override is set. The meta must follow the applied class —
+      // this is the case stffen reported on issue #7606.
+      await expect.poll(() => themeColor(page)).toBe('#485365');
+    });
 });
