@@ -231,6 +231,19 @@
   },
 
   /*
+   * Admin OpenAPI document at /admin/openapi.json.
+   *
+   * Disabled by default per Etherpad's "new features behind a flag, off by
+   * default" policy. The admin UI's typed client embeds the spec at build
+   * time, so the runtime route is only useful for third-party tooling
+   * (Postman, swagger-ui, downstream clients). Set `enabled: true` to mount
+   * the route; the SPA at /admin/ continues to serve normally either way.
+   */
+  "adminOpenAPI": {
+    "enabled": false
+  },
+
+  /*
    * Contact address for admin notifications (updates, security advisories, future features).
    * Set to null to disable outbound mail from the updater.
    */

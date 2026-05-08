@@ -1,7 +1,7 @@
 'use strict';
 
 import {ArgsExpressType} from '../../types/ArgsExpressType';
-import {getEpVersion} from '../../utils/Settings';
+import settings, {getEpVersion} from '../../utils/Settings';
 
 const OPENAPI_VERSION = '3.0.2';
 
@@ -11,8 +11,8 @@ const OPENAPI_VERSION = '3.0.2';
  * Distinct from the public versioned API document built by openapi.ts —
  * admin routes are plain Express handlers (not APIHandler-driven), so this
  * spec is hand-authored. The shape is consumed by admin/scripts/dump-spec.ts
- * for client-side codegen and exposed at GET /admin/openapi.json for
- * downstream tooling.
+ * for client-side codegen, and (when settings.adminOpenAPI.enabled) exposed
+ * at GET /admin/openapi.json for downstream tooling.
  */
 export const generateAdminDefinition = (): any => ({
   openapi: OPENAPI_VERSION,
@@ -159,6 +159,11 @@ export const expressPreSession = async (
   _hookName: string,
   {app}: ArgsExpressType,
 ): Promise<void> => {
+  // Behind a feature flag, default off. Etherpad policy
+  // (CONTRIBUTING.md, AGENTS.MD) requires new features to ship disabled by
+  // default. The route is only useful for third-party tooling — codegen
+  // imports generateAdminDefinition() in-process and does not depend on it.
+  if (!settings.adminOpenAPI?.enabled) return;
   app.get('/admin/openapi.json', (_req: any, res: any) => {
     res.header('Access-Control-Allow-Origin', '*');
     res.json(generateAdminDefinition());

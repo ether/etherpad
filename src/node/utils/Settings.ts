@@ -331,6 +331,9 @@ export type SettingsType = {
     githubRepo: string,
     requireAdminForStatus: boolean,
   },
+  adminOpenAPI: {
+    enabled: boolean,
+  },
   adminEmail: string | null,
   getPublicSettings: () => Pick<SettingsType, "title" | "skinVariants"|"randomVersionString"|"skinName"|"toolbar"| "exposeVersion"| "gitVersion" | "enablePadWideSettings" | "privacyBanner">,
 }
@@ -509,6 +512,18 @@ const settings: SettingsType = {
     // Set true to require an authenticated admin session for the endpoint without
     // disabling the updater itself.
     requireAdminForStatus: false,
+  },
+  /**
+   * Admin OpenAPI document endpoint at /admin/openapi.json.
+   *
+   * Disabled by default per Etherpad's "new features behind a flag, off by
+   * default" policy (see CONTRIBUTING.md). The codegen pipeline imports
+   * generateAdminDefinition() in-process and does not depend on the route;
+   * enable this only if you want third-party tooling (Postman, swagger-ui,
+   * downstream clients) to consume the spec at runtime.
+   */
+  adminOpenAPI: {
+    enabled: false,
   },
   /**
    * Contact address for admin notifications (updates, future security advisories).

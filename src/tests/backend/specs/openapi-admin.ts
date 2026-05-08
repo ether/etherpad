@@ -171,8 +171,16 @@ describe('admin OpenAPI document', function () {
   });
 
   describe('GET /admin/openapi.json', function () {
+    // The route is feature-flagged (settings.adminOpenAPI.enabled, default
+    // false). expressPreSession reads the flag once at registration time, so
+    // we set it before common.init() boots Express. Mocha runs this `before`
+    // hook prior to any inner `it`, and it runs before the default-off
+    // describe below sees common.init().
     let agent: any;
     before(async function () {
+      const settings = require('../../../node/utils/Settings').default;
+      settings.adminOpenAPI = settings.adminOpenAPI || {enabled: true};
+      settings.adminOpenAPI.enabled = true;
       const common = require('../common');
       agent = await common.init();
     });
@@ -189,6 +197,34 @@ describe('admin OpenAPI document', function () {
     it('sets a permissive CORS header (matches /api/openapi.json)', async function () {
       const res = await agent.get('/admin/openapi.json').expect(200);
       assert.equal(res.headers['access-control-allow-origin'], '*');
+    });
+  });
+
+  describe('feature-flag default-off behavior', function () {
+    it('expressPreSession is a no-op when settings.adminOpenAPI.enabled is false', async function () {
+      // Boot a stub express app, run expressPreSession with the flag off,
+      // and assert no GET /admin/openapi.json route was registered. We
+      // assert on the spy directly because the live server in the previous
+      // describe has the flag forced on.
+      const registered: string[] = [];
+      const stubApp: any = {
+        get: (path: string, _h: any) => {
+          registered.push(path);
+        },
+      };
+      const settingsModule = require('../../../node/utils/Settings').default;
+      const prev = settingsModule.adminOpenAPI?.enabled;
+      try {
+        settingsModule.adminOpenAPI = {enabled: false};
+        await openapiAdmin.expressPreSession('expressPreSession', {app: stubApp});
+        assert.equal(
+          registered.includes('/admin/openapi.json'),
+          false,
+          'route should not be registered when flag is off',
+        );
+      } finally {
+        if (settingsModule.adminOpenAPI) settingsModule.adminOpenAPI.enabled = !!prev;
+      }
     });
   });
 });
