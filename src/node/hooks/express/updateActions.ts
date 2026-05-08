@@ -42,13 +42,15 @@ const broadcastShout = (key: DrainBroadcastKey, values: Record<string, unknown>)
   try {
     const io = getIo();
     if (!io) return;
+    // The pad-side renderer (src/static/js/pad.ts) already handles `messageKey`
+    // by routing through html10n.get(); we add a `values` field that the
+    // renderer interpolates into the localised string.
     const message = {
       type: 'COLLABROOM',
       data: {
         type: 'shoutMessage',
         payload: {
-          // i18n key + values are picked up by the pad-side renderer (Task 14).
-          message: {message: key, values, sticky: false},
+          message: {messageKey: key, values, sticky: false},
           timestamp: Date.now(),
         },
       },

@@ -401,13 +401,19 @@ const handshake = async () => {
       // gritter so the user doesn't see a confusing duplicate.
       if (typeof msgObj.messageKey === 'string'
           && msgObj.messageKey.startsWith('pad.deletionToken.')) return;
-      const text = msgObj.messageKey ? html10n.get(msgObj.messageKey) : msgObj.message;
+      // Updater drain announcements get their own title and dodge the generic
+      // "Admin message" framing so the user knows it's a system event.
+      const isUpdate = typeof msgObj.messageKey === 'string'
+          && msgObj.messageKey.startsWith('update.drain.');
+      const text = msgObj.messageKey
+          ? html10n.get(msgObj.messageKey, msgObj.values || {})
+          : msgObj.message;
       if (!text) return;
       const date = new Date(payload.timestamp);
       $.gritter.add({
-        title: 'Admin message',
+        title: isUpdate ? html10n.get('update.banner.title') : 'Admin message',
         text: '[' + date.toLocaleTimeString() + ']: ' + text,
-        sticky: msgObj.sticky
+        sticky: !!msgObj.sticky
       });
     }
   })
