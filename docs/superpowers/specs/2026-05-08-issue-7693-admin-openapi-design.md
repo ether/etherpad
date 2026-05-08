@@ -135,32 +135,36 @@ admin UI does not actually depend on.
   - `401` / `403` — only emitted when `updates.requireAdminForStatus=true`.
 
 Response schema `UpdateStatus` mirrors the runtime shape returned by
-`src/node/hooks/express/updateStatus.ts`:
+`src/node/hooks/express/updateStatus.ts:res.json({...})` on the base branch
+(`chore/admin-typesafe-api-7638-upstream`, which mirrors develop's Tier 1):
 
 ```yaml
 UpdateStatus:
   type: object
-  required: [currentVersion, installMethod, tier, vulnerableBelow, execution, lockHeld]
+  required: [currentVersion, installMethod, tier, vulnerableBelow]
   properties:
     currentVersion:   { type: string }
-    latest:           { $ref: '#/components/schemas/UpdateLatest', nullable: true }
+    latest:           { $ref: '#/components/schemas/ReleaseInfo', nullable: true }
     lastCheckAt:      { type: string, format: date-time, nullable: true }
-    installMethod:    { type: string, enum: [git, pnpm, docker, snap, unknown] }
-    tier:             { type: string, enum: [off, '1', '2'] }
-    policy:           { $ref: '#/components/schemas/UpdatePolicy', nullable: true }
-    vulnerableBelow:  { type: string, nullable: true }
-    execution:        { $ref: '#/components/schemas/UpdateExecution' }
-    lastResult:       { $ref: '#/components/schemas/UpdateResult', nullable: true }
-    lockHeld:         { type: boolean }
+    installMethod:    { type: string, enum: [auto, git, docker, npm, managed] }
+    tier:             { type: string, enum: [off, notify, manual, auto, autonomous] }
+    policy:           { $ref: '#/components/schemas/PolicyResult', nullable: true }
+    vulnerableBelow:
+      type: array
+      items: { $ref: '#/components/schemas/VulnerableBelowDirective' }
 ```
 
-Sub-schemas (`UpdateLatest`, `UpdatePolicy`, `UpdateExecution`,
-`UpdateResult`) are declared in `components.schemas` so the generated client
-gets full nesting. Their fields mirror the source types in
-`src/node/updater/state.ts` and `src/node/updater/UpdatePolicy.ts`. Where the
-handler sanitizes the payload for non-admins (`sanitizeExecution`,
-`sanitizeLastResult`), the schemas mark the redacted fields as optional so
-both shapes validate.
+Sub-schemas (`ReleaseInfo`, `PolicyResult`, `VulnerableBelowDirective`)
+mirror the exported interfaces in `src/node/updater/types.ts` exactly:
+
+- `ReleaseInfo`: `version`, `tag`, `body`, `publishedAt`, `prerelease`, `htmlUrl`.
+- `PolicyResult`: `canNotify`, `canManual`, `canAuto`, `canAutonomous`, `reason`.
+- `VulnerableBelowDirective`: `announcedBy`, `threshold`.
+
+The Tier 2 PR (#7607) will amend `UpdateStatus` to add `execution`,
+`lastResult`, and `lockHeld` (with their corresponding sub-schemas) when it
+ships its own changes to `updateStatus.ts`. Those fields are out of scope
+here.
 
 ### Public exposure (runtime)
 
