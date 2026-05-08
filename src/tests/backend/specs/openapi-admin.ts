@@ -55,4 +55,78 @@ describe('admin OpenAPI document', function () {
       assert.deepEqual(keys.sort(), ['__anon__', 'basicAuth', 'sessionCookie'].sort());
     });
   });
+
+  describe('/admin/update/status', function () {
+    it('declares GET with operationId getUpdateStatus', function () {
+      const op = doc.paths['/admin/update/status']?.get;
+      assert.ok(op, 'GET /admin/update/status is missing');
+      assert.equal(op.operationId, 'getUpdateStatus');
+    });
+
+    it('200 response references components.schemas.UpdateStatus', function () {
+      const ok = doc.paths['/admin/update/status'].get.responses['200'];
+      assert.equal(
+        ok.content['application/json'].schema.$ref,
+        '#/components/schemas/UpdateStatus',
+      );
+    });
+
+    it('declares security: sessionCookie OR anonymous', function () {
+      const security = doc.paths['/admin/update/status'].get.security;
+      const keys = security.map((s: any) => Object.keys(s)[0] ?? '__anon__');
+      assert.deepEqual(keys.sort(), ['__anon__', 'sessionCookie'].sort());
+    });
+  });
+
+  describe('UpdateStatus schema', function () {
+    it('declares all properties emitted by the handler', function () {
+      const schema = doc.components.schemas.UpdateStatus;
+      assert.equal(schema.type, 'object');
+      const props = Object.keys(schema.properties).sort();
+      assert.deepEqual(props, [
+        'currentVersion',
+        'installMethod',
+        'lastCheckAt',
+        'latest',
+        'policy',
+        'tier',
+        'vulnerableBelow',
+      ]);
+    });
+
+    it('installMethod enum matches updater/types.ts InstallMethod', function () {
+      const enums = doc.components.schemas.UpdateStatus.properties.installMethod.enum;
+      assert.deepEqual(enums.slice().sort(), ['auto', 'docker', 'git', 'managed', 'npm']);
+    });
+
+    it('tier enum matches updater/types.ts Tier', function () {
+      const enums = doc.components.schemas.UpdateStatus.properties.tier.enum;
+      assert.deepEqual(enums.slice().sort(), ['auto', 'autonomous', 'manual', 'notify', 'off']);
+    });
+
+    it('declares ReleaseInfo, PolicyResult, VulnerableBelowDirective sub-schemas', function () {
+      assert.ok(doc.components.schemas.ReleaseInfo);
+      assert.ok(doc.components.schemas.PolicyResult);
+      assert.ok(doc.components.schemas.VulnerableBelowDirective);
+    });
+
+    it('ReleaseInfo properties mirror updater/types.ts', function () {
+      const props = Object.keys(doc.components.schemas.ReleaseInfo.properties).sort();
+      assert.deepEqual(props, [
+        'body', 'htmlUrl', 'prerelease', 'publishedAt', 'tag', 'version',
+      ]);
+    });
+
+    it('PolicyResult properties mirror updater/types.ts', function () {
+      const props = Object.keys(doc.components.schemas.PolicyResult.properties).sort();
+      assert.deepEqual(props, [
+        'canAuto', 'canAutonomous', 'canManual', 'canNotify', 'reason',
+      ]);
+    });
+
+    it('VulnerableBelowDirective properties mirror updater/types.ts', function () {
+      const props = Object.keys(doc.components.schemas.VulnerableBelowDirective.properties).sort();
+      assert.deepEqual(props, ['announcedBy', 'threshold']);
+    });
+  });
 });

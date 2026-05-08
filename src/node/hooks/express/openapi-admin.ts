@@ -44,9 +44,100 @@ export const generateAdminDefinition = (): any => ({
         },
       },
     },
+    '/admin/update/status': {
+      get: {
+        operationId: 'getUpdateStatus',
+        summary: 'Fetch updater status for the admin UI banner and update page',
+        description:
+          'Returns the cached update state (current version, latest known release, ' +
+          'install method, tier, policy verdict, and vulnerability directives). ' +
+          'Open by default; gated to authenticated admin sessions when ' +
+          'updates.requireAdminForStatus=true in settings.',
+        security: [
+          {sessionCookie: []},
+          {},
+        ],
+        responses: {
+          '200': {
+            description: 'Update status payload.',
+            content: {
+              'application/json': {
+                schema: {$ref: '#/components/schemas/UpdateStatus'},
+              },
+            },
+          },
+          '401': {
+            description: 'requireAdminForStatus is set and no admin session exists.',
+          },
+          '403': {
+            description: 'requireAdminForStatus is set and the session user is not an admin.',
+          },
+        },
+      },
+    },
   },
   components: {
-    schemas: {},
+    schemas: {
+      ReleaseInfo: {
+        type: 'object',
+        required: ['version', 'tag', 'body', 'publishedAt', 'prerelease', 'htmlUrl'],
+        properties: {
+          version:     {type: 'string', description: 'Semver string without leading "v".'},
+          tag:         {type: 'string', description: 'Original GitHub tag_name (e.g. "v2.7.2").'},
+          body:        {type: 'string', description: 'Markdown body of the release.'},
+          publishedAt: {type: 'string', format: 'date-time'},
+          prerelease:  {type: 'boolean'},
+          htmlUrl:     {type: 'string', format: 'uri'},
+        },
+      },
+      PolicyResult: {
+        type: 'object',
+        required: ['canNotify', 'canManual', 'canAuto', 'canAutonomous', 'reason'],
+        properties: {
+          canNotify:     {type: 'boolean'},
+          canManual:     {type: 'boolean'},
+          canAuto:       {type: 'boolean'},
+          canAutonomous: {type: 'boolean'},
+          reason:        {type: 'string'},
+        },
+      },
+      VulnerableBelowDirective: {
+        type: 'object',
+        required: ['announcedBy', 'threshold'],
+        properties: {
+          announcedBy: {type: 'string'},
+          threshold:   {type: 'string'},
+        },
+      },
+      UpdateStatus: {
+        type: 'object',
+        required: ['currentVersion', 'installMethod', 'tier', 'vulnerableBelow'],
+        properties: {
+          currentVersion: {type: 'string'},
+          latest: {
+            allOf: [{$ref: '#/components/schemas/ReleaseInfo'}],
+            nullable: true,
+          },
+          lastCheckAt: {type: 'string', format: 'date-time', nullable: true},
+          installMethod: {
+            type: 'string',
+            enum: ['auto', 'git', 'docker', 'npm', 'managed'],
+          },
+          tier: {
+            type: 'string',
+            enum: ['off', 'notify', 'manual', 'auto', 'autonomous'],
+          },
+          policy: {
+            allOf: [{$ref: '#/components/schemas/PolicyResult'}],
+            nullable: true,
+          },
+          vulnerableBelow: {
+            type: 'array',
+            items: {$ref: '#/components/schemas/VulnerableBelowDirective'},
+          },
+        },
+      },
+    },
     securitySchemes: {
       basicAuth: {
         type: 'http',
