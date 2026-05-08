@@ -31,7 +31,9 @@ describe('verifyReleaseTag', () => {
     expect(r).toEqual({ok: true, reason: 'signature-verified'});
     expect(spawnFn).toHaveBeenCalledWith(
       'git',
-      ['verify-tag', 'v2.7.3'],
+      // -- terminates options so a future tag-validation regression can't
+      // smuggle a flag past git verify-tag.
+      ['verify-tag', '--', 'v2.7.3'],
       expect.objectContaining({cwd: '/tmp/x'}),
     );
   });
@@ -62,6 +64,19 @@ describe('verifyReleaseTag', () => {
       spawnFn: spawnFn as any,
     });
     expect(calls[0].env.GNUPGHOME).toBe('/srv/etherpad/keys');
+  });
+
+  it('refuses unsafe tags (option-injection guard) before spawning git', async () => {
+    const spawnFn = vi.fn();
+    const r = await verifyReleaseTag({
+      tag: '-no-verify',
+      repoDir: '/tmp/x',
+      requireSignature: true,
+      trustedKeysPath: null,
+      spawnFn: spawnFn as any,
+    });
+    expect(r).toEqual({ok: false, reason: 'signature-verification-failed'});
+    expect(spawnFn).not.toHaveBeenCalled();
   });
 
   it('does not set GNUPGHOME when trustedKeysPath is null', async () => {

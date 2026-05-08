@@ -166,6 +166,79 @@ describe('Tier 2 state extensions', () => {
     expect(state).toEqual(EMPTY_STATE);
   });
 
+  it('rejects pending-verification missing fromSha (could break rollback)', async () => {
+    // Regression for Qodo: hand-edited state with a recognised status but
+    // missing required fields would reach RollbackHandler with undefined refs.
+    // Validator must require per-status fields, not just status enum membership.
+    await fs.writeFile(statePath(), JSON.stringify({
+      schemaVersion: 1, lastCheckAt: null, lastEtag: null, latest: null,
+      vulnerableBelow: [],
+      email: {severeAt: null, vulnerableAt: null, vulnerableNewReleaseTag: null},
+      execution: {status: 'pending-verification', targetTag: 'v2.7.3', deadlineAt: '2026-05-08T00:00:00Z'},
+      // fromSha intentionally missing
+    }));
+    const state = await loadState(statePath());
+    expect(state).toEqual(EMPTY_STATE);
+  });
+
+  it('rejects rolling-back missing reason / targetTag', async () => {
+    await fs.writeFile(statePath(), JSON.stringify({
+      schemaVersion: 1, lastCheckAt: null, lastEtag: null, latest: null,
+      vulnerableBelow: [],
+      email: {severeAt: null, vulnerableAt: null, vulnerableNewReleaseTag: null},
+      execution: {status: 'rolling-back', fromSha: 'abc', at: '2026-05-08T00:00:00Z'},
+      // reason and targetTag missing
+    }));
+    const state = await loadState(statePath());
+    expect(state).toEqual(EMPTY_STATE);
+  });
+
+  it('rejects empty-string fields for required keys', async () => {
+    await fs.writeFile(statePath(), JSON.stringify({
+      schemaVersion: 1, lastCheckAt: null, lastEtag: null, latest: null,
+      vulnerableBelow: [],
+      email: {severeAt: null, vulnerableAt: null, vulnerableNewReleaseTag: null},
+      execution: {status: 'executing', targetTag: '', fromSha: 'abc', startedAt: '2026-05-08T00:00:00Z'},
+    }));
+    const state = await loadState(statePath());
+    expect(state).toEqual(EMPTY_STATE);
+  });
+
+  it('accepts a fully-formed pending-verification', async () => {
+    const valid = {
+      schemaVersion: 1, lastCheckAt: null, lastEtag: null, latest: null,
+      vulnerableBelow: [],
+      email: {severeAt: null, vulnerableAt: null, vulnerableNewReleaseTag: null},
+      execution: {
+        status: 'pending-verification',
+        targetTag: 'v2.7.3',
+        fromSha: 'abc123',
+        deadlineAt: '2026-05-08T00:00:00Z',
+      },
+      bootCount: 1,
+      lastResult: null,
+    };
+    await fs.writeFile(statePath(), JSON.stringify(valid));
+    const state = await loadState(statePath());
+    expect(state.execution.status).toBe('pending-verification');
+  });
+
+  it('rejects lastResult with an unrecognised outcome', async () => {
+    await fs.writeFile(statePath(), JSON.stringify({
+      schemaVersion: 1, lastCheckAt: null, lastEtag: null, latest: null,
+      vulnerableBelow: [],
+      email: {severeAt: null, vulnerableAt: null, vulnerableNewReleaseTag: null},
+      execution: {status: 'idle'},
+      lastResult: {
+        targetTag: 'v2.7.3', fromSha: 'abc',
+        outcome: 'totally-made-up',
+        reason: null, at: '2026-05-08T00:00:00Z',
+      },
+    }));
+    const state = await loadState(statePath());
+    expect(state).toEqual(EMPTY_STATE);
+  });
+
   it('rejects a non-numeric bootCount by resetting to EMPTY_STATE', async () => {
     await fs.writeFile(statePath(), JSON.stringify({
       schemaVersion: 1, lastCheckAt: null, lastEtag: null, latest: null,

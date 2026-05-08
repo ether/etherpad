@@ -3,6 +3,7 @@ import log4js from 'log4js';
 import {SpawnOptions} from 'node:child_process';
 import {UpdateState} from './types';
 import {appendLine} from './updateLog';
+import {assertValidTag, refsTagsForm} from './refSafety';
 
 const logger = log4js.getLogger('updater');
 
@@ -109,6 +110,10 @@ export const executeUpdate = async (deps: ExecutorDeps): Promise<ExecutorResult>
   // unexpected synchronous error in a step — lands us at rolling-back rather
   // than leaving execution stuck at 'executing' forever.
   try {
+    // Reject unsafe release-tag strings (option injection guard).
+    // Tag is sourced from GitHub's tag_name and persisted into update-state.json;
+    // a tag starting with '-' would otherwise be parsed by git as an option flag.
+    const safeTag = assertValidTag(deps.targetTag);
     fromSha = await deps.readSha();
 
     let s: UpdateState = {
@@ -154,7 +159,11 @@ export const executeUpdate = async (deps: ExecutorDeps): Promise<ExecutorResult>
     let r = await runStep(deps.spawnFn, deps.repoDir, logPath, 'git', ['fetch', '--tags', 'origin']);
     if (r.code !== 0) return fail('failed-checkout', `git fetch exit ${r.code}: ${r.stderr.trim()}`);
 
-    r = await runStep(deps.spawnFn, deps.repoDir, logPath, 'git', ['checkout', deps.targetTag]);
+    // Use the refs/tags/<tag> form so even an unforeseen edge-case in the tag
+    // string can't be parsed as a git option. assertValidTag above already
+    // rules out leading '-' / whitespace / shell metacharacters.
+    r = await runStep(
+      deps.spawnFn, deps.repoDir, logPath, 'git', ['checkout', refsTagsForm(safeTag)]);
     if (r.code !== 0) return fail('failed-checkout', `git checkout exit ${r.code}: ${r.stderr.trim()}`);
 
     r = await runStep(deps.spawnFn, deps.repoDir, logPath, 'pnpm', ['install', '--frozen-lockfile']);

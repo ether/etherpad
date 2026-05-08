@@ -17,6 +17,7 @@ import {verifyReleaseTag} from '../../updater/trustedKeys';
 import {tailLines, appendLine} from '../../updater/updateLog';
 import {performRollback} from '../../updater/RollbackHandler';
 import {UpdateState} from '../../updater/types';
+import {isValidTag} from '../../updater/refSafety';
 import {getIo} from './socketio';
 
 const logger = log4js.getLogger('updater');
@@ -137,6 +138,14 @@ export const expressCreateServer = (
 
     const state = await loadState(stateFilePath());
     if (!state.latest) return res.status(409).json({error: 'no-known-latest'});
+
+    // Defence in depth: VersionChecker validates tag_name before persisting,
+    // but a hand-edited update-state.json could still surface an unsafe tag
+    // here. Reject up-front rather than throw later when the executor calls
+    // assertValidTag, so the admin sees a clear 409 instead of a 500.
+    if (!isValidTag(state.latest.tag)) {
+      return res.status(409).json({error: 'invalid-tag-in-state'});
+    }
 
     // Allowed entry statuses: idle / verified / preflight-failed / rolled-back.
     // Anything else means an in-flight or terminal-needs-acknowledge state.

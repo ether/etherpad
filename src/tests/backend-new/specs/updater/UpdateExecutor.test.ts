@@ -39,7 +39,7 @@ const baseDeps = (): {
       backupDir: '/srv/etherpad/var/update-backup',
       spawnFn: okSpawn([
         {cmd: 'git fetch --tags origin', exit: 0},
-        {cmd: 'git checkout v2.7.3', exit: 0},
+        {cmd: 'git checkout refs/tags/v2.7.3', exit: 0},
         {cmd: 'pnpm install --frozen-lockfile', exit: 0},
         {cmd: 'pnpm run build:ui', exit: 0},
       ]) as any,
@@ -84,7 +84,7 @@ describe('executeUpdate', () => {
     const {deps, states, exitedWith} = baseDeps();
     deps.spawnFn = okSpawn([
       {cmd: 'git fetch --tags origin', exit: 0},
-      {cmd: 'git checkout v2.7.3', exit: 0},
+      {cmd: 'git checkout refs/tags/v2.7.3', exit: 0},
       {cmd: 'pnpm install --frozen-lockfile', exit: 1, stderr: 'resolver bork'},
     ]) as any;
     const r = await executeUpdate(deps);
@@ -98,7 +98,7 @@ describe('executeUpdate', () => {
     const {deps, states, exitedWith} = baseDeps();
     deps.spawnFn = okSpawn([
       {cmd: 'git fetch --tags origin', exit: 0},
-      {cmd: 'git checkout v2.7.3', exit: 0},
+      {cmd: 'git checkout refs/tags/v2.7.3', exit: 0},
       {cmd: 'pnpm install --frozen-lockfile', exit: 0},
       {cmd: 'pnpm run build:ui', exit: 2, stderr: 'tsc bork'},
     ]) as any;
@@ -114,7 +114,7 @@ describe('executeUpdate', () => {
     const {deps, copies, states} = baseDeps();
     deps.spawnFn = okSpawn([
       {cmd: 'git fetch --tags origin', exit: 0},
-      {cmd: 'git checkout v2.7.3', exit: 1, stderr: 'conflict'},
+      {cmd: 'git checkout refs/tags/v2.7.3', exit: 1, stderr: 'conflict'},
     ]) as any;
     const r = await executeUpdate(deps);
     expect(r.outcome).toBe('failed-checkout');
@@ -136,7 +136,7 @@ describe('executeUpdate', () => {
     const {deps, states} = baseDeps();
     deps.spawnFn = okSpawn([
       {cmd: 'git fetch --tags origin', exit: 0},
-      {cmd: 'git checkout v2.7.3', exit: 0},
+      {cmd: 'git checkout refs/tags/v2.7.3', exit: 0},
       {cmd: 'pnpm install --frozen-lockfile', exit: 1},
     ]) as any;
     await executeUpdate(deps);

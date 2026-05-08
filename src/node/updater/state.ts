@@ -8,10 +8,40 @@ const isPlainObject = (v: unknown): v is Record<string, unknown> =>
 const isStringOrNull = (v: unknown): v is string | null =>
   v === null || typeof v === 'string';
 
+// Per-status field requirements that mirror the ExecutionStatus union in types.ts.
+// Persisted-state corruption (a hand-edited file or a future schema bump that
+// missed a migration) must never reach RollbackHandler with `undefined` refs —
+// loadState resets to EMPTY_STATE when any required field is missing.
+const EXEC_REQUIRED_FIELDS: Record<string, readonly string[]> = {
+  'idle': [],
+  'preflight': ['targetTag', 'startedAt'],
+  'preflight-failed': ['targetTag', 'reason', 'at'],
+  'draining': ['targetTag', 'drainEndsAt', 'startedAt'],
+  'executing': ['targetTag', 'fromSha', 'startedAt'],
+  'pending-verification': ['targetTag', 'fromSha', 'deadlineAt'],
+  'verified': ['targetTag', 'verifiedAt'],
+  'rolling-back': ['reason', 'targetTag', 'fromSha', 'at'],
+  'rolled-back': ['reason', 'targetTag', 'restoredSha', 'at'],
+  'rollback-failed': ['reason', 'targetTag', 'fromSha', 'at'],
+};
+
 const isValidExecution = (v: unknown): boolean => {
   if (!isPlainObject(v)) return false;
-  return typeof v.status === 'string' && (EXECUTION_STATUSES as readonly string[]).includes(v.status);
+  if (typeof v.status !== 'string') return false;
+  if (!(EXECUTION_STATUSES as readonly string[]).includes(v.status)) return false;
+  const required = EXEC_REQUIRED_FIELDS[v.status];
+  if (!required) return false; // unknown status — fail closed
+  for (const field of required) {
+    if (typeof (v as Record<string, unknown>)[field] !== 'string') return false;
+    if (((v as Record<string, unknown>)[field] as string).length === 0) return false;
+  }
+  return true;
 };
+
+// Outcomes that LastUpdateResult.outcome must match.
+const VALID_OUTCOMES: ReadonlySet<string> = new Set([
+  'verified', 'rolled-back', 'rollback-failed', 'preflight-failed', 'cancelled',
+]);
 
 const isValidLastResult = (v: unknown): boolean => {
   if (v === null) return true;
@@ -19,6 +49,7 @@ const isValidLastResult = (v: unknown): boolean => {
   return typeof v.targetTag === 'string'
     && typeof v.fromSha === 'string'
     && typeof v.outcome === 'string'
+    && VALID_OUTCOMES.has(v.outcome)
     && (v.reason === null || typeof v.reason === 'string')
     && typeof v.at === 'string';
 };

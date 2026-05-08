@@ -161,21 +161,55 @@ export const checkPendingVerification = (state: UpdateState, deps: RollbackDeps)
   const exec = state.execution;
   if (exec.status !== 'pending-verification') return {armed: false, markVerified: () => {}};
 
+  // Fire-and-forget helpers that swallow rejections cleanly. We intentionally
+  // don't propagate — the boot sequence must proceed even if the rollback
+  // path can't write its terminal state. Worst case: the supervisor restart
+  // brings the same boot back up and the bootCount-based crash-loop guard
+  // catches it on the next attempt.
+  const fireRollback = (s: UpdateState) => {
+    void performRollback(s, deps).catch((err) => {
+      logger.error(`performRollback unhandled rejection: ${(err as Error).message}`);
+      // Best-effort: try to land on rollback-failed terminal state and exit
+      // 75 anyway. If saveState also rejects, log and exit so the supervisor
+      // restart at least re-runs checkPendingVerification with bootCount++.
+      const fb = {
+        ...s,
+        execution: {
+          status: 'rollback-failed' as const,
+          reason: `unhandled rollback rejection: ${(err as Error).message}`,
+          targetTag: (s.execution as {targetTag?: string}).targetTag ?? '',
+          fromSha: (s.execution as {fromSha?: string}).fromSha ?? '',
+          at: deps.now().toISOString(),
+        },
+        bootCount: 0,
+      };
+      void deps.saveState(fb).catch((saveErr) => {
+        logger.error(`fallback saveState rejected: ${(saveErr as Error).message}`);
+      }).finally(() => deps.exit(75));
+    });
+  };
+
+  const fireSaveState = (s: UpdateState, ctx: string) => {
+    void deps.saveState(s).catch((err) => {
+      logger.warn(`saveState (${ctx}) rejected: ${(err as Error).message}`);
+    });
+  };
+
   if (state.bootCount > 2) {
     // Don't await — fire and forget so the boot sequence proceeds; the rollback
     // path will exit 75 asynchronously and the supervisor restarts on the
-    // restored SHA.
-    void performRollback(state, deps);
+    // restored SHA. Rejections caught + best-effort terminal-state write.
+    fireRollback(state);
     return {armed: false, markVerified: () => {}};
   }
 
   const incremented: UpdateState = {...state, bootCount: state.bootCount + 1};
-  void deps.saveState(incremented);
+  fireSaveState(incremented, 'bootCount-increment');
 
   let cleared = false;
   const timer = setTimeout(() => {
     if (cleared) return;
-    void performRollback({
+    fireRollback({
       ...incremented,
       execution: {
         status: 'rolling-back',
@@ -184,7 +218,7 @@ export const checkPendingVerification = (state: UpdateState, deps: RollbackDeps)
         fromSha: exec.fromSha,
         at: deps.now().toISOString(),
       },
-    }, deps);
+    });
   }, deps.rollbackHealthCheckSeconds * 1000);
 
   return {
@@ -194,7 +228,7 @@ export const checkPendingVerification = (state: UpdateState, deps: RollbackDeps)
       cleared = true;
       clearTimeout(timer);
       const at = deps.now().toISOString();
-      void deps.saveState({
+      fireSaveState({
         ...incremented,
         execution: {status: 'verified', targetTag: exec.targetTag, verifiedAt: at},
         lastResult: {
@@ -205,7 +239,7 @@ export const checkPendingVerification = (state: UpdateState, deps: RollbackDeps)
           at,
         },
         bootCount: 0,
-      });
+      }, 'mark-verified');
       logger.info(`update verified after restart: ${exec.fromSha} -> ${exec.targetTag}`);
     },
   };
