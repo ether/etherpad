@@ -216,8 +216,10 @@ describe(__filename, function () {
       const raw = await renderText('<p><a href="https://etherpad.org">site</a></p>');
       const visible = decodeVisibleText(raw);
       assert.ok(visible.includes('site'), `expected "site" in: ${visible}`);
-      // URL is stored in a /URI dict as a plain (parenthesized) string
-      assert.ok(raw.includes('etherpad.org'),
+      // URL is stored in a /URI dict as a plain (parenthesized) string.
+      // Match the full /URI (...) form so we're verifying the PDF link
+      // annotation structure, not just any occurrence of the host string.
+      assert.match(raw, /\/URI\s*\(https:\/\/etherpad\.org\)/,
           'expected link target URL in PDF /URI dict');
     });
 
