@@ -49,6 +49,29 @@ describe(__filename, function () {
       assert.doesNotMatch(html, /<img[^>]+src="https?:/);
       assert.doesNotMatch(html, /<img[^>]+src="\/\//);
     });
+
+    it('preserves paragraph alignment from <w:jc>', async function () {
+      // Round through html-to-docx so the input docx has <w:jc> entries
+      // we can verify mammoth + our workaround surface as text-align.
+      try { require.resolve('html-to-docx'); }
+      catch { this.skip(); return; }
+      const htmlToDocx = require('html-to-docx');
+      const docx: Buffer = await htmlToDocx(
+          '<h1 style="text-align:right">Right heading</h1>' +
+          '<p style="text-align:center">Center paragraph</p>' +
+          '<p>Left paragraph</p>' +
+          '<p style="text-align:justify">Justify paragraph</p>');
+      const html = await docxBufferToHtml(docx);
+      assert.match(html, /<h1[^>]*style="[^"]*text-align:right/,
+          `expected right-aligned h1 in: ${html}`);
+      assert.match(html, /<p[^>]*style="[^"]*text-align:center/,
+          `expected center-aligned p in: ${html}`);
+      assert.match(html, /<p[^>]*style="[^"]*text-align:justify/,
+          `expected justify-aligned p in: ${html}`);
+      // Left-aligned paragraph should NOT carry a redundant style attr
+      // (we skip "left" because it's the CSS default).
+      assert.match(html, /<p>Left paragraph<\/p>/);
+    });
   });
 
   describe('end-to-end DOCX import (#7538)', function () {
