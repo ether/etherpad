@@ -37,6 +37,7 @@ import settings, {
   sofficeAvailable
 } from '../utils/Settings';
 import {anonymizeIp} from '../utils/anonymizeIp';
+import {isAcceptingConnections} from '../updater/SessionDrainer';
 const logIp = (ip: string | null | undefined) => anonymizeIp(ip, settings.ipLogging);
 const securityManager = require('../db/SecurityManager');
 const plugins = require('../../static/js/pluginfw/plugin_defs');
@@ -377,6 +378,14 @@ exports.handleMessage = async (socket:any, message: ClientVarMessage) => {
   if (!thisSession) throw new Error('message from an unknown connection');
 
   if (message.type === 'CLIENT_READY') {
+    // Refuse new joiners while the updater drainer is running. Existing sockets
+    // are unaffected — only the initial CLIENT_READY handshake is gated. The
+    // pad UI will show the drain announcement separately via shoutMessage.
+    if (!isAcceptingConnections()) {
+      socket.json.send({disconnect: 'updateInProgress'});
+      socket.disconnect(true);
+      return;
+    }
     // Prefer the HttpOnly author-token cookie over the in-message token (GDPR
     // PR3). Legacy clients (pre-PR3 browsers or API consumers) still send
     // `token` in the CLIENT_READY payload — honour it one more release, warn

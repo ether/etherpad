@@ -1,5 +1,6 @@
 import {describe, it, expect, vi} from 'vitest';
 import {runPreflight, PreflightDeps} from '../../../../node/updater/preflight';
+import type {VerifyResult} from '../../../../node/updater/trustedKeys';
 
 const baseDeps = (): PreflightDeps => ({
   installMethod: 'git',
@@ -8,7 +9,7 @@ const baseDeps = (): PreflightDeps => ({
   pnpmOnPath: vi.fn(async () => true),
   lockHeld: vi.fn(async () => false),
   remoteHasTag: vi.fn(async () => true),
-  verifyTag: vi.fn(async () => ({ok: true, reason: 'signature-not-required'})),
+  verifyTag: vi.fn(async (): Promise<VerifyResult> => ({ok: true, reason: 'signature-not-required'})),
 });
 
 const baseInput = {
@@ -62,7 +63,7 @@ describe('runPreflight', () => {
   it('rejects when signature verification fails', async () => {
     const r = await runPreflight(baseInput, {
       ...baseDeps(),
-      verifyTag: vi.fn(async () => ({ok: false, reason: 'signature-verification-failed'})),
+      verifyTag: vi.fn(async (): Promise<VerifyResult> => ({ok: false, reason: 'signature-verification-failed'})),
     });
     expect(r).toEqual({ok: false, reason: 'signature-verification-failed'});
   });
