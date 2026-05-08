@@ -22,7 +22,29 @@ export const generateAdminDefinition = (): any => ({
       'Distinct from the public /api/{version}/* surface served by /api/openapi.json.',
     version: getEpVersion(),
   },
-  paths: {},
+  paths: {
+    '/admin-auth/': {
+      post: {
+        operationId: 'verifyAdminAccess',
+        summary: 'Verify or establish an admin session',
+        description:
+          'POST with `Authorization: Basic <user:pass>` to log in as an admin ' +
+          '(server sets a session cookie on success). POST with no auth header ' +
+          'to verify an existing admin session cookie. The response body is ' +
+          'always empty; the status code conveys the outcome.',
+        security: [
+          {basicAuth: []},
+          {sessionCookie: []},
+          {},
+        ],
+        responses: {
+          '200': {description: 'Caller is an authenticated admin.'},
+          '401': {description: 'No authentication presented and no admin session exists.'},
+          '403': {description: 'Authenticated, but the user is not an admin.'},
+        },
+      },
+    },
+  },
   components: {
     schemas: {},
     securitySchemes: {
