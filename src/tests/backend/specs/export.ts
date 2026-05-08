@@ -152,6 +152,61 @@ describe(__filename, function () {
     });
   });
 
+  describe('extractBody', function () {
+    const {extractBody} = require('../../../node/utils/ExportSanitizeHtml');
+
+    it('returns trimmed body content from a full document', function () {
+      const html = `<!doctype html><html><head><style>.x{color:red}</style></head><body>
+hello<br>world
+</body></html>`;
+      assert.strictEqual(extractBody(html), 'hello<br>world');
+    });
+
+    it('passes a body-less fragment through unchanged', function () {
+      const html = '<p>just a fragment</p>';
+      assert.strictEqual(extractBody(html), html);
+    });
+
+    it('drops <head><style> contents', function () {
+      const html = '<html><head><style>.x{}</style></head><body><p>kept</p></body></html>';
+      const out = extractBody(html);
+      assert.doesNotMatch(out, /style/);
+      assert.doesNotMatch(out, /\.x/);
+      assert.match(out, /kept/);
+    });
+  });
+
+  describe('wrapLooseLines', function () {
+    const {wrapLooseLines} = require('../../../node/utils/ExportSanitizeHtml');
+
+    it('wraps loose text in <p>', function () {
+      assert.strictEqual(wrapLooseLines('Hello'), '<p>Hello</p>');
+    });
+
+    it('keeps single <br> as soft break inside one paragraph', function () {
+      assert.strictEqual(wrapLooseLines('A<br>B'), '<p>A<br>B</p>');
+    });
+
+    it('splits paragraphs on consecutive <br>', function () {
+      assert.strictEqual(wrapLooseLines('A<br><br>B'), '<p>A</p><p>B</p>');
+    });
+
+    it('drops trailing <br>', function () {
+      assert.strictEqual(wrapLooseLines('Foo<br>'), '<p>Foo</p>');
+    });
+
+    it('leaves block elements alone', function () {
+      const html = '<ul><li>x</li></ul>';
+      assert.strictEqual(wrapLooseLines(html), html);
+    });
+
+    it('handles realistic etherpad pad HTML', function () {
+      const out = wrapLooseLines(
+          'Welcome!<br><br>Body text.<br>More text.<br>');
+      assert.strictEqual(out, '<p>Welcome!</p><p>Body text.<br>More text.</p>');
+    });
+  });
+
   describe('htmlToPdfBuffer', function () {
     let htmlToPdfBuffer: (html: string) => Promise<Buffer>;
 
@@ -234,6 +289,23 @@ describe(__filename, function () {
       const buf = await htmlToPdfBuffer(
           '<custom-tag><p>still works</p></custom-tag>');
       assert.strictEqual(buf.slice(0, 5).toString('ascii'), '%PDF-');
+    });
+
+    it('does not render head/style/script content', async function () {
+      const raw = await renderText(`
+        <html><head>
+          <title>SECRET_TITLE</title>
+          <style>.x { display: SECRET_CSS; }</style>
+          <script>var SECRET_JS = 1;</script>
+        </head><body>
+          <p>visible body</p>
+        </body></html>
+      `);
+      const visible = decodeVisibleText(raw);
+      assert.doesNotMatch(visible, /SECRET_TITLE/);
+      assert.doesNotMatch(visible, /SECRET_CSS/);
+      assert.doesNotMatch(visible, /SECRET_JS/);
+      assert.match(visible, /visible body/);
     });
   });
 });

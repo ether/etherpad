@@ -101,13 +101,24 @@ exports.doExport = async (req: any, res: any, padId: string, readOnlyId: string,
         || (sofState === 'withoutPDF' && type === 'pdf');
 
     if (goNative) {
-      const {stripRemoteImages} = require('../utils/ExportSanitizeHtml');
-      const safeHtml = stripRemoteImages(html);
+      const {stripRemoteImages, extractBody, wrapLooseLines} =
+          require('../utils/ExportSanitizeHtml');
+      // The HTML pipeline returns a full document (head, style, body); the
+      // legacy soffice path renders that fine, but the in-process
+      // converters need just the body content to avoid leaking CSS into
+      // the output and to drop the document-level whitespace that creates
+      // stray paragraph breaks at the top of the result.
+      const bodyHtml = stripRemoteImages(extractBody(html));
       html = null;
       try {
         if (type === 'docx') {
+          // html-to-docx renders bare <br> outside <p> as a new <w:p>
+          // paragraph (full empty line in Word). Wrap loose lines in <p>
+          // so single <br> stays as a soft break (<w:br/>) and only
+          // explicit blank-line gaps (<br><br>) become paragraph breaks.
+          const docxHtml = wrapLooseLines(bodyHtml);
           const htmlToDocx = require('html-to-docx');
-          const buf = await htmlToDocx(safeHtml);
+          const buf = await htmlToDocx(docxHtml);
           res.contentType(
               'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
           res.send(buf);
@@ -115,7 +126,7 @@ exports.doExport = async (req: any, res: any, padId: string, readOnlyId: string,
         }
         if (type === 'pdf') {
           const {htmlToPdfBuffer} = require('../utils/ExportPdfNative');
-          const buf = await htmlToPdfBuffer(safeHtml);
+          const buf = await htmlToPdfBuffer(bodyHtml);
           res.contentType('application/pdf');
           res.send(buf);
           return;

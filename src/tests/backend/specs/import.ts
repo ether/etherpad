@@ -2,6 +2,7 @@
 
 import {MapArrayType} from '../../../node/types/MapType';
 import path from 'path';
+import os from 'os';
 import {promises as fs} from 'fs';
 
 const assert = require('assert').strict;
@@ -91,6 +92,97 @@ describe(__filename, function () {
       } finally {
         await fs.unlink(odtPath).catch(() => undefined);
       }
+    });
+  });
+
+  describe('DOCX export -> import round-trip (#7538)', function () {
+    before(function () {
+      try {
+        require.resolve('html-to-docx');
+        require.resolve('mammoth');
+      } catch {
+        this.skip();
+        return;
+      }
+      settings.soffice = null;
+    });
+
+    const fetchBuffer = (req: any): Promise<Buffer> => req
+        .buffer(true)
+        .parse((resp: any, cb: any) => {
+          const chunks: Buffer[] = [];
+          resp.on('data', (c: Buffer) => chunks.push(c));
+          resp.on('end', () => cb(null, Buffer.concat(chunks)));
+        });
+
+    it('preserves text content through native DOCX round-trip', async function () {
+      const srcPadId = 'test7538RoundTripSrc';
+      const dstPadId = 'test7538RoundTripDst';
+      const tmpFile = path.join(os.tmpdir(), `roundtrip-${process.pid}.docx`);
+
+      try {
+        await padManager.removePad(srcPadId);
+        await padManager.removePad(dstPadId);
+      } catch { /* noop */ }
+
+      const srcPad = await padManager.getPad(srcPadId, '\n');
+      await srcPad.setText('Line one\nLine two\n\nAfter the blank line\n');
+      const srcText = srcPad.text();
+      assert.match(srcText, /Line one/);
+      assert.match(srcText, /After the blank line/);
+
+      const exp = await fetchBuffer(agent.get(`/p/${srcPadId}/export/docx`))
+          .expect(200);
+      const docxBuffer: Buffer = exp.body as Buffer;
+      assert.strictEqual(docxBuffer.slice(0, 4).toString('latin1'), 'PK\x03\x04');
+      await fs.writeFile(tmpFile, docxBuffer);
+
+      try {
+        const imp = await agent
+            .post(`/p/${dstPadId}/import`)
+            .attach('file', tmpFile)
+            .expect(200);
+        assert.strictEqual(imp.body.code, 0,
+            `import failed: ${JSON.stringify(imp.body)}`);
+
+        const dstPad = await padManager.getPad(dstPadId);
+        const dstText = dstPad.text();
+        assert.match(dstText, /Line one/);
+        assert.match(dstText, /Line two/);
+        assert.match(dstText, /After the blank line/);
+      } finally {
+        await fs.unlink(tmpFile).catch(() => undefined);
+      }
+    });
+
+    it('preserves text content through native PDF export (sanity check)', async function () {
+      // PDF round-trip is one-way (no native PDF import) -- this just
+      // verifies the exported PDF has the source text in its visible
+      // content stream, so we know nothing got dropped on export.
+      const padId = 'test7538PdfSanity';
+      try { await padManager.removePad(padId); } catch { /* noop */ }
+      const pad = await padManager.getPad(padId, '\n');
+      await pad.setText('Hello PDF\nSecond line\n');
+
+      const exp = await fetchBuffer(agent.get(`/p/${padId}/export/pdf`))
+          .expect(200);
+      const pdf: Buffer = exp.body as Buffer;
+      assert.strictEqual(pdf.slice(0, 5).toString('ascii'), '%PDF-');
+
+      // pdfkit emits text as hex strings inside TJ ops; concat them and
+      // search the visible content.
+      const ascii = pdf.toString('latin1');
+      const visible: string[] = [];
+      const re = /<([0-9a-fA-F]{2,})>/g;
+      let m: RegExpExecArray | null;
+      while ((m = re.exec(ascii)) !== null) {
+        visible.push(Buffer.from(m[1], 'hex').toString('latin1'));
+      }
+      const concatenated = visible.join('');
+      assert.ok(concatenated.includes('Hello PDF'),
+          `expected "Hello PDF" in PDF visible content: ${concatenated}`);
+      assert.ok(concatenated.includes('Second line'),
+          `expected "Second line" in PDF visible content: ${concatenated}`);
     });
   });
 });

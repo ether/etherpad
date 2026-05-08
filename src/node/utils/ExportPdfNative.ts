@@ -18,6 +18,11 @@ const HEADING_SIZES: Record<string, number> = {
   h1: 24, h2: 20, h3: 16, h4: 14, h5: 12, h6: 11,
 };
 
+// Tags whose text content must never appear in the rendered PDF (CSS,
+// scripts, document metadata). The walker maintains a depth counter so that
+// nested elements inside one of these are ignored too.
+const SKIP_TAGS = new Set(['head', 'style', 'script', 'title', 'meta', 'link', 'noscript']);
+
 const decodeDataUri = (src: string): Buffer | null => {
   const m = /^data:[^;,]+;base64,(.+)$/i.exec(src);
   if (!m) return null;
@@ -48,6 +53,7 @@ export const htmlToPdfBuffer = (html: string): Promise<Buffer> =>
     const listType: ('ul' | 'ol' | null)[] = [];
     const listIndex: number[] = [];
     let pendingNewline = false;
+    let skipDepth = 0;
 
     const top = () => styleStack[styleStack.length - 1];
 
@@ -77,12 +83,25 @@ export const htmlToPdfBuffer = (html: string): Promise<Buffer> =>
       doc.text(raw, opts);
     };
 
+    // End the current `continued: true` text run. pdfkit's `text('', false)`
+    // closes the run but does NOT advance the cursor — subsequent text would
+    // overlay at the same y. Use `breakLine` whenever a true newline is
+    // intended (br, end-of-block, list items).
     const flushLine = () => {
       doc.text('', {continued: false});
+    };
+    const breakLine = () => {
+      flushLine();
+      doc.moveDown(1);
     };
 
     const parser = new Parser({
       onopentag(name, attribs) {
+        if (SKIP_TAGS.has(name)) skipDepth += 1;
+        if (skipDepth > 0) {
+          styleStack.push({...top()});
+          return;
+        }
         const cur = top();
         const next: InlineState = {...cur};
         switch (name) {
@@ -94,20 +113,18 @@ export const htmlToPdfBuffer = (html: string): Promise<Buffer> =>
           case 'h1': case 'h2': case 'h3': case 'h4': case 'h5': case 'h6':
             next.fontSize = HEADING_SIZES[name];
             next.bold = true;
-            if (!pendingNewline) flushLine();
-            doc.moveDown(0.5);
+            if (!pendingNewline) breakLine();
             break;
           case 'p': case 'div':
-            if (!pendingNewline) flushLine();
-            doc.moveDown(0.3);
+            if (!pendingNewline) breakLine();
             break;
           case 'ul': case 'ol':
             listType.push(name as 'ul' | 'ol');
             listIndex.push(0);
-            flushLine();
+            breakLine();
             break;
           case 'li': {
-            flushLine();
+            breakLine();
             const t = listType[listType.length - 1] || 'ul';
             if (t === 'ol') listIndex[listIndex.length - 1] += 1;
             const prefix = t === 'ul'
@@ -119,7 +136,7 @@ export const htmlToPdfBuffer = (html: string): Promise<Buffer> =>
             break;
           }
           case 'br':
-            flushLine();
+            breakLine();
             break;
           case 'img': {
             const buf = decodeDataUri(attribs.src || '');
@@ -134,14 +151,28 @@ export const htmlToPdfBuffer = (html: string): Promise<Buffer> =>
       },
 
       ontext(text) {
-        writeText(text);
+        if (skipDepth > 0) return;
+        // Collapse consecutive whitespace to a single space, the way an
+        // HTML renderer would. Without this, literal newlines and tabs in
+        // pretty-printed source HTML show up as runs of " " in the PDF.
+        const collapsed = text.replace(/[\s ]+/g, ' ');
+        if (collapsed === ' ') return;  // pure-whitespace runs are dropped
+        writeText(collapsed);
       },
 
       onclosetag(name) {
+        if (skipDepth > 0) {
+          if (SKIP_TAGS.has(name)) skipDepth -= 1;
+          styleStack.pop();
+          if (styleStack.length === 0) {
+            styleStack.push({bold: false, italic: false, underline: false, strike: false});
+          }
+          return;
+        }
         switch (name) {
           case 'h1': case 'h2': case 'h3': case 'h4': case 'h5': case 'h6':
           case 'p': case 'div':
-            flushLine();
+            breakLine();
             pendingNewline = true;
             break;
           case 'li':
