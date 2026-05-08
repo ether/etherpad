@@ -218,7 +218,13 @@
     "installMethod": "docker",
     "checkIntervalHours": 6,
     "githubRepo": "ether/etherpad",
-    "requireAdminForStatus": false
+    "requireAdminForStatus": false,
+    "preApplyGraceMinutes": 0,
+    "drainSeconds": 60,
+    "rollbackHealthCheckSeconds": 60,
+    "diskSpaceMinMB": 500,
+    "requireSignature": false,
+    "trustedKeysPath": null
   },
 
   /*

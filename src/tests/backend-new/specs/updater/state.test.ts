@@ -117,3 +117,95 @@ describe('saveState', () => {
     expect(data.schemaVersion).toBe(1);
   });
 });
+
+describe('Tier 2 state extensions', () => {
+  it('EMPTY_STATE carries an idle execution block, bootCount 0, no lastResult', () => {
+    expect(EMPTY_STATE.execution).toEqual({status: 'idle'});
+    expect(EMPTY_STATE.bootCount).toBe(0);
+    expect(EMPTY_STATE.lastResult).toBeNull();
+  });
+
+  it('loadState backfills missing Tier 2 fields on a Tier 1 file', async () => {
+    // Hand-write a Tier 1 state file (no execution / bootCount / lastResult).
+    await fs.writeFile(statePath(), JSON.stringify({
+      schemaVersion: 1,
+      lastCheckAt: '2026-05-01T00:00:00Z',
+      lastEtag: 'W/"abc"',
+      latest: null,
+      vulnerableBelow: [],
+      email: {severeAt: null, vulnerableAt: null, vulnerableNewReleaseTag: null},
+    }));
+    const state = await loadState(statePath());
+    expect(state.execution).toEqual({status: 'idle'});
+    expect(state.bootCount).toBe(0);
+    expect(state.lastResult).toBeNull();
+    // Tier 1 fields preserved.
+    expect(state.lastCheckAt).toBe('2026-05-01T00:00:00Z');
+    expect(state.lastEtag).toBe('W/"abc"');
+  });
+
+  it('rejects a malformed execution block by resetting to EMPTY_STATE', async () => {
+    await fs.writeFile(statePath(), JSON.stringify({
+      schemaVersion: 1, lastCheckAt: null, lastEtag: null, latest: null,
+      vulnerableBelow: [],
+      email: {severeAt: null, vulnerableAt: null, vulnerableNewReleaseTag: null},
+      execution: 'not-an-object',
+    }));
+    const state = await loadState(statePath());
+    expect(state).toEqual(EMPTY_STATE);
+  });
+
+  it('rejects an unknown execution status by resetting to EMPTY_STATE', async () => {
+    await fs.writeFile(statePath(), JSON.stringify({
+      schemaVersion: 1, lastCheckAt: null, lastEtag: null, latest: null,
+      vulnerableBelow: [],
+      email: {severeAt: null, vulnerableAt: null, vulnerableNewReleaseTag: null},
+      execution: {status: 'totally-bogus'},
+    }));
+    const state = await loadState(statePath());
+    expect(state).toEqual(EMPTY_STATE);
+  });
+
+  it('rejects a non-numeric bootCount by resetting to EMPTY_STATE', async () => {
+    await fs.writeFile(statePath(), JSON.stringify({
+      schemaVersion: 1, lastCheckAt: null, lastEtag: null, latest: null,
+      vulnerableBelow: [],
+      email: {severeAt: null, vulnerableAt: null, vulnerableNewReleaseTag: null},
+      execution: {status: 'idle'},
+      bootCount: 'one',
+    }));
+    const state = await loadState(statePath());
+    expect(state).toEqual(EMPTY_STATE);
+  });
+
+  it('round-trips a pending-verification execution', async () => {
+    const s = {
+      ...EMPTY_STATE,
+      execution: {
+        status: 'pending-verification' as const,
+        targetTag: 'v2.7.3',
+        fromSha: 'abc123',
+        deadlineAt: '2026-05-08T10:00:00Z',
+      },
+      bootCount: 1,
+    };
+    await saveState(statePath(), s);
+    const loaded = await loadState(statePath());
+    expect(loaded.execution.status).toBe('pending-verification');
+    expect(loaded.bootCount).toBe(1);
+  });
+
+  it('round-trips a non-null lastResult', async () => {
+    const s = {
+      ...EMPTY_STATE,
+      lastResult: {
+        targetTag: 'v2.7.3', fromSha: 'abc',
+        outcome: 'verified' as const, reason: null,
+        at: '2026-05-08T10:00:00Z',
+      },
+    };
+    await saveState(statePath(), s);
+    const loaded = await loadState(statePath());
+    expect(loaded.lastResult?.outcome).toBe('verified');
+  });
+});

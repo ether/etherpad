@@ -331,6 +331,15 @@ export type SettingsType = {
     checkIntervalHours: number,
     githubRepo: string,
     requireAdminForStatus: boolean,
+    /** Tier 2+ knobs. Default 0 in PR 2; tier 3 makes preApplyGraceMinutes meaningful. */
+    preApplyGraceMinutes: number,
+    drainSeconds: number,
+    rollbackHealthCheckSeconds: number,
+    diskSpaceMinMB: number,
+    /** When true, refuse updates whose tag is not signed by a trusted key. */
+    requireSignature: boolean,
+    /** Override the OS keyring location (passed to git verify-tag via $GNUPGHOME). */
+    trustedKeysPath: string | null,
   },
   adminEmail: string | null,
   getPublicSettings: () => Pick<SettingsType, "title" | "skinVariants"|"randomVersionString"|"skinName"|"toolbar"| "exposeVersion"| "gitVersion" | "enablePadWideSettings" | "enablePluginPadOptions" | "privacyBanner">,
@@ -515,6 +524,13 @@ const settings: SettingsType = {
     // Set true to require an authenticated admin session for the endpoint without
     // disabling the updater itself.
     requireAdminForStatus: false,
+    // Tier 2+ knobs. Only meaningful at tier "manual" or higher.
+    preApplyGraceMinutes: 0,
+    drainSeconds: 60,
+    rollbackHealthCheckSeconds: 60,
+    diskSpaceMinMB: 500,
+    requireSignature: false,
+    trustedKeysPath: null,
   },
   /**
    * Contact address for admin notifications (updates, future security advisories).
