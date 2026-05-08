@@ -18,6 +18,22 @@ export const extractBody = (html: string): string => {
   return m[1].replace(/^[\s ]+/, '').replace(/[\s ]+$/, '');
 };
 
+// Drop block elements whose only content is whitespace. Etherpad plugins
+// like ep_headings2 emit a heading-styled blank-line block (e.g.
+// `<h1 style='text-align:right'></h1>`) after every styled line, which
+// turns into an extra empty `<w:p>` in DOCX and an extra blank line in
+// PDF. Iterates because removing one empty wrapper can expose another.
+const EMPTY_BLOCK_RE = /<(h[1-6]|p|code|pre|div|blockquote)\b[^>]*>\s*<\/\1>/gi;
+export const dropEmptyBlocks = (html: string): string => {
+  let prev: string;
+  let cur = html;
+  do {
+    prev = cur;
+    cur = cur.replace(EMPTY_BLOCK_RE, '');
+  } while (cur !== prev);
+  return cur;
+};
+
 // Wrap loose text + inline content in `<p>` blocks so html-to-docx renders
 // `<br>` as a soft line break (`<w:br/>`) instead of a paragraph break
 // (`<w:p>`). Etherpad's HTML export uses bare `<br>` for every line and

@@ -12,7 +12,15 @@ interface InlineState {
   strike: boolean;
   link?: string;
   fontSize?: number;
+  align?: 'left' | 'center' | 'right' | 'justify';
+  mono?: boolean;
 }
+
+const parseAlign = (style: string | undefined): InlineState['align'] | undefined => {
+  if (!style) return undefined;
+  const m = /text-align\s*:\s*(left|center|right|justify)/i.exec(style);
+  return m ? (m[1].toLowerCase() as InlineState['align']) : undefined;
+};
 
 const HEADING_SIZES: Record<string, number> = {
   h1: 24, h2: 20, h3: 16, h4: 14, h5: 12, h6: 11,
@@ -59,14 +67,28 @@ export const htmlToPdfBuffer = (html: string): Promise<Buffer> =>
 
     const applyFont = () => {
       const s = top();
-      const variant =
-        s.bold && s.italic ? 'Helvetica-BoldOblique' :
-        s.bold ? 'Helvetica-Bold' :
-        s.italic ? 'Helvetica-Oblique' :
-        'Helvetica';
+      let variant: string;
+      if (s.mono) {
+        variant =
+          s.bold && s.italic ? 'Courier-BoldOblique' :
+          s.bold ? 'Courier-Bold' :
+          s.italic ? 'Courier-Oblique' :
+          'Courier';
+      } else {
+        variant =
+          s.bold && s.italic ? 'Helvetica-BoldOblique' :
+          s.bold ? 'Helvetica-Bold' :
+          s.italic ? 'Helvetica-Oblique' :
+          'Helvetica';
+      }
       doc.font(variant);
       doc.fontSize(s.fontSize || 11);
     };
+
+    // Track whether the current run started with an alignment override so
+    // we apply `align` exactly once per pdfkit text() call (pdfkit uses the
+    // align option of the first call in a continued run for the whole line).
+    let runStartedAligned = false;
 
     const writeText = (raw: string) => {
       if (!raw) return;
@@ -80,6 +102,10 @@ export const htmlToPdfBuffer = (html: string): Promise<Buffer> =>
       if (s.underline) opts.underline = true;
       if (s.strike) opts.strike = true;
       if (s.link) opts.link = s.link;
+      if (s.align && !runStartedAligned) {
+        opts.align = s.align;
+        runStartedAligned = true;
+      }
       doc.text(raw, opts);
     };
 
@@ -89,6 +115,7 @@ export const htmlToPdfBuffer = (html: string): Promise<Buffer> =>
     // intended (br, end-of-block, list items).
     const flushLine = () => {
       doc.text('', {continued: false});
+      runStartedAligned = false;
     };
     const breakLine = () => {
       flushLine();
@@ -110,14 +137,27 @@ export const htmlToPdfBuffer = (html: string): Promise<Buffer> =>
           case 'u': next.underline = true; break;
           case 's': case 'strike': case 'del': next.strike = true; break;
           case 'a': next.link = attribs.href; next.underline = true; break;
-          case 'h1': case 'h2': case 'h3': case 'h4': case 'h5': case 'h6':
+          case 'code': case 'tt': case 'kbd': case 'samp':
+            next.mono = true;
+            break;
+          case 'pre':
+            next.mono = true;
+            if (!pendingNewline) breakLine();
+            break;
+          case 'h1': case 'h2': case 'h3': case 'h4': case 'h5': case 'h6': {
             next.fontSize = HEADING_SIZES[name];
             next.bold = true;
+            const a = parseAlign(attribs.style);
+            if (a) next.align = a;
             if (!pendingNewline) breakLine();
             break;
-          case 'p': case 'div':
+          }
+          case 'p': case 'div': {
+            const a = parseAlign(attribs.style);
+            if (a) next.align = a;
             if (!pendingNewline) breakLine();
             break;
+          }
           case 'ul': case 'ol':
             listType.push(name as 'ul' | 'ol');
             listIndex.push(0);
@@ -171,7 +211,7 @@ export const htmlToPdfBuffer = (html: string): Promise<Buffer> =>
         }
         switch (name) {
           case 'h1': case 'h2': case 'h3': case 'h4': case 'h5': case 'h6':
-          case 'p': case 'div':
+          case 'p': case 'div': case 'pre':
             breakLine();
             pendingNewline = true;
             break;

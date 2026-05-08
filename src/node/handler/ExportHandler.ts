@@ -101,14 +101,16 @@ exports.doExport = async (req: any, res: any, padId: string, readOnlyId: string,
         || (sofState === 'withoutPDF' && type === 'pdf');
 
     if (goNative) {
-      const {stripRemoteImages, extractBody, wrapLooseLines} =
+      const {stripRemoteImages, extractBody, wrapLooseLines, dropEmptyBlocks} =
           require('../utils/ExportSanitizeHtml');
       // The HTML pipeline returns a full document (head, style, body); the
       // legacy soffice path renders that fine, but the in-process
       // converters need just the body content to avoid leaking CSS into
       // the output and to drop the document-level whitespace that creates
       // stray paragraph breaks at the top of the result.
-      const bodyHtml = stripRemoteImages(extractBody(html));
+      // dropEmptyBlocks strips heading-styled blank-line wrappers that
+      // ep_headings2 emits between every styled line.
+      const bodyHtml = dropEmptyBlocks(stripRemoteImages(extractBody(html)));
       html = null;
       try {
         if (type === 'docx') {

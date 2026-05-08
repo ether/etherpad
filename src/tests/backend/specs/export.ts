@@ -207,6 +207,32 @@ hello<br>world
     });
   });
 
+  describe('dropEmptyBlocks', function () {
+    const {dropEmptyBlocks} = require('../../../node/utils/ExportSanitizeHtml');
+
+    it('drops empty heading blocks', function () {
+      const out = dropEmptyBlocks(
+          "<h1 style='text-align:right'>Hi</h1><br><h1 style='text-align:right'></h1><br>x");
+      assert.strictEqual(out, "<h1 style='text-align:right'>Hi</h1><br><br>x");
+    });
+
+    it('drops empty code blocks', function () {
+      assert.strictEqual(dropEmptyBlocks('<code></code>x'), 'x');
+      assert.strictEqual(
+          dropEmptyBlocks('<code style="x">  \n\t  </code>x'), 'x');
+    });
+
+    it('iterates so nested empties are dropped too', function () {
+      const out = dropEmptyBlocks('<div><p></p></div>after');
+      assert.strictEqual(out, 'after');
+    });
+
+    it('keeps non-empty blocks unchanged', function () {
+      const html = '<h1>Hi</h1><p>body</p><code>x = 1</code>';
+      assert.strictEqual(dropEmptyBlocks(html), html);
+    });
+  });
+
   describe('htmlToPdfBuffer', function () {
     let htmlToPdfBuffer: (html: string) => Promise<Buffer>;
 
@@ -306,6 +332,33 @@ hello<br>world
       assert.doesNotMatch(visible, /SECRET_CSS/);
       assert.doesNotMatch(visible, /SECRET_JS/);
       assert.match(visible, /visible body/);
+    });
+
+    it('honors text-align style on block elements', async function () {
+      // pdfkit emits text-positioning matrices for aligned text. We assert
+      // the alignment option produced different output than left-aligned
+      // by checking the x coordinate of the BT block.
+      const leftRaw = await renderText('<p>aligned text</p>');
+      const rightRaw = await renderText('<p style="text-align:right">aligned text</p>');
+      const leftX = (leftRaw.match(/1 0 0 1 (\d+(?:\.\d+)?)/) || [])[1];
+      const rightX = (rightRaw.match(/1 0 0 1 (\d+(?:\.\d+)?)/) || [])[1];
+      assert.ok(leftX, 'expected left x');
+      assert.ok(rightX, 'expected right x');
+      assert.notStrictEqual(leftX, rightX,
+          `right-aligned text should sit at a different x than left-aligned (left=${leftX} right=${rightX})`);
+    });
+
+    it('uses Courier font inside <code>', async function () {
+      const raw = await renderText('<p>before <code>x = 1</code> after</p>');
+      // pdfkit references the font in the resource dictionary; Courier
+      // isn't in the default resources so its first use creates a new
+      // /Font subtype entry. Look for "Courier" anywhere in the PDF.
+      assert.match(raw, /Courier/);
+    });
+
+    it('uses Courier font inside <pre>', async function () {
+      const raw = await renderText('<pre>preformatted text</pre>');
+      assert.match(raw, /Courier/);
     });
   });
 });
