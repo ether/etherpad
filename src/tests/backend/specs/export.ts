@@ -76,4 +76,38 @@ describe(__filename, function () {
           `unexpected content-type: ${res.headers['content-type']}`);
     });
   });
+
+  describe('stripRemoteImages', function () {
+    const {stripRemoteImages} = require('../../../node/utils/ExportSanitizeHtml');
+
+    it('keeps data: URIs', function () {
+      const out = stripRemoteImages(
+          '<p>x</p><img src="data:image/png;base64,iVBORw0KGgo=">');
+      assert.match(out, /<img[^>]+src="data:image\/png/);
+    });
+
+    it('keeps relative URLs', function () {
+      const out = stripRemoteImages('<img src="/foo/bar.png">');
+      assert.match(out, /<img[^>]+src="\/foo\/bar\.png"/);
+    });
+
+    it('drops absolute http(s) URLs and falls back to alt', function () {
+      const out = stripRemoteImages(
+          '<p>before<img src="https://evil.example/x.png" alt="cat">after</p>');
+      assert.doesNotMatch(out, /evil\.example/);
+      assert.match(out, /before/);
+      assert.match(out, /cat/);
+      assert.match(out, /after/);
+    });
+
+    it('drops protocol-relative URLs', function () {
+      const out = stripRemoteImages('<img src="//evil.example/x.png">');
+      assert.doesNotMatch(out, /evil\.example/);
+    });
+
+    it('passes non-image markup through unchanged', function () {
+      const html = '<h1>hi</h1><p>body <a href="/x">link</a></p>';
+      assert.strictEqual(stripRemoteImages(html), html);
+    });
+  });
 });
