@@ -66,10 +66,30 @@ module.
 ### Why merge in `dump-spec.ts` rather than at `openapi-typescript` time
 
 `openapi-typescript` only accepts one input. We could run it twice and emit
-two `.d.ts` files, but the chosen design (see "Codegen merge" below) is a single
-merged `schema.d.ts` so the admin UI's `$api` instance has one `paths`
-interface covering both surfaces. The merge therefore happens at JSON-dump
-time, before `openapi-typescript` runs.
+two `.d.ts` files, but the chosen design (see "Codegen merge" below) is a
+single merged `schema.d.ts`. The merge therefore happens at JSON-dump time,
+before `openapi-typescript` runs.
+
+### Two clients, one schema
+
+The merged schema covers two surfaces with different baseUrls (public API
+under `/api/<version>/`, admin endpoints at root). A single runtime client
+with one `baseUrl` cannot target both correctly. `admin/src/api/client.ts`
+therefore narrows the generated `paths` interface by URL prefix and exports
+two clients:
+
+```ts
+type AdminPath = Extract<keyof paths, `/admin${string}`>;
+type PublicPath = Exclude<keyof paths, AdminPath>;
+export const fetchClient      = createClient<Pick<paths, PublicPath>>({ baseUrl: API_BASE_URL });
+export const adminFetchClient = createClient<Pick<paths, AdminPath>>({  baseUrl: '/' });
+export const $api      = createQueryHooks(fetchClient);
+export const $adminApi = createQueryHooks(adminFetchClient);
+```
+
+Narrowing at the type level means TypeScript rejects calling an admin path
+on `fetchClient` (or vice versa) at compile time — the runtime baseUrl
+mismatch is unrepresentable.
 
 ## OpenAPI document contents
 
@@ -168,21 +188,27 @@ here.
 
 ### Public exposure (runtime)
 
-`openapi-admin.ts` exports an `expressPreSession` hook that mounts:
+`openapi-admin.ts` exports an `expressPreSession` hook that **conditionally**
+mounts:
 
 ```
 GET /admin/openapi.json   (CORS: *)
 ```
 
-for parity with `/api/openapi.json` and `/rest/openapi.json`. The hook
-registers the route in `expressPreSession`, which runs before
+The route is gated by `settings.adminOpenAPI.enabled`, **default `false`**,
+per the project's "new features behind a flag, off by default" policy
+(CONTRIBUTING.md, AGENTS.MD, best_practices.md). When the flag is off,
+`expressPreSession` returns early and the route is dormant.
+
+When enabled, the route registers in `expressPreSession`, which runs before
 `expressCreateServer` (where `admin.ts` registers the SPA wildcard
 `/admin/{*filename}`). The earlier registration ensures
 `/admin/openapi.json` resolves before the wildcard catches it.
 
 Codegen does not depend on this route — `dump-spec.ts` calls
 `generateAdminDefinition()` in-process. The route exists for downstream
-tooling (Postman, swagger-ui, third-party clients).
+tooling (Postman, swagger-ui, third-party clients) that operators choose to
+expose.
 
 ## Codegen merge
 
