@@ -39,6 +39,23 @@ const wrapAsync = (fn: (req: any, res: any, next: Function) => Promise<unknown>)
     Promise.resolve(fn(req, res, next)).catch((err) => next(err));
   };
 
+/**
+ * Strip diagnostic strings (reason, fromSha, targetTag, build/install paths)
+ * from execution before exposing to unauthenticated callers. Status enum is
+ * preserved so the admin banner / pad-side badge can still render the right UI.
+ */
+const sanitizeExecution = (e: any): any => {
+  if (!e || typeof e !== 'object' || typeof e.status !== 'string') return {status: 'idle'};
+  return {status: e.status};
+};
+
+const sanitizeLastResult = (r: any): any => {
+  if (r === null) return null;
+  if (!r || typeof r !== 'object' || typeof r.outcome !== 'string') return null;
+  // outcome enum + at timestamp are non-sensitive. reason / fromSha / targetTag are dropped.
+  return {outcome: r.outcome, at: typeof r.at === 'string' ? r.at : null};
+};
+
 export const expressCreateServer = (
   _hookName: string,
   {app}: ArgsExpressType,
@@ -70,6 +87,7 @@ export const expressCreateServer = (
   // release. Admins who want the endpoint gated to authenticated admin sessions —
   // without disabling the updater entirely — set updates.requireAdminForStatus=true.
   app.get('/admin/update/status', wrapAsync(async (req, res) => {
+    const isAdmin = !!req.session?.user?.is_admin;
     if (settings.updates.requireAdminForStatus) {
       const user = req.session?.user;
       if (!user) return res.status(401).send('Authentication required');
@@ -88,6 +106,20 @@ export const expressCreateServer = (
         })
       : null;
     const lockHeld = await isHeld(path.join(settings.root, 'var', 'update.lock'));
+
+    // The Tier 2 fields (execution, lastResult) carry diagnostic strings
+    // built from git/pnpm stderr — environment-specific paths, error
+    // messages, etc. Endpoint defaults to unauthenticated; only authed
+    // admin sessions see the full diagnostic payload. Everyone else sees
+    // just the status enum + outcome enum so the pad-side / public banners
+    // can still render correctly without leaking operational detail.
+    const execution = isAdmin
+      ? state.execution
+      : sanitizeExecution(state.execution);
+    const lastResult = isAdmin
+      ? state.lastResult
+      : sanitizeLastResult(state.lastResult);
+
     res.json({
       currentVersion: current,
       latest: state.latest,
@@ -97,8 +129,8 @@ export const expressCreateServer = (
       policy,
       vulnerableBelow: state.vulnerableBelow,
       // PR 2 additions:
-      execution: state.execution,
-      lastResult: state.lastResult,
+      execution,
+      lastResult,
       lockHeld,
     });
   }));

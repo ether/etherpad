@@ -48,11 +48,21 @@ export const createDrainer = ({drainSeconds, broadcast}: DrainerOpts): Drainer =
     return new Promise((resolve) => {
       resolveDone = resolve;
       const ms = drainSeconds * 1000;
-      // T-60 announcement fires at start; T-30 and T-10 are scheduled at offsets.
-      // Drain windows shorter than 30s collapse the early timers to "fire ASAP".
+      // The opening announcement reports the actual drain length rather than a
+      // hardcoded 60, so a configured drainSeconds of e.g. 30 says "30 seconds".
+      // i18n key is still update.drain.t60 — that's the "start of drain" key in
+      // the locale file; the {{seconds}} placeholder carries the real value.
       fire('update.drain.t60', drainSeconds);
-      timers.push(setTimeout(() => fire('update.drain.t30', 30), Math.max(0, ms - 30_000)));
-      timers.push(setTimeout(() => fire('update.drain.t10', 10), Math.max(0, ms - 10_000)));
+      // Only schedule T-30 / T-10 when the configured window can actually
+      // honour them. Firing a "30 seconds" message at zero remaining (because
+      // ms - 30_000 < 0) is misleading; admins picking a short drainSeconds
+      // get fewer announcements but each carries an accurate countdown.
+      if (drainSeconds > 30) {
+        timers.push(setTimeout(() => fire('update.drain.t30', 30), ms - 30_000));
+      }
+      if (drainSeconds > 10) {
+        timers.push(setTimeout(() => fire('update.drain.t10', 10), ms - 10_000));
+      }
       timers.push(setTimeout(() => {
         if (cancelled) return;
         // Restore the gate as soon as the drain window closes. The executor

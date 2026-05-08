@@ -77,19 +77,34 @@ describe('SessionDrainer', () => {
     expect(seen[2]).toEqual({key: 'update.drain.t10', values: {seconds: 10}});
   });
 
-  it('drain shorter than 30s skips the t30 broadcast but still emits t10 and completes', async () => {
-    const broadcasts: string[] = [];
+  it('drainSeconds=15 skips t30 (window too short) but still fires t10', async () => {
+    const seen: Array<{key: string; values: any}> = [];
     const drainer = createDrainer({
       drainSeconds: 15,
-      broadcast: (key) => { broadcasts.push(key); },
+      broadcast: (key, values) => { seen.push({key, values}); },
     });
     const done = drainer.start();
-    expect(broadcasts).toEqual(['update.drain.t60']);
-    // t30 fires at max(0, 15-30)=0 i.e. immediately on next tick.
-    await vi.advanceTimersByTimeAsync(0);
-    expect(broadcasts).toContain('update.drain.t30');
-    await vi.advanceTimersByTimeAsync(15_000);
+    // Opening announcement reports the configured drain length, not a fixed 60.
+    expect(seen).toEqual([{key: 'update.drain.t60', values: {seconds: 15}}]);
+    // t30 is suppressed because reporting "30 seconds" would be wrong.
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(seen.map((s) => s.key)).not.toContain('update.drain.t30');
+    // t10 fires when 10 seconds remain (= 5s from start of a 15s drain).
+    expect(seen.map((s) => s.key)).toContain('update.drain.t10');
+    await vi.advanceTimersByTimeAsync(10_000);
     await done;
-    expect(broadcasts.at(-1)).toBe('update.drain.t10');
+  });
+
+  it('drainSeconds=5 skips both t30 and t10', async () => {
+    const seen: string[] = [];
+    const drainer = createDrainer({
+      drainSeconds: 5,
+      broadcast: (key) => { seen.push(key); },
+    });
+    const done = drainer.start();
+    expect(seen).toEqual(['update.drain.t60']);
+    await vi.advanceTimersByTimeAsync(5_000);
+    await done;
+    expect(seen).toEqual(['update.drain.t60']); // only the opening announcement
   });
 });
