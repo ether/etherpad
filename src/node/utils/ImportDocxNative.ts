@@ -49,13 +49,13 @@ const extractAlignmentMap = async (buffer: Buffer): Promise<Array<string|null>> 
 const applyAlignmentToHtml = (html: string, aligns: Array<string|null>): string => {
   if (aligns.length === 0 || !aligns.some((a) => a && a !== 'left')) return html;
   let i = 0;
-  return html.replace(/<(p|h[1-6])(\b[^>]*)>/gi, (whole, tag, attrs) => {
+  return html.replace(/<(p|h[1-6])(\b[^>]*)>/gi, (whole: string, tag: string, attrs: string) => {
     const align = aligns[i++];
     if (!align || align === 'left') return whole;
     if (/\bstyle\s*=/.test(attrs)) {
       return `<${tag}${attrs.replace(
           /\bstyle\s*=\s*(['"])([^'"]*)\1/i,
-          (_full, q, val) => `style=${q}${val}; text-align:${align}${q}`)}>`;
+          (_full: string, q: string, val: string) => `style=${q}${val}; text-align:${align}${q}`)}>`;
     }
     return `<${tag}${attrs} style="text-align:${align}">`;
   });

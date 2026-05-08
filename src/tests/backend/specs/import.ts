@@ -286,6 +286,75 @@ describe(__filename, function () {
     });
   });
 
+  describe('HTML import — adjacent headings (#7538)', function () {
+    before(async function () {
+      settings.soffice = null;
+    });
+
+    const importHtml = async (padId: string, html: string) => {
+      try { await padManager.removePad(padId); } catch { /* noop */ }
+      const tmp = path.join(os.tmpdir(),
+          `htmlimport-${process.pid}-${Date.now()}.html`);
+      await fs.writeFile(tmp, html);
+      try {
+        const r = await agent.post(`/p/${padId}/import`)
+            .attach('file', tmp).expect(200);
+        assert.strictEqual(r.body.code, 0,
+            `import failed: ${JSON.stringify(r.body)}`);
+      } finally {
+        await fs.unlink(tmp).catch(() => undefined);
+      }
+    };
+
+    it('does not introduce a blank line between H1 and H2', async function () {
+      const padId = 'test7538HtmlH1H2';
+      await importHtml(padId, '<html><body><h1>A</h1><h2>B</h2></body></html>');
+      const pad = await padManager.getPad(padId);
+      const lines = (pad.text().split('\n') as string[]).filter(
+          (l: string, i: number, arr: string[]) =>
+              // ignore the trailing blank line setPadHTML always appends
+              !(l === '' && i === arr.length - 1));
+      // We want exactly two content lines (A and B), no blank line
+      // injected between them.
+      const meaningful = lines.filter((l: string) => l.trim().length > 0);
+      assert.deepStrictEqual(meaningful.length, 2,
+          `expected 2 content lines, got: ${JSON.stringify(lines)}`);
+      const between = lines.slice(
+          lines.findIndex((l: string) => l.includes('A')) + 1,
+          lines.findIndex((l: string) => l.includes('B')));
+      assert.deepStrictEqual(between, [],
+          `expected no blank line between A and B, got: ${JSON.stringify(between)}`);
+    });
+
+    // Reproduce the realistic export-side shape: H1 + two blank pad lines
+    // (encoded by ep_align as `<br><p style></p><br><p style></p><br>`)
+    // + H2. The pad should round-trip back to H1, blank, blank, H2 -- not
+    // gain or lose blank lines.
+it('preserves blank-line count between H1 and H2 (realistic shape)', async function () {
+      const padId = 'test7538HtmlBlankLines';
+      const html =
+          '<html><body>' +
+          "<h1 style='text-align:right'>A</h1><br>" +
+          "<p style='text-align:right'></p><br>" +
+          "<p style='text-align:right'></p><br>" +
+          "<h2 style='text-align:center'>B</h2><br>" +
+          '</body></html>';
+      await importHtml(padId, html);
+      const pad = await padManager.getPad(padId);
+      const lines: string[] = pad.text().split('\n');
+      // Drop the trailing-newline appended by setPadHTML on import.
+      while (lines.length > 0 && lines[lines.length - 1] === '') lines.pop();
+      // Expect: A, '', '', B
+      const aIdx = lines.findIndex((l: string) => l.includes('A'));
+      const bIdx = lines.findIndex((l: string) => l.includes('B'));
+      assert.notStrictEqual(aIdx, -1, `expected A: ${JSON.stringify(lines)}`);
+      assert.notStrictEqual(bIdx, -1, `expected B: ${JSON.stringify(lines)}`);
+      const blankCount = bIdx - aIdx - 1;
+      assert.strictEqual(blankCount, 2,
+          `expected 2 blank lines between A and B, got ${blankCount}: ${JSON.stringify(lines)}`);
+    });
+  });
+
   describe('Round-trip integrity: heading-style content (#7538)', function () {
     before(function () {
       try {

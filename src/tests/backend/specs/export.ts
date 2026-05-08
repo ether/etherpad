@@ -255,6 +255,46 @@ hello<br>world
     });
   });
 
+  describe('collapseRedundantBrAfterBlocks', function () {
+    const {collapseRedundantBrAfterBlocks} =
+        require('../../../node/utils/ExportSanitizeHtml');
+
+    it('drops <br> immediately after a closing <p>', function () {
+      assert.strictEqual(
+          collapseRedundantBrAfterBlocks('<p>x</p><br><p>y</p>'),
+          '<p>x</p><p>y</p>');
+    });
+
+    it('drops <br> after closing heading and code tags', function () {
+      for (const tag of ['h1', 'h2', 'h3', 'code', 'pre', 'div', 'blockquote']) {
+        assert.strictEqual(
+            collapseRedundantBrAfterBlocks(`<${tag}>x</${tag}><br>`),
+            `<${tag}>x</${tag}>`,
+            `expected </${tag}><br> collapsed`);
+      }
+    });
+
+    it('keeps a standalone <br> between text', function () {
+      const html = 'Hello<br>World';
+      assert.strictEqual(collapseRedundantBrAfterBlocks(html), html);
+    });
+
+    it('handles whitespace between </tag> and <br>', function () {
+      assert.strictEqual(
+          collapseRedundantBrAfterBlocks('<p>x</p>  \n<br>after'),
+          '<p>x</p>after');
+    });
+
+    it('drops only one <br>, leaving any subsequent ones', function () {
+      // <br><br> after a closing block represents (one redundant + one
+      // intentional blank-line break). After collapsing the first, the
+      // second remains.
+      assert.strictEqual(
+          collapseRedundantBrAfterBlocks('<p>x</p><br><br><p>y</p>'),
+          '<p>x</p><br><p>y</p>');
+    });
+  });
+
   describe('separateAdjacentHeadingBlocks', function () {
     const {separateAdjacentHeadingBlocks} =
         require('../../../node/utils/ExportSanitizeHtml');

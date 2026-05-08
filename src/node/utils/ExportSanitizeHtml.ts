@@ -18,6 +18,18 @@ export const extractBody = (html: string): string => {
   return m[1].replace(/^[\s ]+/, '').replace(/[\s ]+$/, '');
 };
 
+// Drop `<br>` immediately following a closing block tag. Etherpad's
+// HTML export writes one `<p>...</p>` per pad line (or `<h1>...</h1>`,
+// `<code>...</code>` for the styled ones from ep_align/ep_headings2),
+// then appends a `<br>` between lines. The `<br>` is redundant — the
+// closing block tag already ends the line — and on import the server
+// content collector counts BOTH as line breaks, so every blank line
+// between two paragraphs gets duplicated.
+const REDUNDANT_BR_RE =
+  /(<\/(?:p|h[1-6]|div|pre|blockquote|code|ul|ol|li|table|tr|td|th)>)\s*<br\s*\/?>/gi;
+export const collapseRedundantBrAfterBlocks = (html: string): string =>
+    html.replace(REDUNDANT_BR_RE, '$1');
+
 // Insert a `<br>` between adjacent heading-style blocks so etherpad's
 // server-side content collector breaks them into separate pad lines.
 //

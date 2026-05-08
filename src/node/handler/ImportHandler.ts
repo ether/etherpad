@@ -135,6 +135,22 @@ const doImport = async (req:any, res:any, padId:string, authorId:string) => {
     }
   }
 
+  // Detect once whether the contentcollector treats h1-h6/code as block
+  // elements server-side. ep_headings2 v0.2.118+ (after the
+  // ep_plugin_helpers ccRegisterBlockElements wiring lands) registers
+  // them; older versions don't. The two preprocessors below are only
+  // needed when the plugin hook is missing — they're harmful otherwise
+  // (each adds an extra blank pad line per heading transition).
+  const ccBlockElems: string[] =
+      ([] as string[]).concat(...(hooks.callAll('ccRegisterBlockElements') || []));
+  const ccBlockSet = new Set(ccBlockElems.map((t: string) => t.toLowerCase()));
+  // ep_headings2 registers 'h1' along with the others when its server
+  // hook is wired (ccRegisterBlockElements). h1 is sufficient as the
+  // detection probe; the absence of h5/h6 in the set is a quirk of
+  // ep_headings2 (it only handles h1-h4) and not a sign of a broken
+  // hook.
+  const headingsAreBlocks = ccBlockSet.has('h1');
+
   // Native DOCX import (issue #7538): when soffice isn't configured we
   // hand .docx files to mammoth, which produces HTML — then we feed that
   // through the existing setPadHTML pipeline.
@@ -145,12 +161,14 @@ const doImport = async (req:any, res:any, padId:string, authorId:string) => {
     let nativeHtml: string;
     try {
       nativeHtml = await docxBufferToHtml(buf);
-      // Insert <br> between adjacent <h1>...</h1><h2>...</h2> style
-      // blocks so the server-side content collector (which doesn't know
-      // h1-h6/code are block elements without the right plugin hook)
-      // treats each as its own pad line. Without this, h1+h2+code from
-      // the export round-trip merge into a single line on import.
-      nativeHtml = separateAdjacentHeadingBlocks(nativeHtml);
+      // When the plugin hook is missing, contentcollector treats h1-h6
+      // as inline and adjacent headings merge into a single pad line.
+      // Insert <br> between them as a defensive workaround. Skipped when
+      // the plugin already registers the tags (otherwise the <br> becomes
+      // an extra blank line per heading transition).
+      if (!headingsAreBlocks) {
+        nativeHtml = separateAdjacentHeadingBlocks(nativeHtml);
+      }
     } catch (err: any) {
       logger.warn(`Native DOCX import failed: ${err.stack || err}`);
       throw new ImportError('convertFailed');
@@ -253,7 +271,20 @@ const doImport = async (req:any, res:any, padId:string, authorId:string) => {
   if (!directDatabaseAccess) {
     if (importHandledByPlugin || useConverter || fileIsHTML) {
       try {
-        await importHtml.setPadHTML(pad, text, authorId);
+        // Etherpad's HTML export wraps each pad line in `<p>...</p>`
+        // (or `<h1>`, `<code>`, etc.) and then appends a `<br>` between
+        // lines. The closing block tag already ends the line for
+        // contentcollector, so the trailing `<br>` is redundant and
+        // doubles every blank line on import. Collapse `</block><br>`
+        // before handing to setPadHTML so HTML round-trips don't drift.
+        // Only applied to HTML imports (and converted-via-soffice
+        // outputs, which look the same shape) -- the docx native path
+        // above doesn't go through here.
+        const {collapseRedundantBrAfterBlocks} =
+            require('../utils/ExportSanitizeHtml');
+        const cleaned = (fileIsHTML || useConverter)
+            ? collapseRedundantBrAfterBlocks(text) : text;
+        await importHtml.setPadHTML(pad, cleaned, authorId);
       } catch (err:any) {
         logger.warn(`Error importing, possibly caused by malformed HTML: ${err.stack || err}`);
       }

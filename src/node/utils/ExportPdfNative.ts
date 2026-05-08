@@ -137,13 +137,23 @@ export const htmlToPdfBuffer = (html: string): Promise<Buffer> =>
           case 'u': next.underline = true; break;
           case 's': case 'strike': case 'del': next.strike = true; break;
           case 'a': next.link = attribs.href; next.underline = true; break;
-          case 'code': case 'tt': case 'kbd': case 'samp':
+          case 'code': case 'tt': case 'kbd': case 'samp': {
             next.mono = true;
+            // ep_headings2 uses <code style='text-align:...'> as a block-
+            // styled "code" line, so read the alignment off the opening
+            // tag too. parseAlign returns undefined when no text-align
+            // is set, so this is a no-op for inline <code> usage.
+            const a = parseAlign(attribs.style);
+            if (a) next.align = a;
             break;
-          case 'pre':
+          }
+          case 'pre': {
             next.mono = true;
+            const a = parseAlign(attribs.style);
+            if (a) next.align = a;
             if (!pendingNewline) breakLine();
             break;
+          }
           case 'h1': case 'h2': case 'h3': case 'h4': case 'h5': case 'h6': {
             next.fontSize = HEADING_SIZES[name];
             next.bold = true;
