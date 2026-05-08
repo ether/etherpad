@@ -66,7 +66,7 @@ module.
 ### Why merge in `dump-spec.ts` rather than at `openapi-typescript` time
 
 `openapi-typescript` only accepts one input. We could run it twice and emit
-two `.d.ts` files, but the chosen design (Section 3, codegen) is a single
+two `.d.ts` files, but the chosen design (see "Codegen merge" below) is a single
 merged `schema.d.ts` so the admin UI's `$api` instance has one `paths`
 interface covering both surfaces. The merge therefore happens at JSON-dump
 time, before `openapi-typescript` runs.
