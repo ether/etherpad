@@ -177,6 +177,17 @@ exports.start = async () => {
   // @ts-ignore
   startDoneGate.resolve();
 
+  // Once the server is RUNNING, /health responds 200 — that is the implicit
+  // health signal the updater's pending-verification timer is waiting for.
+  // Wrapped in try/catch because it must never block startup on a bug here.
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const updater = require('./updater');
+    if (typeof updater.markBootHealthy === 'function') updater.markBootHealthy();
+  } catch (err) {
+    logger.debug(`markBootHealthy: ${(err as Error).message}`);
+  }
+
   // Return the HTTP server to make it easier to write tests.
   return express.server;
 };

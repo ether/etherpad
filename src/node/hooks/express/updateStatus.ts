@@ -1,11 +1,13 @@
 'use strict';
 
+import path from 'node:path';
 import {ArgsExpressType} from '../../types/ArgsExpressType';
 import settings, {getEpVersion} from '../../utils/Settings';
 import {getDetectedInstallMethod, stateFilePath} from '../../updater';
 import {evaluatePolicy} from '../../updater/UpdatePolicy';
 import {compareSemver, isMajorBehind, isVulnerable} from '../../updater/versionCompare';
 import {loadState} from '../../updater/state';
+import {isHeld} from '../../updater/lock';
 
 
 let badgeCache: {value: 'severe' | 'vulnerable' | null; at: number} = {value: null, at: 0};
@@ -77,8 +79,15 @@ export const expressCreateServer = (
     const current = getEpVersion();
     const installMethod = getDetectedInstallMethod();
     const policy = state.latest
-      ? evaluatePolicy({installMethod, tier: settings.updates.tier, current, latest: state.latest.version})
+      ? evaluatePolicy({
+          installMethod,
+          tier: settings.updates.tier,
+          current,
+          latest: state.latest.version,
+          executionStatus: state.execution.status,
+        })
       : null;
+    const lockHeld = await isHeld(path.join(settings.root, 'var', 'update.lock'));
     res.json({
       currentVersion: current,
       latest: state.latest,
@@ -87,6 +96,10 @@ export const expressCreateServer = (
       tier: settings.updates.tier,
       policy,
       vulnerableBelow: state.vulnerableBelow,
+      // PR 2 additions:
+      execution: state.execution,
+      lastResult: state.lastResult,
+      lockHeld,
     });
   }));
 
