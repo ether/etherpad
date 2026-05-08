@@ -29,8 +29,11 @@ export const extractBody = (html: string): string => {
 // leave it alone, otherwise wrap in `<p>`. Single `<br>` inside a chunk
 // stays as a soft break which html-to-docx handles correctly.
 const BLOCK_HEAD_RE = /^<(?:p|h[1-6]|ul|ol|table|blockquote|pre|div)[\s>/]/i;
-const BR_PARA_RE = /(?:\s*<br\s*\/?>\s*){2,}/gi;
-const TRAILING_BR_RE = /(?:\s*<br\s*\/?>\s*)+$/i;
+// Anchored so the inner `\s*` can't overlap with surrounding whitespace and
+// trigger exponential backtracking. Matches `<br>` followed by at least one
+// more `<br>` (with optional whitespace between).
+const BR_PARA_RE = /<br\s*\/?>(?:\s*<br\s*\/?>)+/gi;
+const TRAILING_BR_RE = /(?:<br\s*\/?>\s*)+$/i;
 export const wrapLooseLines = (html: string): string => {
   const chunks = html.split(BR_PARA_RE)
       .map((c) => c.replace(TRAILING_BR_RE, '').trim())

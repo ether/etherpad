@@ -107,7 +107,10 @@ describe(__filename, function () {
       settings.soffice = null;
     });
 
-    const fetchBuffer = (req: any): Promise<Buffer> => req
+    // Returns the supertest Test so callers can keep chaining .expect();
+    // typing as `any` because supertest's Test isn't re-exported as a type
+    // we can name here.
+    const fetchBuffer = (req: any): any => req
         .buffer(true)
         .parse((resp: any, cb: any) => {
           const chunks: Buffer[] = [];
