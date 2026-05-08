@@ -170,22 +170,35 @@ describe('admin OpenAPI document', function () {
     });
   });
 
-  describe('GET /admin/openapi.json', function () {
-    // The route is feature-flagged (settings.adminOpenAPI.enabled, default
-    // false). expressPreSession reads the flag once at registration time, so
-    // we set it before common.init() boots Express. Mocha runs this `before`
-    // hook prior to any inner `it`, and it runs before the default-off
-    // describe below sees common.init().
+  describe('GET /admin/openapi.json (feature flag)', function () {
+    // The route is registered unconditionally; the handler reads
+    // settings.adminOpenAPI.enabled per-request. This lets a single Express
+    // agent (shared across the whole suite via common.init()) exercise both
+    // states by toggling the flag in-process — no server restart needed.
     let agent: any;
+    let settingsModule: any;
+
     before(async function () {
-      const settings = require('../../../node/utils/Settings').default;
-      settings.adminOpenAPI = settings.adminOpenAPI || {enabled: true};
-      settings.adminOpenAPI.enabled = true;
       const common = require('../common');
       agent = await common.init();
+      settingsModule = require('../../../node/utils/Settings').default;
     });
 
-    it('serves the admin OpenAPI document as JSON', async function () {
+    after(function () {
+      // Restore default-off so subsequent specs don't see leaked state.
+      if (settingsModule?.adminOpenAPI) settingsModule.adminOpenAPI.enabled = false;
+    });
+
+    it('returns 404 JSON when settings.adminOpenAPI.enabled is false (default)', async function () {
+      settingsModule.adminOpenAPI = settingsModule.adminOpenAPI || {enabled: false};
+      settingsModule.adminOpenAPI.enabled = false;
+      const res = await agent.get('/admin/openapi.json').expect(404);
+      assert.match(res.headers['content-type'] || '', /application\/json/);
+      assert.deepEqual(res.body, {error: 'Not Found'});
+    });
+
+    it('serves the admin OpenAPI document as JSON when the flag is on', async function () {
+      settingsModule.adminOpenAPI.enabled = true;
       const res = await agent.get('/admin/openapi.json').expect(200);
       assert.match(res.headers['content-type'] || '', /application\/json/);
       assert.equal(res.body.openapi, '3.0.2');
@@ -194,37 +207,10 @@ describe('admin OpenAPI document', function () {
       assert.ok(res.body.paths['/admin/update/status']);
     });
 
-    it('sets a permissive CORS header (matches /api/openapi.json)', async function () {
+    it('sets a permissive CORS header when enabled (matches /api/openapi.json)', async function () {
+      settingsModule.adminOpenAPI.enabled = true;
       const res = await agent.get('/admin/openapi.json').expect(200);
       assert.equal(res.headers['access-control-allow-origin'], '*');
-    });
-  });
-
-  describe('feature-flag default-off behavior', function () {
-    it('expressPreSession is a no-op when settings.adminOpenAPI.enabled is false', async function () {
-      // Boot a stub express app, run expressPreSession with the flag off,
-      // and assert no GET /admin/openapi.json route was registered. We
-      // assert on the spy directly because the live server in the previous
-      // describe has the flag forced on.
-      const registered: string[] = [];
-      const stubApp: any = {
-        get: (path: string, _h: any) => {
-          registered.push(path);
-        },
-      };
-      const settingsModule = require('../../../node/utils/Settings').default;
-      const prev = settingsModule.adminOpenAPI?.enabled;
-      try {
-        settingsModule.adminOpenAPI = {enabled: false};
-        await openapiAdmin.expressPreSession('expressPreSession', {app: stubApp});
-        assert.equal(
-          registered.includes('/admin/openapi.json'),
-          false,
-          'route should not be registered when flag is off',
-        );
-      } finally {
-        if (settingsModule.adminOpenAPI) settingsModule.adminOpenAPI.enabled = !!prev;
-      }
     });
   });
 });

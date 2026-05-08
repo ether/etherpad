@@ -163,8 +163,17 @@ export const expressPreSession = async (
   // (CONTRIBUTING.md, AGENTS.MD) requires new features to ship disabled by
   // default. The route is only useful for third-party tooling — codegen
   // imports generateAdminDefinition() in-process and does not depend on it.
-  if (!settings.adminOpenAPI?.enabled) return;
+  //
+  // The flag is checked per-request (not at registration time) so toggling
+  // settings.adminOpenAPI.enabled at runtime takes effect immediately and
+  // so test suites that share a long-lived Express agent can exercise both
+  // states without restarting the server.
   app.get('/admin/openapi.json', (_req: any, res: any) => {
+    if (!settings.adminOpenAPI?.enabled) {
+      // Return JSON 404 (not the SPA's text/html catch-all) so callers get
+      // a clear "feature disabled" signal rather than an HTML page.
+      return res.status(404).type('application/json').send({error: 'Not Found'});
+    }
     res.header('Access-Control-Allow-Origin', '*');
     res.json(generateAdminDefinition());
   });
