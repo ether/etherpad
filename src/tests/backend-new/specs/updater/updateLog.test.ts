@@ -67,6 +67,16 @@ describe('appendLine + rotation', () => {
     expect(await fs.readFile(nested, 'utf8')).toBe('hello world\n');
   });
 
+  it('appendLine swallows errors so the caller never breaks on a read-only fs', async () => {
+    const {appendLine} = await import('../../../../node/updater/updateLog');
+    // Make the would-be parent dir a regular file — fs.mkdir then fails with ENOTDIR
+    // (or EEXIST depending on platform), which the helper must swallow.
+    const collide = path.join(dir, 'not-a-dir');
+    await fs.writeFile(collide, 'oops');
+    const target = path.join(collide, 'inner', 'update.log');
+    await appendLine(target, 'x'); // must NOT throw
+  });
+
   it('rotateIfNeeded shifts .1 -> .2, current -> .1 once over the size threshold', async () => {
     const {rotateIfNeeded} = await import('../../../../node/updater/updateLog');
     // Force rotation by passing a tiny limit; write a line above the limit.

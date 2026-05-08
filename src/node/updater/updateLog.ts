@@ -38,8 +38,27 @@ export const rotateIfNeeded = async (
  * Append `line` to `<logPath>`, rotating first if the file is over the size cap.
  * Creates parent directories as needed. The line is newline-terminated; do not
  * include a trailing newline in `line`.
+ *
+ * Best-effort: swallows fs errors silently. Update logging must never break the
+ * update flow itself, and errors are already surfaced via log4js by callers.
  */
 export const appendLine = async (
+  logPath: string,
+  line: string,
+  maxBytes = DEFAULT_MAX_BYTES,
+  backups = DEFAULT_BACKUPS,
+): Promise<void> => {
+  try {
+    await fs.mkdir(path.dirname(logPath), {recursive: true});
+    await rotateIfNeeded(logPath, maxBytes, backups);
+    await fs.appendFile(logPath, `${line}\n`);
+  } catch {
+    // ignore — caller is fire-and-forget logging
+  }
+};
+
+/** Same as appendLine but throws on error — used by tests that want to assert disk failures surface. */
+export const appendLineStrict = async (
   logPath: string,
   line: string,
   maxBytes = DEFAULT_MAX_BYTES,
