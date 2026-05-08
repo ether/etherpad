@@ -49,4 +49,48 @@ describe(__filename, function () {
       assert.doesNotMatch(html, /<img[^>]+src="\/\//);
     });
   });
+
+  describe('end-to-end DOCX import (#7538)', function () {
+    before(function () {
+      try { require.resolve('mammoth'); }
+      catch { this.skip(); return; }
+      settings.soffice = null;
+    });
+
+    it('imports a docx into a pad without soffice', async function () {
+      const padId = 'test7538DocxImport';
+      try { await padManager.removePad(padId); } catch { /* noop */ }
+      const fixture = path.join(__dirname, 'fixtures', 'sample.docx');
+      const res = await agent
+          .post(`/p/${padId}/import`)
+          .attach('file', fixture)
+          .expect(200);
+      assert.strictEqual(res.body.code, 0,
+          `import failed: ${JSON.stringify(res.body)}`);
+      const pad = await padManager.getPad(padId);
+      const text = pad.text();
+      assert.match(text, /Heading/);
+      assert.match(text, /Paragraph body/);
+      assert.match(text, /one/);
+      assert.match(text, /two/);
+    });
+
+    it('rejects odt extension when soffice is null', async function () {
+      const padId = 'test7538OdtReject';
+      try { await padManager.removePad(padId); } catch { /* noop */ }
+      const fixture = path.join(__dirname, 'fixtures', 'sample.docx');
+      const odtPath = path.join(__dirname, 'fixtures', 'sample.odt');
+      await fs.copyFile(fixture, odtPath);
+      try {
+        const res = await agent
+            .post(`/p/${padId}/import`)
+            .attach('file', odtPath);
+        assert.ok(
+            res.status >= 400 || res.body.code !== 0,
+            `expected odt import to fail when soffice is null, got: ${res.status} ${JSON.stringify(res.body)}`);
+      } finally {
+        await fs.unlink(odtPath).catch(() => undefined);
+      }
+    });
+  });
 });

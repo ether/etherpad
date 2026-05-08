@@ -65,6 +65,11 @@ if (settings.soffice != null) {
   exportExtension = 'html';
 }
 
+// Office formats with no in-process import path (issue #7538). When soffice
+// is null these are rejected explicitly so users see a clear error instead
+// of a silent ASCII-only fallback. .docx has a native path via mammoth.
+const SOFFICE_ONLY_IMPORT_FORMATS = new Set(['.pdf', '.odt', '.doc', '.rtf']);
+
 const tmpDirectory = os.tmpdir();
 
 /**
@@ -128,6 +133,42 @@ const doImport = async (req:any, res:any, padId:string, authorId:string) => {
       logger.warn(`Not allowing unknown file type to be imported: ${fileEnding}`);
       throw new ImportError('uploadFailed');
     }
+  }
+
+  // Native DOCX import (issue #7538): when soffice isn't configured we
+  // hand .docx files to mammoth, which produces HTML — then we feed that
+  // through the existing setPadHTML pipeline.
+  if (settings.soffice == null && fileEnding === '.docx') {
+    const buf = await fs.readFile(srcFile);
+    const {docxBufferToHtml} = require('../utils/ImportDocxNative');
+    let nativeHtml: string;
+    try {
+      nativeHtml = await docxBufferToHtml(buf);
+    } catch (err: any) {
+      logger.warn(`Native DOCX import failed: ${err.stack || err}`);
+      throw new ImportError('convertFailed');
+    }
+    const pad = await padManager.getPad(padId, '\n', authorId);
+    try {
+      await importHtml.setPadHTML(pad, nativeHtml, authorId);
+    } catch (err: any) {
+      logger.warn(`Error importing native DOCX HTML: ${err.stack || err}`);
+      throw new ImportError('convertFailed');
+    }
+    padManager.unloadPad(padId);
+    const reloaded = await padManager.getPad(padId, '\n', authorId);
+    padManager.unloadPad(padId);
+    await padMessageHandler.updatePadClients(reloaded);
+    rm(srcFile);
+    return false;
+  }
+
+  // Without soffice, the legacy office formats (pdf, odt, doc, rtf) have
+  // no in-process path. Reject explicitly so the user sees a clear error
+  // instead of a silent ASCII-only fallback.
+  if (settings.soffice == null && SOFFICE_ONLY_IMPORT_FORMATS.has(fileEnding)) {
+    logger.warn(`Cannot import ${fileEnding} without soffice configured`);
+    throw new ImportError('uploadFailed');
   }
 
   const destFile = path.join(tmpDirectory, `etherpad_import_${randNum}.${exportExtension}`);
