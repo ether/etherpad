@@ -14,6 +14,9 @@ const padMessageHandler = require('../../handler/PadMessageHandler');
 
 let io:any;
 const logger = log4js.getLogger('socket.io');
+
+/** Returns the socket.io Server once expressCreateServer has run, or null otherwise. Used by features that need to broadcast outside the regular hook surface. */
+export const getIo = (): any => io;
 const sockets = new Set();
 const socketsEvents = new events.EventEmitter();
 

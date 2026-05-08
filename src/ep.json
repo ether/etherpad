@@ -117,6 +117,13 @@
       }
     },
     {
+      "name": "updateActions",
+      "post": ["ep_etherpad-lite/admin"],
+      "hooks": {
+        "expressCreateServer": "ep_etherpad-lite/node/hooks/express/updateActions"
+      }
+    },
+    {
       "name": "admin",
       "hooks": {
         "expressCreateServer": "ep_etherpad-lite/node/hooks/express/admin"
