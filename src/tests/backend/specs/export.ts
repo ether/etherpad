@@ -110,4 +110,87 @@ describe(__filename, function () {
       assert.strictEqual(stripRemoteImages(html), html);
     });
   });
+
+  describe('htmlToPdfBuffer', function () {
+    let htmlToPdfBuffer: (html: string) => Promise<Buffer>;
+
+    before(function () {
+      try {
+        require.resolve('pdfkit');
+        require.resolve('htmlparser2');
+      } catch {
+        this.skip();
+        return;
+      }
+      htmlToPdfBuffer = require('../../../node/utils/ExportPdfNative').htmlToPdfBuffer;
+    });
+
+    it('produces a buffer starting with %PDF-', async function () {
+      const buf = await htmlToPdfBuffer('<p>hello world</p>');
+      assert.ok(Buffer.isBuffer(buf), 'must return Buffer');
+      assert.ok(buf.length > 100, `buffer suspiciously small: ${buf.length} bytes`);
+      assert.strictEqual(buf.slice(0, 5).toString('ascii'), '%PDF-');
+    });
+
+    // pdfkit emits visible text as hex strings inside TJ operators
+    // (e.g. `Title` -> `<5469746c65>`), and pdfkit splits a single text
+    // run into multiple chunks at kerning boundaries. Decode every hex
+    // string we find and concatenate the result so substring matching
+    // works on the visible text content.
+    const decodeVisibleText = (raw: string): string => {
+      const out: string[] = [];
+      const re = /<([0-9a-fA-F]{2,})>/g;
+      let m: RegExpExecArray | null;
+      while ((m = re.exec(raw)) !== null) {
+        try {
+          out.push(Buffer.from(m[1], 'hex').toString('latin1'));
+        } catch { /* not hex; ignore */ }
+      }
+      return out.join('');
+    };
+
+    const renderText = async (html: string): Promise<string> => {
+      const buf = await htmlToPdfBuffer(html);
+      return buf.toString('latin1');
+    };
+
+    it('renders headings, paragraphs, and lists', async function () {
+      const raw = await renderText(`
+        <h1>Title</h1>
+        <p>Body paragraph here.</p>
+        <ul><li>one</li><li>two</li></ul>
+        <ol><li>alpha</li><li>beta</li></ol>
+      `);
+      const visible = decodeVisibleText(raw);
+      assert.ok(visible.includes('Title'), `expected Title in: ${visible}`);
+      assert.ok(visible.includes('Body paragraph here.'),
+          `expected paragraph in: ${visible}`);
+      assert.ok(visible.includes('one'), `expected "one" in: ${visible}`);
+      assert.ok(visible.includes('two'), `expected "two" in: ${visible}`);
+      assert.ok(visible.includes('alpha'), `expected "alpha" in: ${visible}`);
+      assert.ok(visible.includes('beta'), `expected "beta" in: ${visible}`);
+    });
+
+    it('emits link annotations for <a href>', async function () {
+      const raw = await renderText('<p><a href="https://etherpad.org">site</a></p>');
+      const visible = decodeVisibleText(raw);
+      assert.ok(visible.includes('site'), `expected "site" in: ${visible}`);
+      // URL is stored in a /URI dict as a plain (parenthesized) string
+      assert.ok(raw.includes('etherpad.org'),
+          'expected link target URL in PDF /URI dict');
+    });
+
+    it('embeds data: URI images without throwing', async function () {
+      const tinyPng =
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+      const buf = await htmlToPdfBuffer(`<img src="data:image/png;base64,${tinyPng}">`);
+      assert.ok(buf.length > 200);
+    });
+
+    it('ignores unknown tags rather than crashing', async function () {
+      const buf = await htmlToPdfBuffer(
+          '<custom-tag><p>still works</p></custom-tag>');
+      assert.strictEqual(buf.slice(0, 5).toString('ascii'), '%PDF-');
+    });
+  });
 });
