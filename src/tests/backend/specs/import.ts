@@ -158,6 +158,131 @@ describe(__filename, function () {
       }
     });
 
+    // Bidirectional round-trip: export from src pad, import into dst pad,
+    // export again. Compare exhibit (a) to exhibit (c). For text-based
+    // formats (txt, etherpad) this is straight byte equality. For HTML
+    // and DOCX we compare the relevant invariants (line text, paragraph
+    // count) since whitespace and metadata can differ between exports.
+    const exportPad = async (padId: string, type: string): Promise<Buffer> => {
+      const r = await fetchBuffer(agent.get(`/p/${padId}/export/${type}`))
+          .expect(200);
+      return r.body as Buffer;
+    };
+
+    const importToPad = async (padId: string, content: Buffer, ext: string) => {
+      try { await padManager.removePad(padId); } catch { /* noop */ }
+      const tmp = path.join(os.tmpdir(),
+          `roundtrip-${process.pid}-${Date.now()}.${ext}`);
+      await fs.writeFile(tmp, content);
+      try {
+        const r = await agent.post(`/p/${padId}/import`)
+            .attach('file', tmp).expect(200);
+        assert.strictEqual(r.body.code, 0,
+            `${ext} import failed: ${JSON.stringify(r.body)}`);
+      } finally {
+        await fs.unlink(tmp).catch(() => undefined);
+      }
+    };
+
+    const seedPad = async (padId: string, text: string) => {
+      try { await padManager.removePad(padId); } catch { /* noop */ }
+      const pad = await padManager.getPad(padId, '\n');
+      await pad.setText(text);
+    };
+
+    const SAMPLE_TEXT = 'Line one\nLine two\n\nAfter blank\n';
+
+    it('a==c round-trip: txt export -> import -> export', async function () {
+      const src = 'test7538RtTxtSrc';
+      const dst = 'test7538RtTxtDst';
+      await seedPad(src, SAMPLE_TEXT);
+      const a = await exportPad(src, 'txt');
+      await importToPad(dst, a, 'txt');
+      const c = await exportPad(dst, 'txt');
+      assert.strictEqual(c.toString('utf8'), a.toString('utf8'),
+          `txt round-trip drift\nA:${JSON.stringify(a.toString('utf8'))}\nC:${JSON.stringify(c.toString('utf8'))}`);
+    });
+
+    it('a==c round-trip: etherpad export -> import -> export', async function () {
+      const src = 'test7538RtEpadSrc';
+      const dst = 'test7538RtEpadDst';
+      await seedPad(src, SAMPLE_TEXT);
+      const a = await exportPad(src, 'etherpad');
+      await importToPad(dst, a, 'etherpad');
+      const c = await exportPad(dst, 'etherpad');
+      // etherpad format is JSON metadata + atext; the surrounding metadata
+      // (timestamps, ids) differs across pads. Assert the line content
+      // matches by parsing pad text from both pads.
+      const srcText = (await padManager.getPad(src)).text();
+      const dstText = (await padManager.getPad(dst)).text();
+      assert.strictEqual(dstText, srcText,
+          `etherpad round-trip drift\nsrc:${JSON.stringify(srcText)}\ndst:${JSON.stringify(dstText)}`);
+      assert.ok(a.length > 0 && c.length > 0,
+          'expected non-empty etherpad bodies');
+    });
+
+    it('a==c round-trip: html export -> import -> export', async function () {
+      const src = 'test7538RtHtmlSrc';
+      const dst = 'test7538RtHtmlDst';
+      await seedPad(src, SAMPLE_TEXT);
+      const a = (await exportPad(src, 'html')).toString('utf8');
+      await importToPad(dst, Buffer.from(a, 'utf8'), 'html');
+      const c = (await exportPad(dst, 'html')).toString('utf8');
+      // Strip <head> (skin-versioned hashes), trim trailing whitespace,
+      // and trim trailing <br>s — etherpad's setPadHTML appends an empty
+      // <p> on import to keep a caret below the last line, which adds
+      // exactly one trailing newline per round-trip. That's pre-existing
+      // core behavior, so the meaningful invariant is "content lines
+      // match" with the trailing newline tolerated.
+      const bodyOf = (s: string) =>
+          (s.match(/<body>([\s\S]*?)<\/body>/i)?.[1] ?? '')
+              .replace(/(?:<br\s*\/?>\s*)+$/i, '')
+              .trim();
+      assert.strictEqual(bodyOf(c), bodyOf(a),
+          `html body drift\nA:${JSON.stringify(bodyOf(a))}\nC:${JSON.stringify(bodyOf(c))}`);
+    });
+
+    it('a==c round-trip: docx export -> import -> export (line text)',
+        async function () {
+      const src = 'test7538RtDocxSrc';
+      const dst = 'test7538RtDocxDst';
+      await seedPad(src, SAMPLE_TEXT);
+      const a = await exportPad(src, 'docx');
+      await importToPad(dst, a, 'docx');
+      // Compare pad text, not docx bytes -- DOCX includes timestamps
+      // and pad ID metadata in the document properties so byte equality
+      // is impossible. Pad text equality is the right invariant.
+      const srcText = (await padManager.getPad(src)).text();
+      const dstText = (await padManager.getPad(dst)).text();
+      // setPadHTML appends a trailing newline on import, so dst is
+      // expected to be src plus one trailing '\n'.
+      const srcNorm = srcText.replace(/\n+$/, '\n');
+      const dstNorm = dstText.replace(/\n+$/, '\n');
+      assert.strictEqual(dstNorm, srcNorm,
+          `docx round-trip drift\nsrc:${JSON.stringify(srcText)}\ndst:${JSON.stringify(dstText)}`);
+    });
+  });
+
+  describe('Round-trip integrity: heading-style content (#7538)', function () {
+    before(function () {
+      try {
+        require.resolve('html-to-docx');
+        require.resolve('mammoth');
+      } catch {
+        this.skip();
+        return;
+      }
+      settings.soffice = null;
+    });
+
+    const fetchBuffer = (req: any): any => req
+        .buffer(true)
+        .parse((resp: any, cb: any) => {
+          const chunks: Buffer[] = [];
+          resp.on('data', (c: Buffer) => chunks.push(c));
+          resp.on('end', () => cb(null, Buffer.concat(chunks)));
+        });
+
     it('keeps adjacent heading-style blocks on separate lines after round-trip', async function () {
       // Regression: ep_headings2 emits <h1>/<h2>/<code> that aren't in
       // contentcollector's default block-element set. Without the

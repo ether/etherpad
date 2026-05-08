@@ -188,7 +188,17 @@ hello<br>world
     });
 
     it('splits paragraphs on consecutive <br>', function () {
-      assert.strictEqual(wrapLooseLines('A<br><br>B'), '<p>A</p><p>B</p>');
+      // Two <br>s between content: one paragraph break + one empty
+      // <p></p> marker so the blank pad line survives a DOCX round-trip
+      // through html-to-docx and mammoth.
+      assert.strictEqual(wrapLooseLines('A<br><br>B'),
+          '<p>A</p><p></p><p>B</p>');
+    });
+
+    it('emits more empty <p> markers for longer <br> runs', function () {
+      // Three <br>s = 2 blank pad lines between content.
+      assert.strictEqual(wrapLooseLines('A<br><br><br>B'),
+          '<p>A</p><p></p><p></p><p>B</p>');
     });
 
     it('drops trailing <br>', function () {
@@ -203,7 +213,11 @@ hello<br>world
     it('handles realistic etherpad pad HTML', function () {
       const out = wrapLooseLines(
           'Welcome!<br><br>Body text.<br>More text.<br>');
-      assert.strictEqual(out, '<p>Welcome!</p><p>Body text.<br>More text.</p>');
+      // <br><br> -> blank-line marker between Welcome and Body text;
+      // single <br> in the second chunk stays as a soft break;
+      // trailing <br> is dropped.
+      assert.strictEqual(out,
+          '<p>Welcome!</p><p></p><p>Body text.<br>More text.</p>');
     });
   });
 
@@ -223,8 +237,16 @@ hello<br>world
     });
 
     it('iterates so nested empties are dropped too', function () {
-      const out = dropEmptyBlocks('<div><p></p></div>after');
+      // <code></code> inside a <div> -> div becomes empty -> div drops too.
+      // (<p></p> is preserved on purpose; wrapLooseLines uses it as a
+      // blank-line marker for DOCX round-trip fidelity.)
+      const out = dropEmptyBlocks('<div><code></code></div>after');
       assert.strictEqual(out, 'after');
+    });
+
+    it('does not drop empty <p></p> (blank-line marker)', function () {
+      const out = dropEmptyBlocks('<p>x</p><p></p><p>y</p>');
+      assert.strictEqual(out, '<p>x</p><p></p><p>y</p>');
     });
 
     it('keeps non-empty blocks unchanged', function () {
@@ -266,6 +288,39 @@ hello<br>world
           separateAdjacentHeadingBlocks(
               '<h1>Welcome</h1><h2>This pad</h2><p>Code line</p>'),
           '<h1>Welcome</h1><br><h2>This pad</h2><br><p>Code line</p>');
+    });
+  });
+
+  describe('applyMonospaceToCode', function () {
+    const {applyMonospaceToCode} =
+        require('../../../node/utils/ExportSanitizeHtml');
+
+    it('wraps <code> content in a Courier-styled span', function () {
+      const out = applyMonospaceToCode('<code>x = 1</code>');
+      assert.match(out, /<span style="font-family:'Courier New', monospace">x = 1<\/span>/);
+      assert.match(out, /^<code>/);
+      assert.match(out, /<\/code>$/);
+    });
+
+    it('preserves attributes on the original tag', function () {
+      const out = applyMonospaceToCode("<code style='text-align:right'>x</code>");
+      assert.match(out, /<code style='text-align:right'>/);
+      assert.match(out, /font-family:'Courier New'/);
+    });
+
+    it('handles <pre>, <tt>, <kbd>, <samp>', function () {
+      for (const tag of ['pre', 'tt', 'kbd', 'samp']) {
+        const out = applyMonospaceToCode(`<${tag}>x</${tag}>`);
+        assert.match(out, new RegExp(`<${tag}>`),
+            `expected ${tag} tag preserved`);
+        assert.match(out, /font-family:'Courier New'/,
+            `expected Courier wrap inside ${tag}`);
+      }
+    });
+
+    it('does not touch unrelated tags', function () {
+      const html = '<p>plain</p><strong>bold</strong>';
+      assert.strictEqual(applyMonospaceToCode(html), html);
     });
   });
 

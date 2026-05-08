@@ -33,12 +33,27 @@ const ADJACENT_HEADING_BLOCKS_RE =
 export const separateAdjacentHeadingBlocks = (html: string): string =>
     html.replace(ADJACENT_HEADING_BLOCKS_RE, '$1<br>$2');
 
+// Wrap code/pre/tt/kbd/samp content in a styled span so html-to-docx
+// emits `<w:rFonts w:ascii="Courier New" .../>` for the runs. The bare
+// HTML `<code>` tag isn't translated to a font change by html-to-docx —
+// it just emits the text without styling. Wrapping the content in
+// `<span style="font-family:'Courier New'">` is the documented way to
+// get a monospace run in the DOCX output.
+const MONO_TAGS_RE = /<(code|tt|kbd|samp|pre)\b([^>]*)>([\s\S]*?)<\/\1>/gi;
+export const applyMonospaceToCode = (html: string): string =>
+    html.replace(MONO_TAGS_RE, (_, tag, attrs, content) =>
+      `<${tag}${attrs}><span style="font-family:'Courier New', monospace">${content}</span></${tag}>`);
+
 // Drop block elements whose only content is whitespace. Etherpad plugins
 // like ep_headings2 emit a heading-styled blank-line block (e.g.
 // `<h1 style='text-align:right'></h1>`) after every styled line, which
 // turns into an extra empty `<w:p>` in DOCX and an extra blank line in
 // PDF. Iterates because removing one empty wrapper can expose another.
-const EMPTY_BLOCK_RE = /<(h[1-6]|p|code|pre|div|blockquote)\b[^>]*>\s*<\/\1>/gi;
+//
+// Note: `<p></p>` is intentionally NOT in this list — `wrapLooseLines`
+// uses empty `<p>` markers to encode blank-line gaps for round-trip
+// fidelity through html-to-docx.
+const EMPTY_BLOCK_RE = /<(h[1-6]|code|pre|div|blockquote)\b[^>]*>\s*<\/\1>/gi;
 export const dropEmptyBlocks = (html: string): string => {
   let prev: string;
   let cur = html;
@@ -55,23 +70,38 @@ export const dropEmptyBlocks = (html: string): string => {
 // `<br><br>` for blank lines, so without this DOCX exports get one Word
 // paragraph per line and two empty paragraphs for every blank line.
 //
-// Strategy: split the input on runs of `<br>` of length >= 2 (paragraph
-// separators), then for each chunk, if it's a recognized block element
-// leave it alone, otherwise wrap in `<p>`. Single `<br>` inside a chunk
-// stays as a soft break which html-to-docx handles correctly.
+// Strategy: capture `<br>` separators of length >= 2 (paragraph separators)
+// AND remember how many `<br>`s each separator contains, so blank-line
+// gaps survive the round-trip. For N consecutive `<br>`s, emit one
+// closing-then-opening paragraph break PLUS (N - 2) empty `<p></p>`
+// markers (each empty paragraph = one blank pad line).
 const BLOCK_HEAD_RE = /^<(?:p|h[1-6]|ul|ol|table|blockquote|pre|div)[\s>/]/i;
 // Anchored so the inner `\s*` can't overlap with surrounding whitespace and
 // trigger exponential backtracking. Matches `<br>` followed by at least one
 // more `<br>` (with optional whitespace between).
 const BR_PARA_RE = /<br\s*\/?>(?:\s*<br\s*\/?>)+/gi;
 const TRAILING_BR_RE = /(?:<br\s*\/?>\s*)+$/i;
+const BR_COUNT_RE = /<br/gi;
 export const wrapLooseLines = (html: string): string => {
-  const chunks = html.split(BR_PARA_RE)
-      .map((c) => c.replace(TRAILING_BR_RE, '').trim())
-      .filter((c) => c.length > 0);
-  return chunks
-      .map((c) => (BLOCK_HEAD_RE.test(c) ? c : `<p>${c}</p>`))
-      .join('');
+  // split() with a capturing group keeps the separators in the result, so
+  // parts[i] alternates between content (even i) and br-run separator
+  // (odd i).
+  const parts = html.split(/(<br\s*\/?>(?:\s*<br\s*\/?>)+)/gi);
+  const out: string[] = [];
+  for (let i = 0; i < parts.length; i++) {
+    if (i % 2 === 0) {
+      const c = parts[i].replace(TRAILING_BR_RE, '').trim();
+      if (!c) continue;
+      out.push(BLOCK_HEAD_RE.test(c) ? c : `<p>${c}</p>`);
+    } else {
+      // Separator of N >= 2 <br>s. The first <br> is the paragraph
+      // boundary; the remaining (N - 1) each represent one blank pad
+      // line, emitted as an empty <p></p>.
+      const n = (parts[i].match(BR_COUNT_RE) || []).length;
+      for (let k = 0; k < n - 1; k++) out.push('<p></p>');
+    }
+  }
+  return out.join('');
 };
 
 const isLocalSrc = (src: string): boolean => {

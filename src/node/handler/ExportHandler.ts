@@ -101,8 +101,10 @@ exports.doExport = async (req: any, res: any, padId: string, readOnlyId: string,
         || (sofState === 'withoutPDF' && type === 'pdf');
 
     if (goNative) {
-      const {stripRemoteImages, extractBody, wrapLooseLines, dropEmptyBlocks} =
-          require('../utils/ExportSanitizeHtml');
+      const {
+        stripRemoteImages, extractBody, wrapLooseLines, dropEmptyBlocks,
+        applyMonospaceToCode,
+      } = require('../utils/ExportSanitizeHtml');
       // The HTML pipeline returns a full document (head, style, body); the
       // legacy soffice path renders that fine, but the in-process
       // converters need just the body content to avoid leaking CSS into
@@ -118,7 +120,10 @@ exports.doExport = async (req: any, res: any, padId: string, readOnlyId: string,
           // paragraph (full empty line in Word). Wrap loose lines in <p>
           // so single <br> stays as a soft break (<w:br/>) and only
           // explicit blank-line gaps (<br><br>) become paragraph breaks.
-          const docxHtml = wrapLooseLines(bodyHtml);
+          // applyMonospaceToCode wraps code/pre content in a styled
+          // span so Word renders it in Courier New (html-to-docx
+          // ignores the bare <code> tag).
+          const docxHtml = applyMonospaceToCode(wrapLooseLines(bodyHtml));
           const htmlToDocx = require('html-to-docx');
           const buf = await htmlToDocx(docxHtml);
           res.contentType(
