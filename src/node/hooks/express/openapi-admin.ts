@@ -1,5 +1,6 @@
 'use strict';
 
+import {ArgsExpressType} from '../../types/ArgsExpressType';
 import {getEpVersion} from '../../utils/Settings';
 
 const OPENAPI_VERSION = '3.0.2';
@@ -153,3 +154,15 @@ export const generateAdminDefinition = (): any => ({
 });
 
 exports.generateAdminDefinition = generateAdminDefinition;
+
+export const expressPreSession = async (
+  _hookName: string,
+  {app}: ArgsExpressType,
+): Promise<void> => {
+  app.get('/admin/openapi.json', (_req: any, res: any) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.json(generateAdminDefinition());
+  });
+};
+
+exports.expressPreSession = expressPreSession;

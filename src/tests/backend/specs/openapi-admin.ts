@@ -169,4 +169,26 @@ describe('admin OpenAPI document', function () {
       assert.deepEqual(collisions, [], `schema name collisions: ${collisions.join(', ')}`);
     });
   });
+
+  describe('GET /admin/openapi.json', function () {
+    let agent: any;
+    before(async function () {
+      const common = require('../common');
+      agent = await common.init();
+    });
+
+    it('serves the admin OpenAPI document as JSON', async function () {
+      const res = await agent.get('/admin/openapi.json').expect(200);
+      assert.match(res.headers['content-type'] || '', /application\/json/);
+      assert.equal(res.body.openapi, '3.0.2');
+      assert.equal(res.body.info.title, 'Etherpad Admin API');
+      assert.ok(res.body.paths['/admin-auth/']);
+      assert.ok(res.body.paths['/admin/update/status']);
+    });
+
+    it('sets a permissive CORS header (matches /api/openapi.json)', async function () {
+      const res = await agent.get('/admin/openapi.json').expect(200);
+      assert.equal(res.headers['access-control-allow-origin'], '*');
+    });
+  });
 });
