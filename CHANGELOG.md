@@ -1,3 +1,15 @@
+# Unreleased
+
+### Notable enhancements
+
+- **Self-update subsystem — Tier 2 (manual click).**
+  - Admins on a git install can click "Apply update" at `/admin/update`. Etherpad runs a 60s session drain (with T-60 / T-30 / T-10 broadcasts to every pad), `git fetch / checkout / pnpm install --frozen-lockfile / pnpm run build:ui`, and exits with code 75 so a process supervisor restarts it on the new version. The next boot runs a 60s health check; if `/health` doesn't come up the previous SHA + lockfile are restored automatically.
+  - Crash-loop guard: if the new version reboots more than twice without the health check completing, RollbackHandler forces a rollback regardless of the timer.
+  - Terminal `rollback-failed` state surfaces a strong banner; the admin clicks Acknowledge once they've manually recovered to clear the lock and re-allow Tier 2 attempts.
+  - New settings under `updates.*`: `preApplyGraceMinutes`, `drainSeconds`, `rollbackHealthCheckSeconds`, `diskSpaceMinMB`, `requireSignature`, `trustedKeysPath`. Tag signature verification is opt-in (default `false`) — see `doc/admin/updates.md` for the keyring setup.
+  - **A process supervisor (systemd / pm2 / docker `--restart=unless-stopped`) is required to apply updates.** Without one, exit 75 leaves the instance down.
+  - Tiers 3 (auto with grace window) and 4 (autonomous in maintenance window) remain designed but unimplemented and will land in subsequent releases.
+
 # 2.7.3
 
 ### Breaking changes
