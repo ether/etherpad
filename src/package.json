@@ -113,7 +113,7 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/mime-types": "^3.0.1",
     "@types/mocha": "^10.0.9",
-    "@types/node": "^25.6.0",
+    "@types/node": "^25.6.2",
     "@types/oidc-provider": "^9.5.0",
     "@types/pdfkit": "^0.17.6",
     "@types/semver": "^7.7.1",
