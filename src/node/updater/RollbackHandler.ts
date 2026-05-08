@@ -91,17 +91,30 @@ export const performRollback = async (state: UpdateState, deps: RollbackDeps): P
     deps.exit(75);
   };
 
+  // Force-checkout first so any partial mutation from the failed executor run
+  // (rewritten lockfile, half-installed modules) is discarded. -f overwrites
+  // tracked files from the target tree's index — without it, `git checkout`
+  // refuses when there are unstaged modifications to files it would replace.
+  const checkoutCode = await runStep(
+    deps.spawnFn, deps.repoDir, logPath, 'git', ['checkout', '-f', fromSha]);
+  if (checkoutCode !== 0) return failTerminal(`git checkout -f ${fromSha} exit ${checkoutCode}`);
+
+  // Now overlay the backed-up lockfile on top. Belt-and-braces: a force
+  // checkout already restored the lockfile to the target SHA's version; the
+  // backup wins on the rare case where the running install had a hand-edited
+  // lockfile we want to preserve.
   try {
     await deps.copyFile(
       path.join(deps.backupDir, 'pnpm-lock.yaml'),
       path.join(deps.repoDir, 'pnpm-lock.yaml'),
     );
-  } catch (err) {
-    return failTerminal(`copy lockfile: ${(err as Error).message}`);
+  } catch (err: any) {
+    // ENOENT on the backup is acceptable — the force checkout already
+    // restored the right lockfile from the index.
+    if (err?.code !== 'ENOENT') {
+      return failTerminal(`copy lockfile: ${(err as Error).message}`);
+    }
   }
-
-  const checkoutCode = await runStep(deps.spawnFn, deps.repoDir, logPath, 'git', ['checkout', fromSha]);
-  if (checkoutCode !== 0) return failTerminal(`git checkout ${fromSha} exit ${checkoutCode}`);
 
   const installCode = await runStep(deps.spawnFn, deps.repoDir, logPath, 'pnpm', ['install', '--frozen-lockfile']);
   if (installCode !== 0) return failTerminal(`pnpm install exit ${installCode}`);
