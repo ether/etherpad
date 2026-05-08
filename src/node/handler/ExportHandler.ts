@@ -90,30 +90,50 @@ exports.doExport = async (req: any, res: any, padId: string, readOnlyId: string,
       return;
     }
 
-    // Native DOCX path (issue #7538) — when `nativeDocxExport` is enabled,
-    // convert the HTML export into a Word document in-process with
-    // `html-to-docx` instead of shelling out to LibreOffice. Saves admins
-    // from having to install `soffice` and avoids per-export subprocess
-    // latency. On failure we fall through to the LibreOffice path below
-    // so the change is strictly additive (opt-in via setting, auto-fallback
-    // if the converter throws).
-    if (type === 'docx' && settings.nativeDocxExport) {
+    // Soffice-first dispatch (issue #7538). When soffice is configured
+    // we keep the legacy convert-via-tempfile path; when it's not, we
+    // hand DOCX to html-to-docx and PDF to our pdfkit walker — both
+    // pure-JS, in-process. No fallback chain: native errors surface as
+    // 5xx so admins see real failures instead of silent shadowing.
+    const {sofficeAvailable} = require('../utils/Settings');
+    const sofState = sofficeAvailable();
+    const goNative = sofState === 'no'
+        || (sofState === 'withoutPDF' && type === 'pdf');
+
+    if (goNative) {
+      const {stripRemoteImages} = require('../utils/ExportSanitizeHtml');
+      const safeHtml = stripRemoteImages(html);
+      html = null;
       try {
-        const htmlToDocx = require('html-to-docx');
-        const docxBuffer = await htmlToDocx(html);
-        html = null;
-        res.contentType(
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-        res.send(docxBuffer);
+        if (type === 'docx') {
+          const htmlToDocx = require('html-to-docx');
+          const buf = await htmlToDocx(safeHtml);
+          res.contentType(
+              'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+          res.send(buf);
+          return;
+        }
+        if (type === 'pdf') {
+          const {htmlToPdfBuffer} = require('../utils/ExportPdfNative');
+          const buf = await htmlToPdfBuffer(safeHtml);
+          res.contentType('application/pdf');
+          res.send(buf);
+          return;
+        }
+        // soffice-only formats (odt, doc) are blocked at the route guard
+        // when soffice is null; reaching here means the guard is wrong.
+        res.status(500).send(`Cannot export ${type} without soffice configured`);
         return;
       } catch (err) {
-        console.warn(
-            `native-docx export failed for pad "${padId}", falling back to ` +
-            `LibreOffice: ${(err as Error).message || err}`);
+        console.error(
+            `native ${type} export failed for pad "${padId}":`,
+            err && (err as Error).stack ? (err as Error).stack : err);
+        res.status(500).send(`Failed to export pad as ${type}.`);
+        return;
       }
     }
 
-    // else write the html export to a file
+    // soffice path — write the html export to a file
     const randNum = Math.floor(Math.random() * 0xFFFFFFFF);
     const srcFile = `${tempDirectory}/etherpad_export_${randNum}.html`;
     await fsp_writeFile(srcFile, html);

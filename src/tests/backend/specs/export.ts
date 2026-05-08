@@ -14,7 +14,6 @@ describe(__filename, function () {
   before(async function () {
     agent = await common.init();
     settingsBackup.soffice = settings.soffice;
-    settingsBackup.nativeDocxExport = settings.nativeDocxExport;
     await padManager.getPad('testExportPad', 'test content');
   });
 
@@ -23,15 +22,18 @@ describe(__filename, function () {
   });
 
   it('returns 500 on export error', async function () {
-    settings.soffice = 'false'; // '/bin/false' doesn't work on Windows
-    settings.nativeDocxExport = false;
+    // With soffice configured but pointing at a binary that fails, the
+    // legacy convert path errors and the route returns 500. .doc has no
+    // native fallback (it stays soffice-only), so this exercises the
+    // soffice error path even after #7538.
+    settings.soffice = '/bin/false';
     await agent.get('/p/testExportPad/export/doc')
         .expect(500);
   });
 
   // Issue #7538: in-process DOCX export via html-to-docx bypasses the
-  // soffice requirement entirely. A deployment with `soffice: false` and
-  // `nativeDocxExport: true` should still produce a working .docx.
+  // soffice requirement entirely. A deployment with `soffice: null`
+  // should still produce a working .docx via the native path.
   describe('native DOCX export (#7538)', function () {
     before(function () {
       // The upgrade-from-latest-release CI job installs deps from the
@@ -46,8 +48,7 @@ describe(__filename, function () {
         this.skip();
         return;
       }
-      settings.soffice = 'false';
-      settings.nativeDocxExport = true;
+      settings.soffice = null;
     });
 
     it('returns a valid DOCX archive (PK zip signature)', async function () {
@@ -74,6 +75,46 @@ describe(__filename, function () {
       assert.match(res.headers['content-type'],
           /application\/vnd\.openxmlformats-officedocument\.wordprocessingml\.document/,
           `unexpected content-type: ${res.headers['content-type']}`);
+    });
+  });
+
+  describe('native PDF export (#7538)', function () {
+    before(function () {
+      try {
+        require.resolve('pdfkit');
+        require.resolve('htmlparser2');
+      } catch {
+        this.skip();
+        return;
+      }
+      settings.soffice = null;
+    });
+
+    it('returns a valid %PDF- document', async function () {
+      const res = await agent.get('/p/testExportPad/export/pdf')
+          .buffer(true)
+          .parse((resp: any, callback: any) => {
+            const chunks: Buffer[] = [];
+            resp.on('data', (chunk: Buffer) => chunks.push(chunk));
+            resp.on('end', () => callback(null, Buffer.concat(chunks)));
+          })
+          .expect(200);
+      const body: Buffer = res.body as Buffer;
+      assert.ok(body.length > 200, 'PDF body must be non-trivial');
+      assert.strictEqual(body.slice(0, 5).toString('ascii'), '%PDF-');
+    });
+
+    it('sends application/pdf content-type', async function () {
+      const res = await agent.get('/p/testExportPad/export/pdf').expect(200);
+      assert.match(res.headers['content-type'], /application\/pdf/);
+    });
+  });
+
+  describe('odt without soffice (#7538)', function () {
+    before(function () { settings.soffice = null; });
+    it('returns the "not enabled" message for odt', async function () {
+      const res = await agent.get('/p/testExportPad/export/odt').expect(200);
+      assert.match(res.text, /This export is not enabled/);
     });
   });
 
