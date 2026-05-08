@@ -141,9 +141,16 @@ const doImport = async (req:any, res:any, padId:string, authorId:string) => {
   if (settings.soffice == null && fileEnding === '.docx') {
     const buf = await fs.readFile(srcFile);
     const {docxBufferToHtml} = require('../utils/ImportDocxNative');
+    const {separateAdjacentHeadingBlocks} = require('../utils/ExportSanitizeHtml');
     let nativeHtml: string;
     try {
       nativeHtml = await docxBufferToHtml(buf);
+      // Insert <br> between adjacent <h1>...</h1><h2>...</h2> style
+      // blocks so the server-side content collector (which doesn't know
+      // h1-h6/code are block elements without the right plugin hook)
+      // treats each as its own pad line. Without this, h1+h2+code from
+      // the export round-trip merge into a single line on import.
+      nativeHtml = separateAdjacentHeadingBlocks(nativeHtml);
     } catch (err: any) {
       logger.warn(`Native DOCX import failed: ${err.stack || err}`);
       throw new ImportError('convertFailed');

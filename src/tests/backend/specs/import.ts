@@ -158,6 +158,55 @@ describe(__filename, function () {
       }
     });
 
+    it('keeps adjacent heading-style blocks on separate lines after round-trip', async function () {
+      // Regression: ep_headings2 emits <h1>/<h2>/<code> that aren't in
+      // contentcollector's default block-element set. Without the
+      // separateAdjacentHeadingBlocks fix, mammoth's <h1>A</h1><h2>B</h2>
+      // would merge into one pad line.
+      const srcPadId = 'test7538MultiHeading';
+      const dstPadId = 'test7538MultiHeadingImport';
+      const tmpFile = path.join(os.tmpdir(), `multiheading-${process.pid}.docx`);
+
+      try {
+        await padManager.removePad(srcPadId);
+        await padManager.removePad(dstPadId);
+      } catch { /* noop */ }
+
+      // Drive the import path directly with a hand-crafted DOCX whose
+      // content is just three adjacent block elements; this is what
+      // mammoth produces from the round-trip output of ep_headings2's
+      // pad HTML.
+      const htmlToDocx = require('html-to-docx');
+      const buf: Buffer = await htmlToDocx(
+          '<h1>Welcome</h1><h2>This pad</h2><p>Code line</p>');
+      await fs.writeFile(tmpFile, buf);
+
+      try {
+        await agent.post(`/p/${dstPadId}/import`)
+            .attach('file', tmpFile)
+            .expect(200);
+        const dstPad = await padManager.getPad(dstPadId);
+        const lines = dstPad.text().split('\n');
+        // Each block must land on its own line (lines may carry an
+        // etherpad heading marker prefix like '*' from ep_headings2).
+        const findLine = (needle: string) =>
+            lines.findIndex((l: string) => l.includes(needle));
+        const iWelcome = findLine('Welcome');
+        const iThisPad = findLine('This pad');
+        const iCode = findLine('Code line');
+        assert.notStrictEqual(iWelcome, -1,
+            `expected "Welcome" on its own line: ${JSON.stringify(lines)}`);
+        assert.notStrictEqual(iThisPad, -1,
+            `expected "This pad" on its own line: ${JSON.stringify(lines)}`);
+        assert.notStrictEqual(iCode, -1,
+            `expected "Code line" on its own line: ${JSON.stringify(lines)}`);
+        assert.ok(iWelcome !== iThisPad && iThisPad !== iCode,
+            `headings/code merged into the same line: ${JSON.stringify(lines)}`);
+      } finally {
+        await fs.unlink(tmpFile).catch(() => undefined);
+      }
+    });
+
     it('preserves text content through native PDF export (sanity check)', async function () {
       // PDF round-trip is one-way (no native PDF import) -- this just
       // verifies the exported PDF has the source text in its visible

@@ -18,6 +18,21 @@ export const extractBody = (html: string): string => {
   return m[1].replace(/^[\s ]+/, '').replace(/[\s ]+$/, '');
 };
 
+// Insert a `<br>` between adjacent heading-style blocks so etherpad's
+// server-side content collector breaks them into separate pad lines.
+//
+// Background: contentcollector's default `_blockElems` set is just
+// `{div, p, pre, li}`. ep_headings2 registers the CLIENT-side
+// `aceRegisterBlockElements` for `h1..h4` and `code`, but not the
+// SERVER-side `ccRegisterBlockElements`, so on import contentcollector
+// treats those tags as inline and merges adjacent ones into a single
+// line. This helper fires on the IMPORT path (after mammoth produces
+// HTML) to forcibly separate them.
+const ADJACENT_HEADING_BLOCKS_RE =
+  /(<\/(?:h[1-6]|code)>)(\s*<(?:h[1-6]|code|p|pre|div|blockquote|ul|ol)\b)/gi;
+export const separateAdjacentHeadingBlocks = (html: string): string =>
+    html.replace(ADJACENT_HEADING_BLOCKS_RE, '$1<br>$2');
+
 // Drop block elements whose only content is whitespace. Etherpad plugins
 // like ep_headings2 emit a heading-styled blank-line block (e.g.
 // `<h1 style='text-align:right'></h1>`) after every styled line, which

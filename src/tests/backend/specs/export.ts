@@ -233,6 +233,42 @@ hello<br>world
     });
   });
 
+  describe('separateAdjacentHeadingBlocks', function () {
+    const {separateAdjacentHeadingBlocks} =
+        require('../../../node/utils/ExportSanitizeHtml');
+
+    it('inserts <br> between adjacent <h1> and <h2>', function () {
+      assert.strictEqual(
+          separateAdjacentHeadingBlocks('<h1>A</h1><h2>B</h2>'),
+          '<h1>A</h1><br><h2>B</h2>');
+    });
+
+    it('inserts <br> between adjacent <code> blocks', function () {
+      assert.strictEqual(
+          separateAdjacentHeadingBlocks('<code>A</code><code>B</code>'),
+          '<code>A</code><br><code>B</code>');
+    });
+
+    it('inserts <br> after a heading before a <p>', function () {
+      assert.strictEqual(
+          separateAdjacentHeadingBlocks('<h1>A</h1><p>B</p>'),
+          '<h1>A</h1><br><p>B</p>');
+    });
+
+    it('does not change adjacent <p> elements', function () {
+      const html = '<p>A</p><p>B</p>';
+      assert.strictEqual(separateAdjacentHeadingBlocks(html), html);
+    });
+
+    it('handles three-block round-trip case', function () {
+      // Mirrors what mammoth produces for a pad with H1 + H2 + Code.
+      assert.strictEqual(
+          separateAdjacentHeadingBlocks(
+              '<h1>Welcome</h1><h2>This pad</h2><p>Code line</p>'),
+          '<h1>Welcome</h1><br><h2>This pad</h2><br><p>Code line</p>');
+    });
+  });
+
   describe('htmlToPdfBuffer', function () {
     let htmlToPdfBuffer: (html: string) => Promise<Buffer>;
 
@@ -359,6 +395,26 @@ hello<br>world
     it('uses Courier font inside <pre>', async function () {
       const raw = await renderText('<pre>preformatted text</pre>');
       assert.match(raw, /Courier/);
+    });
+
+    it('honors text-align on <code> (ep_headings2 code lines)', async function () {
+      const leftRaw = await renderText('<code>x = 1</code>');
+      const rightRaw = await renderText("<code style='text-align:right'>x = 1</code>");
+      const leftX = (leftRaw.match(/1 0 0 1 (\d+(?:\.\d+)?)/) || [])[1];
+      const rightX = (rightRaw.match(/1 0 0 1 (\d+(?:\.\d+)?)/) || [])[1];
+      assert.ok(leftX, 'expected left x');
+      assert.ok(rightX, 'expected right x');
+      assert.notStrictEqual(leftX, rightX,
+          `right-aligned <code> should sit at a different x than left-aligned (left=${leftX} right=${rightX})`);
+    });
+
+    it('honors text-align on <pre>', async function () {
+      const leftRaw = await renderText('<pre>x = 1</pre>');
+      const rightRaw = await renderText("<pre style='text-align:right'>x = 1</pre>");
+      const leftX = (leftRaw.match(/1 0 0 1 (\d+(?:\.\d+)?)/) || [])[1];
+      const rightX = (rightRaw.match(/1 0 0 1 (\d+(?:\.\d+)?)/) || [])[1];
+      assert.notStrictEqual(leftX, rightX,
+          `right-aligned <pre> should sit at a different x than left-aligned (left=${leftX} right=${rightX})`);
     });
   });
 });
