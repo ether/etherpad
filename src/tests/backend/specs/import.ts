@@ -288,6 +288,22 @@ describe(__filename, function () {
 
   describe('HTML import — adjacent headings (#7538)', function () {
     before(async function () {
+      // These tests assume ep_headings2 (or another plugin) registers
+      // h1/h2/etc. as server-side block elements via
+      // `ccRegisterBlockElements`. Without that hook, contentcollector
+      // treats <h1>/<h2> as inline and adjacent ones merge into a
+      // single pad line — making the assertions below moot. The CI
+      // backend-tests job runs without plugins installed, so skip
+      // there. Local dev with ep_headings2 installed exercises these.
+      const hooks = require('../../../static/js/pluginfw/hooks');
+      const ccBlockElems: string[] = ([] as string[]).concat(
+          ...(hooks.callAll('ccRegisterBlockElements') || []));
+      const headingsAreBlocks = ccBlockElems.map((t: string) => t.toLowerCase())
+          .includes('h1');
+      if (!headingsAreBlocks) {
+        this.skip();
+        return;
+      }
       settings.soffice = null;
     });
 
