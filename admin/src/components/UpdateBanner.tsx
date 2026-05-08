@@ -17,7 +17,21 @@ export const UpdateBanner = () => {
     return () => { cancelled = true; };
   }, [setUpdateStatus]);
 
-  if (!updateStatus || !updateStatus.latest) return null;
+  if (!updateStatus) return null;
+
+  // Terminal rollback-failed wins over the regular "update available" banner —
+  // an admin who left the system in this state needs to fix it before any
+  // other admin work matters.
+  if (updateStatus.execution?.status === 'rollback-failed') {
+    return (
+      <div className="update-banner update-banner-terminal" role="alert">
+        <strong><Trans i18nKey="update.banner.terminal.rollback-failed"/></strong>{' '}
+        <Link to="/update">{t('update.banner.cta')}</Link>
+      </div>
+    );
+  }
+
+  if (!updateStatus.latest) return null;
   if (updateStatus.currentVersion === updateStatus.latest.version) return null;
 
   return (
