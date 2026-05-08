@@ -151,3 +151,14 @@ Default off. Etherpad releases are not yet consistently signed; turning verifica
 ```
 
 The check shells out to `git verify-tag <tag>`. The keyring at `trustedKeysPath` is passed to git via `GNUPGHOME`. If `trustedKeysPath` is `null` (default), the OS user's default keyring is used.
+
+### Docker-friendly update flows (future work)
+
+Tier 2 deliberately refuses to apply on `installMethod: "docker"` because in-container `git fetch / pnpm install / build:ui` doesn't survive a container restart — the orchestrator brings the container back up on the same image tag and the work is lost. Docker installs stay on Tier 1 (banner + version status) for now.
+
+The right way to give docker admins an in-product Apply button is to delegate to the orchestrator rather than mutate the container. Two patterns to consider in a follow-up PR:
+
+- **Instructions-only.** When the page detects `installMethod: docker` *and* a newer release exists, swap the policy-denial copy for actionable instructions (`docker pull etherpad/etherpad:<tag>` for plain docker; `docker compose pull && docker compose up -d` for compose). Cheap, no new attack surface.
+- **Deploy webhook.** New setting `updates.dockerWebhook`. When set, the Apply button on a docker install POSTs to the configured URL and trusts the orchestrator (Render / Railway / Fly / Portainer / Coolify / GitHub Actions — they all expose redeploy webhooks) to do the actual pull-and-recreate.
+
+Direct Docker-socket access (mount `/var/run/docker.sock` into the container) is **out of scope** — anyone who escapes the Etherpad process via that socket gets root on the host. Admins who want fully autonomous docker updates should run [Watchtower](https://containrrr.dev/watchtower/) alongside Etherpad rather than bake equivalent privilege into Etherpad itself.
