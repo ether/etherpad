@@ -129,4 +129,44 @@ describe('admin OpenAPI document', function () {
       assert.deepEqual(props, ['announcedBy', 'threshold']);
     });
   });
+
+  describe('cross-collision with public spec', function () {
+    let publicDoc: any;
+    before(function () {
+      const apiHandler = require('../../../node/handler/APIHandler');
+      const openapi = require('../../../node/hooks/express/openapi');
+      publicDoc = openapi.generateDefinitionForVersion(
+        apiHandler.latestApiVersion,
+        openapi.APIPathStyle.FLAT,
+      );
+    });
+
+    it('admin paths and operationIds do not collide with the latest public spec', function () {
+      const adminPaths = Object.keys(doc.paths);
+      const publicPaths = Object.keys(publicDoc.paths);
+      const pathCollisions = adminPaths.filter((p) => publicPaths.includes(p));
+      assert.deepEqual(pathCollisions, [], `path collisions: ${pathCollisions.join(', ')}`);
+
+      const collectOpIds = (d: any): string[] => {
+        const ids: string[] = [];
+        for (const item of Object.values(d.paths) as any[]) {
+          for (const op of Object.values(item) as any[]) {
+            if (op && typeof op.operationId === 'string') ids.push(op.operationId);
+          }
+        }
+        return ids;
+      };
+      const adminIds = collectOpIds(doc);
+      const publicIds = collectOpIds(publicDoc);
+      const idCollisions = adminIds.filter((id) => publicIds.includes(id));
+      assert.deepEqual(idCollisions, [], `operationId collisions: ${idCollisions.join(', ')}`);
+    });
+
+    it('schema names do not collide with the latest public spec', function () {
+      const adminSchemas = Object.keys(doc.components.schemas);
+      const publicSchemas = Object.keys(publicDoc.components.schemas || {});
+      const collisions = adminSchemas.filter((n) => publicSchemas.includes(n));
+      assert.deepEqual(collisions, [], `schema name collisions: ${collisions.join(', ')}`);
+    });
+  });
 });
