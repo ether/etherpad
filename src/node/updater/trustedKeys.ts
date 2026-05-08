@@ -4,7 +4,10 @@ import log4js from 'log4js';
 const logger = log4js.getLogger('updater');
 
 export type SpawnFn = (cmd: string, args: string[], opts: SpawnOptions) => {
-  on: (event: 'close', cb: (code: number | null) => void) => void;
+  on: {
+    (event: 'close', cb: (code: number | null) => void): void;
+    (event: 'error', cb: (err: Error) => void): void;
+  };
 };
 
 export interface VerifyArgs {
@@ -46,7 +49,17 @@ export const verifyReleaseTag = async (args: VerifyArgs): Promise<VerifyResult> 
     env,
     stdio: 'ignore',
   });
-  const code: number | null = await new Promise((resolve) => child.on('close', resolve));
+  // Listen for both 'close' and 'error' so a missing/unexecutable git binary
+  // surfaces as verification-failure rather than a hung promise.
+  const code: number | null = await new Promise((resolve) => {
+    let settled = false;
+    const settle = (c: number | null) => { if (settled) return; settled = true; resolve(c); };
+    child.on('close', settle);
+    child.on('error', (err: Error) => {
+      logger.error(`verifyReleaseTag: git verify-tag spawn error: ${err.message}`);
+      settle(1);
+    });
+  });
   if (code === 0) return {ok: true, reason: 'signature-verified'};
   logger.error(`verifyReleaseTag: git verify-tag ${args.tag} exited ${code}`);
   return {ok: false, reason: 'signature-verification-failed'};

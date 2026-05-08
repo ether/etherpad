@@ -31,6 +31,16 @@ describe('SessionDrainer', () => {
     expect(isAcceptingConnections()).toBe(true);
   });
 
+  it('restores isAcceptingConnections to true on drain completion', async () => {
+    const drainer = createDrainer({drainSeconds: 60, broadcast: () => {}});
+    const done = drainer.start();
+    expect(isAcceptingConnections()).toBe(false);
+    await vi.advanceTimersByTimeAsync(60_000);
+    await done;
+    // Restored at completion so a downstream throw doesn't wedge join handshakes.
+    expect(isAcceptingConnections()).toBe(true);
+  });
+
   it('cancel before T=0 resolves start() promise as cancelled', async () => {
     const drainer = createDrainer({drainSeconds: 60, broadcast: () => {}});
     const done = drainer.start();

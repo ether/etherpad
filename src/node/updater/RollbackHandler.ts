@@ -27,6 +27,12 @@ const runStep = (
   cmd: string,
   args: string[],
 ): Promise<number | null> => new Promise((resolve) => {
+  let settled = false;
+  const settle = (c: number | null) => {
+    if (settled) return;
+    settled = true;
+    resolve(c);
+  };
   const child = spawnFn(cmd, args, {cwd, stdio: ['ignore', 'pipe', 'pipe']});
   const tag = `${cmd} ${args.join(' ')}`;
   child.stdout.on('data', (b: Buffer) => {
@@ -39,7 +45,14 @@ const runStep = (
     logger.warn(`[rollback ${tag}] ${t}`);
     appendLine(logPath, `[${new Date().toISOString()}] rollback ${tag} ERR | ${t}`);
   });
-  child.on('close', (c) => resolve(c));
+  // Spawn failures (binary missing, permissions) — without this listener the
+  // promise hangs forever and the rollback path never lands on terminal state.
+  child.on('error', (err: Error) => {
+    logger.error(`[rollback ${tag}] spawn error: ${err.message}`);
+    appendLine(logPath, `[${new Date().toISOString()}] rollback ${tag} SPAWN_ERR | ${err.message}`);
+    settle(1);
+  });
+  child.on('close', (c) => settle(c));
 });
 
 /**

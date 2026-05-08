@@ -103,12 +103,34 @@ const buildPreflightDeps = (installMethod: ReturnType<typeof getDetectedInstallM
   }),
 });
 
+/**
+ * The set of update tiers at which the Tier 2 action endpoints serve.
+ * `notify` only ships read-only routes (registered in updateStatus.ts);
+ * `manual` and higher are the supersets that include manual-click. Disabled
+ * paths (off / notify) match prior behaviour: requests 404, no new attack
+ * surface vs PR 1.
+ *
+ * Read at request time (not hook-init time) so that operators flipping
+ * `updates.tier` in settings.json + reloading take effect without a full
+ * restart, and so that integration tests can drive the gate dynamically.
+ */
+const TIER2_TIERS: ReadonlySet<string> = new Set(['manual', 'auto', 'autonomous']);
+const tierAllowsActions = (): boolean => TIER2_TIERS.has(settings.updates.tier);
+
 export const expressCreateServer = (
   _hookName: string,
   {app}: ArgsExpressType,
   cb: Function,
 ): void => {
-  if (settings.updates.tier === 'off') return cb();
+  // Always register the routes; gate at request time so a runtime tier change
+  // takes effect on the next request rather than requiring a restart.
+  // The early 404 below preserves Qodo #1's "disabled path matches prior
+  // behaviour (no Tier 2 endpoints existed before this PR)" requirement.
+  const tierGate = (req: any, res: any, next: Function) => {
+    if (!tierAllowsActions()) return res.status(404).send('Not found');
+    next();
+  };
+  app.use(['/admin/update/apply', '/admin/update/cancel', '/admin/update/acknowledge', '/admin/update/log'], tierGate);
 
   app.post('/admin/update/apply', wrapAsync(async (req: any, res: any) => {
     if (!requireAdmin(req, res)) return;
@@ -184,6 +206,19 @@ export const expressCreateServer = (
         appendLine(logPath(), `[${at}] PREFLIGHT_FAILED ${pf.reason}`);
         cleanupLock = true;
         return res.status(409).json({error: 'preflight-failed', reason: pf.reason});
+      }
+
+      // Re-check state after preflight: /admin/update/cancel may have flipped
+      // execution back to 'idle' while we were running the slow checks. The
+      // cancel handler intentionally leaves the lock alone (we own it) and
+      // signals via state instead, so a stale apply can detect cancellation
+      // here before mutating the filesystem.
+      const afterPreflight = await loadState(stateFilePath());
+      if (afterPreflight.execution.status !== 'preflight'
+          || (afterPreflight.execution as {targetTag?: string}).targetTag !== targetTag) {
+        appendLine(logPath(),
+          `[${new Date().toISOString()}] APPLY aborted post-preflight (state=${afterPreflight.execution.status})`);
+        return res.status(409).json({error: 'cancelled-during-preflight'});
       }
 
       // Drain — respond 202 first so the UI starts polling /log without waiting.
@@ -285,7 +320,10 @@ export const expressCreateServer = (
         at,
       },
     });
-    try { await releaseLock(lockPath()); } catch {/* noop */}
+    // Intentionally do NOT release the lock here. The apply handler owns the
+    // lock for its lifetime and releases it in its finally block; releasing
+    // here would let a second apply slip in while the first is still mid-
+    // preflight, racing for the same on-disk state.
     appendLine(logPath(), `[${at}] CANCEL by admin during status=${state.execution.status}`);
     res.json({cancelled: true});
   }));

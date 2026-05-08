@@ -55,10 +55,12 @@ export const createDrainer = ({drainSeconds, broadcast}: DrainerOpts): Drainer =
       timers.push(setTimeout(() => fire('update.drain.t10', 10), Math.max(0, ms - 10_000)));
       timers.push(setTimeout(() => {
         if (cancelled) return;
-        // Don't restore acceptingConnections — the executor is about to exit 75
-        // and the supervisor restart will reset module state. Leaving the flag
-        // off until exit means stragglers can't slip in between drain end and
-        // exit().
+        // Restore the gate as soon as the drain window closes. The executor
+        // takes over from here and the supervisor restart wipes module state
+        // anyway; if the executor throws and the process keeps running, we
+        // want join handshakes to recover rather than stay wedged.
+        // The lock + state.execution.status guarantee no fresh apply can race.
+        acceptingConnections = true;
         resolveDone?.({outcome: 'completed'});
         resolveDone = null;
       }, ms));

@@ -93,7 +93,10 @@ test.describe('admin update page actions', () => {
     await page.goto('http://localhost:9001/admin/update');
     await expect(page.getByRole('button', {name: /acknowledge/i})).toBeVisible({timeout: 30000});
     // lastResult copy uses i18n update.page.last_result.rollback-failed.
-    await expect(page.getByText(/Manual intervention required/i)).toBeVisible();
+    // Both the banner and the lastResult paragraph contain "Manual intervention
+    // required" — scope to the lastResult <p> so we get exactly one match.
+    await expect(page.locator('p.last-result-rollback-failed')).toBeVisible();
+    await expect(page.locator('p.last-result-rollback-failed')).toContainText(/Manual intervention required/i);
   });
 
   test('lockHeld true hides the Apply button even when policy.canManual is on', async ({page}) => {

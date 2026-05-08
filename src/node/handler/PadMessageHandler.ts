@@ -381,8 +381,11 @@ exports.handleMessage = async (socket:any, message: ClientVarMessage) => {
     // Refuse new joiners while the updater drainer is running. Existing sockets
     // are unaffected — only the initial CLIENT_READY handshake is gated. The
     // pad UI will show the drain announcement separately via shoutMessage.
+    // Use socket.emit('message', ...) for consistency with the other disconnect
+    // paths in this file (see line ~221, 569). socket.json.send is a socket.io
+    // v2/v3-era API that may not exist on v4 Socket objects.
     if (!isAcceptingConnections()) {
-      socket.json.send({disconnect: 'updateInProgress'});
+      socket.emit('message', {disconnect: 'updateInProgress'});
       socket.disconnect(true);
       return;
     }

@@ -6,11 +6,16 @@ import {appendLine} from './updateLog';
 
 const logger = log4js.getLogger('updater');
 
-export type SpawnFn = (cmd: string, args: string[], opts: SpawnOptions) => {
+export interface SpawnedChild {
   stdout: {on: (event: 'data', cb: (chunk: Buffer) => void) => void};
   stderr: {on: (event: 'data', cb: (chunk: Buffer) => void) => void};
-  on: (event: 'close', cb: (code: number | null) => void) => void;
-};
+  on: {
+    (event: 'close', cb: (code: number | null) => void): void;
+    (event: 'error', cb: (err: Error) => void): void;
+  };
+}
+
+export type SpawnFn = (cmd: string, args: string[], opts: SpawnOptions) => SpawnedChild;
 
 export interface ExecutorDeps {
   /** Path of the on-disk Etherpad install (the git working tree). */
@@ -49,6 +54,12 @@ const runStep = (
   args: string[],
 ): Promise<{code: number | null; stderr: string}> => new Promise((resolve) => {
   let stderr = '';
+  let settled = false;
+  const settle = (v: {code: number | null; stderr: string}) => {
+    if (settled) return;
+    settled = true;
+    resolve(v);
+  };
   const child = spawnFn(cmd, args, {cwd: repoDir, stdio: ['ignore', 'pipe', 'pipe']});
   const tag = `${cmd} ${args.join(' ')}`;
   child.stdout.on('data', (chunk: Buffer) => {
@@ -63,7 +74,16 @@ const runStep = (
     logger.warn(`[${tag}] ${trimmed}`);
     appendLine(logPath, `[${new Date().toISOString()}] ${tag} ERR | ${trimmed}`);
   });
-  child.on('close', (code) => resolve({code, stderr}));
+  // Spawn failures (binary missing, permissions) emit 'error' and never close.
+  // Without this listener the promise hangs forever and leaves state in-flight.
+  // Treat as exit code 1 with the error message in stderr so the caller's
+  // failure-detection branch fires normally.
+  child.on('error', (err: Error) => {
+    logger.error(`[${tag}] spawn error: ${err.message}`);
+    appendLine(logPath, `[${new Date().toISOString()}] ${tag} SPAWN_ERR | ${err.message}`);
+    settle({code: 1, stderr: stderr + err.message});
+  });
+  child.on('close', (code) => settle({code, stderr}));
 });
 
 /**
@@ -74,79 +94,117 @@ const runStep = (
  * persists, and returns. The route layer then runs RollbackHandler.performRollback.
  * The executor does NOT call `exit` on failure paths — the rollback path owns
  * that exit so we don't double-exit and lose log lines.
+ *
+ * On a thrown exception (e.g., copyFile EACCES, saveState ENOSPC) the executor
+ * also transitions to rolling-back with `failed-checkout` so the route's post-
+ * executor rollback path picks it up. The state must never get stuck at
+ * `executing` — if it does, no further updates can start until an admin
+ * acknowledges.
  */
 export const executeUpdate = async (deps: ExecutorDeps): Promise<ExecutorResult> => {
-  const fromSha = await deps.readSha();
   const logPath = path.join(deps.repoDir, 'var', 'log', 'update.log');
+  let fromSha = '';
 
-  let s: UpdateState = {
-    ...deps.initialState,
-    execution: {
-      status: 'executing',
-      targetTag: deps.targetTag,
-      fromSha,
-      startedAt: deps.now().toISOString(),
-    },
-    bootCount: 0,
-  };
-  await deps.saveState(s);
+  // Wrap the whole body so any throw — readSha, saveState, copyFile, even an
+  // unexpected synchronous error in a step — lands us at rolling-back rather
+  // than leaving execution stuck at 'executing' forever.
+  try {
+    fromSha = await deps.readSha();
 
-  // Snapshot lockfile (SHA already captured above; the rollback handler reads
-  // execution.fromSha rather than a separate file so a successful rollback
-  // doesn't depend on /var staying writable past this point).
-  await deps.copyFile(
-    path.join(deps.repoDir, 'pnpm-lock.yaml'),
-    path.join(deps.backupDir, 'pnpm-lock.yaml'),
-  );
+    let s: UpdateState = {
+      ...deps.initialState,
+      execution: {
+        status: 'executing',
+        targetTag: deps.targetTag,
+        fromSha,
+        startedAt: deps.now().toISOString(),
+      },
+      bootCount: 0,
+    };
+    await deps.saveState(s);
 
-  const fail = async (
-    outcome: 'failed-install' | 'failed-build' | 'failed-checkout',
-    reason: string,
-  ): Promise<ExecutorResult> => {
+    // Snapshot lockfile (SHA already captured above; the rollback handler reads
+    // execution.fromSha rather than a separate file so a successful rollback
+    // doesn't depend on /var staying writable past this point).
+    await deps.copyFile(
+      path.join(deps.repoDir, 'pnpm-lock.yaml'),
+      path.join(deps.backupDir, 'pnpm-lock.yaml'),
+    );
+
+    const fail = async (
+      outcome: 'failed-install' | 'failed-build' | 'failed-checkout',
+      reason: string,
+    ): Promise<ExecutorResult> => {
+      s = {
+        ...s,
+        execution: {
+          status: 'rolling-back',
+          reason,
+          targetTag: deps.targetTag,
+          fromSha,
+          at: deps.now().toISOString(),
+        },
+      };
+      await deps.saveState(s);
+      logger.error(`update step failed (${outcome}): ${reason}`);
+      appendLine(logPath, `[${deps.now().toISOString()}] FAIL ${outcome}: ${reason}`);
+      return {outcome, reason};
+    };
+
+    let r = await runStep(deps.spawnFn, deps.repoDir, logPath, 'git', ['fetch', '--tags', 'origin']);
+    if (r.code !== 0) return fail('failed-checkout', `git fetch exit ${r.code}: ${r.stderr.trim()}`);
+
+    r = await runStep(deps.spawnFn, deps.repoDir, logPath, 'git', ['checkout', deps.targetTag]);
+    if (r.code !== 0) return fail('failed-checkout', `git checkout exit ${r.code}: ${r.stderr.trim()}`);
+
+    r = await runStep(deps.spawnFn, deps.repoDir, logPath, 'pnpm', ['install', '--frozen-lockfile']);
+    if (r.code !== 0) return fail('failed-install', `pnpm install exit ${r.code}: ${r.stderr.trim()}`);
+
+    r = await runStep(deps.spawnFn, deps.repoDir, logPath, 'pnpm', ['run', 'build:ui']);
+    if (r.code !== 0) return fail('failed-build', `pnpm run build:ui exit ${r.code}: ${r.stderr.trim()}`);
+
+    // pending-verification: the next boot's RollbackHandler arms the health-check timer.
     s = {
       ...s,
       execution: {
-        status: 'rolling-back',
-        reason,
+        status: 'pending-verification',
         targetTag: deps.targetTag,
         fromSha,
-        at: deps.now().toISOString(),
+        // Real deadline is computed at next boot using rollbackHealthCheckSeconds.
+        // We persist a placeholder here purely so the field is present.
+        deadlineAt: deps.now().toISOString(),
       },
+      bootCount: 0,
     };
     await deps.saveState(s);
-    logger.error(`update step failed (${outcome}): ${reason}`);
-    appendLine(logPath, `[${deps.now().toISOString()}] FAIL ${outcome}: ${reason}`);
-    return {outcome, reason};
-  };
-
-  let r = await runStep(deps.spawnFn, deps.repoDir, logPath, 'git', ['fetch', '--tags', 'origin']);
-  if (r.code !== 0) return fail('failed-checkout', `git fetch exit ${r.code}: ${r.stderr.trim()}`);
-
-  r = await runStep(deps.spawnFn, deps.repoDir, logPath, 'git', ['checkout', deps.targetTag]);
-  if (r.code !== 0) return fail('failed-checkout', `git checkout exit ${r.code}: ${r.stderr.trim()}`);
-
-  r = await runStep(deps.spawnFn, deps.repoDir, logPath, 'pnpm', ['install', '--frozen-lockfile']);
-  if (r.code !== 0) return fail('failed-install', `pnpm install exit ${r.code}: ${r.stderr.trim()}`);
-
-  r = await runStep(deps.spawnFn, deps.repoDir, logPath, 'pnpm', ['run', 'build:ui']);
-  if (r.code !== 0) return fail('failed-build', `pnpm run build:ui exit ${r.code}: ${r.stderr.trim()}`);
-
-  // pending-verification: the next boot's RollbackHandler arms the health-check timer.
-  s = {
-    ...s,
-    execution: {
-      status: 'pending-verification',
-      targetTag: deps.targetTag,
-      fromSha,
-      // Real deadline is computed at next boot using rollbackHealthCheckSeconds.
-      // We persist a placeholder here purely so the field is present.
-      deadlineAt: deps.now().toISOString(),
-    },
-    bootCount: 0,
-  };
-  await deps.saveState(s);
-  logger.info(`update executed: ${fromSha} -> ${deps.targetTag}; exiting 75 for supervisor restart`);
-  void appendLine(logPath, `[${deps.now().toISOString()}] OK pending-verification ${fromSha} -> ${deps.targetTag}; exiting 75`);
-  deps.exit(75);
-  return {outcome: 'pending-verification'};
+    logger.info(`update executed: ${fromSha} -> ${deps.targetTag}; exiting 75 for supervisor restart`);
+    void appendLine(logPath, `[${deps.now().toISOString()}] OK pending-verification ${fromSha} -> ${deps.targetTag}; exiting 75`);
+    deps.exit(75);
+    return {outcome: 'pending-verification'};
+  } catch (err) {
+    // Unexpected throw — fs ENOSPC, EACCES on the backup dir, network blip
+    // surfaced through readSha, etc. Persist rolling-back so the route's
+    // post-executor rollback path runs and the state never wedges at 'executing'.
+    const reason = `executor exception: ${(err as Error).message}`;
+    logger.error(reason);
+    void appendLine(logPath, `[${deps.now().toISOString()}] EXECUTOR_THROW ${reason}`);
+    try {
+      await deps.saveState({
+        ...deps.initialState,
+        execution: {
+          status: 'rolling-back',
+          reason,
+          targetTag: deps.targetTag,
+          fromSha,
+          at: deps.now().toISOString(),
+        },
+        bootCount: 0,
+      });
+    } catch (saveErr) {
+      // Even saveState threw. Best-effort log, rethrow original — the route's
+      // catch will surface it. State on disk is whatever last successfully wrote.
+      logger.error(`could not persist rolling-back: ${(saveErr as Error).message}`);
+    }
+    return {outcome: 'failed-checkout', reason};
+  }
 };

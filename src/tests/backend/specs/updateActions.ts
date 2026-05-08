@@ -30,8 +30,18 @@ const installAdminAuth = () => {
 describe(__filename, function () {
   let agent: any;
   const backups: Record<string, any> = {};
+  // Bump tier to 'manual' so the action endpoints are mounted by the hook.
+  // (At default tier 'notify' they 404 — that's the gate Qodo #1 introduced.)
+  const originalTier = settings.updates.tier;
 
-  before(async () => { agent = await common.init(); });
+  before(async () => {
+    settings.updates.tier = 'manual';
+    agent = await common.init();
+  });
+
+  after(() => {
+    settings.updates.tier = originalTier;
+  });
 
   beforeEach(async () => {
     backups.hooks = {};
@@ -63,24 +73,26 @@ describe(__filename, function () {
       await agent.post('/admin/update/apply').expect(401);
     });
 
-    it('rejects when policy denies (non-git install method)', async () => {
+    it('returns 409 with no-known-latest when state has no latest release', async () => {
       installAdminAuth();
-      // Force the detector path: the boot detector ran with the real install
-      // method, but evaluatePolicy uses settings.updates.installMethod via the
-      // hook's getDetectedInstallMethod(). We can't easily flip that mid-test,
-      // so instead we set tier=off which also denies canManual.
+      // Replace seeded "update available" with empty state.
+      await saveState(statePath(), {...EMPTY_STATE});
+      const r = await agent.post('/admin/update/apply')
+        .auth('admin', 'admin-pw')
+        .expect(409);
+      assert.equal(r.body.error, 'no-known-latest');
+    });
+
+    it('returns 404 when tier is "notify" (action endpoints disabled)', async () => {
+      // Regression for the Tier 2 gate (Qodo #1): disabled tiers must 404 to
+      // match prior PR-1 behaviour, not 401/403/409.
       const orig = settings.updates.tier;
-      settings.updates.tier = 'off';
+      settings.updates.tier = 'notify';
       try {
-        await agent.post('/admin/update/apply')
-          .auth('admin', 'admin-pw')
-          .expect((r: any) => {
-            // tier=off removes the entire route registration, so we expect 404.
-            // tier !== off and policy.canManual=false would expect 409. Either is OK.
-            if (r.status !== 404 && r.status !== 409) {
-              throw new Error(`expected 404 or 409, got ${r.status}`);
-            }
-          });
+        await agent.post('/admin/update/apply').expect(404);
+        await agent.post('/admin/update/cancel').expect(404);
+        await agent.post('/admin/update/acknowledge').expect(404);
+        await agent.get('/admin/update/log').expect(404);
       } finally { settings.updates.tier = orig; }
     });
 
