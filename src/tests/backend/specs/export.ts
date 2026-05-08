@@ -295,32 +295,80 @@ hello<br>world
     const {applyMonospaceToCode} =
         require('../../../node/utils/ExportSanitizeHtml');
 
-    it('wraps <code> content in a Courier-styled span', function () {
+    it('emits a Courier span for inline <code>', function () {
+      // The <code> tag itself is dropped (html-to-docx ignores it and
+      // also breaks <a> children when they're nested inside it). The
+      // text becomes a Courier-styled inline span.
       const out = applyMonospaceToCode('<code>x = 1</code>');
-      assert.match(out, /<span style="font-family:'Courier New', monospace">x = 1<\/span>/);
-      assert.match(out, /^<code>/);
-      assert.match(out, /<\/code>$/);
+      assert.strictEqual(out,
+          `<span style="font-family:'Courier New', monospace">x = 1</span>`);
     });
 
-    it('preserves attributes on the original tag', function () {
+    it('forwards block-level style to a wrapping <p>', function () {
+      // ep_headings2 + ep_align emit `<code style='text-align:right'>`
+      // for each "Code"-styled pad line. The alignment must reach
+      // html-to-docx as a paragraph property, so we move the style
+      // onto a wrapping <p>.
       const out = applyMonospaceToCode("<code style='text-align:right'>x</code>");
-      assert.match(out, /<code style='text-align:right'>/);
+      assert.match(out, /<p style="text-align:right">/);
       assert.match(out, /font-family:'Courier New'/);
     });
 
-    it('handles <pre>, <tt>, <kbd>, <samp>', function () {
-      for (const tag of ['pre', 'tt', 'kbd', 'samp']) {
+    it('emits <p> wrap for <pre> regardless of style', function () {
+      // <pre> is always block-level.
+      const out = applyMonospaceToCode('<pre>preformatted</pre>');
+      assert.match(out, /^<p>/);
+      assert.match(out, /<\/p>$/);
+      assert.match(out, /font-family:'Courier New'/);
+    });
+
+    it('handles inline <tt>, <kbd>, <samp> as bare spans', function () {
+      for (const tag of ['tt', 'kbd', 'samp']) {
         const out = applyMonospaceToCode(`<${tag}>x</${tag}>`);
-        assert.match(out, new RegExp(`<${tag}>`),
-            `expected ${tag} tag preserved`);
-        assert.match(out, /font-family:'Courier New'/,
-            `expected Courier wrap inside ${tag}`);
+        assert.strictEqual(out,
+            `<span style="font-family:'Courier New', monospace">x</span>`,
+            `expected styled span (no ${tag} wrapper) but got: ${out}`);
       }
     });
 
     it('does not touch unrelated tags', function () {
       const html = '<p>plain</p><strong>bold</strong>';
       assert.strictEqual(applyMonospaceToCode(html), html);
+    });
+
+    it('does not wrap <a> elements in the Courier span', function () {
+      // Regression: html-to-docx drops <a href> content when nested
+      // inside a styled span OR inside <code>. We split on anchors
+      // and leave them unstyled.
+      const out = applyMonospaceToCode(
+          '<code>Github: <a href="https://github.com/ether/etherpad">link</a> end</code>');
+      // Anchor is preserved as-is (no Courier span around it)
+      assert.match(out, /<a href="https:\/\/github\.com\/ether\/etherpad">link<\/a>/);
+      // Text before the anchor is wrapped
+      assert.match(out, /font-family:'Courier New', monospace">Github: <\/span>/);
+      // Text after the anchor is wrapped
+      assert.match(out, /font-family:'Courier New', monospace"> end<\/span>/);
+      // <code> wrapper is dropped
+      assert.doesNotMatch(out, /<code/);
+      assert.doesNotMatch(out, /<\/code>/);
+    });
+
+    it('preserves <a> through html-to-docx round-trip', async function () {
+      try { require.resolve('html-to-docx'); }
+      catch { this.skip(); return; }
+      const htmlToDocx = require('html-to-docx');
+      const JSZip = require('jszip');
+      const buf: Buffer = await htmlToDocx(applyMonospaceToCode(
+          '<p><code>Github: <a href="https://github.com/ether/etherpad">site</a></code></p>'));
+      const z = await JSZip.loadAsync(buf);
+      const xml: string = await z.file('word/document.xml').async('text');
+      // Anchor must survive: docx hyperlinks live in <w:hyperlink>
+      assert.match(xml, /<w:hyperlink/, 'expected <w:hyperlink> in docx');
+      assert.match(xml, /<w:t[^>]*>site<\/w:t>/, 'expected link text "site"');
+      const rels: string = await z.file('word/_rels/document.xml.rels')
+          .async('text');
+      assert.match(rels, /github\.com\/ether\/etherpad/,
+          'expected URL in document.xml.rels');
     });
   });
 

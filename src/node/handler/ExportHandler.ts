@@ -116,14 +116,18 @@ exports.doExport = async (req: any, res: any, padId: string, readOnlyId: string,
       html = null;
       try {
         if (type === 'docx') {
-          // html-to-docx renders bare <br> outside <p> as a new <w:p>
-          // paragraph (full empty line in Word). Wrap loose lines in <p>
-          // so single <br> stays as a soft break (<w:br/>) and only
-          // explicit blank-line gaps (<br><br>) become paragraph breaks.
-          // applyMonospaceToCode wraps code/pre content in a styled
-          // span so Word renders it in Courier New (html-to-docx
-          // ignores the bare <code> tag).
-          const docxHtml = applyMonospaceToCode(wrapLooseLines(bodyHtml));
+          // applyMonospaceToCode strips `<code>`/`<pre>`/`<tt>` wrappers
+          // (html-to-docx ignores them AND has a bug where it drops
+          // `<a href>` children of those tags) and emits styled
+          // monospace spans, forwarding any block-level alignment style
+          // to a wrapping `<p>`. Run BEFORE wrapLooseLines so the
+          // resulting `<p>` lands at the loose-line boundary instead
+          // of getting double-wrapped.
+          //
+          // wrapLooseLines then handles `<br>` semantics: bare `<br>`
+          // outside `<p>` becomes a soft break, `<br><br>` becomes a
+          // paragraph boundary plus blank-line markers.
+          const docxHtml = wrapLooseLines(applyMonospaceToCode(bodyHtml));
           const htmlToDocx = require('html-to-docx');
           const buf = await htmlToDocx(docxHtml);
           res.contentType(

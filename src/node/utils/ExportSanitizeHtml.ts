@@ -33,16 +33,57 @@ const ADJACENT_HEADING_BLOCKS_RE =
 export const separateAdjacentHeadingBlocks = (html: string): string =>
     html.replace(ADJACENT_HEADING_BLOCKS_RE, '$1<br>$2');
 
-// Wrap code/pre/tt/kbd/samp content in a styled span so html-to-docx
-// emits `<w:rFonts w:ascii="Courier New" .../>` for the runs. The bare
-// HTML `<code>` tag isn't translated to a font change by html-to-docx —
-// it just emits the text without styling. Wrapping the content in
-// `<span style="font-family:'Courier New'">` is the documented way to
-// get a monospace run in the DOCX output.
+// Convert code/pre/tt/kbd/samp wrappers to plain styled spans (and a
+// wrapping <p> when block-styled) so html-to-docx renders them with
+// `<w:rFonts w:ascii="Courier New" .../>`. The bare `<code>` tag
+// isn't translated to a font change by html-to-docx, AND it has a
+// nasty bug where any `<a href>` nested inside `<code>` (or inside a
+// styled `<span>`) is silently dropped from the output. Workaround:
+// drop the code/pre tag entirely, wrap non-anchor text in monospace
+// spans, leave anchors as-is. For block-level usage (e.g.
+// ep_headings2's `<code style='text-align:right'>` per-line wrapper)
+// we emit a wrapping `<p>` and forward any text-align style.
+//
+// Run BEFORE `wrapLooseLines` so the resulting `<p>` lands at the
+// loose-line boundary instead of getting double-wrapped.
 const MONO_TAGS_RE = /<(code|tt|kbd|samp|pre)\b([^>]*)>([\s\S]*?)<\/\1>/gi;
+const ANCHOR_RE = /<a\b[^>]*>[\s\S]*?<\/a>/gi;
+const STYLE_ATTR_RE = /\bstyle\s*=\s*(['"])([^'"]*)\1/i;
+const COURIER_OPEN = '<span style="font-family:\'Courier New\', monospace">';
+const COURIER_CLOSE = '</span>';
+
+const wrapNonAnchorSegments = (content: string): string => {
+  let out = '';
+  let lastIndex = 0;
+  let m: RegExpExecArray | null;
+  ANCHOR_RE.lastIndex = 0;
+  while ((m = ANCHOR_RE.exec(content)) !== null) {
+    const before = content.slice(lastIndex, m.index);
+    if (before) out += `${COURIER_OPEN}${before}${COURIER_CLOSE}`;
+    out += m[0];
+    lastIndex = m.index + m[0].length;
+  }
+  if (lastIndex < content.length) {
+    const after = content.slice(lastIndex);
+    if (after) out += `${COURIER_OPEN}${after}${COURIER_CLOSE}`;
+  }
+  return out || `${COURIER_OPEN}${content}${COURIER_CLOSE}`;
+};
+
 export const applyMonospaceToCode = (html: string): string =>
-    html.replace(MONO_TAGS_RE, (_, tag, attrs, content) =>
-      `<${tag}${attrs}><span style="font-family:'Courier New', monospace">${content}</span></${tag}>`);
+    html.replace(MONO_TAGS_RE, (_, tag, attrs, content) => {
+      const styled = wrapNonAnchorSegments(content);
+      // Block-level treatment for <pre> (always) and <code>/<tt>/etc.
+      // when the wrapper carries an inline style (ep_headings2 +
+      // ep_align emit `<code style='text-align:right'>` for each pad
+      // line). Forward the style to a wrapping `<p>`.
+      const styleMatch = STYLE_ATTR_RE.exec(attrs);
+      if (tag.toLowerCase() === 'pre' || styleMatch) {
+        const styleAttr = styleMatch ? ` style="${styleMatch[2]}"` : '';
+        return `<p${styleAttr}>${styled}</p>`;
+      }
+      return styled;
+    });
 
 // Drop block elements whose only content is whitespace. Etherpad plugins
 // like ep_headings2 emit a heading-styled blank-line block (e.g.
