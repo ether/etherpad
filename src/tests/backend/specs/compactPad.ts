@@ -536,6 +536,55 @@ describe(__filename, function () {
       assert.strictEqual(report.ok, 0);
     });
 
+    it('skips a pad that gets edited between selection and compaction',
+        async function () {
+          // Two getLastEdited calls per pad: the first-pass selection,
+          // and the right-before-compact recheck. We answer "old" the
+          // first time and "fresh" the second to simulate an edit
+          // landing during the run.
+          const calls: Record<string, number> = {p1: 0, p2: 0};
+          let compactCalls = 0;
+          const api = {
+            async listAllPads() { return ['p1', 'p2']; },
+            async getLastEdited(padId: string) {
+              calls[padId]++;
+              if (padId === 'p1' && calls.p1 === 2) return NOW - 1 * day;
+              return NOW - 200 * day;
+            },
+            async getRevisionsCount() { return 4; },
+            async compactPad() { compactCalls++; },
+          };
+          const report = await runCompactStale(api,
+              {olderThanDays: 90, keepRevisions: null, dryRun: false},
+              silent, fixedNow);
+          assert.strictEqual(report.total, 2);
+          assert.strictEqual(report.stale, 1, 'p1 reclassified to fresh');
+          assert.strictEqual(report.skippedFresh, 1);
+          assert.strictEqual(report.ok, 1);
+          assert.strictEqual(compactCalls, 1);
+        });
+
+    it('counts a getLastEdited recheck failure as a failure', async function () {
+      let compactCalls = 0;
+      const callCount: Record<string, number> = {p1: 0};
+      const api = {
+        async listAllPads() { return ['p1']; },
+        async getLastEdited(padId: string) {
+          callCount[padId]++;
+          if (callCount[padId] === 2) throw new Error('recheck-boom');
+          return NOW - 200 * day;
+        },
+        async getRevisionsCount() { return 5; },
+        async compactPad() { compactCalls++; },
+      };
+      const report = await runCompactStale(api,
+          {olderThanDays: 90, keepRevisions: null, dryRun: false},
+          silent, fixedNow);
+      assert.strictEqual(report.failed, 1);
+      assert.strictEqual(report.ok, 0);
+      assert.strictEqual(compactCalls, 0);
+    });
+
     it('--older-than 0 treats every pad as stale', async function () {
       const api = makeApi(
           [{id: 'a', ageDays: 0}, {id: 'b', ageDays: 0}]);

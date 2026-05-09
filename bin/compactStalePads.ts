@@ -157,6 +157,27 @@ export const runCompactStale = async (
       continue;
     }
 
+    // Re-check staleness right before compacting. Without this the
+    // first-pass selection is a TOCTOU window: on a long bulk run a
+    // pad can become active between selection and compaction, and
+    // compactPad would then kick those sessions. Re-checking here
+    // shrinks the window to one round-trip and treats the pad as
+    // freshened (skipped, not failed).
+    let lastEditedNow: number;
+    try {
+      lastEditedNow = await api.getLastEdited(padId);
+    } catch (e: any) {
+      logger.error(`${idx} ${padId}: getLastEdited recheck failed: ${e.message ?? e}`);
+      report.failed++;
+      continue;
+    }
+    if (lastEditedNow > cutoff) {
+      logger.info(`${idx} ${padId}: edited during run — skipping (now fresh)`);
+      report.skippedFresh++;
+      report.stale--;
+      continue;
+    }
+
     try {
       await api.compactPad(padId, opts.keepRevisions);
     } catch (e: any) {
