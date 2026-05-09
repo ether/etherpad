@@ -424,18 +424,21 @@
   "maxAge": "${MAX_AGE:21600}", // 60 * 60 * 6 = 6 hours
 
   /*
-   * This is the absolute path to the soffice executable.
+   * Absolute path to the soffice (LibreOffice) executable.
    *
-   * LibreOffice is used for advanced import/export of pads (docx, pdf, odt).
-   * Setting it to null disables LibreOffice and will only allow plain text
-   * and HTML import/exports.
+   * When configured, soffice handles all advanced office-format
+   * conversions (docx, pdf, odt, doc, rtf -- both directions). When
+   * null, Etherpad falls back to pure-JS in-process converters
+   * that handle docx export, pdf export, and docx import natively.
+   * odt/doc/rtf export and pdf import still require soffice.
    */
   "soffice": "${SOFFICE:null}",
 
   /*
-   * When true (the default), the "Microsoft Word" export button downloads a .docx file via
-   * LibreOffice (requires "soffice" to be set). Set to false to revert to legacy .doc output
-   * (which also requires "soffice").
+   * When true (the default), the "Microsoft Word" export button
+   * downloads a .docx file -- via soffice if it's configured, or via
+   * the in-process html-to-docx converter otherwise. Set to false to
+   * revert to legacy .doc output (.doc still requires soffice).
    */
   "docxExport": "${DOCX_EXPORT:true}",
 

@@ -35,16 +35,17 @@ The variable value has to be a space separated, double quoted list of plugin nam
 
 Some plugins will need personalized settings. Just refer to the previous section, and include them in your custom `settings.json.docker`.
 
-### Rebuilding including export functionality for DOC/DOCX/PDF/ODT
+### Office-format import/export
 
-If you want to be able to export your pads to DOC/DOCX/PDF/ODT files, you can
-install Libreoffice via setting the `INSTALL_SOFFICE` build variable to any
-value.
+DOCX export, PDF export, and DOCX import work out of the box — Etherpad
+ships pure-JS in-process converters and needs no extra dependencies for
+those three formats.
 
-Also, you will need to configure the path to the libreoffice executable
-via setting the `soffice` property in `<BASEDIR>/settings.json.docker` to
-`/usr/bin/soffice` or via setting the environment variable  `SOFFICE` to
-`/usr/bin/soffice`.
+DOC/ODT/RTF export and PDF import still require LibreOffice. To enable
+them, install LibreOffice via the `INSTALL_SOFFICE` build variable (any
+value), and either set the `soffice` property in
+`<BASEDIR>/settings.json.docker` to `/usr/bin/soffice` or set the
+`SOFFICE` environment variable to `/usr/bin/soffice`.
 
 ### Examples
 
