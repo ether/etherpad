@@ -104,7 +104,19 @@ const init = () => {
     // or writes it; the server picks it up from the socket.io handshake.
     cp = (window as any).clientVars?.cookiePrefix || '';
 
-    socket = socketio.connect(exports.baseURL, '/', {query: {padId}});
+    // Pass `embed` to the server when this timeslider is the in-place
+    // history iframe inside a pad page (issue #7659). Without this the
+    // server's duplicate-author kick treats the iframe's connection as a
+    // stale tab and disconnects the parent pad's live socket.
+    const embed = (() => {
+      try {
+        if (window.parent === window) return false;
+        const params = new URLSearchParams(window.location.search);
+        return params.get('embed') === '1';
+      } catch (_e) { return false; }
+    })();
+    socket = socketio.connect(
+        exports.baseURL, '/', {query: embed ? {padId, embed: '1'} : {padId}});
 
     // send the ready message once we're connected
     socket.on('connect', () => {
