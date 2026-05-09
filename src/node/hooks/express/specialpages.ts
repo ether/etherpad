@@ -404,7 +404,12 @@ exports.expressCreateServer = async (_hookName: string, args: ArgsExpressType, c
       // The iframe used by history mode requests this URL with ?embed=1
       // and gets the full timeslider HTML rendered for embedded use.
       if (req.query.embed !== '1') {
-        return res.redirect(302, `../${encodeURIComponent(req.params.pad)}`);
+        // Absolute path (not relative `../`) so Firefox and Chrome resolve
+        // it identically — relative redirects from /p/:pad/timeslider are
+        // technically well-defined but Firefox dropped a trailing-slash
+        // case once that flaked the legacy-URL test (#7710).
+        const proxyPath = sanitizeProxyPath(req);
+        return res.redirect(302, `${proxyPath}/p/${encodeURIComponent(req.params.pad)}`);
       }
       ensureAuthorTokenCookie(req, res, settings);
       hooks.callAll('padInitToolbar', {
