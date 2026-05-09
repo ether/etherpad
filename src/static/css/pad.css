@@ -131,11 +131,16 @@ input {
 .history-banner-date    { opacity: 0.85; }
 .history-banner #history-banner-return { margin-left: auto; }
 
+/* The history iframe takes the place of the live ACE editor. We use the    */
+/* same positioning model (absolute, fill the editor area) so the page      */
+/* layout is identical between modes.                                       */
 .history-frame-mount {
   display: none;
-  flex: 1 1 auto;
-  min-height: 0;
+  position: absolute;
+  inset: 0;
   border: 0;
+  background: var(--bg-color, #f2f3f4);
+  z-index: 4;
 }
 .history-frame-mount[hidden] { display: none; }
 .history-frame-mount > iframe {
@@ -151,7 +156,8 @@ input {
 /* toolbar itself stays interactive so chat / settings / users / share     */
 /* still work — only the editing-command icons are dimmed visually.        */
 body.history-mode #editorcontainer { display: none; }
-body.history-mode .history-frame-mount { display: flex; }
+body.history-mode #editorcontainerbox { position: relative; }
+body.history-mode .history-frame-mount { display: block; }
 body.history-mode #editbar {
   filter: sepia(0.3) saturate(0.7);
 }
