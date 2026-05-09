@@ -100,6 +100,19 @@
         <input type="range" id="history-slider-input" class="history-slider-input"
                min="0" max="0" value="0" step="1">
         <span id="history-timer" class="history-timer hide-for-mobile" aria-live="polite"></span>
+        <label class="history-toggle hide-for-mobile">
+          <input type="checkbox" id="history-options-followContents" checked>
+          <span data-l10n-id="pad.historyMode.settings.followShort">Follow</span>
+        </label>
+        <select id="history-playbackspeed" class="history-speed hide-for-mobile"
+                aria-label="Playback speed"
+                data-l10n-aria-label="true">
+          <option value="100" data-l10n-id="timeslider.settings.playbackSpeed.original">Original speed</option>
+          <option value="realtime" data-l10n-id="timeslider.settings.playbackSpeed.realtime">Realtime</option>
+          <option value="200" data-l10n-id="timeslider.settings.playbackSpeed.200ms">200 ms</option>
+          <option value="500" data-l10n-id="timeslider.settings.playbackSpeed.500ms">500 ms</option>
+          <option value="1000" data-l10n-id="timeslider.settings.playbackSpeed.1000ms">1000 ms</option>
+        </select>
       </div>
       <ul class="menu_right" role="toolbar">
           <% e.begin_block("editbarMenuRight"); %>
@@ -296,27 +309,6 @@
               </div>
               <button class="btn btn-danger" data-l10n-id="pad.settings.deletePad" id="delete-pad">Delete pad</button>
             </div><% } %>
-
-            <!-- HISTORY-MODE OPTIONS (visible only while scrubbing pad history) -->
-            <div id="history-settings-section" class="settings-section">
-              <h2 data-l10n-id="pad.historyMode.settings.title">History playback</h2>
-              <p>
-                <input type="checkbox" id="history-options-followContents" checked>
-                <label for="history-options-followContents" data-l10n-id="pad.historyMode.settings.follow">Follow pad content updates</label>
-              </p>
-              <div class="dropdowns-container">
-                <p class="dropdown-line">
-                  <label for="history-playbackspeed" data-l10n-id="pad.historyMode.settings.playbackSpeed">Playback speed:</label>
-                  <select id="history-playbackspeed">
-                    <option value="100" data-l10n-id="timeslider.settings.playbackSpeed.original">Original speed</option>
-                    <option value="realtime" data-l10n-id="timeslider.settings.playbackSpeed.realtime">Realtime</option>
-                    <option value="200" data-l10n-id="timeslider.settings.playbackSpeed.200ms">200 ms</option>
-                    <option value="500" data-l10n-id="timeslider.settings.playbackSpeed.500ms">500 ms</option>
-                    <option value="1000" data-l10n-id="timeslider.settings.playbackSpeed.1000ms">1000 ms</option>
-                  </select>
-                </p>
-              </div>
-            </div>
           </div>
           <% if (!settings.requireAuthentication) { %>
           <details id="delete-pad-with-token">

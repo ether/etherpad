@@ -164,8 +164,10 @@ body.history-mode #editbar .show-more-icon-btn { display: none; }
 body.history-mode #history-controls { display: flex; }
 
 /* History toolbar controls (issue #7659): a slider + play/pause/step      */
-/* buttons that remote-control the embedded timeslider iframe. Take the    */
-/* place of the formatting menu while scrubbing.                           */
+/* buttons + Follow/Speed controls that remote-control the embedded        */
+/* timeslider iframe. Take the place of the formatting menu while          */
+/* scrubbing. align-items + min-height keep the toolbar the same vertical  */
+/* size as in live mode so swapping modes doesn't reflow the layout.       */
 .history-controls {
   display: none;
   flex: 1 1 auto;
@@ -173,11 +175,22 @@ body.history-mode #history-controls { display: flex; }
   gap: 8px;
   padding: 0 12px;
   min-width: 0;
+  min-height: 40px;
 }
 .history-controls[hidden] { display: none; }
 .history-controls button.buttonicon {
   flex: 0 0 auto;
+  /* Match the live-toolbar buttonicon visual weight (no <li><a> wrapper  */
+  /* gives us a smaller default; bump padding so the icon hit area lines */
+  /* up vertically with menu_right's settings/share/users/etc. icons).   */
+  padding: 6px 8px;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  font-size: 15px;
+  color: inherit;
 }
+.history-controls button.buttonicon:hover { background: rgba(0,0,0,0.06); border-radius: 4px; }
 .history-controls button.buttonicon.buttonicon-play.pause::before {
   content: "\e829";
 }
@@ -194,27 +207,35 @@ body.history-mode #history-controls { display: flex; }
   opacity: 0.85;
   white-space: nowrap;
 }
+.history-toggle {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.history-toggle input[type="checkbox"] { margin: 0; }
+.history-speed {
+  flex: 0 0 auto;
+  font-size: 13px;
+  padding: 2px 4px;
+  max-width: 130px;
+}
 
-/* Responsive — on narrow screens the slider compresses, the timestamp    */
-/* would push other controls offscreen. Match the legacy timeslider's     */
-/* @media (max-width: 800px) treatment by hiding the timer there.         */
+/* Responsive — Follow + Speed inherit .hide-for-mobile (already collapses */
+/* at <=800px). Pack the remaining play/slider/step buttons tighter so     */
+/* they always fit. At ultra-narrow widths the step buttons compact too.   */
 @media (max-width: 800px) {
-  .history-controls { padding: 0 6px; gap: 4px; }
-  .history-controls .history-timer { display: none; }
-  .history-controls button.buttonicon { padding: 4px; min-width: 36px; }
+  .history-controls { padding: 0 6px; gap: 4px; min-height: 36px; }
+  .history-controls button.buttonicon { padding: 4px 6px; min-width: 32px; }
   .history-slider-input { min-width: 60px; margin: 0 2px; }
 }
 @media (max-width: 480px) {
-  /* Tighten step buttons to icon-only at very small widths so play +    */
-  /* slider always fit on the toolbar.                                   */
   .history-controls #history-leftstep,
   .history-controls #history-rightstep { min-width: 28px; padding: 2px; }
 }
-
-/* History playback settings live inside the regular Settings popup but    */
-/* are only relevant while scrubbing — show them only in history mode.     */
-#history-settings-section { display: none; }
-body.history-mode #history-settings-section { display: block; }
 
 /* Chat replay header — appears above the chat log while scrubbing so the  */
 /* user knows the message list is filtered to a historical timestamp.      */

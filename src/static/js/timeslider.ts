@@ -74,14 +74,15 @@ const init = () => {
     if (typeof customStart === 'function') customStart(); // eslint-disable-line no-undef
 
     // Issue #7659: when this timeslider is mounted as the in-place history
-    // iframe inside a pad page, inherit the parent's skin tokens so dark
-    // mode (and any other skinVariants the user toggled at runtime) is
-    // applied immediately on first paint. Same-origin assumption holds —
-    // the embed route only renders for /p/:pad/timeslider on the same
-    // host as the parent. Skip silently if the access is cross-origin or
-    // we're not really embedded.
+    // iframe inside a pad page, mark the body so CSS can hide the inner
+    // editbar (the outer pad's toolbar owns the slider) and inherit the
+    // parent's skin tokens so dark mode (and any other skinVariants the
+    // user toggled at runtime) is applied immediately on first paint.
+    // Direct visits to /p/:pad/timeslider?embed=1 (existing test/legacy
+    // entry points) keep their full chrome because parent === window.
     try {
       if (window.parent !== window) {
+        document.body.classList.add('iframe-mode');
         const parentClasses = window.parent.document.documentElement.className || '';
         const tokens = parentClasses.split(/\s+/).filter((c) =>
             /^(super-light|light|dark|super-dark)-(toolbar|editor|background)$/.test(c) ||

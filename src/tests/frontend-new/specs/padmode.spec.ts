@@ -36,10 +36,13 @@ test.describe('in-pad history mode', () => {
     expect(new URL(page.url()).pathname).toBe(padPath);
     expect(page.url()).toMatch(/#rev\//);
 
-    // The iframe mounted with the embedded timeslider markup.
+    // The iframe mounted with the embedded timeslider markup; its own
+    // editbar is hidden because the slider lives in the outer toolbar
+    // (#history-controls).
     const frame = page.frameLocator('#history-frame');
-    await expect(frame.locator('#timeslider-wrapper')).toBeVisible();
     await expect(frame.locator('body.embedded-history-frame')).toBeVisible();
+    await expect(frame.locator('#editbar')).toBeHidden();
+    await expect(page.locator('#history-slider-input')).toBeVisible();
     expect(padId).toBeTruthy();
   });
 
@@ -88,32 +91,25 @@ test.describe('in-pad history mode', () => {
 
   // Phase B — chrome consolidation, chat replay, authors panel, exports.
 
-  test('outer Settings popup exposes history-only controls in history mode', async ({page}) => {
+  test('Follow + Playback speed are inline in the toolbar in history mode', async ({page}) => {
     await goToNewPad(page);
     await clearPadContent(page);
     await writeToPad(page, 'one');
     await page.waitForTimeout(300);
 
-    // Settings popup needs to be opened to assess section visibility, since
-    // the popup itself is display:none until a class is toggled. Open it
-    // and assert the history section is hidden in live mode.
-    await page.locator('button[data-l10n-id=\'pad.toolbar.settings.title\']').click();
-    await page.waitForFunction(() => document.querySelector('#settings')?.classList.contains('popup-show'));
-    const liveDisplay = await page.locator('#history-settings-section').evaluate(
-        (el) => getComputedStyle(el).display);
-    expect(liveDisplay).toBe('none');
+    // Live mode: history-controls hidden, so Follow + Speed are not visible.
+    await expect(page.locator('#history-options-followContents')).toBeHidden();
+    await expect(page.locator('#history-playbackspeed')).toBeHidden();
 
-    // Close settings, enter history, reopen — section should now display.
-    await page.keyboard.press('Escape');
     await page.locator('.buttonicon-history').click();
     await expect(page.locator('body.history-mode')).toBeVisible();
-    await page.locator('button[data-l10n-id=\'pad.toolbar.settings.title\']').click();
-    await page.waitForFunction(() => document.querySelector('#settings')?.classList.contains('popup-show'));
-    const histDisplay = await page.locator('#history-settings-section').evaluate(
-        (el) => getComputedStyle(el).display);
-    expect(histDisplay).not.toBe('none');
-    await expect(page.locator('#history-options-followContents')).toBeAttached();
-    await expect(page.locator('#history-playbackspeed')).toBeAttached();
+
+    // Both controls live inside #history-controls in the toolbar — no need
+    // to open the Settings popup.
+    await expect(page.locator('#history-controls #history-options-followContents'))
+        .toBeAttached();
+    await expect(page.locator('#history-controls #history-playbackspeed'))
+        .toBeAttached();
   });
 
   test('embedded iframe shows only the editor surface (no inner editbar)', async ({page}) => {

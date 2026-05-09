@@ -3,15 +3,17 @@
   display: block;
 }
 
-/* When the timeslider is embedded as an iframe inside a pad page, the outer
- * pad's toolbar, banner, and Settings/Export popups own all chrome. The
- * outer pad also hosts its own slider + play/step buttons (#history-controls)
- * which remote-control this iframe's BroadcastSlider, so we hide the inner
- * #editbar entirely — the iframe is purely the editor surface. */
-body.embedded-history-frame #editbar,
-body.embedded-history-frame #import_export,
-body.embedded-history-frame #connectivity,
-body.embedded-history-frame #settings {
+/* When the timeslider is embedded as an iframe inside a pad page (the
+ * parent pad's history mode — issue #7659), the outer pad's toolbar,
+ * banner, slider, and Settings/Export popups own all chrome, and the
+ * iframe is purely the editor surface. The .iframe-mode class is added
+ * by timeslider.ts only when window.parent !== window, so direct visits
+ * to /p/:pad/timeslider?embed=1 (existing test/legacy entry points)
+ * keep their full chrome and stay independently usable. */
+body.embedded-history-frame.iframe-mode #editbar,
+body.embedded-history-frame.iframe-mode #import_export,
+body.embedded-history-frame.iframe-mode #connectivity,
+body.embedded-history-frame.iframe-mode #settings {
   display: none !important;
 }
 
