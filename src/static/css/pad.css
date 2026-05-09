@@ -151,16 +151,49 @@ input {
 }
 
 /* While in history mode, hide the live ACE editor and show the history    */
-/* iframe in its place. The formatting buttons on the left side of the     */
-/* toolbar (Bold/Italic/Lists/Indent/Undo/etc.) target the live editor     */
-/* which is hidden, so we hide them entirely rather than render disabled   */
-/* icons that imply the user is doing something. The right-side menu       */
-/* (Settings / Share / Users / Chat / Home) stays fully interactive.       */
+/* iframe in its place. The formatting menu on the left side of the        */
+/* toolbar (Bold/Italic/Lists/Indent/Undo/etc.) targets the hidden live    */
+/* editor, so we swap it for the history controls (slider + play/step      */
+/* buttons) that drive the iframe. The right-side menu (Settings / Share / */
+/* Users / Chat / Home) stays fully interactive across modes.              */
 body.history-mode #editorcontainer { display: none; }
 body.history-mode #editorcontainerbox { position: relative; }
 body.history-mode .history-frame-mount { display: block; }
-body.history-mode #editbar .menu_left { visibility: hidden; }
+body.history-mode #editbar .menu_left { display: none; }
 body.history-mode #editbar .show-more-icon-btn { display: none; }
+body.history-mode #history-controls { display: flex; }
+
+/* History toolbar controls (issue #7659): a slider + play/pause/step      */
+/* buttons that remote-control the embedded timeslider iframe. Take the    */
+/* place of the formatting menu while scrubbing.                           */
+.history-controls {
+  display: none;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  min-width: 0;
+}
+.history-controls[hidden] { display: none; }
+.history-controls button.buttonicon {
+  flex: 0 0 auto;
+}
+.history-controls button.buttonicon.buttonicon-play.pause::before {
+  content: "\e829";
+}
+.history-slider-input {
+  flex: 1 1 auto;
+  min-width: 80px;
+  margin: 0 6px;
+  cursor: pointer;
+}
+.history-timer {
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.85;
+  white-space: nowrap;
+}
 
 /* History playback settings live inside the regular Settings popup but    */
 /* are only relevant while scrubbing — show them only in history mode.     */

@@ -78,6 +78,23 @@
           <%- toolbar.menu(settings.toolbar.left, isReadOnly, 'left', 'pad') %>
           <% e.end_block(); %>
       </ul>
+      <!-- HISTORY-MODE CONTROLS — slider + play/step buttons swap into the
+           toolbar's left zone while scrubbing pad history. The formatting
+           menu_left is hidden in history mode so this fills its space. The
+           outer slider is just a remote control for the embedded
+           timeslider iframe's BroadcastSlider; pad_mode.ts owns the
+           bridging. -->
+      <div id="history-controls" class="history-controls" hidden>
+        <button type="button" id="history-playpause" class="buttonicon buttonicon-play"
+                aria-label="Play/Pause" data-l10n-id="timeslider.playPause"></button>
+        <button type="button" id="history-leftstep" class="buttonicon buttonicon-step-backward"
+                aria-label="Back a revision" data-l10n-id="timeslider.backRevision"></button>
+        <button type="button" id="history-rightstep" class="buttonicon buttonicon-step-forward"
+                aria-label="Forward a revision" data-l10n-id="timeslider.forwardRevision"></button>
+        <input type="range" id="history-slider-input" class="history-slider-input"
+               min="0" max="0" value="0" step="1" aria-label="Pad revision">
+        <span id="history-timer" class="history-timer" aria-live="polite"></span>
+      </div>
       <ul class="menu_right" role="toolbar">
           <% e.begin_block("editbarMenuRight"); %>
           <%- toolbar.menu(settings.toolbar.right, isReadOnly, 'right', 'pad') %>

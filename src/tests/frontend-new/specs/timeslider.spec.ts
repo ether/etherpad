@@ -35,8 +35,10 @@ test.describe('history toolbar button enters in-pad history mode', function () {
     // reserved for the embedded iframe.
     expect(new URL(page.url()).pathname).not.toContain('timeslider');
 
-    // The iframe is mounted and the inner slider is reachable.
-    const frame = page.frameLocator('#history-frame');
-    await expect(frame.locator('#timeslider-wrapper')).toBeVisible();
+    // The iframe is mounted and the outer history-controls (slider, play,
+    // step buttons) take over the toolbar's left zone.
+    await expect(page.locator('#history-controls')).toBeVisible();
+    await expect(page.locator('#history-slider-input')).toBeVisible();
+    await expect(page.locator('#history-playpause')).toBeVisible();
   });
 });

@@ -4,37 +4,15 @@
 }
 
 /* When the timeslider is embedded as an iframe inside a pad page, the outer
- * pad's toolbar, banner, and Settings/Export popups own all chrome. Hide the
- * embedded copy's title, right-side toolbar, and modal popups so the iframe
- * shows only the slider and the editor surface. The outer pad surfaces
- * playback speed, follow-contents, export, etc. via its own Settings/Export
- * popups and bridges to this iframe's BroadcastSlider. */
-body.embedded-history-frame .timeslider-title-container,
-body.embedded-history-frame .editbarright,
+ * pad's toolbar, banner, and Settings/Export popups own all chrome. The
+ * outer pad also hosts its own slider + play/step buttons (#history-controls)
+ * which remote-control this iframe's BroadcastSlider, so we hide the inner
+ * #editbar entirely — the iframe is purely the editor surface. */
+body.embedded-history-frame #editbar,
 body.embedded-history-frame #import_export,
 body.embedded-history-frame #connectivity,
 body.embedded-history-frame #settings {
   display: none !important;
-}
-/* Pin the slider to the bottom of the iframe so the outer pad's history
- * banner (which sits above the iframe) and the slider can't visually
- * overlap. The editor surface fills the space between.
- * Reserve room at the bottom of #editorcontainerbox so the editor never
- * scrolls under the slider. */
-body.embedded-history-frame #editbar {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  padding: 4px 10px;
-  background: var(--bg-color, #f8f8f8);
-  border-top: 1px solid rgba(0, 0, 0, 0.08);
-  border-bottom: 0;
-  box-shadow: 0 -1px 4px rgba(0, 0, 0, 0.06);
-  z-index: 10;
-}
-body.embedded-history-frame #editorcontainerbox {
-  padding-bottom: 56px;
 }
 
 .timeslider-bar {

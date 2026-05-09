@@ -64,6 +64,8 @@ class PadModeController {
   private chatHeaderEl: HTMLElement | null = null;
   private playbackChangeListener: ((e: Event) => void) | null = null;
   private followChangeListener: ((e: Event) => void) | null = null;
+  // Outer history controls (#history-controls) — bridge listeners.
+  private outerControlListeners: Array<{el: HTMLElement; type: string; fn: EventListener}> = [];
 
   constructor() {
     this.banner = document.getElementById('history-banner')!;
@@ -103,6 +105,8 @@ class PadModeController {
     document.body.classList.add('history-mode');
     this.banner.removeAttribute('hidden');
     this.mount.removeAttribute('hidden');
+    const ctrl = document.getElementById('history-controls');
+    if (ctrl) ctrl.removeAttribute('hidden');
 
     // Push the new state. If the user lands here from the toolbar button we
     // pushState so browser back exits history; if they arrived via a direct
@@ -126,6 +130,8 @@ class PadModeController {
     this.unmountIframe();
     this.banner.setAttribute('hidden', '');
     this.mount.setAttribute('hidden', '');
+    const ctrl = document.getElementById('history-controls');
+    if (ctrl) ctrl.setAttribute('hidden', '');
     document.body.classList.remove('history-mode');
     if (window.location.hash) {
       this.syncingHash = true;
@@ -169,6 +175,8 @@ class PadModeController {
     }
     // Inner BroadcastSlider has no removeCallback API, but the whole iframe
     // is destroyed on exit so any callbacks die with it.
+    this.outerControlListeners.forEach(({el, type, fn}) => el.removeEventListener(type, fn));
+    this.outerControlListeners = [];
   }
 
   private mountIframe(rev: number | null): void {
@@ -258,6 +266,81 @@ class PadModeController {
 
     this.snapshotForHistory();
     this.wireSettingsBridges(win);
+    this.wireHistoryControls(win);
+  }
+
+  // Bind the outer #history-controls (slider input + play/pause/step
+  // buttons) as a remote control for the embedded timeslider's
+  // BroadcastSlider. The inner slider DOM stays present (the embed CSS
+  // hides it) so its existing drag/click handlers continue to work — the
+  // outer controls just push state into the same BroadcastSlider via its
+  // public methods.
+  private wireHistoryControls(innerWin: Window): void {
+    const inner: any = innerWin as any;
+    const sliderInput = document.getElementById('history-slider-input') as HTMLInputElement | null;
+    const playBtn = document.getElementById('history-playpause') as HTMLButtonElement | null;
+    const leftStep = document.getElementById('history-leftstep') as HTMLButtonElement | null;
+    const rightStep = document.getElementById('history-rightstep') as HTMLButtonElement | null;
+    const timer = document.getElementById('history-timer') as HTMLElement | null;
+
+    const bind = (el: HTMLElement | null, type: string, fn: EventListener) => {
+      if (!el) return;
+      el.addEventListener(type, fn);
+      this.outerControlListeners.push({el, type, fn});
+    };
+
+    bind(sliderInput, 'input', () => {
+      if (!sliderInput) return;
+      const target = Math.max(0, Math.floor(Number(sliderInput.value) || 0));
+      try { inner.BroadcastSlider?.setSliderPosition?.(target); } catch (_e) {}
+    });
+    bind(playBtn, 'click', () => {
+      try { inner.BroadcastSlider?.playpause?.(); } catch (_e) {}
+    });
+    // Inner #leftstep / #rightstep already wire all the step logic; just
+    // forward the click so we share the same code path.
+    bind(leftStep, 'click', () => {
+      try { (innerWin.document.getElementById('leftstep') as HTMLElement | null)?.click(); }
+      catch (_e) {}
+    });
+    bind(rightStep, 'click', () => {
+      try { (innerWin.document.getElementById('rightstep') as HTMLElement | null)?.click(); }
+      catch (_e) {}
+    });
+
+    // Mirror inner state into the outer controls. We register a
+    // BroadcastSlider.onSlider callback (called on every position change)
+    // and poll the inner #playpause_button_icon.pause class for play state.
+    const sync = (revno: number) => {
+      const max = inner.BroadcastSlider?.getSliderLength?.();
+      if (sliderInput && typeof max === 'number' && Number(sliderInput.max) !== max) {
+        sliderInput.max = String(max);
+      }
+      if (sliderInput && Number(sliderInput.value) !== revno) {
+        sliderInput.value = String(revno);
+      }
+      if (timer) {
+        const innerTimer = innerWin.document.getElementById('timer');
+        if (innerTimer) timer.textContent = innerTimer.textContent || '';
+      }
+      if (playBtn) {
+        const innerPlay = innerWin.document.getElementById('playpause_button_icon');
+        playBtn.classList.toggle('pause', !!innerPlay && innerPlay.classList.contains('pause'));
+      }
+    };
+    // The hook registered earlier in attachInnerBridges already calls
+    // onRevChange — piggyback on it for slider input/timer updates by
+    // chaining through the same listener path.
+    const registerSync = () => {
+      const BS = inner.BroadcastSlider;
+      if (!BS || typeof BS.onSlider !== 'function') {
+        innerWin.requestAnimationFrame(registerSync);
+        return;
+      }
+      BS.onSlider(sync);
+      sync(BS.getSliderPosition?.() ?? 0);
+    };
+    registerSync();
   }
 
   // Capture the live state we'll restore on exit: live chat message

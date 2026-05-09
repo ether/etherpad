@@ -116,7 +116,7 @@ test.describe('in-pad history mode', () => {
     await expect(page.locator('#history-playbackspeed')).toBeAttached();
   });
 
-  test('history-mode hides the embedded timeslider chrome', async ({page}) => {
+  test('embedded iframe shows only the editor surface (no inner editbar)', async ({page}) => {
     await goToNewPad(page);
     await clearPadContent(page);
     await writeToPad(page, 'A');
@@ -126,60 +126,67 @@ test.describe('in-pad history mode', () => {
     await expect(page.locator('body.history-mode')).toBeVisible();
 
     const frame = page.frameLocator('#history-frame');
-    // Slider stays visible; the right-side toolbar (settings/export/return)
-    // and modal popups are hidden — outer pad owns those affordances.
-    await expect(frame.locator('#timeslider-wrapper')).toBeVisible();
-    await expect(frame.locator('.editbarright')).toBeHidden();
-    await expect(frame.locator('.timeslider-title-container')).toBeHidden();
+    // The whole inner editbar is hidden — slider + play buttons live in
+    // the outer pad's toolbar now (#history-controls). Iframe is editor.
+    await expect(frame.locator('#editbar')).toBeHidden();
+    // Editor body itself is still rendered.
+    await expect(frame.locator('#outerdocbody')).toBeVisible();
   });
 
-  test('outer toolbar hides editing buttons but keeps menu_right active', async ({page}) => {
+  test('outer toolbar swaps formatting menu for history controls', async ({page}) => {
     await goToNewPad(page);
     await clearPadContent(page);
     await writeToPad(page, 'A');
     await page.waitForTimeout(300);
 
+    // Live mode: history-controls is in DOM but hidden; menu_left visible.
+    await expect(page.locator('#history-controls')).toBeHidden();
+    await expect(page.locator('#editbar .menu_left')).toBeVisible();
+
     await page.locator('.buttonicon-history').click();
     await expect(page.locator('body.history-mode')).toBeVisible();
 
-    // Formatting buttons live in #editbar .menu_left — they target the
-    // hidden live editor and would do nothing useful, so they're hidden
-    // (visibility:hidden so the layout stays stable).
-    const leftVisibility = await page.locator('#editbar .menu_left').evaluate(
-        (el) => getComputedStyle(el).visibility);
-    expect(leftVisibility).toBe('hidden');
+    // History mode: menu_left hidden, history-controls + slider visible.
+    const leftDisplay = await page.locator('#editbar .menu_left').evaluate(
+        (el) => getComputedStyle(el).display);
+    expect(leftDisplay).toBe('none');
+    await expect(page.locator('#history-controls')).toBeVisible();
+    await expect(page.locator('#history-slider-input')).toBeVisible();
     // Right-side menu (Settings/Share/Users/Chat/Home) stays fully active.
     await expect(page.locator('button[data-l10n-id=\'pad.toolbar.settings.title\']'))
         .toBeVisible();
-    const rightVisibility = await page.locator('#editbar .menu_right').evaluate(
-        (el) => getComputedStyle(el).visibility);
-    expect(rightVisibility).toBe('visible');
   });
 
-  test('embedded slider sits at the bottom of the iframe viewport', async ({page}) => {
+  test('outer slider drives the embedded timeslider revision', async ({page}) => {
     await goToNewPad(page);
     await clearPadContent(page);
-    await writeToPad(page, 'A');
+    await writeToPad(page, 'one');
     await page.waitForTimeout(300);
+    await writeToPad(page, ' two');
+    await page.waitForTimeout(300);
+    await writeToPad(page, ' three');
+    await page.waitForTimeout(800);
 
     await page.locator('.buttonicon-history').click();
     await expect(page.locator('body.history-mode')).toBeVisible();
-    await page.waitForTimeout(700);
+    // Wait until BroadcastSlider has populated the outer slider's max.
+    await page.waitForFunction(() => {
+      const i = document.getElementById('history-slider-input') as HTMLInputElement | null;
+      return !!i && Number(i.max) > 0;
+    }, {timeout: 10_000});
 
-    // The embed CSS pins #editbar to the bottom of the iframe so the
-    // outer banner and the slider never visually compete for the same
-    // band of pixels. Verify by reading geometry.
-    const offset = await page.locator('#history-frame').evaluate((iframe: any) => {
-      const idoc = iframe.contentDocument!;
-      const editbar = idoc.getElementById('editbar') as HTMLElement;
-      const r = editbar.getBoundingClientRect();
-      return {
-        bottomFromViewport: idoc.defaultView!.innerHeight - r.bottom,
-        position: getComputedStyle(editbar).position,
-      };
+    // Move the outer slider to revision 0 and assert the iframe followed.
+    await page.locator('#history-slider-input').evaluate((el: HTMLInputElement) => {
+      el.value = '0';
+      el.dispatchEvent(new Event('input', {bubbles: true}));
     });
-    expect(offset.position).toBe('fixed');
-    expect(Math.abs(offset.bottomFromViewport)).toBeLessThanOrEqual(2);
+    await page.waitForFunction(() => {
+      const f = document.getElementById('history-frame') as HTMLIFrameElement | null;
+      const win: any = f && f.contentWindow;
+      return !!win?.BroadcastSlider && win.BroadcastSlider.getSliderPosition() === 0;
+    }, {timeout: 5_000});
+
+    expect(page.url()).toMatch(/#rev\/0$/);
   });
 
   test('dark mode propagates into the history iframe', async ({page}) => {
