@@ -89,8 +89,39 @@ class PadModeController {
   // Called once after pad.init() so an initial #rev/N (or legacy #NN) on
   // page load enters history mode without an extra round-trip.
   bootstrapFromHash(): void {
+    this.localizeControls();
     const rev = parseRevFromHash(window.location.hash);
     if (rev != null) this.enterHistory(rev);
+  }
+
+  // The icon buttons have no text content; we set their `title` (hover
+  // tooltip) and `aria-label` (screen reader name) from html10n once it
+  // has loaded. Re-runs on the html10n `localized` event so language
+  // switches at runtime stay in sync.
+  private localizeControls(): void {
+    const html10n: any = (window as any).html10n;
+    if (!html10n || typeof html10n.get !== 'function') return;
+    const apply = () => {
+      const setLabel = (id: string, key: string) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const txt = html10n.get(key);
+        if (!txt) return;
+        el.setAttribute('title', txt);
+        el.setAttribute('aria-label', txt);
+      };
+      setLabel('history-playpause', 'timeslider.playPause');
+      setLabel('history-leftstep', 'timeslider.backRevision');
+      setLabel('history-rightstep', 'timeslider.forwardRevision');
+      setLabel('history-slider-input', 'pad.historyMode.sliderLabel');
+      const ctrl = document.getElementById('history-controls');
+      const ctrlLabel = html10n.get('pad.historyMode.controlsLabel');
+      if (ctrl && ctrlLabel) ctrl.setAttribute('aria-label', ctrlLabel);
+    };
+    apply();
+    if (typeof html10n.bind === 'function') {
+      html10n.bind('localized', apply);
+    }
   }
 
   getMode(): Mode { return this.mode; }

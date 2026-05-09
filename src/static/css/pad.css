@@ -195,6 +195,22 @@ body.history-mode #history-controls { display: flex; }
   white-space: nowrap;
 }
 
+/* Responsive — on narrow screens the slider compresses, the timestamp    */
+/* would push other controls offscreen. Match the legacy timeslider's     */
+/* @media (max-width: 800px) treatment by hiding the timer there.         */
+@media (max-width: 800px) {
+  .history-controls { padding: 0 6px; gap: 4px; }
+  .history-controls .history-timer { display: none; }
+  .history-controls button.buttonicon { padding: 4px; min-width: 36px; }
+  .history-slider-input { min-width: 60px; margin: 0 2px; }
+}
+@media (max-width: 480px) {
+  /* Tighten step buttons to icon-only at very small widths so play +    */
+  /* slider always fit on the toolbar.                                   */
+  .history-controls #history-leftstep,
+  .history-controls #history-rightstep { min-width: 28px; padding: 2px; }
+}
+
 /* History playback settings live inside the regular Settings popup but    */
 /* are only relevant while scrubbing — show them only in history mode.     */
 #history-settings-section { display: none; }

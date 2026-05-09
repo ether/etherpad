@@ -85,23 +85,21 @@
            timeslider iframe's BroadcastSlider; pad_mode.ts owns the
            bridging.
 
-           Accessible names are localized via html10n: a data-l10n-id with
-           no hardcoded aria-label lets html10n.translateElement populate
-           aria-label from the translation. -->
-      <div id="history-controls" class="history-controls" role="toolbar"
-           aria-label="Pad history controls"
-           data-l10n-id="pad.historyMode.controlsLabel" hidden>
+           Accessible names + tooltip titles are populated by pad_mode.ts
+           after html10n is ready, reusing the existing `timeslider.*`
+           translation keys. We deliberately do NOT put data-l10n-id on
+           the icon buttons — that would set their textContent, which on
+           a buttonicon glyph would draw the localized string on screen. -->
+      <div id="history-controls" class="history-controls" role="toolbar" hidden>
         <button type="button" id="history-playpause" class="buttonicon buttonicon-play"
-                aria-pressed="false"
-                title="Play/Pause" data-l10n-id="timeslider.playPause"></button>
-        <button type="button" id="history-leftstep" class="buttonicon buttonicon-step-backward"
-                title="Back a revision" data-l10n-id="timeslider.backRevision"></button>
-        <button type="button" id="history-rightstep" class="buttonicon buttonicon-step-forward"
-                title="Forward a revision" data-l10n-id="timeslider.forwardRevision"></button>
+                aria-pressed="false"></button>
+        <button type="button" id="history-leftstep" class="buttonicon buttonicon-step-backward">
+        </button>
+        <button type="button" id="history-rightstep" class="buttonicon buttonicon-step-forward">
+        </button>
         <input type="range" id="history-slider-input" class="history-slider-input"
-               min="0" max="0" value="0" step="1"
-               data-l10n-id="pad.historyMode.sliderLabel">
-        <span id="history-timer" class="history-timer" aria-live="polite"></span>
+               min="0" max="0" value="0" step="1">
+        <span id="history-timer" class="history-timer hide-for-mobile" aria-live="polite"></span>
       </div>
       <ul class="menu_right" role="toolbar">
           <% e.begin_block("editbarMenuRight"); %>
