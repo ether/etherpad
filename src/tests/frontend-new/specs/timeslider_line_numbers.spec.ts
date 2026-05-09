@@ -13,7 +13,7 @@ test.describe('timeslider line numbers', function () {
     await writeToPad(page, 'One\nTwo\nThree');
     await page.waitForTimeout(1000);
 
-    await page.goto(`http://localhost:9001/p/${padId}/timeslider`);
+    await page.goto(`http://localhost:9001/p/${padId}/timeslider?embed=1`);
     await page.waitForSelector('#timeslider-wrapper', {state: 'visible'});
     await page.waitForSelector('#sidediv.sidedivdelayed', {state: 'attached'});
     await page.waitForTimeout(1000);
@@ -53,7 +53,7 @@ test.describe('timeslider line numbers', function () {
       url: 'http://localhost:9001',
     }]);
 
-    await page.goto(`http://localhost:9001/p/${padId}/timeslider`);
+    await page.goto(`http://localhost:9001/p/${padId}/timeslider?embed=1`);
     await page.waitForSelector('#timeslider-wrapper', {state: 'visible'});
     await showSettings(page);
 

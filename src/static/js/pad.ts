@@ -42,6 +42,7 @@ const getCollabClient = require('./collab_client').getCollabClient;
 const padconnectionstatus = require('./pad_connectionstatus').padconnectionstatus;
 const padcookie = require('./pad_cookie').padcookie;
 const padeditbar = require('./pad_editbar').padeditbar;
+const padMode = require('./pad_mode').padMode;
 const padeditor = require('./pad_editor').padeditor;
 const padimpexp = require('./pad_impexp').padimpexp;
 const padmodals = require('./pad_modals').padmodals;
@@ -677,6 +678,7 @@ const pad = {
       $('#colorpicker').farbtastic({callback: '#mycolorpickerpreview', width: 220});
       $('#readonlyinput').on('click', () => { padeditbar.setEmbedLinks(); });
       padcookie.init();
+      padMode.init();
       await handshake();
       this._afterHandshake();
     })());

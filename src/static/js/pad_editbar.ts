@@ -500,7 +500,14 @@ exports.padeditbar = new class {
     });
 
     this.registerCommand('showTimeSlider', () => {
-      document.location = `${document.location.pathname}/timeslider`;
+      // Issue #7659: enter history in-place rather than navigating away. The
+      // PadModeController owns the iframe lifecycle, banner, and URL hash.
+      try {
+        require('./pad_mode').padMode.enterHistory();
+      } catch (_e) {
+        // Fallback for the unlikely case the controller failed to load.
+        document.location = `${document.location.pathname}/timeslider`;
+      }
     });
 
     const aceAttributeCommand = (cmd, ace) => {

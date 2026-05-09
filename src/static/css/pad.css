@@ -107,3 +107,51 @@ input {
 }
 #version-badge[data-level="severe"]   { background: #fff3cd; color: #664d03; border: 1px solid #ffe69c; }
 #version-badge[data-level="vulnerable"] { background: #f8d7da; color: #58151c; border: 1px solid #f1aeb5; }
+
+/* ----------------------------------------------------------------------- */
+/* History mode (issue #7659): timeslider rendered in-place inside the     */
+/* pad page. The live editor stays mounted but hidden; a sibling iframe    */
+/* hosts the existing timeslider replay code.                              */
+/* ----------------------------------------------------------------------- */
+
+.history-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: #fff8e1;
+  border-bottom: 1px solid #f0d27a;
+  color: #5b4b00;
+  font-size: 14px;
+  z-index: 5;
+}
+.history-banner[hidden] { display: none; }
+.history-banner-label   { font-weight: 600; }
+.history-banner-rev,
+.history-banner-date    { opacity: 0.85; }
+.history-banner #history-banner-return { margin-left: auto; }
+
+.history-frame-mount {
+  display: none;
+  flex: 1 1 auto;
+  min-height: 0;
+  border: 0;
+}
+.history-frame-mount[hidden] { display: none; }
+.history-frame-mount > iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+}
+
+/* While in history mode, hide the live ACE editor and show the history    */
+/* iframe in its place. Apply a light sepia tint to the surrounding pad    */
+/* shell so it is unmistakable that this is not the live document. The     */
+/* toolbar itself stays interactive so chat / settings / users / share     */
+/* still work — only the editing-command icons are dimmed visually.        */
+body.history-mode #editorcontainer { display: none; }
+body.history-mode .history-frame-mount { display: flex; }
+body.history-mode #editbar {
+  filter: sepia(0.3) saturate(0.7);
+}

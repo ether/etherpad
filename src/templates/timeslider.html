@@ -56,7 +56,7 @@
 </head>
 
 <% e.begin_block("timesliderBody"); %>
-<body id="padbody" class="timeslider limwidth">
+<body id="padbody" class="timeslider limwidth<% if (typeof embed !== 'undefined' && embed) { %> embedded-history-frame<% } %>">
 
   <!----------------------------->
   <!--------- TOOLBAR ----------->

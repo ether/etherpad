@@ -228,8 +228,14 @@ const handleLiveReload = async (args: ArgsExpressType, padString: string, timeSl
       })
 
       setRouteHandler("/p/:pad/timeslider", (req: any, res: any, next: Function) => {
+        // Direct visits (legacy bookmarks) get redirected back to the pad,
+        // where the in-pad PadModeController handles entering history mode.
+        // The iframe used by history mode requests this URL with ?embed=1
+        // and gets the full timeslider HTML rendered for embedded use.
+        if (!req.query.embed) {
+          return res.redirect(302, `../${encodeURIComponent(req.params.pad)}`);
+        }
         ensureAuthorTokenCookie(req, res, settings);
-        console.log("Reloading pad")
         // The below might break for pads being rewritten
         const isReadOnly = !webaccess.userCanModify(req.params.pad, req);
 
@@ -246,6 +252,7 @@ const handleLiveReload = async (args: ArgsExpressType, padString: string, timeSl
           req,
           toolbar,
           isReadOnly,
+          embed: true,
           entrypoint: proxyPath + '/watch/timeslider?hash=' + hash,
           settings: settings.getPublicSettings(),
           socialMetaHtml,
@@ -392,6 +399,13 @@ exports.expressCreateServer = async (_hookName: string, args: ArgsExpressType, c
 
     // serve timeslider.html under /p/$padname/timeslider
     args.app.get('/p/:pad/timeslider', (req: any, res: any, next: Function) => {
+      // Direct visits (legacy bookmarks) get redirected back to the pad,
+      // where the in-pad PadModeController handles entering history mode.
+      // The iframe used by history mode requests this URL with ?embed=1
+      // and gets the full timeslider HTML rendered for embedded use.
+      if (!req.query.embed) {
+        return res.redirect(302, `../${encodeURIComponent(req.params.pad)}`);
+      }
       ensureAuthorTokenCookie(req, res, settings);
       hooks.callAll('padInitToolbar', {
         toolbar,
@@ -403,6 +417,7 @@ exports.expressCreateServer = async (_hookName: string, args: ArgsExpressType, c
       res.send(eejs.require('ep_etherpad-lite/templates/timeslider.html', {
         req,
         toolbar,
+        embed: true,
         entrypoint: "../../"+fileNameTimeSlider,
         settings: settings.getPublicSettings(),
         socialMetaHtml,
