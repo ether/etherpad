@@ -4,15 +4,16 @@
 }
 
 /* When the timeslider is embedded as an iframe inside a pad page, the outer
- * pad provides the banner, title, and "return to live" affordance. Hide the
- * embedded copy's redundant title and the return-to-pad toolbar entry; the
- * slider itself, the settings dropdown, and export links stay reachable so
- * users can still tweak line numbers / playback speed / export from the
- * historical revision they're viewing. */
-body.embedded-history-frame .timeslider-title-container {
-  display: none !important;
-}
-body.embedded-history-frame [data-key="timeslider_returnToPad"] {
+ * pad's toolbar, banner, and Settings/Export popups own all chrome. Hide the
+ * embedded copy's title, right-side toolbar, and modal popups so the iframe
+ * shows only the slider and the editor surface. The outer pad surfaces
+ * playback speed, follow-contents, export, etc. via its own Settings/Export
+ * popups and bridges to this iframe's BroadcastSlider. */
+body.embedded-history-frame .timeslider-title-container,
+body.embedded-history-frame .editbarright,
+body.embedded-history-frame #import_export,
+body.embedded-history-frame #connectivity,
+body.embedded-history-frame #settings {
   display: none !important;
 }
 body.embedded-history-frame #editbar {

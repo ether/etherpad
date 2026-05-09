@@ -159,6 +159,9 @@ const handleClientVars = (message) => {
   // load all script that doesn't work without the clientVars
   BroadcastSlider = require('./broadcast_slider')
       .loadBroadcastSliderJS(fireWhenAllScriptsAreLoaded);
+  // Exposed on window so the outer pad shell (issue #7659 in-place history
+  // mode) can subscribe to slider movement without postMessage round-trips.
+  (window as any).BroadcastSlider = BroadcastSlider;
 
   require('./broadcast_revisions').loadBroadcastRevisionsJS();
   changesetLoader = require('./broadcast')

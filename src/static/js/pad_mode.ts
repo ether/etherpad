@@ -41,6 +41,10 @@ const parseRevFromHash = (hash: string): number | null => {
 const buildOuterHash = (rev: number | null): string =>
   rev == null || rev < 0 ? `${HASH_PREFIX}latest` : `${HASH_PREFIX}${rev}`;
 
+// Map of an outer export anchor to its live-mode `href`, captured on entry to
+// history mode so we can restore on exit.
+type HrefSnapshot = Map<HTMLAnchorElement, string>;
+
 class PadModeController {
   private mode: Mode = 'live';
   private iframe: HTMLIFrameElement | null = null;
@@ -52,6 +56,14 @@ class PadModeController {
   private innerHashChangeHandler: (() => void) | null = null;
   private revObserver: MutationObserver | null = null;
   private syncingHash = false;
+
+  // History-mode bridges — populated on enter, torn down on exit.
+  private exportSnapshot: HrefSnapshot | null = null;
+  private usersSnapshot: string | null = null;
+  private chatHeaderSnapshot: {parent: HTMLElement; sibling: Node | null} | null = null;
+  private chatHeaderEl: HTMLElement | null = null;
+  private playbackChangeListener: ((e: Event) => void) | null = null;
+  private followChangeListener: ((e: Event) => void) | null = null;
 
   constructor() {
     this.banner = document.getElementById('history-banner')!;
@@ -110,6 +122,7 @@ class PadModeController {
   exitHistory(): void {
     if (this.mode === 'live') return;
     this.mode = 'live';
+    this.teardownBridges();
     this.unmountIframe();
     this.banner.setAttribute('hidden', '');
     this.mount.setAttribute('hidden', '');
@@ -124,6 +137,38 @@ class PadModeController {
     }
     this.revLabel.textContent = '';
     this.dateLabel.textContent = '';
+  }
+
+  // Restore everything entry-time we stashed: chat message visibility, the
+  // chat replay header, the live users-panel HTML, original export hrefs,
+  // and any DOM listeners we attached to outer Settings controls.
+  private teardownBridges(): void {
+    document.querySelectorAll<HTMLElement>('#chattext > p[data-timestamp]')
+        .forEach((p) => { p.style.display = ''; });
+    if (this.chatHeaderEl) this.chatHeaderEl.remove();
+    this.chatHeaderEl = null;
+    this.chatHeaderSnapshot = null;
+    if (this.usersSnapshot != null) {
+      const tbl = document.getElementById('otheruserstable');
+      if (tbl) tbl.innerHTML = this.usersSnapshot;
+      this.usersSnapshot = null;
+    }
+    if (this.exportSnapshot) {
+      this.exportSnapshot.forEach((href, anchor) => { anchor.setAttribute('href', href); });
+      this.exportSnapshot = null;
+    }
+    if (this.playbackChangeListener) {
+      const sel = document.getElementById('history-playbackspeed');
+      if (sel) sel.removeEventListener('change', this.playbackChangeListener);
+      this.playbackChangeListener = null;
+    }
+    if (this.followChangeListener) {
+      const cb = document.getElementById('history-options-followContents');
+      if (cb) cb.removeEventListener('change', this.followChangeListener);
+      this.followChangeListener = null;
+    }
+    // Inner BroadcastSlider has no removeCallback API, but the whole iframe
+    // is destroyed on exit so any callbacks die with it.
   }
 
   private mountIframe(rev: number | null): void {
@@ -190,6 +235,165 @@ class PadModeController {
       if (innerDate) {
         this.revObserver.observe(innerDate, {childList: true, subtree: true, characterData: true});
       }
+    }
+
+    // Register a single slider callback that drives the outer pad's
+    // historical-state UI: chat replay, authors-at-this-revision, and
+    // export href rewriting. The callback fires once on initial setup
+    // plus on every scrub.
+    const inner: any = win as any;
+    const registerHook = () => {
+      const BS = inner.BroadcastSlider;
+      if (!BS || typeof BS.onSlider !== 'function') {
+        // Slider not initialized yet — try again on next frame.
+        win.requestAnimationFrame(registerHook);
+        return;
+      }
+      BS.onSlider((revno: number) => { this.onRevChange(revno, win); });
+      // Drive the initial sync (the slider may have already fired before
+      // we got here on a fast load).
+      this.onRevChange(BS.getSliderPosition?.() ?? 0, win);
+    };
+    registerHook();
+
+    this.snapshotForHistory();
+    this.wireSettingsBridges(win);
+  }
+
+  // Capture the live state we'll restore on exit: live chat message
+  // visibility (just the timestamps — actual messages stay), live users
+  // panel HTML, and current Export hrefs.
+  private snapshotForHistory(): void {
+    if (this.usersSnapshot == null) {
+      const tbl = document.getElementById('otheruserstable');
+      if (tbl) this.usersSnapshot = tbl.innerHTML;
+    }
+    if (this.exportSnapshot == null) {
+      this.exportSnapshot = new Map();
+      document.querySelectorAll<HTMLAnchorElement>(
+          '#exportColumn a.exportlink, #export a.exportlink',
+      ).forEach((a) => {
+        if (a.hasAttribute('href')) this.exportSnapshot!.set(a, a.getAttribute('href') || '');
+      });
+    }
+    // Inject the chat replay header above #chattext on first entry.
+    if (!this.chatHeaderEl) {
+      const chattext = document.getElementById('chattext');
+      if (chattext && chattext.parentNode) {
+        const header = document.createElement('div');
+        header.id = 'history-chat-header';
+        header.className = 'history-chat-header';
+        header.setAttribute('data-l10n-id', 'pad.historyMode.chat.replayHeader');
+        header.textContent = 'Chat as of —';
+        this.chatHeaderSnapshot = {
+          parent: chattext.parentNode as HTMLElement,
+          sibling: chattext,
+        };
+        chattext.parentNode.insertBefore(header, chattext);
+        this.chatHeaderEl = header;
+      }
+    }
+  }
+
+  // Called on every revision change while in history mode. Drives:
+  //   - chat replay (filter rendered messages by timestamp)
+  //   - authors-at-this-revision panel (mirrors inner #authorsList)
+  //   - outer Export hrefs (point at /p/PAD/<rev>/export/<type>)
+  private onRevChange(revno: number, innerWin: Window): void {
+    const inner: any = innerWin as any;
+    const ts = inner.padContents?.currentTime as number | undefined;
+    if (typeof ts === 'number') {
+      this.filterChatByTimestamp(ts);
+      this.updateChatHeader(ts);
+    }
+    this.syncAuthorsPanel(innerWin);
+    this.syncExportHrefs(revno);
+  }
+
+  private filterChatByTimestamp(asOf: number): void {
+    document.querySelectorAll<HTMLElement>('#chattext > p[data-timestamp]')
+        .forEach((p) => {
+          const t = Number(p.getAttribute('data-timestamp'));
+          p.style.display = Number.isFinite(t) && t > asOf ? 'none' : '';
+        });
+  }
+
+  private updateChatHeader(asOf: number): void {
+    if (!this.chatHeaderEl) return;
+    const d = new Date(asOf);
+    const z = (n: number) => String(n).padStart(2, '0');
+    const time = `${z(d.getHours())}:${z(d.getMinutes())}`;
+    // html10n.get is not always loaded; fall back to a literal string.
+    const html10n: any = (window as any).html10n;
+    const label = (html10n && typeof html10n.get === 'function')
+        ? html10n.get('pad.historyMode.chat.replayHeader', {time})
+        : `Chat as of ${time}`;
+    this.chatHeaderEl.textContent = label;
+  }
+
+  // Mirror the inner timeslider's #authorsList (rendered by broadcast.ts)
+  // into the outer users panel. We replace the live user table while in
+  // history mode and restore it on exit.
+  private syncAuthorsPanel(innerWin: Window): void {
+    const innerAuthors = (innerWin.document as Document).getElementById('authorsList');
+    const tbl = document.getElementById('otheruserstable');
+    if (!innerAuthors || !tbl) return;
+    const text = innerAuthors.textContent || '';
+    tbl.innerHTML = '';
+    const tr = document.createElement('tr');
+    const td = document.createElement('td');
+    td.className = 'history-authors-row';
+    td.textContent = text;
+    tr.appendChild(td);
+    tbl.appendChild(tr);
+  }
+
+  // Rewrite outer export anchors so a click downloads the historical
+  // revision instead of the live document. Etherpad already supports
+  // /p/:pad/<rev>/export/<type>.
+  private syncExportHrefs(revno: number): void {
+    if (!this.exportSnapshot) return;
+    this.exportSnapshot.forEach((origHref, anchor) => {
+      const m = origHref.match(/^(.*\/p\/[^/]+)\/export\/([^/?#]+)/);
+      if (!m) return;
+      anchor.setAttribute('href', `${m[1]}/${revno}/export/${m[2]}`);
+    });
+  }
+
+  // Outer Settings popup grew a "History playback" section. Drive the inner
+  // BroadcastSlider state from those controls so the user sees one set of
+  // controls regardless of mode.
+  private wireSettingsBridges(innerWin: Window): void {
+    const speedSel = document.getElementById('history-playbackspeed') as HTMLSelectElement | null;
+    const followCb = document.getElementById('history-options-followContents') as HTMLInputElement | null;
+    const inner: any = innerWin as any;
+
+    if (speedSel) {
+      // Initial sync: read existing inner cookie/setting if available.
+      const innerSpeed = inner.document.getElementById('playbackspeed') as HTMLSelectElement | null;
+      if (innerSpeed && innerSpeed.value) speedSel.value = innerSpeed.value;
+      this.playbackChangeListener = () => {
+        const v = speedSel.value || '100';
+        try {
+          inner.BroadcastSlider?.setPlaybackSpeed?.(v);
+          if (innerSpeed) {
+            innerSpeed.value = v;
+            innerSpeed.dispatchEvent(new Event('change'));
+          }
+        } catch (_e) {}
+      };
+      speedSel.addEventListener('change', this.playbackChangeListener);
+    }
+
+    if (followCb) {
+      const innerFollow = inner.document.getElementById('options-followContents') as HTMLInputElement | null;
+      if (innerFollow) followCb.checked = !!innerFollow.checked;
+      this.followChangeListener = () => {
+        if (!innerFollow) return;
+        innerFollow.checked = followCb.checked;
+        innerFollow.dispatchEvent(new Event('change'));
+      };
+      followCb.addEventListener('change', this.followChangeListener);
     }
   }
 

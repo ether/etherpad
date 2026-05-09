@@ -161,3 +161,26 @@ body.history-mode .history-frame-mount { display: block; }
 body.history-mode #editbar {
   filter: sepia(0.3) saturate(0.7);
 }
+
+/* History playback settings live inside the regular Settings popup but    */
+/* are only relevant while scrubbing — show them only in history mode.     */
+#history-settings-section { display: none; }
+body.history-mode #history-settings-section { display: block; }
+
+/* Chat replay header — appears above the chat log while scrubbing so the  */
+/* user knows the message list is filtered to a historical timestamp.      */
+.history-chat-header {
+  display: none;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  background: #fff8e1;
+  color: #5b4b00;
+  border-bottom: 1px solid #f0d27a;
+}
+body.history-mode .history-chat-header { display: block; }
+body.history-mode .history-authors-row {
+  font-style: italic;
+  opacity: 0.85;
+  padding: 6px 8px;
+}

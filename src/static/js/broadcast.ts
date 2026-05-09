@@ -50,7 +50,10 @@ const loadBroadcastJS = (socket, sendSocketMsg, fireWhenAllScriptsAreLoaded, Bro
     }
   };
 
-  const padContents = {
+  // Exposed on `window` so the outer pad shell (issue #7659 in-place
+  // history mode) can read `currentTime` after each scrub to drive chat
+  // replay and other revision-anchored UI without postMessage round-trips.
+  const padContents: any = (window as any).padContents = {
     currentRevision: clientVars.collab_client_vars.rev,
     currentTime: clientVars.collab_client_vars.time,
     currentLines:

@@ -85,4 +85,138 @@ test.describe('in-pad history mode', () => {
     expect(new URL(page.url()).pathname).toBe(`/p/${padId}`);
     expect(res?.status()).toBe(200);
   });
+
+  // Phase B — chrome consolidation, chat replay, authors panel, exports.
+
+  test('outer Settings popup exposes history-only controls in history mode', async ({page}) => {
+    await goToNewPad(page);
+    await clearPadContent(page);
+    await writeToPad(page, 'one');
+    await page.waitForTimeout(300);
+
+    // Settings popup needs to be opened to assess section visibility, since
+    // the popup itself is display:none until a class is toggled. Open it
+    // and assert the history section is hidden in live mode.
+    await page.locator('button[data-l10n-id=\'pad.toolbar.settings.title\']').click();
+    await page.waitForFunction(() => document.querySelector('#settings')?.classList.contains('popup-show'));
+    const liveDisplay = await page.locator('#history-settings-section').evaluate(
+        (el) => getComputedStyle(el).display);
+    expect(liveDisplay).toBe('none');
+
+    // Close settings, enter history, reopen — section should now display.
+    await page.keyboard.press('Escape');
+    await page.locator('.buttonicon-history').click();
+    await expect(page.locator('body.history-mode')).toBeVisible();
+    await page.locator('button[data-l10n-id=\'pad.toolbar.settings.title\']').click();
+    await page.waitForFunction(() => document.querySelector('#settings')?.classList.contains('popup-show'));
+    const histDisplay = await page.locator('#history-settings-section').evaluate(
+        (el) => getComputedStyle(el).display);
+    expect(histDisplay).not.toBe('none');
+    await expect(page.locator('#history-options-followContents')).toBeAttached();
+    await expect(page.locator('#history-playbackspeed')).toBeAttached();
+  });
+
+  test('history-mode hides the embedded timeslider chrome', async ({page}) => {
+    await goToNewPad(page);
+    await clearPadContent(page);
+    await writeToPad(page, 'A');
+    await page.waitForTimeout(300);
+
+    await page.locator('.buttonicon-history').click();
+    await expect(page.locator('body.history-mode')).toBeVisible();
+
+    const frame = page.frameLocator('#history-frame');
+    // Slider stays visible; the right-side toolbar (settings/export/return)
+    // and modal popups are hidden — outer pad owns those affordances.
+    await expect(frame.locator('#timeslider-wrapper')).toBeVisible();
+    await expect(frame.locator('.editbarright')).toBeHidden();
+    await expect(frame.locator('.timeslider-title-container')).toBeHidden();
+  });
+
+  test('chat panel is filtered to messages newer than the historical revision', async ({page}) => {
+    await goToNewPad(page);
+    await clearPadContent(page);
+    await writeToPad(page, 'rev1');
+    await page.waitForTimeout(400);
+
+    // Inject two chat messages with controlled timestamps so we can assert
+    // filtering deterministically without driving the chat widget. The chat
+    // panel is closed by default so we read display style directly rather
+    // than relying on Playwright's visibility (which considers ancestors).
+    await page.evaluate(() => {
+      const ct = document.getElementById('chattext')!;
+      const earlier = document.createElement('p');
+      earlier.setAttribute('data-timestamp', String(Date.now() - 60_000));
+      earlier.classList.add('chat-msg-test-earlier');
+      earlier.textContent = 'old';
+      const later = document.createElement('p');
+      later.setAttribute('data-timestamp', String(Date.now() + 60_000));
+      later.classList.add('chat-msg-test-later');
+      later.textContent = 'future';
+      ct.append(earlier, later);
+    });
+
+    await page.locator('.buttonicon-history').click();
+    await expect(page.locator('body.history-mode')).toBeVisible();
+    // Wait for the inner BroadcastSlider hook to fire at least once.
+    await page.waitForFunction(() => {
+      const p = document.querySelector('.chat-msg-test-later') as HTMLElement | null;
+      return !!p && p.style.display === 'none';
+    }, {timeout: 10_000});
+
+    // Earlier message has its inline display cleared (still rendered);
+    // later message has display:none injected by the filter.
+    const earlierDisplay = await page.locator('.chat-msg-test-earlier').evaluate(
+        (el) => (el as HTMLElement).style.display);
+    expect(earlierDisplay).not.toBe('none');
+    const laterDisplay = await page.locator('.chat-msg-test-later').evaluate(
+        (el) => (el as HTMLElement).style.display);
+    expect(laterDisplay).toBe('none');
+    // Chat replay header has the localized prefix.
+    const headerText = await page.locator('#history-chat-header').textContent();
+    expect(headerText).toMatch(/Chat as of/);
+  });
+
+  test('outer Export hrefs point at the historical revision in history mode', async ({page}) => {
+    const padId = await goToNewPad(page);
+    await clearPadContent(page);
+    await writeToPad(page, 'one');
+    await page.waitForTimeout(400);
+    await writeToPad(page, ' two');
+    await page.waitForTimeout(800);
+
+    await page.locator('.buttonicon-history').click();
+    await expect(page.locator('body.history-mode')).toBeVisible();
+    await page.waitForTimeout(700);
+
+    const href = await page.locator('#exporthtmla').getAttribute('href');
+    expect(href).not.toBeNull();
+    // Format is /p/<padId>/<rev>/export/html — assert the revision segment.
+    expect(href).toMatch(new RegExp(`/p/${padId}/\\d+/export/html`));
+
+    await page.locator('#history-banner-return').click();
+    await expect(page.locator('body.history-mode')).toHaveCount(0);
+    const restored = await page.locator('#exporthtmla').getAttribute('href');
+    expect(restored).toMatch(new RegExp(`/p/${padId}/export/html$`));
+  });
+
+  test('users panel shows authors-at-this-revision in history mode', async ({page}) => {
+    await goToNewPad(page);
+    await clearPadContent(page);
+    await writeToPad(page, 'hello');
+    await page.waitForTimeout(400);
+
+    await page.locator('.buttonicon-history').click();
+    await expect(page.locator('body.history-mode')).toBeVisible();
+    await page.waitForTimeout(700);
+
+    // The authors row replaces the live-users table contents while in
+    // history mode. Restored on exit.
+    const tbl = page.locator('#otheruserstable');
+    await expect(tbl.locator('.history-authors-row')).toBeAttached();
+
+    await page.locator('#history-banner-return').click();
+    await expect(page.locator('body.history-mode')).toHaveCount(0);
+    await expect(tbl.locator('.history-authors-row')).toHaveCount(0);
+  });
 });
