@@ -329,13 +329,13 @@ jobs:
         if: success() && github.ref == 'refs/heads/develop'
         working-directory: ether-charts
         run: |
-          sed -i 's/tag: ".*"/tag: "${{ steps.build-docker.outputs.digest }}"/' values-dev.yaml
+          sed -i 's/tag: ".*"/tag: "${{ steps.build-docker.outputs.digest }}"/' charts/etherpad/values-dev.yaml
       - name: Commit and push changes
         working-directory: ether-charts
         if: success() && github.ref == 'refs/heads/develop'
         run: |
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-          git add values-dev.yaml
+          git add charts/etherpad/values-dev.yaml
           git commit -m 'Update develop image tag'
           git push

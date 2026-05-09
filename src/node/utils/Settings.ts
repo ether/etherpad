@@ -184,6 +184,7 @@ export type SettingsType = {
   updateServer: string,
   enableDarkMode: boolean,
   enablePadWideSettings: boolean,
+  enablePluginPadOptions: boolean,
   allowPadDeletionByAllUsers: boolean,
   privacyBanner: {
     enabled: boolean,
@@ -335,7 +336,7 @@ export type SettingsType = {
     enabled: boolean,
   },
   adminEmail: string | null,
-  getPublicSettings: () => Pick<SettingsType, "title" | "skinVariants"|"randomVersionString"|"skinName"|"toolbar"| "exposeVersion"| "gitVersion" | "enablePadWideSettings" | "privacyBanner">,
+  getPublicSettings: () => Pick<SettingsType, "title" | "skinVariants"|"randomVersionString"|"skinName"|"toolbar"| "exposeVersion"| "gitVersion" | "enablePadWideSettings" | "enablePluginPadOptions" | "privacyBanner">,
 }
 
 const settings: SettingsType = {
@@ -400,6 +401,11 @@ const settings: SettingsType = {
   updateServer: "https://static.etherpad.org",
   enableDarkMode: true,
   enablePadWideSettings: true,
+  // New plugin-padOption passthrough is opt-in per AGENTS.MD §52 ("New
+  // features should be placed behind feature flags and disabled by
+  // default"). Flip to true to let plugins (e.g. ep_plugin_helpers'
+  // padToggle) ride the existing padoptions broadcast/persist rail.
+  enablePluginPadOptions: false,
   allowPadDeletionByAllUsers: false,
   privacyBanner: {
     enabled: false,
@@ -785,6 +791,7 @@ const settings: SettingsType = {
       skinName: settings.skinName,
       skinVariants: settings.skinVariants,
       enablePadWideSettings: settings.enablePadWideSettings,
+      enablePluginPadOptions: settings.enablePluginPadOptions,
       privacyBanner: getPublicPrivacyBanner(),
     }
   },

@@ -43,6 +43,43 @@ type PadSettings = {
   chatAndUsers: boolean;
   lang: string | null;
   view: PadViewSettings;
+  // Plugin-namespaced pad-wide options ride alongside the core keys.
+  // Anything matching /^ep_[a-z0-9_]+$/ is preserved verbatim by
+  // normalizePadSettings so plugins can use the existing padoptions
+  // broadcast/persist rail without forking their own transport.
+  [pluginKey: string]: any;
+};
+
+const PLUGIN_KEY_RE = /^ep_[a-z0-9_]+$/;
+// Per-key serialized JSON size cap: ~64 KB. Pad-wide settings are persisted
+// with the pad and broadcast to every connected client on every change, so
+// plugins must keep their values small. A misbehaving plugin shouldn't bloat
+// the pad payload or the broadcast.
+const PLUGIN_KEY_MAX_BYTES = 64 * 1024;
+// Combined ep_* size cap: ~256 KB. Same rationale, aggregated.
+const PLUGIN_TOTAL_MAX_BYTES = 256 * 1024;
+
+// Returns true iff `v` round-trips through JSON.stringify cleanly (no
+// functions, symbols, BigInt, or circular references) and serializes to at
+// most `maxBytes` UTF-8 bytes. Returns the serialized length on success so
+// callers can enforce a cumulative cap without serializing twice.
+const validatePluginValue = (
+    key: string, value: unknown, maxBytes: number): {ok: true, bytes: number} | {ok: false, reason: string} => {
+  let serialized: string;
+  try {
+    serialized = JSON.stringify(value);
+  } catch (e: any) {
+    return {ok: false, reason: `JSON.stringify failed: ${e && e.message || e}`};
+  }
+  if (serialized === undefined) {
+    // JSON.stringify returns undefined for top-level functions/undefined.
+    return {ok: false, reason: 'value is not JSON-serializable (function/undefined)'};
+  }
+  const bytes = Buffer.byteLength(serialized, 'utf8');
+  if (bytes > maxBytes) {
+    return {ok: false, reason: `serialized size ${bytes}B exceeds per-key cap ${maxBytes}B`};
+  }
+  return {ok: true, bytes};
 };
 
 /**
@@ -87,7 +124,7 @@ class Pad {
 
   static normalizePadSettings(rawPadSettings: any = {}): PadSettings {
     const rawView = rawPadSettings.view ?? {};
-    return {
+    const result: PadSettings = {
       enforceSettings: !!rawPadSettings.enforceSettings,
       showChat: rawPadSettings.showChat == null ? settings.padOptions.showChat !== false :
         !!rawPadSettings.showChat,
@@ -109,6 +146,28 @@ class Pad {
           !!rawView.fadeInactiveAuthorColors,
       },
     };
+    if (settings.enablePluginPadOptions) {
+      let totalBytes = 0;
+      for (const [k, v] of Object.entries(rawPadSettings)) {
+        if (!PLUGIN_KEY_RE.test(k)) continue;
+        const check = validatePluginValue(k, v, PLUGIN_KEY_MAX_BYTES);
+        if (!check.ok) {
+          // Drop and log. Persistence/broadcast still rejects the value, but
+          // the rest of the settings round-trip cleanly.
+          console.warn(`[normalizePadSettings] dropping ${k}: ${check.reason}`);
+          continue;
+        }
+        if (totalBytes + check.bytes > PLUGIN_TOTAL_MAX_BYTES) {
+          console.warn(
+              `[normalizePadSettings] dropping ${k}: combined ep_* size ` +
+              `would exceed cap ${PLUGIN_TOTAL_MAX_BYTES}B`);
+          continue;
+        }
+        totalBytes += check.bytes;
+        result[k] = v;
+      }
+    }
+    return result;
   }
 
   apool() {
