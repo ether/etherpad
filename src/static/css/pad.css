@@ -217,6 +217,38 @@ body.history-mode #history-controls { display: flex; }
   cursor: pointer;
 }
 .history-toggle input[type="checkbox"] { margin: 0; }
+
+/* Follow toggle — eye icon, with a diagonal slash that appears only when
+ * the underlying checkbox is unchecked (auto-follow disabled). The hidden
+ * input still drives state (so pad_mode.ts's bridge code reads .checked
+ * and the existing label-for relationship handles click). */
+.history-follow-toggle {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  cursor: pointer;
+  border-radius: 4px;
+  color: inherit;
+}
+.history-follow-toggle:hover { background: rgba(0,0,0,0.06); }
+.history-follow-eye-slash { display: none; }
+#history-options-followContents:not(:checked) + .history-follow-toggle .history-follow-eye-slash {
+  display: inline;
+}
+#history-options-followContents:not(:checked) + .history-follow-toggle {
+  opacity: 0.55;
+}
+/* Keep the checkbox in the DOM (label-for needs a present target) but
+ * hidden visually + accessibly redundant since the label conveys state. */
+#history-options-followContents.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  margin: -1px; padding: 0; border: 0;
+  clip: rect(0 0 0 0); overflow: hidden;
+}
 .history-speed {
   flex: 0 0 auto;
   font-size: 13px;

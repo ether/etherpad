@@ -100,9 +100,22 @@
         <input type="range" id="history-slider-input" class="history-slider-input"
                min="0" max="0" value="0" step="1">
         <span id="history-timer" class="history-timer hide-for-mobile" aria-live="polite"></span>
-        <label class="history-toggle hide-for-mobile">
-          <input type="checkbox" id="history-options-followContents" checked>
-          <span data-l10n-id="pad.historyMode.settings.followShort">Follow</span>
+        <!-- Follow toggle: an icon-only button. The eye is always rendered;
+             the diagonal slash overlay is shown only when aria-pressed is
+             false. Backed by a hidden checkbox so existing pad_mode.ts
+             bridge code (which reads .checked) keeps working. -->
+        <input type="checkbox" id="history-options-followContents" class="sr-only" checked>
+        <label for="history-options-followContents" class="history-follow-toggle hide-for-mobile"
+               aria-hidden="true">
+          <svg class="history-follow-eye" width="16" height="16" viewBox="0 0 16 16"
+               aria-hidden="true" focusable="false">
+            <path class="history-follow-eye-shape"
+                  d="M1.2 8C2.7 4.4 5.1 2.5 8 2.5s5.3 1.9 6.8 5.5c-1.5 3.6-3.9 5.5-6.8 5.5S2.7 11.6 1.2 8z"
+                  fill="none" stroke="currentColor" stroke-width="1.4"/>
+            <circle class="history-follow-eye-pupil" cx="8" cy="8" r="2.3" fill="currentColor"/>
+            <line class="history-follow-eye-slash" x1="2" y1="14" x2="14" y2="2"
+                  stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+          </svg>
         </label>
         <select id="history-playbackspeed" class="history-speed hide-for-mobile"
                 aria-label="Playback speed"

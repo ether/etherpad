@@ -117,6 +117,27 @@ class PadModeController {
       const ctrl = document.getElementById('history-controls');
       const ctrlLabel = html10n.get('pad.historyMode.controlsLabel');
       if (ctrl && ctrlLabel) ctrl.setAttribute('aria-label', ctrlLabel);
+      // Follow toggle is rendered as an eye icon — title (hover tooltip)
+      // and aria-label are populated from html10n and updated whenever
+      // state flips so screen readers + tooltip both narrate the action
+      // the click would take.
+      const followInput = document.getElementById('history-options-followContents') as HTMLInputElement | null;
+      const followLabel = document.querySelector<HTMLLabelElement>('.history-follow-toggle');
+      const updateFollowLabel = () => {
+        if (!followLabel) return;
+        const key = followInput && followInput.checked
+            ? 'pad.historyMode.followOn'
+            : 'pad.historyMode.followOff';
+        const txt = html10n.get(key);
+        if (!txt) return;
+        followLabel.setAttribute('title', txt);
+        followLabel.setAttribute('aria-label', txt);
+      };
+      updateFollowLabel();
+      if (followInput && !(followInput as any)._padModeFollowBound) {
+        followInput.addEventListener('change', updateFollowLabel);
+        (followInput as any)._padModeFollowBound = true;
+      }
     };
     apply();
     if (typeof html10n.bind === 'function') {

@@ -281,6 +281,51 @@ test.describe('in-pad history mode', () => {
     expect(restored).toMatch(new RegExp(`/p/${padId}/export/html$`));
   });
 
+  test('line numbers align with each line of text in history mode', async ({page}) => {
+    await goToNewPad(page);
+    await clearPadContent(page);
+    await writeToPad(page, 'one');
+    await page.keyboard.press('Enter');
+    await writeToPad(page, 'two');
+    await page.keyboard.press('Enter');
+    await writeToPad(page, 'three');
+    await page.waitForTimeout(800);
+
+    await page.locator('.buttonicon-history').click();
+    await expect(page.locator('body.history-mode')).toBeVisible();
+
+    // Wait for the iframe's broadcast.ts to populate #sidedivinner with
+    // line-number children and align them to the editor body.
+    const frame = page.frameLocator('#history-frame');
+    await frame.locator('#sidediv.sidedivdelayed').waitFor({state: 'attached', timeout: 10_000});
+    await page.waitForTimeout(500);
+
+    const counts = await page.locator('#history-frame').evaluate((iframe: any) => {
+      const idoc = iframe.contentDocument!;
+      return {
+        editorLines: idoc.querySelector('#innerdocbody')?.children.length ?? 0,
+        gutterLines: idoc.querySelector('#sidedivinner')?.children.length ?? 0,
+      };
+    });
+    expect(counts.editorLines).toBeGreaterThan(0);
+    expect(counts.gutterLines).toBe(counts.editorLines);
+
+    // Vertical alignment: every gutter row's top should match its
+    // corresponding editor row's top within a small tolerance (line-height
+    // rounding can introduce sub-pixel drift).
+    const offsets = await page.locator('#history-frame').evaluate((iframe: any) => {
+      const idoc = iframe.contentDocument!;
+      const editor = [...idoc.querySelectorAll('#innerdocbody > div')];
+      const gutter = [...idoc.querySelectorAll('#sidedivinner > div')];
+      return editor.map((e: HTMLElement, i: number) => ({
+        diff: Math.abs(e.offsetTop - (gutter[i] as HTMLElement).offsetTop),
+      }));
+    });
+    for (const {diff} of offsets) {
+      expect(diff).toBeLessThanOrEqual(2);
+    }
+  });
+
   test('users panel shows authors-at-this-revision in history mode', async ({page}) => {
     await goToNewPad(page);
     await clearPadContent(page);

@@ -242,6 +242,8 @@
   "pad.historyMode.settings.title": "History playback",
   "pad.historyMode.settings.follow": "Follow pad content updates",
   "pad.historyMode.settings.followShort": "Follow",
+  "pad.historyMode.followOn": "Following pad changes — click to stop following",
+  "pad.historyMode.followOff": "Not following pad changes — click to follow",
   "pad.historyMode.settings.playbackSpeed": "Playback speed:",
   "pad.historyMode.chat.replayHeader": "Chat as of {{time}}",
   "pad.historyMode.users.authorsHeader": "Authors at this revision",

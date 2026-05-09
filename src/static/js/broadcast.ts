@@ -158,12 +158,14 @@ const loadBroadcastJS = (socket, sendSocketMsg, fireWhenAllScriptsAreLoaded, Bro
       let height;
       const nextDocLine = docLine.nextElementSibling;
       if (nextDocLine) {
-        if (lineOffsets.length === 0) {
-          height = nextDocLine.offsetTop - parseInt(
-              innerdocbodyStyles.getPropertyValue('padding-top'));
-        } else {
-          height = nextDocLine.offsetTop - docLine.offsetTop;
-        }
+        // Use the consistent (next - current) formula for every line,
+        // including the first. The previous first-line special case
+        // subtracted innerdocbody.padding-top from nextDocLine.offsetTop,
+        // which only works when innerdocbody is the offsetParent. In the
+        // in-pad history iframe (#7659) it isn't (its outerdocbody has
+        // padding-top of its own), so the first gutter row was 20px too
+        // tall and every subsequent row drifted out of alignment.
+        height = nextDocLine.offsetTop - docLine.offsetTop;
       } else {
         height = docLine.clientHeight || docLine.offsetHeight;
       }
