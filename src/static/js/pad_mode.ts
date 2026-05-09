@@ -325,7 +325,9 @@ class PadModeController {
       }
       if (playBtn) {
         const innerPlay = innerWin.document.getElementById('playpause_button_icon');
-        playBtn.classList.toggle('pause', !!innerPlay && innerPlay.classList.contains('pause'));
+        const playing = !!innerPlay && innerPlay.classList.contains('pause');
+        playBtn.classList.toggle('pause', playing);
+        playBtn.setAttribute('aria-pressed', playing ? 'true' : 'false');
       }
     };
     // The hook registered earlier in attachInnerBridges already calls

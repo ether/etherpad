@@ -237,6 +237,8 @@
   "pad.historyMode.banner": "Viewing history",
   "pad.historyMode.return": "Return to live",
   "pad.historyMode.revisionLabel": "Revision {{rev}}",
+  "pad.historyMode.controlsLabel": "Pad history controls",
+  "pad.historyMode.sliderLabel": "Pad revision",
   "pad.historyMode.settings.title": "History playback",
   "pad.historyMode.settings.follow": "Follow pad content updates",
   "pad.historyMode.settings.playbackSpeed": "Playback speed:",
