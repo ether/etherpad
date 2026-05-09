@@ -133,6 +133,82 @@ test.describe('in-pad history mode', () => {
     await expect(frame.locator('.timeslider-title-container')).toBeHidden();
   });
 
+  test('outer toolbar hides editing buttons but keeps menu_right active', async ({page}) => {
+    await goToNewPad(page);
+    await clearPadContent(page);
+    await writeToPad(page, 'A');
+    await page.waitForTimeout(300);
+
+    await page.locator('.buttonicon-history').click();
+    await expect(page.locator('body.history-mode')).toBeVisible();
+
+    // Formatting buttons live in #editbar .menu_left — they target the
+    // hidden live editor and would do nothing useful, so they're hidden
+    // (visibility:hidden so the layout stays stable).
+    const leftVisibility = await page.locator('#editbar .menu_left').evaluate(
+        (el) => getComputedStyle(el).visibility);
+    expect(leftVisibility).toBe('hidden');
+    // Right-side menu (Settings/Share/Users/Chat/Home) stays fully active.
+    await expect(page.locator('button[data-l10n-id=\'pad.toolbar.settings.title\']'))
+        .toBeVisible();
+    const rightVisibility = await page.locator('#editbar .menu_right').evaluate(
+        (el) => getComputedStyle(el).visibility);
+    expect(rightVisibility).toBe('visible');
+  });
+
+  test('embedded slider sits at the bottom of the iframe viewport', async ({page}) => {
+    await goToNewPad(page);
+    await clearPadContent(page);
+    await writeToPad(page, 'A');
+    await page.waitForTimeout(300);
+
+    await page.locator('.buttonicon-history').click();
+    await expect(page.locator('body.history-mode')).toBeVisible();
+    await page.waitForTimeout(700);
+
+    // The embed CSS pins #editbar to the bottom of the iframe so the
+    // outer banner and the slider never visually compete for the same
+    // band of pixels. Verify by reading geometry.
+    const offset = await page.locator('#history-frame').evaluate((iframe: any) => {
+      const idoc = iframe.contentDocument!;
+      const editbar = idoc.getElementById('editbar') as HTMLElement;
+      const r = editbar.getBoundingClientRect();
+      return {
+        bottomFromViewport: idoc.defaultView!.innerHeight - r.bottom,
+        position: getComputedStyle(editbar).position,
+      };
+    });
+    expect(offset.position).toBe('fixed');
+    expect(Math.abs(offset.bottomFromViewport)).toBeLessThanOrEqual(2);
+  });
+
+  test('dark mode propagates into the history iframe', async ({page}) => {
+    await goToNewPad(page);
+    await clearPadContent(page);
+    await writeToPad(page, 'A');
+    await page.waitForTimeout(300);
+
+    // Apply dark-mode skin tokens directly to the outer <html>; this
+    // mirrors what the dark-mode checkbox does at runtime. The iframe
+    // should inherit them on first paint via timeslider.ts's
+    // parent-class lookup.
+    await page.evaluate(() => {
+      const html = document.documentElement;
+      ['super-dark-editor', 'dark-background', 'super-dark-toolbar']
+          .forEach((c) => html.classList.add(c));
+    });
+
+    await page.locator('.buttonicon-history').click();
+    await expect(page.locator('body.history-mode')).toBeVisible();
+    await page.waitForTimeout(800);
+
+    const innerClasses = await page.locator('#history-frame').evaluate(
+        (iframe: any) => iframe.contentDocument!.documentElement.className);
+    expect(innerClasses).toMatch(/super-dark-editor/);
+    expect(innerClasses).toMatch(/dark-background/);
+    expect(innerClasses).toMatch(/super-dark-toolbar/);
+  });
+
   test('chat panel is filtered to messages newer than the historical revision', async ({page}) => {
     await goToNewPad(page);
     await clearPadContent(page);

@@ -16,11 +16,25 @@ body.embedded-history-frame #connectivity,
 body.embedded-history-frame #settings {
   display: none !important;
 }
+/* Pin the slider to the bottom of the iframe so the outer pad's history
+ * banner (which sits above the iframe) and the slider can't visually
+ * overlap. The editor surface fills the space between.
+ * Reserve room at the bottom of #editorcontainerbox so the editor never
+ * scrolls under the slider. */
 body.embedded-history-frame #editbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
   padding: 4px 10px;
-  background: transparent;
-  box-shadow: none;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  background: var(--bg-color, #f8f8f8);
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  border-bottom: 0;
+  box-shadow: 0 -1px 4px rgba(0, 0, 0, 0.06);
+  z-index: 10;
+}
+body.embedded-history-frame #editorcontainerbox {
+  padding-bottom: 56px;
 }
 
 .timeslider-bar {

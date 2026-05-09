@@ -73,6 +73,25 @@ const init = () => {
     // start the custom js
     if (typeof customStart === 'function') customStart(); // eslint-disable-line no-undef
 
+    // Issue #7659: when this timeslider is mounted as the in-place history
+    // iframe inside a pad page, inherit the parent's skin tokens so dark
+    // mode (and any other skinVariants the user toggled at runtime) is
+    // applied immediately on first paint. Same-origin assumption holds —
+    // the embed route only renders for /p/:pad/timeslider on the same
+    // host as the parent. Skip silently if the access is cross-origin or
+    // we're not really embedded.
+    try {
+      if (window.parent !== window) {
+        const parentClasses = window.parent.document.documentElement.className || '';
+        const tokens = parentClasses.split(/\s+/).filter((c) =>
+            /^(super-light|light|dark|super-dark)-(toolbar|editor|background)$/.test(c) ||
+            c === 'full-width-editor');
+        if (tokens.length) {
+          document.documentElement.classList.add(...tokens);
+        }
+      }
+    } catch (_e) { /* cross-origin parent — leave defaults */ }
+
     // get the padId out of the url
     const urlParts = document.location.pathname.split('/');
     padId = decodeURIComponent(urlParts[urlParts.length - 2]);

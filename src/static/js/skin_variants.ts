@@ -30,6 +30,19 @@ const updateSkinVariantsClasses = (newClasses) => {
     $('iframe[name=ace_outer]').contents().find('iframe[name=ace_inner]').contents().find('html'),
   ];
 
+  // Issue #7659: when in-place history mode is active, the historical pad
+  // renders inside #history-frame (its own document, with its own
+  // ace_outer/ace_inner). Propagate skin tokens through the same path so a
+  // user toggling dark mode while scrubbing sees the iframe re-theme.
+  const $hist = $('#history-frame');
+  if ($hist.length) {
+    domsToUpdate.push($hist.contents().find('html'));
+    domsToUpdate.push($hist.contents().find('iframe[name=ace_outer]').contents().find('html'));
+    domsToUpdate.push(
+        $hist.contents().find('iframe[name=ace_outer]').contents()
+            .find('iframe[name=ace_inner]').contents().find('html'));
+  }
+
   colors.forEach((color) => {
     containers.forEach((container) => {
       domsToUpdate.forEach((el) => { el.removeClass(`${color}-${container}`); });
