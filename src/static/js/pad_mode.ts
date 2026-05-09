@@ -195,7 +195,21 @@ class PadModeController {
 
   private setInnerRevision(rev: number): void {
     if (!this.iframe || !this.iframe.contentWindow) return;
+    // The embedded timeslider treats #N as "go to revision N", so we must
+    // NOT write #-1 (or #0 as a stand-in for "latest"); for "latest" we
+    // jump to the slider's current upper bound, which broadcast_slider
+    // exposes via its sliderLength on the iframe's `BroadcastSlider`.
     try {
+      if (rev < 0) {
+        const inner: any = this.iframe.contentWindow as any;
+        const upper = inner?.BroadcastSlider?.getSliderLength?.();
+        if (typeof upper === 'number') {
+          this.iframe.contentWindow.location.hash = `#${upper}`;
+        }
+        // If BroadcastSlider isn't ready yet, leave the iframe alone — its
+        // own init reads its hash and starts at the latest revision.
+        return;
+      }
       this.iframe.contentWindow.location.hash = `#${rev}`;
     } catch (_e) { /* same-origin guaranteed; ignore the unlikely failure */ }
   }
@@ -221,7 +235,7 @@ class PadModeController {
     if (this.mode === 'live') {
       this.enterHistory(rev);
     } else {
-      this.setInnerRevision(rev < 0 ? 0 : rev);
+      this.setInnerRevision(rev);
     }
   }
 }

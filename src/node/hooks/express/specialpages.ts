@@ -232,7 +232,7 @@ const handleLiveReload = async (args: ArgsExpressType, padString: string, timeSl
         // where the in-pad PadModeController handles entering history mode.
         // The iframe used by history mode requests this URL with ?embed=1
         // and gets the full timeslider HTML rendered for embedded use.
-        if (!req.query.embed) {
+        if (req.query.embed !== '1') {
           return res.redirect(302, `../${encodeURIComponent(req.params.pad)}`);
         }
         ensureAuthorTokenCookie(req, res, settings);
@@ -403,7 +403,7 @@ exports.expressCreateServer = async (_hookName: string, args: ArgsExpressType, c
       // where the in-pad PadModeController handles entering history mode.
       // The iframe used by history mode requests this URL with ?embed=1
       // and gets the full timeslider HTML rendered for embedded use.
-      if (!req.query.embed) {
+      if (req.query.embed !== '1') {
         return res.redirect(302, `../${encodeURIComponent(req.params.pad)}`);
       }
       ensureAuthorTokenCookie(req, res, settings);

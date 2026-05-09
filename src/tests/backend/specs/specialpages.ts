@@ -93,7 +93,9 @@ describe(__filename, function () {
     it('timeslider page emits theme-color matching the configured toolbar', async function () {
       settings.skinName = 'colibris';
       settings.skinVariants = 'super-dark-toolbar super-dark-editor dark-background';
-      const res = await agent.get('/p/testpad/timeslider').expect(200);
+      // Issue #7659: /p/:pad/timeslider redirects unless ?embed=1 — that
+      // query is the iframe path that still serves the timeslider HTML.
+      const res = await agent.get('/p/testpad/timeslider?embed=1').expect(200);
       assert.match(res.text, /<meta name="theme-color" content="#485365">/);
       assert.doesNotMatch(res.text, /prefers-color-scheme/);
     });
@@ -101,7 +103,7 @@ describe(__filename, function () {
     it('timeslider page omits theme-color for non-colibris skins', async function () {
       settings.skinName = 'no-skin';
       settings.skinVariants = 'super-light-toolbar';
-      const res = await agent.get('/p/testpad/timeslider').expect(200);
+      const res = await agent.get('/p/testpad/timeslider?embed=1').expect(200);
       assert.doesNotMatch(res.text, /theme-color/);
     });
   });
