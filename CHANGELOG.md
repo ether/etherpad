@@ -21,6 +21,7 @@
   - Tier 1 ships in this release. Tiers 2 (manual click), 3 (auto with grace window) and 4 (autonomous in maintenance window) are designed and will land in subsequent releases.
   - See `doc/admin/updates.md` for full configuration.
 - **Pad compaction.** New `compactPad` HTTP API plus `bin/compactPad` and `bin/compactAllPads` CLIs to reclaim database space on long-lived pads with heavy edit history (issue #6194). `--keep N` retains the last N revisions; `--dry-run` previews per-pad rev counts before writing. Per-pad failures don't stop the bulk run.
+  - `bin/compactStalePads` (issue #7642) targets only pads not edited in the last `--older-than N` days, so hot pads in active timeslider use are left alone. Same `--keep` / `--dry-run` shape as `bin/compactAllPads`. Targeting is deliberately a CLI concern — the `compactPad` API surface stays unchanged.
 - **New packaging targets.**
   - Etherpad is now published as a **Snap** package.
   - **Debian (.deb)** packages are built via nfpm with a systemd unit, and a signed apt repository is published to `etherpad.org/apt`.

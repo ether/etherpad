@@ -344,4 +344,269 @@ describe(__filename, function () {
       assert.ok(reB.getHeadRevisionNumber() <= 1);
     });
   });
+
+  // Coverage for the staleness-gated bulk loop in
+  // bin/compactStalePads.ts (issue #7642). Same pattern as the
+  // compactAllPads tests above: stub api + `now` injection so we don't
+  // need real wall-clock drift, plus one end-to-end run through the
+  // real /api/1.3.1/getLastEdited + compactPad endpoints to prove the
+  // CLI's adapter shape doesn't lie.
+  describe('runCompactStale (bin/compactStalePads loop)', function () {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const {runCompactStale, parseArgs} =
+        require('../../../../bin/compactStalePads');
+
+    const silent = {info: () => {}, error: () => {}};
+    const NOW = 1_700_000_000_000;
+    const day = 24 * 60 * 60 * 1000;
+    const fixedNow = () => NOW;
+
+    type StubFails = {
+      list?: boolean;
+      lastEdited?: Set<string>;
+      count?: Set<string>;
+      compact?: Set<string>;
+    };
+    const makeApi = (
+      pads: Array<{id: string, ageDays: number}>, fails: StubFails = {},
+    ) => {
+      const counts = new Map<string, number>();
+      const ages = new Map<string, number>();
+      pads.forEach((p) => {
+        counts.set(p.id, 5);
+        ages.set(p.id, NOW - p.ageDays * day);
+      });
+      return {
+        async listAllPads() {
+          if (fails.list) throw new Error('boom');
+          return pads.map((p) => p.id);
+        },
+        async getLastEdited(padId: string) {
+          if (fails.lastEdited?.has(padId)) throw new Error('lastEdited-boom');
+          const t = ages.get(padId);
+          if (t == null) throw new Error('unknown pad');
+          return t;
+        },
+        async getRevisionsCount(padId: string) {
+          if (fails.count?.has(padId)) throw new Error('count-boom');
+          const c = counts.get(padId);
+          if (c == null) throw new Error('unknown pad');
+          return c;
+        },
+        async compactPad(padId: string, keepRevisions: number | null) {
+          if (fails.compact?.has(padId)) throw new Error('compact-boom');
+          counts.set(padId,
+              keepRevisions == null ? 0 : Math.min(counts.get(padId)!, keepRevisions));
+        },
+      };
+    };
+
+    it('parses --older-than / --keep / --dry-run', function () {
+      assert.deepStrictEqual(parseArgs(['--older-than', '90']),
+          {olderThanDays: 90, keepRevisions: null, dryRun: false});
+      assert.deepStrictEqual(parseArgs(['--older-than', '30', '--keep', '50']),
+          {olderThanDays: 30, keepRevisions: 50, dryRun: false});
+      assert.deepStrictEqual(
+          parseArgs(['--older-than', '7', '--keep', '10', '--dry-run']),
+          {olderThanDays: 7, keepRevisions: 10, dryRun: true});
+    });
+
+    it('rejects missing / invalid --older-than and unknown args', function () {
+      assert.strictEqual(parseArgs([]), null);
+      assert.strictEqual(parseArgs(['--keep', '10']), null);
+      assert.strictEqual(parseArgs(['--older-than', 'abc']), null);
+      assert.strictEqual(parseArgs(['--older-than', '-1']), null);
+      assert.strictEqual(parseArgs(['--older-than', '7', '--unknown']), null);
+    });
+
+    it('only compacts pads older than the cutoff', async function () {
+      const compacted: string[] = [];
+      const api = {
+        async listAllPads() { return ['fresh', 'stale-a', 'stale-b']; },
+        async getLastEdited(padId: string) {
+          if (padId === 'fresh') return NOW - 5 * day;
+          return NOW - 120 * day;
+        },
+        async getRevisionsCount() { return 3; },
+        async compactPad(padId: string) { compacted.push(padId); },
+      };
+      const report = await runCompactStale(api,
+          {olderThanDays: 90, keepRevisions: null, dryRun: false},
+          silent, fixedNow);
+      assert.strictEqual(report.total, 3);
+      assert.strictEqual(report.stale, 2);
+      assert.strictEqual(report.skippedFresh, 1);
+      assert.strictEqual(report.ok, 2);
+      assert.deepStrictEqual(compacted.sort(), ['stale-a', 'stale-b']);
+    });
+
+    it('honours --keep N for stale pads', async function () {
+      const seen: Array<[string, number | null]> = [];
+      const api = {
+        async listAllPads() { return ['p1', 'p2']; },
+        async getLastEdited() { return NOW - 200 * day; },
+        async getRevisionsCount() { return 5; },
+        async compactPad(padId: string, k: number | null) {
+          seen.push([padId, k]);
+        },
+      };
+      const report = await runCompactStale(api,
+          {olderThanDays: 90, keepRevisions: 3, dryRun: false},
+          silent, fixedNow);
+      assert.strictEqual(report.ok, 2);
+      assert.deepStrictEqual(seen, [['p1', 3], ['p2', 3]]);
+    });
+
+    it('--dry-run does not call compactPad on stale pads', async function () {
+      let compactCalls = 0;
+      const api = {
+        async listAllPads() { return ['old-1', 'old-2', 'fresh']; },
+        async getLastEdited(padId: string) {
+          return padId === 'fresh' ? NOW - 1 * day : NOW - 365 * day;
+        },
+        async getRevisionsCount() { return 4; },
+        async compactPad() { compactCalls++; },
+      };
+      const report = await runCompactStale(api,
+          {olderThanDays: 90, keepRevisions: null, dryRun: true},
+          silent, fixedNow);
+      assert.strictEqual(compactCalls, 0);
+      assert.strictEqual(report.stale, 2);
+      assert.strictEqual(report.skippedFresh, 1);
+      assert.strictEqual(report.totalRevsBefore, 10); // 2 stale × (4+1)
+      assert.strictEqual(report.totalRevsAfter, 0);
+    });
+
+    it('keeps going when one stale pad fails to compact', async function () {
+      const api = makeApi(
+          [{id: 'ok-1', ageDays: 100}, {id: 'broken', ageDays: 200},
+            {id: 'ok-2', ageDays: 365}],
+          {compact: new Set(['broken'])});
+      const report = await runCompactStale(api,
+          {olderThanDays: 90, keepRevisions: null, dryRun: false},
+          silent, fixedNow);
+      assert.strictEqual(report.stale, 3);
+      assert.strictEqual(report.ok, 2);
+      assert.strictEqual(report.failed, 1);
+    });
+
+    it('counts a getLastEdited failure as a failure but keeps going',
+        async function () {
+          const api = makeApi(
+              [{id: 'a', ageDays: 100}, {id: 'unreadable', ageDays: 0},
+                {id: 'b', ageDays: 200}],
+              {lastEdited: new Set(['unreadable'])});
+          const report = await runCompactStale(api,
+              {olderThanDays: 90, keepRevisions: null, dryRun: false},
+              silent, fixedNow);
+          assert.strictEqual(report.total, 3);
+          assert.strictEqual(report.stale, 2);
+          assert.strictEqual(report.ok, 2);
+          assert.strictEqual(report.failed, 1);
+        });
+
+    it('reports listAllPads failure without iterating', async function () {
+      const api = makeApi([{id: 'a', ageDays: 100}], {list: true});
+      const report = await runCompactStale(api,
+          {olderThanDays: 90, keepRevisions: null, dryRun: false},
+          silent, fixedNow);
+      assert.strictEqual(report.total, 0);
+      assert.strictEqual(report.failed, 1);
+    });
+
+    it('handles an empty instance', async function () {
+      const api = makeApi([]);
+      const report = await runCompactStale(api,
+          {olderThanDays: 90, keepRevisions: null, dryRun: false},
+          silent, fixedNow);
+      assert.strictEqual(report.total, 0);
+      assert.strictEqual(report.stale, 0);
+      assert.strictEqual(report.ok, 0);
+      assert.strictEqual(report.failed, 0);
+    });
+
+    it('handles an instance where every pad is fresh', async function () {
+      const api = makeApi(
+          [{id: 'a', ageDays: 1}, {id: 'b', ageDays: 5}]);
+      const report = await runCompactStale(api,
+          {olderThanDays: 90, keepRevisions: null, dryRun: false},
+          silent, fixedNow);
+      assert.strictEqual(report.stale, 0);
+      assert.strictEqual(report.skippedFresh, 2);
+      assert.strictEqual(report.ok, 0);
+    });
+
+    it('--older-than 0 treats every pad as stale', async function () {
+      const api = makeApi(
+          [{id: 'a', ageDays: 0}, {id: 'b', ageDays: 0}]);
+      const report = await runCompactStale(api,
+          {olderThanDays: 0, keepRevisions: null, dryRun: false},
+          silent, fixedNow);
+      assert.strictEqual(report.stale, 2);
+      assert.strictEqual(report.ok, 2);
+    });
+
+    // Plumbs the loop through the real /api/1.3.1/getLastEdited +
+    // compactPad endpoints so we know the CLI's adapter shape doesn't
+    // lie about its contract. Two pads, both old (the test instance
+    // wall-clock is "now"), with --older-than 0 to force both stale.
+    it('end-to-end against the real HTTP handler', async function () {
+      const padA = common.randomString();
+      const padB = common.randomString();
+      const padObjA = await padManager.getPad(padA);
+      const padObjB = await padManager.getPad(padB);
+      for (let i = 0; i < 4; i++) await padObjA.appendText(`a-${i}\n`);
+      for (let i = 0; i < 4; i++) await padObjB.appendText(`b-${i}\n`);
+      const beforeA = padObjA.getHeadRevisionNumber();
+      const beforeB = padObjB.getHeadRevisionNumber();
+      assert.ok(beforeA >= 4 && beforeB >= 4);
+
+      const allowed = new Set([padA, padB]);
+      const httpApi = {
+        // Scope to just the pads this test created — the test DB is
+        // shared across describes.
+        async listAllPads() { return [padA, padB]; },
+        async getLastEdited(padId: string) {
+          const r = await agent.get(
+              `/api/1.3.1/getLastEdited?padID=${padId}`)
+              .set('authorization', await generateJWTToken())
+              .expect(200);
+          if (r.body.code !== 0) throw new Error(JSON.stringify(r.body));
+          return r.body.data.lastEdited;
+        },
+        async getRevisionsCount(padId: string) {
+          const r = await agent.get(
+              `/api/1.3.1/getRevisionsCount?padID=${padId}`)
+              .set('authorization', await generateJWTToken())
+              .expect(200);
+          if (r.body.code !== 0) throw new Error(JSON.stringify(r.body));
+          return r.body.data.revisions;
+        },
+        async compactPad(padId: string, keepRevisions: number | null) {
+          assert.ok(allowed.has(padId));
+          const url = keepRevisions == null
+            ? `/api/1.3.1/compactPad?padID=${padId}`
+            : `/api/1.3.1/compactPad?padID=${padId}&keepRevisions=${keepRevisions}`;
+          const r = await agent.get(url)
+              .set('authorization', await generateJWTToken())
+              .expect(200);
+          if (r.body.code !== 0) throw new Error(JSON.stringify(r.body));
+        },
+      };
+
+      // --older-than 0 → cutoff == now → both freshly-edited test pads
+      // are >= cutoff and considered stale.
+      const report = await runCompactStale(httpApi,
+          {olderThanDays: 0, keepRevisions: null, dryRun: false}, silent);
+      assert.strictEqual(report.total, 2);
+      assert.strictEqual(report.stale, 2);
+      assert.strictEqual(report.ok, 2);
+      assert.strictEqual(report.failed, 0);
+
+      const reA = await padManager.getPad(padA);
+      const reB = await padManager.getPad(padB);
+      assert.ok(reA.getHeadRevisionNumber() <= 1);
+      assert.ok(reB.getHeadRevisionNumber() <= 1);
+    });
+  });
 });
