@@ -86,7 +86,9 @@ test.describe('in-pad history mode', () => {
     const res = await page.goto(`http://localhost:9001/p/${padId}/timeslider`);
     // Final landing URL is the pad page, not /timeslider.
     expect(new URL(page.url()).pathname).toBe(`/p/${padId}`);
-    expect(res?.status()).toBe(200);
+    // Accept 304 — Firefox issues a conditional GET because goToNewPad
+    // already loaded the same URL and the response is identical.
+    expect([200, 304]).toContain(res?.status());
   });
 
   // Phase B — chrome consolidation, chat replay, authors panel, exports.
