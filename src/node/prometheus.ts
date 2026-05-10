@@ -26,7 +26,7 @@ register.registerMetric(activePadsGauge);
 client.collectDefaultMetrics({register});
 
 const monitor = async function () {
-  for (const [metric, value] of Object.entries(db.metrics)) {
+  for (const [metric, value] of Object.entries(db.metrics())) {
     if (typeof value !== 'number') continue;
     gaugeDB.set({type: metric}, value);
   }
