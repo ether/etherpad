@@ -29,17 +29,18 @@ const cmds: Record<string, (args: string[]) => void> = {
   },
 
   aggregate: (args) => {
-    const [runDir, supPath, floor] = args;
-    if (!runDir || !supPath || !floor) die('usage: aggregate <runDir> <suppressionPath> <severityFloor>');
+    const [runDir, supPath, floor, repoRoot] = args;
+    if (!runDir || !supPath || !floor || !repoRoot) die('usage: aggregate <runDir> <suppressionPath> <severityFloor> <repoRoot>');
     const fileLineCache = new Map<string, string[]>();
     const readLines = (file: string): string[] => {
-      if (!fileLineCache.has(file)) {
+      const abs = path.isAbsolute(file) ? file : path.join(repoRoot, file);
+      if (!fileLineCache.has(abs)) {
         fileLineCache.set(
-          file,
-          fs.existsSync(file) ? fs.readFileSync(file, 'utf8').split('\n') : [],
+          abs,
+          fs.existsSync(abs) ? fs.readFileSync(abs, 'utf8').split('\n') : [],
         );
       }
-      return fileLineCache.get(file)!;
+      return fileLineCache.get(abs)!;
     };
     const enrich = (raw: any): Finding => {
       // Subagent JSON may be top-level array OR {findings: [...]}.

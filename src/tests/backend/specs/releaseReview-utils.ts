@@ -320,7 +320,7 @@ describe(__filename, function () {
       ]));
       const supPath = path.join(tmpDir, 'sup.yml');
       fs.writeFileSync(supPath, 'findings: []\n');
-      runCli(['aggregate', runDir, supPath, 'medium']);
+      runCli(['aggregate', runDir, supPath, 'medium', '/']);
       const merged = JSON.parse(fs.readFileSync(path.join(runDir, 'merged.json'), 'utf8'));
       assert.equal(merged.length, 1);
       assert.equal(merged[0].severity, 'high');
@@ -339,10 +339,35 @@ describe(__filename, function () {
       }));
       const supPath = path.join(tmpDir, 'sup-empty.yml');
       fs.writeFileSync(supPath, 'findings: []\n');
-      runCli(['aggregate', runDir, supPath, 'medium']);
+      runCli(['aggregate', runDir, supPath, 'medium', '/']);
       const merged = JSON.parse(fs.readFileSync(path.join(runDir, 'merged.json'), 'utf8'));
       assert.equal(merged.length, 1);
       assert.match(merged[0].fingerprint, /^[0-9a-f]{64}$/);
+    });
+
+    it('aggregate resolves repo-relative file paths against repoRoot', function () {
+      this.timeout(15000);
+      const runDir = path.join(tmpDir, 'run-2026-05-09-3');
+      fs.mkdirSync(runDir);
+      // Use a relative path that requires repoRoot resolution.
+      const fakeRepoRoot = FIXTURE_DIR;
+      const relPath = 'sample-source.ts';  // exists at FIXTURE_DIR/sample-source.ts
+      fs.writeFileSync(path.join(runDir, 'auth-sessions.json'), JSON.stringify({
+        findings: [
+          {source: 'auth-sessions', severity: 'high', category: 'bug', file: relPath, line: 6, ruleId: 'auth-sessions.x', message: 'm'},
+        ],
+      }));
+      const supPath = path.join(tmpDir, 'sup-rel.yml');
+      fs.writeFileSync(supPath, 'findings: []\n');
+      runCli(['aggregate', runDir, supPath, 'medium', fakeRepoRoot]);
+      const merged = JSON.parse(fs.readFileSync(path.join(runDir, 'merged.json'), 'utf8'));
+      assert.equal(merged.length, 1);
+      // Fingerprint should be computed from real file content.
+      // Compare to a known fingerprint we can derive directly.
+      const {computeFingerprint} = require('../../../node/utils/releaseReview/fingerprint');
+      const lines = fs.readFileSync(path.join(fakeRepoRoot, relPath), 'utf8').split('\n');
+      const expected = computeFingerprint('auth-sessions.x', relPath, 6, lines);
+      assert.equal(merged[0].fingerprint, expected);
     });
   });
 

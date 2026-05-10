@@ -55,7 +55,7 @@ Block until all four complete. Verify each output JSON exists. For any that didn
 
 ```bash
 pnpm --filter ep_etherpad-lite exec tsx node/utils/releaseReview/cli.ts \
-  aggregate /tmp/release-review/<run-id> docs/reviews/known-findings.yml medium
+  aggregate /tmp/release-review/<run-id> docs/reviews/known-findings.yml medium "$(git rev-parse --show-toplevel)"
 ```
 (Replace `<run-id>` with the literal run-id from Phase 0.)
 Reads all `*.json` from the run-dir except `merged.json` / `triage.json`. Writes `merged.json`.
