@@ -1,7 +1,6 @@
 'use strict';
 import semver from 'semver';
 import settings, {getEpVersion} from './Settings';
-import axios from 'axios';
 const headers = {
   'User-Agent': 'Etherpad/' + getEpVersion(),
 }
@@ -20,9 +19,10 @@ const loadEtherpadInformations = () => {
     return infos;
   }
 
-  return axios.get(`${settings.updateServer}/info.json`, {headers: headers})
-  .then(async (resp: any) => {
-    infos = await resp.data;
+  return fetch(`${settings.updateServer}/info.json`, {headers})
+  .then(async (resp) => {
+    if (!resp.ok) throw new Error(`HTTP ${resp.status} ${resp.statusText}`);
+    infos = await resp.json() as Infos;
     if (infos === undefined || infos === null) {
       await Promise.reject("Could not retrieve current version")
       return

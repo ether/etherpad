@@ -126,6 +126,19 @@
   "publicURL": "${PUBLIC_URL:null}",
 
   /*
+   * Open Graph / Twitter Card metadata for link previews.
+   *
+   * SOCIAL_META_DESCRIPTION: when set, this exact text is used as
+   * og:description regardless of negotiated language. Most preview crawlers
+   * (WhatsApp, Signal, Slack, ...) don't send Accept-Language, so without an
+   * override they always hit the English fallback in the i18n catalog.
+   * Leave unset (null) to use the catalog (key `pad.social.description`).
+   */
+  "socialMeta": {
+    "description": "${SOCIAL_META_DESCRIPTION:null}"
+  },
+
+  /*
    * Skin name.
    *
    * Its value has to be an existing directory under src/static/skins.
@@ -205,7 +218,13 @@
     "installMethod": "docker",
     "checkIntervalHours": 6,
     "githubRepo": "ether/etherpad",
-    "requireAdminForStatus": false
+    "requireAdminForStatus": false,
+    "preApplyGraceMinutes": 0,
+    "drainSeconds": 60,
+    "rollbackHealthCheckSeconds": 60,
+    "diskSpaceMinMB": 500,
+    "requireSignature": false,
+    "trustedKeysPath": null
   },
 
   /*
@@ -247,9 +266,12 @@
 
   /**
   * Enable creator-owned Pad-wide Settings and new-pad default seeding from My View.
-  * Disabled by default to preserve the legacy single-settings behavior.
+  * The pad creator (revision-0 author) gets the "Pad-wide Settings" section,
+  * which lets them set defaults and optionally enforce them for other users.
+  * Other users see only "User Settings" (their own view options).
+  * Set to false to revert to the legacy single-settings behavior.
   **/
-  "enablePadWideSettings": "${ENABLE_PAD_WIDE_SETTINGS:false}",
+  "enablePadWideSettings": "${ENABLE_PAD_WIDE_SETTINGS:true}",
 
   /*
    * Optional privacy banner. See settings.json.template for full field docs.
@@ -408,18 +430,21 @@
   "maxAge": "${MAX_AGE:21600}", // 60 * 60 * 6 = 6 hours
 
   /*
-   * This is the absolute path to the soffice executable.
+   * Absolute path to the soffice (LibreOffice) executable.
    *
-   * LibreOffice is used for advanced import/export of pads (docx, pdf, odt).
-   * Setting it to null disables LibreOffice and will only allow plain text
-   * and HTML import/exports.
+   * When configured, soffice handles all advanced office-format
+   * conversions (docx, pdf, odt, doc, rtf -- both directions). When
+   * null, Etherpad falls back to pure-JS in-process converters
+   * that handle docx export, pdf export, and docx import natively.
+   * odt/doc/rtf export and pdf import still require soffice.
    */
   "soffice": "${SOFFICE:null}",
 
   /*
-   * When true (the default), the "Microsoft Word" export button downloads a .docx file via
-   * LibreOffice (requires "soffice" to be set). Set to false to revert to legacy .doc output
-   * (which also requires "soffice").
+   * When true (the default), the "Microsoft Word" export button
+   * downloads a .docx file -- via soffice if it's configured, or via
+   * the in-process html-to-docx converter otherwise. Set to false to
+   * revert to legacy .doc output (.doc still requires soffice).
    */
   "docxExport": "${DOCX_EXPORT:true}",
 

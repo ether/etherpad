@@ -54,6 +54,8 @@
 	"pad.settings.fontType": "Schrëftart:",
 	"pad.settings.fontType.normal": "Normal",
 	"pad.settings.language": "Sprooch:",
+	"pad.deletionToken.copy": "Kopéieren",
+	"pad.deletionToken.copied": "Kopéiert",
 	"pad.settings.about": "Iwwer",
 	"pad.settings.poweredBy": "Zur Verfügung gestallt vu(n)",
 	"pad.importExport.import_export": "Import/Export",

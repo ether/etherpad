@@ -161,9 +161,9 @@ describe(__filename, function () {
 
   // Coverage for the per-instance bulk-compaction loop in
   // bin/compactAllPads.ts. We test the exported `runCompactAll` against
-  // an in-memory CompactAllApi rather than spawning the script + axios,
+  // an in-memory CompactAllApi rather than spawning the script + fetch,
   // so we don't have to stand up an APIKEY-auth path. The CLI shell that
-  // wires axios+APIKEY is a thin adapter; the loop logic — error
+  // wires fetch+APIKEY is a thin adapter; the loop logic — error
   // tolerance, dry-run, keep-last, tally — is what regresses, and that
   // is what this exercises.
   describe('runCompactAll (bin/compactAllPads loop)', function () {

@@ -144,3 +144,38 @@ The XSS escape test is the security-relevant one: pad IDs are user-controlled
 - A `padSocialMetadata` hook that lets plugins override the values.
 - Per-pad description (e.g. ep_pad_title integration).
 - Generated preview images (would require a rendering service).
+
+## Follow-up (2026-05-07): operator description override
+
+Issue #7599 follow-up comment from @stffen flagged two gaps in the shipped
+behaviour:
+
+1. The default description is in English and there is no obvious place in
+   `settings.json` to change it.
+2. The visitor's language is negotiated from `Accept-Language`, which most
+   link-preview crawlers (WhatsApp, Signal, Slack, Telegram, Facebook) do not
+   send — so non-English instances always serve the English fallback to
+   crawlers regardless of which locale files exist.
+
+Resolution: keep the i18n catalog as the default source (the original Qodo
+review still stands — translatable strings belong in locale files), but add
+an explicit `settings.socialMeta.description` override that wins when set:
+
+- `socialMeta.description: null` (default) → existing behaviour: i18n
+  catalog with `Accept-Language` negotiation, English fallback.
+- `socialMeta.description: "<text>"` → that string is used verbatim for
+  `og:description` / `twitter:description` regardless of the negotiated
+  language. This is the lever that fixes the crawler-no-Accept-Language
+  case.
+- Empty / whitespace-only override is treated as unset (would otherwise
+  blank out previews silently — a footgun).
+- The override is HTML-escaped via the same path as every other
+  interpolated value.
+- `og:locale` is unaffected; it continues to reflect the negotiated render
+  language. Operators who want fully localised descriptions still use
+  `customLocaleStrings` to override `pad.social.description` per-language.
+
+Documentation lives next to `publicURL` in both `settings.json.template`
+and `settings.json.docker` (mirrors how the original feature is
+configured), and the `customLocaleStrings` example now shows the
+`pad.social.description` key explicitly so operators can find both routes.

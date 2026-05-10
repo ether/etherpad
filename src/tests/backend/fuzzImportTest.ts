@@ -6,7 +6,6 @@ const settings = require('../container/loadSettings').loadSettings();
 const common = require('./common');
 const host = `http://${settings.ip}:${settings.port}`;
 const froth = require('mocha-froth');
-const axios = require('axios');
 const apiVersion = 1;
 const testPadId = `TEST_fuzz${makeid()}`;
 
@@ -28,37 +27,34 @@ setTimeout(() => {
 }, 5000); // wait 5 seconds
 
 async function runTest(number: number) {
-    await axios
-        .get(`${host + endPoint('createPad')}?padID=${testPadId}`, {
+    try {
+        const createRes = await fetch(`${host + endPoint('createPad')}?padID=${testPadId}`, {
             headers: {
                 Authorization: await common.generateJWTToken(),
-            }
-        })
-        .then(() => {
-            const req = axios.post(`${host}/p/${testPadId}/import`)
-                .then(() => {
-                    console.log('Success');
-                    let fN = '/test.txt';
-                    let cT = 'text/plain';
+            },
+        });
+        if (!createRes.ok) throw new Error(`createPad HTTP ${createRes.status}`);
 
-                    // To be more aggressive every other test we mess with Etherpad
-                    // We provide a weird file name and also set a weird contentType
-                    if (number % 2 == 0) {
-                        fN = froth().toString();
-                        cT = froth().toString();
-                    }
+        let fN = '/test.txt';
+        let cT = 'text/plain';
+        // To be more aggressive every other test we mess with Etherpad
+        // We provide a weird file name and also set a weird contentType
+        if (number % 2 == 0) {
+            fN = froth().toString();
+            cT = froth().toString();
+        }
 
-                    const form = req.form();
-                    form.append('file', froth().toString(), {
-                        filename: fN,
-                        contentType: cT,
-                    });
-                });
-        })
-        .catch((err:any) => {
-        // @ts-ignore
-            throw new Error('FAILURE', err);
-    })
+        const form = new FormData();
+        form.append('file', new Blob([froth().toString()], {type: cT}), fN);
+        const importRes = await fetch(`${host}/p/${testPadId}/import`, {
+            method: 'POST',
+            body: form,
+        });
+        if (!importRes.ok) throw new Error(`import HTTP ${importRes.status}`);
+        console.log('Success');
+    } catch (err: any) {
+        throw new Error('FAILURE', err);
+    }
 }
 
 function makeid() {

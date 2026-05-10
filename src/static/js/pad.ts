@@ -136,6 +136,14 @@ const getParameters = [
     name: 'userName',
     checkVal: null,
     callback: (val) => {
+      // The default for globalUserName/globalUserColor is the boolean `false`
+      // (sentinel meaning "no enforced value"). Older settings.json files used
+      // boolean `false` for these options too, which getParams() coerces to
+      // the string "false" — that fooled the !== false sentinel checks at
+      // _afterHandshake and shipped the literal string "false" as the user's
+      // name and color (#7686). Reject the sentinel string here so URL
+      // parameters like ?userName=false also no-op.
+      if (!val || val === 'false') return;
       settings.globalUserName = val;
       clientVars.userName = val;
     },
@@ -144,6 +152,7 @@ const getParameters = [
     name: 'userColor',
     checkVal: null,
     callback: (val) => {
+      if (!val || val === 'false') return;
       settings.globalUserColor = val;
       clientVars.userColor = val;
     },
@@ -392,13 +401,19 @@ const handshake = async () => {
       // gritter so the user doesn't see a confusing duplicate.
       if (typeof msgObj.messageKey === 'string'
           && msgObj.messageKey.startsWith('pad.deletionToken.')) return;
-      const text = msgObj.messageKey ? html10n.get(msgObj.messageKey) : msgObj.message;
+      // Updater drain announcements get their own title and dodge the generic
+      // "Admin message" framing so the user knows it's a system event.
+      const isUpdate = typeof msgObj.messageKey === 'string'
+          && msgObj.messageKey.startsWith('update.drain.');
+      const text = msgObj.messageKey
+          ? html10n.get(msgObj.messageKey, msgObj.values || {})
+          : msgObj.message;
       if (!text) return;
       const date = new Date(payload.timestamp);
       $.gritter.add({
-        title: 'Admin message',
+        title: isUpdate ? html10n.get('update.banner.title') : 'Admin message',
         text: '[' + date.toLocaleTimeString() + ']: ' + text,
-        sticky: msgObj.sticky
+        sticky: !!msgObj.sticky
       });
     }
   })
@@ -863,6 +878,16 @@ const pad = {
       }
       for (const [k, v] of Object.entries(opts.view)) {
         pad.padOptions.view[k] = v;
+      }
+    }
+    // Plugin-namespaced keys (ep_*) are passed through verbatim so plugins
+    // can ride the existing padoptions broadcast/persist rail. Gated on
+    // settings.enablePluginPadOptions (mirrored to clientVars by
+    // getPublicSettings). Server-side normalizePadSettings preserves the
+    // same keys symmetrically.
+    if (clientVars.enablePluginPadOptions) {
+      for (const [k, v] of Object.entries(opts)) {
+        if (/^ep_[a-z0-9_]+$/.test(k)) pad.padOptions[k] = v;
       }
     }
     normalizeChatOptions(pad.padOptions);

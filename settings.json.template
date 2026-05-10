@@ -124,6 +124,26 @@
   "publicURL": null,
 
   /*
+   * Open Graph / Twitter Card metadata, served on the homepage, pad pages and
+   * timeslider for nicer previews when a pad URL is shared in chat apps
+   * (WhatsApp, Signal, Slack, ...).
+   *
+   * - description: when set to a non-empty string, this exact text is used as
+   *   og:description / twitter:description regardless of the visitor's
+   *   negotiated language. Most link-preview crawlers don't send an
+   *   Accept-Language header, so without an override they always see the
+   *   English fallback. Set this if your instance serves a non-English
+   *   audience and you want a fixed blurb in shared previews.
+   *
+   * Leave description as null to use Etherpad's i18n catalog (key
+   * `pad.social.description`), which honours Accept-Language and can be
+   * overridden per-language via `customLocaleStrings` further down.
+   */
+  "socialMeta": {
+    "description": null
+  },
+
+  /*
    * Skin name.
    *
    * Its value has to be an existing directory under src/static/skins.
@@ -207,7 +227,35 @@
      * endpoint open (the version is already public via /health). Set true to hide
      * full update detail from non-admins without turning the updater off.
      */
-    "requireAdminForStatus": false
+    "requireAdminForStatus": false,
+    /*
+     * Tier 2+ knobs. Only meaningful at tier "manual" or higher.
+     * - preApplyGraceMinutes: tier 3 only — countdown before an auto-update applies.
+     * - drainSeconds: how long to broadcast "restart imminent" before exiting.
+     * - rollbackHealthCheckSeconds: window after restart for /health to come up.
+     * - diskSpaceMinMB: pre-flight refuses to start an update without this much free.
+     * - requireSignature: refuse updates whose tag isn't signed by a trusted key.
+     * - trustedKeysPath: override the keyring location passed to git verify-tag (GNUPGHOME).
+     */
+    "preApplyGraceMinutes": 0,
+    "drainSeconds": 60,
+    "rollbackHealthCheckSeconds": 60,
+    "diskSpaceMinMB": 500,
+    "requireSignature": false,
+    "trustedKeysPath": null
+  },
+
+  /*
+   * Admin OpenAPI document at /admin/openapi.json.
+   *
+   * Disabled by default per Etherpad's "new features behind a flag, off by
+   * default" policy. The admin UI's typed client embeds the spec at build
+   * time, so the runtime route is only useful for third-party tooling
+   * (Postman, swagger-ui, downstream clients). Set `enabled: true` to mount
+   * the route; the SPA at /admin/ continues to serve normally either way.
+   */
+  "adminOpenAPI": {
+    "enabled": false
   },
 
   /*
@@ -402,18 +450,21 @@
   "maxAge": 21600, // 60 * 60 * 6 = 6 hours
 
   /*
-   * This is the absolute path to the soffice executable.
+   * Absolute path to the soffice (LibreOffice) executable.
    *
-   * LibreOffice is used for advanced import/export of pads (docx, pdf, odt).
-   * Setting it to null disables LibreOffice and will only allow plain text
-   * and HTML import/exports.
+   * When configured, soffice handles all advanced office-format
+   * conversions (docx, pdf, odt, doc, rtf — both directions). When
+   * null, Etherpad falls back to pure-JS in-process converters
+   * that handle docx export, pdf export, and docx import natively.
+   * odt/doc/rtf export and pdf import still require soffice.
    */
   "soffice": null,
 
   /*
-   * When true (the default), the "Microsoft Word" export button downloads a .docx file via
-   * LibreOffice (requires "soffice" to be set). Set to false to revert to legacy .doc output
-   * (which also requires "soffice").
+   * When true (the default), the "Microsoft Word" export button
+   * downloads a .docx file -- via soffice if it's configured, or via
+   * the in-process html-to-docx converter otherwise. Set to false to
+   * revert to legacy .doc output (.doc still requires soffice).
    */
   "docxExport": true,
 
@@ -733,9 +784,23 @@
 
     /**
     * Enable creator-owned Pad-wide Settings and new-pad default seeding from My View.
-    * Disabled by default to preserve the legacy single-settings behavior.
+    * The pad creator (revision-0 author) gets the "Pad-wide Settings" section,
+    * which lets them set defaults and optionally enforce them for other users.
+    * Other users see only "User Settings" (their own view options).
+    * Set to false to revert to the legacy single-settings behavior.
     **/
-    "enablePadWideSettings": "${ENABLE_PAD_WIDE_SETTINGS:false}",
+    "enablePadWideSettings": "${ENABLE_PAD_WIDE_SETTINGS:true}",
+
+  /*
+    * Allow plugins to ride the existing padoptions COLLABROOM rail by
+    * accepting pad-wide values under plugin-namespaced keys matching
+    * /^ep_[a-z0-9_]+$/ (e.g. ep_table_of_contents). Values are validated
+    * (JSON-safe, 64 KB per key, 256 KB total) and broadcast to every
+    * connected client just like native pad-wide toggles. Disabled by
+    * default; flip to true once your plugins (e.g. ep_plugin_helpers'
+    * padToggle) require it. See doc/plugins.md.
+    **/
+    "enablePluginPadOptions": "${ENABLE_PLUGIN_PAD_OPTIONS:false}",
 
   /*
    * Optional privacy banner shown once the pad loads. Disabled by default.
@@ -817,7 +882,19 @@
    */
    "logLayoutType": "colored",
 
-  /* Override any strings found in locale directories */
+  /*
+   * Override any strings found in locale directories.
+   *
+   * Format: { "<lang>": { "<key>": "<text>", ... }, ... }
+   * Example, per-language Open Graph description for link previews:
+   *   "customLocaleStrings": {
+   *     "en": { "pad.social.description": "Our team's collaborative pads." },
+   *     "de": { "pad.social.description": "Kollaborative Notizblöcke." }
+   *   }
+   * For a single description regardless of language, prefer
+   * `socialMeta.description` above — link-preview crawlers usually don't
+   * send Accept-Language and otherwise hit the English fallback.
+   */
   "customLocaleStrings": {},
 
   /* Disable Admin UI tests */

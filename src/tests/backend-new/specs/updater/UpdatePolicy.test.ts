@@ -62,3 +62,34 @@ describe('evaluatePolicy', () => {
     expect(r.reason).toBe('up-to-date');
   });
 });
+
+describe('evaluatePolicy terminal-state gating', () => {
+  it('rollback-failed denies auto/autonomous but keeps manual on', () => {
+    const r = evaluatePolicy({
+      ...baseInput, tier: 'autonomous',
+      executionStatus: 'rollback-failed',
+    });
+    expect(r.canNotify).toBe(true);
+    expect(r.canManual).toBe(true);
+    expect(r.canAuto).toBe(false);
+    expect(r.canAutonomous).toBe(false);
+    expect(r.reason).toBe('rollback-failed-terminal');
+  });
+
+  it('idle execution behaves identically to no-status', () => {
+    const r = evaluatePolicy({...baseInput, tier: 'autonomous', executionStatus: 'idle'});
+    expect(r.canManual).toBe(true);
+    expect(r.canAuto).toBe(true);
+    expect(r.canAutonomous).toBe(true);
+    expect(r.reason).toBe('ok');
+  });
+
+  it('preflight-failed does NOT block manual / auto (it is informational only)', () => {
+    const r = evaluatePolicy({
+      ...baseInput, tier: 'autonomous', executionStatus: 'preflight-failed',
+    });
+    expect(r.canManual).toBe(true);
+    expect(r.canAuto).toBe(true);
+    expect(r.canAutonomous).toBe(true);
+  });
+});

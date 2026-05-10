@@ -7,10 +7,17 @@
 #   docker build --build-arg BUILD_ENV=copy .
 ARG BUILD_ENV=git
 
-ARG PnpmVersion=10.28.2
+ARG PnpmVersion=11.0.6
 
 FROM node:22-alpine AS adminbuild
-RUN npm install -g pnpm@${PnpmVersion}
+# Use corepack to provision pnpm and drop the bundled npm — its older
+# transitives (picomatch, brace-expansion) carry CVEs we don't otherwise
+# need. Refresh corepack first: the version bundled with Node 22 ships a
+# stale signing-key list and rejects newer pnpm releases
+# (nodejs/corepack#612). Mirrors the workaround in snap/snapcraft.yaml.
+RUN npm install -g corepack@latest && \
+    corepack enable && corepack prepare pnpm@${PnpmVersion} --activate && \
+    rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
 WORKDIR /opt/etherpad-lite
 COPY . .
 RUN pnpm install
@@ -92,15 +99,25 @@ RUN groupadd --system ${EP_GID:+--gid "${EP_GID}" --non-unique} etherpad && \
 ARG EP_DIR=/opt/etherpad-lite
 RUN mkdir -p "${EP_DIR}" && chown etherpad:etherpad "${EP_DIR}"
 
+# Share corepack's cache between root (which activates pnpm here) and
+# the `etherpad` user (which invokes pnpm later via the corepack shim).
+# $COREPACK_HOME defaults to ~/.cache/node/corepack and is per-user;
+# without this pin the etherpad user finds an empty cache, re-resolves
+# pnpm, and corepack can fall back to "latest" from the registry. See
+# https://github.com/ether/etherpad/issues/7687.
+ENV COREPACK_HOME=/opt/corepack
+
 # the mkdir is needed for configuration of openjdk-11-jre-headless, see
 # https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=863199
 RUN  \
-    mkdir -p /usr/share/man/man1 && \
-    npm install pnpm@${PnpmVersion} -g  && \
+    mkdir -p /usr/share/man/man1 "${COREPACK_HOME}" && \
+    npm install -g corepack@latest && \
+    corepack enable && corepack prepare pnpm@${PnpmVersion} --activate && \
+    chown -R etherpad:etherpad "${COREPACK_HOME}" && \
+    rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx && \
     apk update && apk upgrade && \
     apk add --no-cache \
         ca-certificates \
-        curl \
         git \
         ${INSTALL_SOFFICE:+libreoffice openjdk8-jre libreoffice-common} && \
     rm -rf /var/cache/apk/*
@@ -165,7 +182,10 @@ ENV ETHERPAD_PRODUCTION=true
 # The full pnpm-workspace.yaml references admin, doc, ui which are not
 # needed at runtime. Overwrite it with a production-only version so
 # pnpm install doesn't warn about missing workspace directories.
-RUN printf 'packages:\n  - src\n  - bin\n' > pnpm-workspace.yaml
+# Preserve the build-script policy from the source workspace file so
+# pnpm 11 doesn't error out with ERR_PNPM_IGNORED_BUILDS for transitive
+# postinstalls (e.g. @scarf/scarf via swagger-ui-dist).
+RUN printf 'packages:\n  - src\n  - bin\nonlyBuiltDependencies:\n  - esbuild\nignoredBuiltDependencies:\n  - "@scarf/scarf"\nstrictDepBuilds: false\n' > pnpm-workspace.yaml
 
 COPY --chown=etherpad:etherpad ./src ./src
 COPY --chown=etherpad:etherpad --from=adminbuild /opt/etherpad-lite/src/templates/admin ./src/templates/admin
@@ -191,7 +211,7 @@ COPY --chown=etherpad:etherpad ${SETTINGS} "${EP_DIR}"/settings.json
 USER etherpad
 
 HEALTHCHECK --interval=5s --timeout=3s \
-  CMD curl --silent http://localhost:9001/health | grep -E "pass|ok|up" > /dev/null || exit 1
+  CMD wget -qO- http://127.0.0.1:9001/health | grep -E "pass|ok|up" > /dev/null || exit 1
 
 EXPOSE 9001
 CMD ["pnpm", "run", "prod"]

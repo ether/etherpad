@@ -19,7 +19,6 @@
 import path from 'node:path';
 import fs from 'node:fs';
 import process from 'node:process';
-import axios from 'axios';
 
 // As of v14, Node.js does not exit when there is an unhandled Promise rejection. Convert an
 // unhandled rejection into an uncaught exception, which does cause Node.js to exit.
@@ -27,8 +26,18 @@ process.on('unhandledRejection', (err) => { throw err; });
 
 const settings = require('ep_etherpad-lite/tests/container/loadSettings').loadSettings();
 
-axios.defaults.baseURL =
-    `${settings.ssl ? 'https' : 'http'}://${settings.ip}:${settings.port}`;
+const baseURL = `${settings.ssl ? 'https' : 'http'}://${settings.ip}:${settings.port}`;
+
+const apiGet = async (p: string): Promise<any> => {
+  const r = await fetch(baseURL + p);
+  if (!r.ok) throw new Error(`HTTP ${r.status} ${r.statusText}`);
+  return r.json();
+};
+const apiPost = async (p: string): Promise<any> => {
+  const r = await fetch(baseURL + p, {method: 'POST'});
+  if (!r.ok) throw new Error(`HTTP ${r.status} ${r.statusText}`);
+  return r.json();
+};
 
 const usage = () => {
   console.error('Usage:');
@@ -56,33 +65,33 @@ const filePath = path.join(__dirname, '../APIKEY.txt');
 const apikey = fs.readFileSync(filePath, {encoding: 'utf-8'}).trim();
 
 (async () => {
-  const apiInfo = await axios.get('/api/');
-  const apiVersion: string | undefined = apiInfo.data.currentVersion;
+  const apiInfo = await apiGet('/api/');
+  const apiVersion: string | undefined = apiInfo.currentVersion;
   if (!apiVersion) throw new Error('No version set in API');
 
   // Pre-flight: show current revision count so operators can eyeball impact.
   const countUri = `/api/${apiVersion}/getRevisionsCount?apikey=${apikey}&padID=${padId}`;
-  const countRes = await axios.get(countUri);
-  if (countRes.data.code !== 0) {
-    console.error(`getRevisionsCount failed: ${JSON.stringify(countRes.data)}`);
+  const countRes = await apiGet(countUri);
+  if (countRes.code !== 0) {
+    console.error(`getRevisionsCount failed: ${JSON.stringify(countRes)}`);
     process.exit(1);
   }
-  const before: number = countRes.data.data.revisions;
+  const before: number = countRes.data.revisions;
   const strategy = keepRevisions == null ? 'collapse all' : `keep last ${keepRevisions}`;
   console.log(`Pad ${padId}: ${before + 1} revision(s). Strategy: ${strategy}.`);
 
   const params = new URLSearchParams({apikey, padID: padId});
   if (keepRevisions != null) params.set('keepRevisions', String(keepRevisions));
-  const result = await axios.post(`/api/${apiVersion}/compactPad?${params.toString()}`);
-  if (result.data.code !== 0) {
-    console.error(`compactPad failed: ${JSON.stringify(result.data)}`);
+  const result = await apiPost(`/api/${apiVersion}/compactPad?${params.toString()}`);
+  if (result.code !== 0) {
+    console.error(`compactPad failed: ${JSON.stringify(result)}`);
     process.exit(1);
   }
 
   // Post-flight: the pad is now compacted. Re-read the rev count so the
   // operator sees concrete savings.
-  const afterRes = await axios.get(countUri);
-  const after: number | undefined = afterRes.data?.data?.revisions;
+  const afterRes = await apiGet(countUri);
+  const after: number | undefined = afterRes?.data?.revisions;
   if (after != null) {
     console.log(`Done. Pad ${padId}: ${after + 1} revision(s) remaining ` +
                 `(was ${before + 1}).`);

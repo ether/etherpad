@@ -9,8 +9,13 @@ import type {Request} from 'express';
  * XSS via crafted pad IDs.
  *
  * The description text is sourced from Etherpad's i18n catalog under the key
- * `pad.social.description`. Operators can override it per-language via the
- * standard `customLocaleStrings` mechanism in settings.json.
+ * `pad.social.description`. Operators have two ways to override it:
+ *   - `settings.socialMeta.description` — flat string used regardless of
+ *     negotiated language. Useful because most link-preview crawlers don't
+ *     send Accept-Language and would otherwise always hit the English fallback.
+ *   - `customLocaleStrings` — per-language override that participates in
+ *     normal Accept-Language negotiation.
+ * The flat setting wins over the i18n catalog when set.
  */
 
 const SOCIAL_DESCRIPTION_KEY = 'pad.social.description';
@@ -96,6 +101,13 @@ type SocialMetaSettings = {
   title?: string,
   favicon?: string | null,
   publicURL?: string | null,
+  socialMeta?: {
+    // Wider than the operator-facing type: env-var-driven settings get
+    // pre-coerced by Settings.coerceValue(), so we may receive number/boolean
+    // even though "the value an operator types" is a string. Stringified at
+    // resolve time.
+    description?: string | number | boolean | null,
+  },
 };
 
 const negotiateRenderLang = (req: Request, availableLangs: AvailableLangs): string => {
@@ -153,10 +165,30 @@ export type RenderOpts = {
   padName?: string,
 };
 
+// Operator override wins when set. Settings.ts coerces env-var strings to
+// their typed form (e.g. SOCIAL_META_DESCRIPTION="123" arrives as the number
+// 123 and ="true" as the boolean true), so we accept string | number | boolean
+// and stringify before comparing. Empty / whitespace-only values are treated
+// as unset — an accidental "" in settings would otherwise silently blank out
+// og:description and break previews entirely.
+const resolveDescriptionWithOverride = (
+  override: string | number | boolean | null | undefined,
+  locales: {[lang: string]: {[key: string]: string}} | undefined,
+  renderLang: string,
+): string => {
+  if (override !== null && override !== undefined) {
+    const s = String(override);
+    if (s.trim() !== '') return s;
+  }
+  return resolveDescription(locales, renderLang);
+};
+
 export const renderSocialMeta = (o: RenderOpts): string => {
   const renderLang = negotiateRenderLang(o.req, o.availableLangs);
   const siteName = o.settings.title || 'Etherpad';
-  const description = resolveDescription(o.locales, renderLang);
+  const description = resolveDescriptionWithOverride(
+      o.settings.socialMeta && o.settings.socialMeta.description,
+      o.locales, renderLang);
   const imageUrl = resolveImageUrl(o.req, o.settings.favicon, o.settings.publicURL);
   const imageAlt = `${siteName} logo`;
 

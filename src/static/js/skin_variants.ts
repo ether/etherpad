@@ -1,8 +1,26 @@
 // @ts-nocheck
 'use strict';
 
+import {toolbarColorForTokens} from './skin_toolbar_colors';
+
 const containers = ['editor', 'background', 'toolbar'];
 const colors = ['super-light', 'light', 'dark', 'super-dark'];
+
+// Keep <meta name="theme-color"> in sync with the toolbar the user actually
+// sees. The server emits a baseline derived from settings.skinVariants, but
+// pad.ts may flip the toolbar to super-dark on first paint (enableDarkMode
+// + prefers-color-scheme:dark + no localStorage white-mode override) and
+// the user can toggle via #options-darkmode. Without this, dark-mode users
+// keep the light meta and see a white address bar above a dark toolbar
+// (issue #7606 follow-up). Color resolution lives in skin_toolbar_colors so
+// the server-rendered baseline and the client updates share one source of
+// truth — Qodo flagged the prior duplicated table as a drift hazard.
+const updateThemeColorMeta = (newClasses: string[]) => {
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (!meta) return;
+  meta.setAttribute('content',
+      toolbarColorForTokens(newClasses.join(' ').split(/\s+/).filter(Boolean)));
+};
 
 // add corresponding classes when config change
 const updateSkinVariantsClasses = (newClasses) => {
@@ -21,6 +39,8 @@ const updateSkinVariantsClasses = (newClasses) => {
   domsToUpdate.forEach((el) => { el.removeClass('full-width-editor'); });
 
   domsToUpdate.forEach((el) => { el.addClass(newClasses.join(' ')); });
+
+  updateThemeColorMeta(newClasses);
 };
 
 

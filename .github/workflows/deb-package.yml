@@ -49,8 +49,6 @@ jobs:
           ref: ${{ inputs.ref || github.ref }}
 
       - uses: pnpm/action-setup@v6
-        with:
-          version: 10
 
       - name: Setup Node
         uses: actions/setup-node@v6

@@ -1,8 +1,11 @@
 # Etherpad updates
 
-Etherpad ships with a built-in update subsystem. **Tier 1 (notify)** is enabled by default: a banner appears in the admin UI when a new release is available, and pad users see a discreet badge if the running version is severely outdated or flagged as vulnerable. No automatic execution happens at this tier — admins are simply informed.
+Etherpad ships with a built-in update subsystem.
 
-Tiers 2 (manual click), 3 (auto with grace window), and 4 (autonomous in maintenance window) are designed but not yet implemented. They will land in subsequent releases.
+- **Tier 1 (notify)** — default. A banner appears in the admin UI when a new release is available, and pad users see a discreet badge if the running version is severely outdated or flagged as vulnerable. No execution.
+- **Tier 2 (manual click)** — admins on a git install can click "Apply update" at `/admin/update`. Etherpad drains active sessions, runs `git fetch / checkout / pnpm install / pnpm run build:ui`, and exits with code 75 so a process supervisor restarts it on the new version. Auto-rolls back on failure.
+- **Tier 3 (auto with grace window)** — designed, not yet implemented.
+- **Tier 4 (autonomous in maintenance window)** — designed, not yet implemented.
 
 ## Settings
 
@@ -17,7 +20,14 @@ In `settings.json`:
     "installMethod": "auto",
     "checkIntervalHours": 6,
     "githubRepo": "ether/etherpad",
-    "requireAdminForStatus": false
+    "requireAdminForStatus": false,
+    // Tier 2+ knobs (only meaningful at tier "manual" or higher):
+    "preApplyGraceMinutes": 0,
+    "drainSeconds": 60,
+    "rollbackHealthCheckSeconds": 60,
+    "diskSpaceMinMB": 500,
+    "requireSignature": false,
+    "trustedKeysPath": null
   },
   "adminEmail": null
 }
@@ -32,6 +42,12 @@ In `settings.json`:
 | `updates.checkIntervalHours` | `6` | How often to poll GitHub Releases. |
 | `updates.githubRepo` | `"ether/etherpad"` | Override for forks. |
 | `updates.requireAdminForStatus` | `false` | Lock the `/admin/update/status` endpoint to authenticated admin sessions. Default `false` matches existing Etherpad behavior — `/health` already exposes `releaseId` publicly, and changelog data comes from a public GitHub release. Set `true` to hide the full update payload from non-admins without disabling the updater (`tier: "off"` is the heavier opt-out that removes the endpoints entirely). |
+| `updates.preApplyGraceMinutes` | `0` | **Tier 3 only.** Wait this many minutes between detecting a new release and starting the drain so the admin can cancel. Has no effect at tier `"manual"`. |
+| `updates.drainSeconds` | `60` | How long to broadcast "restart imminent" announcements to active pads before exiting. T-60 / T-30 / T-10 broadcasts fire automatically at the matching offsets within this window. |
+| `updates.rollbackHealthCheckSeconds` | `60` | After a fresh boot post-update, give `/health` this long to come up. If it doesn't, RollbackHandler restores the previous SHA. |
+| `updates.diskSpaceMinMB` | `500` | Pre-flight refuses to start an update unless the install volume has at least this many MB free. |
+| `updates.requireSignature` | `false` | When `true`, refuse updates whose tag is not signed by a trusted key. Verification is done via `git verify-tag <tag>` against the user's GPG keyring. Default `false` because Etherpad's release process does not yet sign tags consistently — turning the check on by default would block every Tier 2 update. Set `true` if you run your own builds or have imported a fork's keys. |
+| `updates.trustedKeysPath` | `null` | Override the keyring location passed to `git verify-tag` via the `$GNUPGHOME` env var. Useful when the trusted keys live in a dedicated keyring outside the Etherpad user's home. Only meaningful when `requireSignature: true`. |
 | `adminEmail` | `null` | Top-level. Contact for admin notifications. Setting it enables the email nudges below. |
 
 ## What "outdated" means
@@ -81,3 +97,68 @@ The version check sends no telemetry. Etherpad fetches the public GitHub Release
 Set the value explicitly if the heuristics get it wrong (e.g., a docker container that bind-mounts a writable git checkout).
 
 In PR 1 (notify only) the install method does not change behavior — every install method gets the banner. From PR 2 onward the install method gates whether the manual-click and automatic tiers can run; only `"git"` is initially supported for write tiers.
+
+## Tier 2 — manual click
+
+Tier 2 is opt-in. To enable: set `updates.tier: "manual"` and ensure your install was deployed via git (not docker / npm / managed package).
+
+### Process supervisor is required
+
+Etherpad applies an update by **exiting with code 75** so a process supervisor restarts it. Without a supervisor the instance simply exits and stays down. Common supervisor setups:
+
+- **systemd:** add `Restart=on-failure` + `RestartSec=5` to your unit file.
+- **pm2:** the default behaviour restarts on exit.
+- **docker:** add `--restart=unless-stopped` (Tier 2 itself is not supported on docker installs anyway, but if you wrap your own image around a git checkout this applies).
+
+### What clicking "Apply update" does
+
+1. **Lock acquire** — `var/update.lock` (PID-based, stale locks reaped automatically).
+2. **Pre-flight checks** — install method writable, working tree clean, free disk ≥ `diskSpaceMinMB`, `pnpm` on `PATH`, target tag exists at the configured remote, signature verifies (if `requireSignature: true`). On failure, state goes to `preflight-failed` with a typed reason; the admin sees a banner and clicks **Acknowledge** to clear it. No filesystem mutation has happened — nothing to roll back.
+3. **Drain** — `drainSeconds` window during which T-60 / T-30 / T-10 announcements broadcast to every connected pad and new socket connections are refused. Click **Cancel** during this window to abort cleanly.
+4. **Execute** — `git fetch --tags origin`, `git checkout <tag>`, `pnpm install --frozen-lockfile`, `pnpm run build:ui`. Output streams to `var/log/update.log` (rotated 10 MB × 5).
+5. **Exit 75** — the supervisor restarts on the new version.
+6. **Health check** — RollbackHandler arms a `rollbackHealthCheckSeconds` timer at boot. When `/health` responds 200 (i.e., Etherpad reaches the `RUNNING` state) the timer cancels and the state lands on `verified`.
+
+### Failure modes
+
+| What went wrong | Resulting state | Admin action |
+| --- | --- | --- |
+| Pre-flight check fails | `preflight-failed` | Click **Acknowledge** after fixing the underlying issue (free up disk, clean working tree, etc.). |
+| `git fetch` / `git checkout` fails mid-flow | `rolled-back` | Informational. The working tree is back where it started; click **Acknowledge** to clear. |
+| `pnpm install` or `pnpm run build:ui` fails | `rolled-back` | Same as above. The lockfile and SHA are restored. |
+| `/health` doesn't come up within `rollbackHealthCheckSeconds` | `rolled-back` | Same — RollbackHandler restores the previous SHA + lockfile and exits 75 again. |
+| The new version crashes at boot more than twice (`bootCount > 2`) | `rolled-back` | Crash-loop guard kicks in regardless of the health-check timer. |
+| Rollback itself fails (e.g., `pnpm install` errors restoring old lockfile) | `rollback-failed` | **Manual intervention required.** The admin banner switches to a strong red alert. Restore the install by hand, then click **Acknowledge** to clear the lock and re-allow Tier 2 attempts. |
+
+### Endpoints
+
+All Tier 2 endpoints require an authenticated admin session (`is_admin: true`) regardless of `requireAdminForStatus`.
+
+- `POST /admin/update/apply` — start an apply. Returns `202 {accepted, drainEndsAt}` once the drain begins. Body unused.
+- `POST /admin/update/cancel` — cancel during pre-flight or drain. Returns `409` once the executor has begun mutating the filesystem (state machine guarantees we either complete or roll back from there).
+- `POST /admin/update/acknowledge` — clear a terminal `preflight-failed` / `rolled-back` / `rollback-failed` state back to `idle`.
+- `GET /admin/update/log` — tail the last 200 lines of `var/log/update.log`. Plain text. Used by the in-progress UI.
+
+### Signature verification
+
+Default off. Etherpad releases are not yet consistently signed; turning verification on by default would block every Tier 2 update. To enable:
+
+```jsonc
+"updates": {
+  "requireSignature": true,
+  "trustedKeysPath": "/srv/etherpad/keys"   // optional — defaults to the OS user keyring
+}
+```
+
+The check shells out to `git verify-tag <tag>`. The keyring at `trustedKeysPath` is passed to git via `GNUPGHOME`. If `trustedKeysPath` is `null` (default), the OS user's default keyring is used.
+
+### Docker-friendly update flows (future work)
+
+Tier 2 deliberately refuses to apply on `installMethod: "docker"` because in-container `git fetch / pnpm install / build:ui` doesn't survive a container restart — the orchestrator brings the container back up on the same image tag and the work is lost. Docker installs stay on Tier 1 (banner + version status) for now.
+
+The right way to give docker admins an in-product Apply button is to delegate to the orchestrator rather than mutate the container. Two patterns to consider in a follow-up PR:
+
+- **Instructions-only.** When the page detects `installMethod: docker` *and* a newer release exists, swap the policy-denial copy for actionable instructions (`docker pull etherpad/etherpad:<tag>` for plain docker; `docker compose pull && docker compose up -d` for compose). Cheap, no new attack surface.
+- **Deploy webhook.** New setting `updates.dockerWebhook`. When set, the Apply button on a docker install POSTs to the configured URL and trusts the orchestrator (Render / Railway / Fly / Portainer / Coolify / GitHub Actions — they all expose redeploy webhooks) to do the actual pull-and-recreate.
+
+Direct Docker-socket access (mount `/var/run/docker.sock` into the container) is **out of scope** — anyone who escapes the Etherpad process via that socket gets root on the host. Admins who want fully autonomous docker updates should run [Watchtower](https://containrrr.dev/watchtower/) alongside Etherpad rather than bake equivalent privilege into Etherpad itself.

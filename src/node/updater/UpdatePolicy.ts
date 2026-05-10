@@ -10,14 +10,27 @@ export interface PolicyInput {
   tier: Tier;
   current: string;
   latest: string;
+  /**
+   * Optional execution-status hint. Only `rollback-failed` materially changes
+   * policy: while it's set, canAuto / canAutonomous are denied (an admin must
+   * acknowledge first). canManual stays on because clicking Apply *is* the
+   * intervention the terminal state requires.
+   */
+  executionStatus?: string;
 }
 
 /**
- * Decide which update tiers are allowed under the given (installMethod, tier, current, latest).
- * Pure function — no I/O. The single source of truth for "what's allowed in this environment."
- * `reason` is one of: 'tier-off' | 'up-to-date' | 'install-method-not-writable' | 'ok'.
+ * Decide which update tiers are allowed under the given (installMethod, tier,
+ * current, latest, executionStatus). Pure function — no I/O. The single source
+ * of truth for "what's allowed in this environment."
+ *
+ * `reason` is one of:
+ *   'tier-off' | 'up-to-date' | 'install-method-not-writable'
+ *   | 'rollback-failed-terminal' | 'ok'.
  */
-export const evaluatePolicy = ({installMethod, tier, current, latest}: PolicyInput): PolicyResult => {
+export const evaluatePolicy = ({
+  installMethod, tier, current, latest, executionStatus,
+}: PolicyInput): PolicyResult => {
   if (tier === 'off') {
     return {canNotify: false, canManual: false, canAuto: false, canAutonomous: false, reason: 'tier-off'};
   }
@@ -32,11 +45,12 @@ export const evaluatePolicy = ({installMethod, tier, current, latest}: PolicyInp
     return {canNotify, canManual: false, canAuto: false, canAutonomous: false, reason: 'install-method-not-writable'};
   }
 
+  const terminal = executionStatus === 'rollback-failed';
   return {
     canNotify,
     canManual: tier === 'manual' || tier === 'auto' || tier === 'autonomous',
-    canAuto: tier === 'auto' || tier === 'autonomous',
-    canAutonomous: tier === 'autonomous',
-    reason: 'ok',
+    canAuto: !terminal && (tier === 'auto' || tier === 'autonomous'),
+    canAutonomous: !terminal && tier === 'autonomous',
+    reason: terminal ? 'rollback-failed-terminal' : 'ok',
   };
 };

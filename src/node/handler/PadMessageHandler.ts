@@ -37,6 +37,7 @@ import settings, {
   sofficeAvailable
 } from '../utils/Settings';
 import {anonymizeIp} from '../utils/anonymizeIp';
+import {isAcceptingConnections} from '../updater/SessionDrainer';
 const logIp = (ip: string | null | undefined) => anonymizeIp(ip, settings.ipLogging);
 const securityManager = require('../db/SecurityManager');
 const plugins = require('../../static/js/pluginfw/plugin_defs');
@@ -239,22 +240,32 @@ exports.handleDisconnect = async (socket:any) => {
                     ` authorID:${session.author}` +
                     (user && user.username ? ` username:${user.username}` : ''));
   /* eslint-enable prefer-template */
-  socket.broadcast.to(session.padId).emit('message', {
-    type: 'COLLABROOM',
-    data: {
-      type: 'USER_LEAVE',
-      userInfo: {
-        colorId: await authorManager.getAuthorColorId(session.author),
-        userId: session.author,
+  // Client presence is keyed by authorID. With the #7656 fix, multiple sockets
+  // can share an authorID (same authenticated identity across windows/devices),
+  // so emitting USER_LEAVE on every socket disconnect would drop the author
+  // from presence even when another socket of theirs is still connected. Only
+  // broadcast — and only run the userLeave hook — when the *last* socket for
+  // this author leaves the pad.
+  const isLastSocketForAuthor = !_getRoomSockets(session.padId).some(
+      (s: any) => sessioninfos[s.id]?.author === session.author);
+  if (isLastSocketForAuthor) {
+    socket.broadcast.to(session.padId).emit('message', {
+      type: 'COLLABROOM',
+      data: {
+        type: 'USER_LEAVE',
+        userInfo: {
+          colorId: await authorManager.getAuthorColorId(session.author),
+          userId: session.author,
+        },
       },
-    },
-  });
-  await hooks.aCallAll('userLeave', {
-    ...session, // For backwards compatibility.
-    authorId: session.author,
-    readOnly: session.readonly,
-    socket,
-  });
+    });
+    await hooks.aCallAll('userLeave', {
+      ...session, // For backwards compatibility.
+      authorId: session.author,
+      readOnly: session.readonly,
+      socket,
+    });
+  }
 };
 
 
@@ -367,6 +378,17 @@ exports.handleMessage = async (socket:any, message: ClientVarMessage) => {
   if (!thisSession) throw new Error('message from an unknown connection');
 
   if (message.type === 'CLIENT_READY') {
+    // Refuse new joiners while the updater drainer is running. Existing sockets
+    // are unaffected — only the initial CLIENT_READY handshake is gated. The
+    // pad UI will show the drain announcement separately via shoutMessage.
+    // Use socket.emit('message', ...) for consistency with the other disconnect
+    // paths in this file (see line ~221, 569). socket.json.send is a socket.io
+    // v2/v3-era API that may not exist on v4 Socket objects.
+    if (!isAcceptingConnections()) {
+      socket.emit('message', {disconnect: 'updateInProgress'});
+      socket.disconnect(true);
+      return;
+    }
     // Prefer the HttpOnly author-token cookie over the in-message token (GDPR
     // PR3). Legacy clients (pre-PR3 browsers or API consumers) still send
     // `token` in the CLIENT_READY payload — honour it one more release, warn
@@ -1020,22 +1042,29 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
   // Check if the user has disconnected during any of the above awaits.
   if (sessionInfo !== sessioninfos[socket.id]) throw new Error('client disconnected');
 
-  // Check if this author is already on the pad, if yes, kick the other sessions!
-  const roomSockets = _getRoomSockets(pad.id);
+  const {session: {user} = {}} = socket.client.request as SocketClientRequest;
 
-  for (const otherSocket of roomSockets) {
-    // The user shouldn't have joined the room yet, but check anyway just in case.
-    if (otherSocket.id === socket.id) continue;
-    const sinfo = sessioninfos[otherSocket.id];
-    if (sinfo && sinfo.author === sessionInfo.author) {
-      // fix user's counter, works on page refresh or if user closes browser window and then rejoins
-      sessioninfos[otherSocket.id] = {};
-      otherSocket.leave(sessionInfo.padId);
-      otherSocket.emit('message', {disconnect: 'userdup'});
+  // The duplicate-author kick exists because cookie-derived authorIDs are
+  // per-browser, so "same authorID, same pad" historically meant "stale tab in
+  // the same browser" — see #7656. Authenticated sessions (req.session.user
+  // set, e.g. via basic auth, SSO, or a getAuthorId plugin hook) carry a
+  // stable identity across windows and devices, so concurrent same-author
+  // sessions are legitimate and must not be kicked.
+  const roomSockets = _getRoomSockets(pad.id);
+  if (user == null) {
+    for (const otherSocket of roomSockets) {
+      // The user shouldn't have joined the room yet, but check anyway just in case.
+      if (otherSocket.id === socket.id) continue;
+      const sinfo = sessioninfos[otherSocket.id];
+      if (sinfo && sinfo.author === sessionInfo.author) {
+        // fix user's counter, works on page refresh or if user closes browser window and then rejoins
+        sessioninfos[otherSocket.id] = {};
+        otherSocket.leave(sessionInfo.padId);
+        otherSocket.emit('message', {disconnect: 'userdup'});
+      }
     }
   }
 
-  const {session: {user} = {}} = socket.client.request as SocketClientRequest;
   /* eslint-disable prefer-template -- it doesn't support breaking across multiple lines */
   accessLogger.info(`[${pad.head > 0 ? 'ENTER' : 'CREATE'}]` +
                     ` pad:${sessionInfo.padId}` +
@@ -1157,6 +1186,7 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
       },
       enableDarkMode: settings.enableDarkMode,
       enablePadWideSettings: settings.enablePadWideSettings,
+      enablePluginPadOptions: settings.enablePluginPadOptions,
       padDeletionToken,
       // Allow-listed copy — settings.privacyBanner could carry extra nested
       // keys from a hand-edited settings.json; sending those by reference

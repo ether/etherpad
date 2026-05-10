@@ -238,6 +238,77 @@ operations in `templates/`, in files of type ".ejs", since Etherpad uses EJS for
 HTML templating. See the following link for more information about EJS:
 <https://github.com/visionmedia/ejs>.
 
+## Plugin-namespaced pad-wide options
+
+Plugins can ride the existing `padoptions` COLLABROOM rail to store
+pad-wide settings — broadcast to every connected client, persisted with the
+pad, and honored by `enforceSettings` — instead of inventing their own
+message type and storage. The model matches how `enablePadWideSettings`
+works for native toggles like sticky chat or line numbers.
+
+### Capability detection
+
+```js
+let padOptionsPluginPassthrough = false;
+try {
+  // The require throws on Etherpad versions that predate this capability;
+  // plugins should degrade gracefully (typically falling back to a per-user
+  // cookie toggle) when the flag is missing.
+  padOptionsPluginPassthrough =
+      require('ep_etherpad-lite/node/utils/PluginCapabilities')
+          .padOptionsPluginPassthrough === true;
+} catch (_e) { /* older core */ }
+```
+
+The flag means the core has the passthrough patch *available*. Whether it
+is actually *enabled* at runtime is a separate per-instance setting — see
+below.
+
+### Runtime flag
+
+The passthrough is gated by `settings.enablePluginPadOptions`, default
+`false`. Operators must opt in via `settings.json`:
+
+```json
+{
+  "enablePluginPadOptions": true
+}
+```
+
+When enabled, the server reflects the value to every client via
+`clientVars.enablePluginPadOptions` so plugins can detect both *capable*
+(static) and *active* (per-pad request) at the same point.
+
+### Key namespace
+
+Plugins must use keys matching `/^ep_[a-z0-9_]+$/`. The recommended pattern
+is `ep_<plugin_name>` (e.g. `ep_table_of_contents`); compose multiple
+pad-wide settings under one key as a plain object:
+
+```js
+pad.changePadOption('ep_my_plugin', {enabled: true, depth: 3});
+```
+
+The server passes through any matching key on the existing `padoptions`
+message, persists it with the pad, and broadcasts it to every connected
+client. `pad.padOptions.ep_my_plugin` reflects the latest value on every
+client.
+
+### Validation
+
+Server-side `Pad.normalizePadSettings()` enforces three rules on every
+plugin-namespaced key:
+
+- Values must round-trip through `JSON.stringify` (no functions, symbols,
+  BigInt, or circular references).
+- Each key's serialized payload must fit within **64 KB**.
+- The combined size of all `ep_*` values per pad must fit within **256 KB**.
+
+Values that fail any of these rules are dropped with a `console.warn`; the
+rest of the settings round-trip cleanly. The caps prevent a misbehaving
+plugin from bloating the persisted pad payload or the COLLABROOM
+broadcast.
+
 ## Writing and running front-end tests for your plugin
 
 Etherpad allows you to easily create front-end tests for plugins.

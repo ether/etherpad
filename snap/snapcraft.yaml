@@ -91,8 +91,9 @@ parts:
     override-build: |
       set -eu
 
-      # -- 1. Install Node.js 22 from the official tarball.
-      NODE_VERSION=22.12.0
+      # -- 1. Install Node.js 22 from the official tarball. Must be >=22.13
+      # because pnpm 11 hard-rejects older 22.x releases.
+      NODE_VERSION=22.22.2
       ARCH="$(dpkg --print-architecture)"
       case "${ARCH}" in
         amd64) NODE_ARCH=x64 ;;
@@ -114,7 +115,7 @@ parts:
       "${CRAFT_PART_INSTALL}/opt/node/bin/npm" install \
         --prefix "${CRAFT_PART_INSTALL}/opt/node" -g corepack@latest
       corepack enable --install-directory "${CRAFT_PART_INSTALL}/opt/node/bin"
-      corepack prepare pnpm@10.33.0 --activate
+      corepack prepare pnpm@11.0.6 --activate
 
       # -- 3. Copy source into install dir and build.
       APP_DIR="${CRAFT_PART_INSTALL}/opt/etherpad"

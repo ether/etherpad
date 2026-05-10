@@ -11,7 +11,6 @@ import fs from "node:fs";
 import process from "node:process";
 
 process.on('unhandledRejection', (err) => { throw err; });
-import axios from 'axios'
 // Set a delete counter which will increment on each delete attempt
 // TODO: Check delete is successful before incrementing
 let deleteCount = 0;
@@ -23,29 +22,38 @@ const settings = require('ep_etherpad-lite/tests/container/loadSettings').loadSe
 
 (async () => {
   const apikey = fs.readFileSync(filePath, {encoding: 'utf-8'});
-  axios.defaults.baseURL = `http://${settings.ip}:${settings.port}`;
+  const baseURL = `http://${settings.ip}:${settings.port}`;
+  const apiGet = async (p: string): Promise<any> => {
+    const r = await fetch(baseURL + p);
+    if (!r.ok) throw new Error(`HTTP ${r.status} ${r.statusText}`);
+    return r.json();
+  };
+  const apiPost = async (p: string): Promise<any> => {
+    const r = await fetch(baseURL + p, {method: 'POST'});
+    if (!r.ok) throw new Error(`HTTP ${r.status} ${r.statusText}`);
+    return r.json();
+  };
 
-  const apiVersionResponse = await axios.get('/api/');
-  const apiVersion = apiVersionResponse.data.currentVersion; // 1.12.5
+  const apiVersionResponse = await apiGet('/api/');
+  const apiVersion = apiVersionResponse.currentVersion; // 1.12.5
   console.log('apiVersion', apiVersion);
 
-  const groupsResponse = await axios.get(`/api/${apiVersion}/listAllGroups?apikey=${apikey}`);
-  const groups = groupsResponse.data.data.groupIDs; // ['whateverGroupID']
+  const groupsResponse = await apiGet(`/api/${apiVersion}/listAllGroups?apikey=${apikey}`);
+  const groups = groupsResponse.data.groupIDs; // ['whateverGroupID']
 
   for (const groupID of groups) {
     const sessionURI = `/api/${apiVersion}/listSessionsOfGroup?apikey=${apikey}&groupID=${groupID}`;
-    const sessionsResponse = await axios.get(sessionURI);
-    const sessions = sessionsResponse.data.data;
+    const sessionsResponse = await apiGet(sessionURI);
+    const sessions = sessionsResponse.data;
 
     if(sessions == null) continue;
 
     for (const [sessionID, val] of Object.entries(sessions)) {
       if(val == null) continue;
       const deleteURI = `/api/${apiVersion}/deleteSession?apikey=${apikey}&sessionID=${sessionID}`;
-      await axios.post(deleteURI).then(c=>{
-        console.log(c.data)
-        deleteCount++;
-      }); // delete
+      const c = await apiPost(deleteURI);
+      console.log(c);
+      deleteCount++;
     }
   }
   console.log(`Deleted ${deleteCount} sessions`);

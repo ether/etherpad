@@ -168,6 +168,121 @@ describe(__filename, function () {
     });
   });
 
+  describe('renderSocialMeta — settings.socialMeta.description override', function () {
+    it('overrides i18n catalog regardless of negotiated language', function () {
+      // Crawler sends de, catalog has both en and de entries — operator
+      // override wins anyway. This is the crawler-no-Accept-Language case.
+      const html = renderSocialMeta({
+        req: fakeReq({acceptsLanguages: () => 'de'}),
+        settings: {
+          title: 'Etherpad', favicon: null,
+          socialMeta: {description: 'Operator-set blurb'},
+        },
+        availableLangs: {en: {}, de: {}},
+        locales: {
+          en: {'pad.social.description': 'En catalog'},
+          de: {'pad.social.description': 'De catalog'},
+        },
+        kind: 'pad', padName: 'P',
+      });
+      assert.equal(ogTag(html, 'og:description'), 'Operator-set blurb');
+      assert.equal(ogTag(html, 'twitter:description'), 'Operator-set blurb');
+    });
+
+    it('null override falls back to i18n catalog', function () {
+      const html = renderSocialMeta({
+        req: fakeReq({acceptsLanguages: () => 'de'}),
+        settings: {
+          title: 'Etherpad', favicon: null,
+          socialMeta: {description: null},
+        },
+        availableLangs: {en: {}, de: {}},
+        locales: {
+          en: {'pad.social.description': 'En'},
+          de: {'pad.social.description': 'De'},
+        },
+        kind: 'pad', padName: 'P',
+      });
+      assert.equal(ogTag(html, 'og:description'), 'De');
+    });
+
+    it('empty / whitespace override does NOT silence the description', function () {
+      // An accidental empty string in settings.json must not blank out the tag —
+      // we'd lose previews entirely. Treat it as unset.
+      for (const blank of ['', '   ', '\t\n']) {
+        const html = renderSocialMeta({
+          req: fakeReq({acceptsLanguages: () => 'en'}),
+          settings: {
+            title: 'Etherpad', favicon: null,
+            socialMeta: {description: blank},
+          },
+          availableLangs: {en: {}},
+          locales: {en: {'pad.social.description': 'Catalog wins'}},
+          kind: 'pad', padName: 'P',
+        });
+        assert.equal(ogTag(html, 'og:description'), 'Catalog wins',
+            `blank override (${JSON.stringify(blank)}) should fall back`);
+      }
+    });
+
+    it('HTML-escapes the override (it is operator-controlled but renders into HTML)', function () {
+      const html = renderSocialMeta({
+        req: fakeReq(),
+        settings: {
+          title: 'Etherpad', favicon: null,
+          socialMeta: {description: 'A & B "<C>"'},
+        },
+        availableLangs: {en: {}}, locales: enLocales,
+        kind: 'pad', padName: 'P',
+      });
+      assert.equal(ogTag(html, 'og:description'), 'A &amp; B &quot;&lt;C&gt;&quot;');
+    });
+
+    it('missing socialMeta block is treated as unset', function () {
+      // Older settings.json files won't have the socialMeta block at all.
+      const html = renderSocialMeta({
+        req: fakeReq({acceptsLanguages: () => 'en'}),
+        settings: {title: 'Etherpad', favicon: null},
+        availableLangs: {en: {}},
+        locales: {en: {'pad.social.description': 'Catalog'}},
+        kind: 'pad', padName: 'P',
+      });
+      assert.equal(ogTag(html, 'og:description'), 'Catalog');
+    });
+
+    it('numeric override is stringified (env-var coercion safety)', function () {
+      // Settings.ts coerceValue() turns numeric-looking env vars into numbers,
+      // so SOCIAL_META_DESCRIPTION="2026" arrives here as the number 2026.
+      // Without stringification the resolver would silently fall back to i18n.
+      const html = renderSocialMeta({
+        req: fakeReq(),
+        settings: {
+          title: 'Etherpad', favicon: null,
+          socialMeta: {description: 2026},
+        },
+        availableLangs: {en: {}}, locales: enLocales,
+        kind: 'pad', padName: 'P',
+      });
+      assert.equal(ogTag(html, 'og:description'), '2026');
+    });
+
+    it('boolean override is stringified (covers "true"/"false" env-var coercion)', function () {
+      // Less likely than the numeric case but possible: setting
+      // SOCIAL_META_DESCRIPTION="true" yields a boolean. Treat it like the
+      // operator wrote that literal string rather than silently dropping it.
+      const html = renderSocialMeta({
+        req: fakeReq(),
+        settings: {
+          title: 'Etherpad', favicon: null,
+          socialMeta: {description: true},
+        },
+        availableLangs: {en: {}}, locales: enLocales,
+        kind: 'pad', padName: 'P',
+      });
+      assert.equal(ogTag(html, 'og:description'), 'true');
+    });
+  });
+
   describe('renderSocialMeta — image URL', function () {
     it('builds absolute URL to /favicon.ico when settings.favicon is null', function () {
       const html = renderSocialMeta({

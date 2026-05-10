@@ -42,7 +42,7 @@ jobs:
         uses: snapcore/action-build@v1
 
       - name: Upload snap artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: etherpad-snap
           path: ${{ steps.build.outputs.snap }}
@@ -57,7 +57,7 @@ jobs:
       contents: read
     steps:
       - name: Download snap artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: etherpad-snap
 
@@ -79,7 +79,7 @@ jobs:
     environment: snap-store-stable
     steps:
       - name: Download snap artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: etherpad-snap
 

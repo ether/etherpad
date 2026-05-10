@@ -165,6 +165,15 @@ export type SettingsType = {
   showRecentPads: boolean,
   favicon: string | null,
   publicURL: string | null,
+  socialMeta: {
+    // Runtime type is wider than what an operator writes by hand: when
+    // `socialMeta.description` is sourced from an env var (e.g.
+    // `"${SOCIAL_META_DESCRIPTION:null}"` in settings.json.docker), the
+    // settings loader's `coerceValue()` turns numeric-looking strings into
+    // numbers and "true"/"false" into booleans. Downstream code stringifies
+    // before use; the wider type stops callers (and tests) needing casts.
+    description: string | number | boolean | null,
+  },
   ttl: {
     AccessToken: number,
     AuthorizationCode: number,
@@ -175,6 +184,7 @@ export type SettingsType = {
   updateServer: string,
   enableDarkMode: boolean,
   enablePadWideSettings: boolean,
+  enablePluginPadOptions: boolean,
   allowPadDeletionByAllUsers: boolean,
   privacyBanner: {
     enabled: boolean,
@@ -321,9 +331,21 @@ export type SettingsType = {
     checkIntervalHours: number,
     githubRepo: string,
     requireAdminForStatus: boolean,
+    /** Tier 2+ knobs. Default 0 in PR 2; tier 3 makes preApplyGraceMinutes meaningful. */
+    preApplyGraceMinutes: number,
+    drainSeconds: number,
+    rollbackHealthCheckSeconds: number,
+    diskSpaceMinMB: number,
+    /** When true, refuse updates whose tag is not signed by a trusted key. */
+    requireSignature: boolean,
+    /** Override the OS keyring location (passed to git verify-tag via $GNUPGHOME). */
+    trustedKeysPath: string | null,
+  },
+  adminOpenAPI: {
+    enabled: boolean,
   },
   adminEmail: string | null,
-  getPublicSettings: () => Pick<SettingsType, "title" | "skinVariants"|"randomVersionString"|"skinName"|"toolbar"| "exposeVersion"| "gitVersion" | "enablePadWideSettings" | "privacyBanner">,
+  getPublicSettings: () => Pick<SettingsType, "title" | "skinVariants"|"randomVersionString"|"skinName"|"toolbar"| "exposeVersion"| "gitVersion" | "enablePadWideSettings" | "enablePluginPadOptions" | "privacyBanner">,
 }
 
 const settings: SettingsType = {
@@ -360,6 +382,24 @@ const settings: SettingsType = {
    * No trailing slash. Must include scheme.
    */
   publicURL: null,
+
+  /**
+   * Open Graph / Twitter Card metadata, served on the homepage, pad pages and
+   * timeslider for nicer previews when a pad URL is shared in chat apps.
+   *
+   * description: when non-null, this exact string is used as og:description /
+   *   twitter:description regardless of the visitor's negotiated language. Most
+   *   crawlers (WhatsApp, Signal, Telegram, Slack, Facebook) don't send an
+   *   Accept-Language header, so without an override they always see the
+   *   English fallback — set this if your instance serves a non-English
+   *   audience and you want a fixed blurb. Leave null to use Etherpad's
+   *   built-in i18n catalog (key `pad.social.description`), which honours the
+   *   visitor's Accept-Language and can be overridden per-language via the
+   *   standard `customLocaleStrings` mechanism below.
+   */
+  socialMeta: {
+    description: null,
+  },
   ttl: {
     AccessToken: 1 * 60 * 60, // 1 hour in seconds
     AuthorizationCode: 10 * 60, // 10 minutes in seconds
@@ -369,7 +409,12 @@ const settings: SettingsType = {
   },
   updateServer: "https://static.etherpad.org",
   enableDarkMode: true,
-  enablePadWideSettings: false,
+  enablePadWideSettings: true,
+  // New plugin-padOption passthrough is opt-in per AGENTS.MD §52 ("New
+  // features should be placed behind feature flags and disabled by
+  // default"). Flip to true to let plugins (e.g. ep_plugin_helpers'
+  // padToggle) ride the existing padoptions broadcast/persist rail.
+  enablePluginPadOptions: false,
   allowPadDeletionByAllUsers: false,
   privacyBanner: {
     enabled: false,
@@ -482,6 +527,25 @@ const settings: SettingsType = {
     // Set true to require an authenticated admin session for the endpoint without
     // disabling the updater itself.
     requireAdminForStatus: false,
+    // Tier 2+ knobs. Only meaningful at tier "manual" or higher.
+    preApplyGraceMinutes: 0,
+    drainSeconds: 60,
+    rollbackHealthCheckSeconds: 60,
+    diskSpaceMinMB: 500,
+    requireSignature: false,
+    trustedKeysPath: null,
+  },
+  /**
+   * Admin OpenAPI document endpoint at /admin/openapi.json.
+   *
+   * Disabled by default per Etherpad's "new features behind a flag, off by
+   * default" policy (see CONTRIBUTING.md). The codegen pipeline imports
+   * generateAdminDefinition() in-process and does not depend on the route;
+   * enable this only if you want third-party tooling (Postman, swagger-ui,
+   * downstream clients) to consume the spec at runtime.
+   */
+  adminOpenAPI: {
+    enabled: false,
   },
   /**
    * Contact address for admin notifications (updates, future security advisories).
@@ -743,6 +807,7 @@ const settings: SettingsType = {
       skinName: settings.skinName,
       skinVariants: settings.skinVariants,
       enablePadWideSettings: settings.enablePadWideSettings,
+      enablePluginPadOptions: settings.enablePluginPadOptions,
       privacyBanner: getPublicPrivacyBanner(),
     }
   },
@@ -1085,6 +1150,30 @@ export const reloadSettings = () => {
           `not one of ${validDismissal.join(', ')}; falling back to ` +
           `"dismissible".`);
       settings.privacyBanner.dismissal = 'dismissible';
+    }
+
+    // Settings.json files generated before December 2021 used `false` as the
+    // default for these string options. The client treats the boolean `false`
+    // as a sentinel meaning "no enforced value", but the dispatch in
+    // pad.ts:getParams() coerces the boolean to the string "false" before
+    // applying it, which then propagates as the user's name and color and
+    // triggers `malformed color: false` on the server (#7686). Normalize
+    // legacy booleans to null at the boundary so downstream code sees the
+    // expected sentinel. Guard against a malformed padOptions (null, array,
+    // primitive) — storeSettings() will overwrite it raw if settings.json
+    // declares it as anything other than a plain object.
+    if (settings.padOptions != null
+        && typeof settings.padOptions === 'object'
+        && !Array.isArray(settings.padOptions)) {
+      for (const key of ['userName', 'userColor'] as const) {
+        if ((settings.padOptions as any)[key] === false) {
+          logger.warn(
+              `padOptions.${key}=false is a legacy default (pre-2021) and is ` +
+              `now treated as null. Update settings.json to use null instead ` +
+              `to silence this warning.`);
+          (settings.padOptions as any)[key] = null;
+        }
+      }
     }
 
     // Init logging config

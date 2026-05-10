@@ -4,6 +4,26 @@ import {PadSearchResult} from "../utils/PadSearch.ts";
 import {AuthorSearchResult} from "../utils/AuthorSearch.ts";
 import {InstalledPlugin} from "../pages/Plugin.ts";
 
+export type Execution =
+  | {status: 'idle'}
+  | {status: 'preflight'; targetTag: string; startedAt: string}
+  | {status: 'preflight-failed'; targetTag: string; reason: string; at: string}
+  | {status: 'draining'; targetTag: string; drainEndsAt: string; startedAt: string}
+  | {status: 'executing'; targetTag: string; fromSha: string; startedAt: string}
+  | {status: 'pending-verification'; targetTag: string; fromSha: string; deadlineAt: string}
+  | {status: 'verified'; targetTag: string; verifiedAt: string}
+  | {status: 'rolling-back'; reason: string; targetTag: string; fromSha: string; at: string}
+  | {status: 'rolled-back'; reason: string; targetTag: string; restoredSha: string; at: string}
+  | {status: 'rollback-failed'; reason: string; targetTag: string; fromSha: string; at: string};
+
+export type LastResult = null | {
+  targetTag: string;
+  fromSha: string;
+  outcome: 'verified' | 'rolled-back' | 'rollback-failed' | 'preflight-failed' | 'cancelled';
+  reason: string | null;
+  at: string;
+};
+
 export interface UpdateStatusPayload {
   currentVersion: string;
   latest: null | {
@@ -19,6 +39,10 @@ export interface UpdateStatusPayload {
   tier: string;
   policy: null | {canNotify: boolean; canManual: boolean; canAuto: boolean; canAutonomous: boolean; reason: string};
   vulnerableBelow: Array<{announcedBy: string; threshold: string}>;
+  // Tier 2 additions:
+  execution: Execution;
+  lastResult: LastResult;
+  lockHeld: boolean;
 }
 
 type ToastState = {
@@ -46,6 +70,8 @@ type StoreState = {
   setInstalledPlugins: (plugins: InstalledPlugin[])=>void,
   updateStatus: UpdateStatusPayload | null,
   setUpdateStatus: (s: UpdateStatusPayload) => void,
+  updateLog: string,
+  setUpdateLog: (log: string) => void,
   authors: AuthorSearchResult|undefined,
   setAuthors: (authors: AuthorSearchResult)=>void,
   gdprAuthorErasureEnabled: boolean,
@@ -75,6 +101,8 @@ export const useStore = create<StoreState>()((set) => ({
   setInstalledPlugins: (plugins)=>set({installedPlugins: plugins}),
   updateStatus: null,
   setUpdateStatus: (s) => set({updateStatus: s}),
+  updateLog: '',
+  setUpdateLog: (log) => set({updateLog: log}),
   authors: undefined,
   setAuthors: (authors)=>set({authors}),
   gdprAuthorErasureEnabled: false,

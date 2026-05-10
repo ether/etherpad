@@ -1,4 +1,6 @@
 import path from 'node:path';
+import {spawn} from 'node:child_process';
+import fs from 'node:fs/promises';
 import log4js from 'log4js';
 import settings, {getEpVersion} from '../utils/Settings';
 import {detectInstallMethod} from './InstallMethodDetector';
@@ -7,6 +9,8 @@ import {loadState, saveState} from './state';
 import {isMajorBehind, isVulnerable} from './versionCompare';
 import {evaluatePolicy} from './UpdatePolicy';
 import {decideEmails} from './Notifier';
+import {checkPendingVerification, CheckResult, RollbackDeps} from './RollbackHandler';
+import type {SpawnFn} from './UpdateExecutor';
 import {InstallMethod, UpdateState} from './types';
 
 const logger = log4js.getLogger('updater');
@@ -16,6 +20,7 @@ let timer: NodeJS.Timeout | null = null;
 let initialTimer: NodeJS.Timeout | null = null;
 let checkInFlight = false;
 let inMemoryState: UpdateState | null = null;
+let pendingVerification: CheckResult | null = null;
 
 export const stateFilePath = () => path.join(settings.root, 'var', 'update-state.json');
 
@@ -126,6 +131,21 @@ const startPolling = (): void => {
   initialTimer = setTimeout(() => { initialTimer = null; void performCheck(); }, 5000);
 };
 
+/** Build the dependency bundle RollbackHandler / UpdateExecutor expect. */
+export const getRollbackDeps = (): RollbackDeps => ({
+  repoDir: settings.root,
+  backupDir: path.join(settings.root, 'var', 'update-backup'),
+  spawnFn: spawn as unknown as SpawnFn,
+  copyFile: async (src: string, dst: string) => {
+    await fs.mkdir(path.dirname(dst), {recursive: true});
+    await fs.copyFile(src, dst);
+  },
+  saveState: (s: UpdateState) => saveState(stateFilePath(), s),
+  exit: (code: number) => process.exit(code),
+  now: () => new Date(),
+  rollbackHealthCheckSeconds: Number(settings.updates.rollbackHealthCheckSeconds) || 60,
+});
+
 /** Hook entry point — called by ep.json on createServer. */
 export const expressCreateServer = async (): Promise<void> => {
   detectedMethod = await detectInstallMethod({
@@ -133,7 +153,27 @@ export const expressCreateServer = async (): Promise<void> => {
     rootDir: settings.root,
   });
   logger.info(`updater: install method = ${detectedMethod}, tier = ${settings.updates.tier}`);
+
+  // Tier 2: if the previous boot left the state in pending-verification, arm
+  // the health-check timer (or force rollback when bootCount has climbed past
+  // the crash-loop threshold). This must run BEFORE polling starts so the
+  // rollback can fire even if the version checker is misconfigured.
+  const state = await getCurrentState();
+  pendingVerification = checkPendingVerification(state, getRollbackDeps());
+
   if (settings.updates.tier !== 'off') startPolling();
+};
+
+/**
+ * Called by the Etherpad runtime once the express stack is fully wired and
+ * /health responds — that's the implicit health signal the
+ * pending-verification timer is waiting for.
+ */
+export const markBootHealthy = (): void => {
+  if (pendingVerification) {
+    pendingVerification.markVerified();
+    pendingVerification = null;
+  }
 };
 
 /** Shutdown hook. */

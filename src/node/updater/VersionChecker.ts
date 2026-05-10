@@ -1,5 +1,6 @@
 import {ReleaseInfo, VulnerableBelowDirective} from './types';
 import {parseVulnerableBelow} from './versionCompare';
+import {isValidTag} from './refSafety';
 
 export interface FetchResult {
   status: number;
@@ -46,6 +47,15 @@ export const checkLatestRelease = async (
   if (typeof j.tag_name !== 'string' ||
       typeof j.html_url !== 'string' ||
       typeof j.published_at !== 'string') {
+    return {kind: 'error', status: 200};
+  }
+
+  // Reject any tag that would be unsafe to hand to git later. Validating at
+  // the persistence boundary (rather than only at the executor) means a
+  // malformed tag_name from a misconfigured fork-as-github-repo never lands
+  // in update-state.json. Treated as a fetch error so the polling loop will
+  // try again next interval.
+  if (!isValidTag(j.tag_name)) {
     return {kind: 'error', status: 200};
   }
 

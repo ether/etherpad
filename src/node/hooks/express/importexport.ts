@@ -36,9 +36,11 @@ exports.expressCreateServer = (hookName:string, args:ArgsExpressType, cb:Functio
         return next();
       }
 
-      // if soffice is disabled, and this is a format we only support with soffice, output a message
+      // When soffice is disabled, only block formats with no native path.
+      // pdf and docx fall through to ExportHandler, which dispatches to
+      // the in-process converters (issue #7538).
       if (exportAvailable() === 'no' &&
-          ['odt', 'pdf', 'doc', 'docx'].indexOf(req.params.type) !== -1) {
+          ['odt', 'doc'].indexOf(req.params.type) !== -1) {
         console.error(`Impossible to export pad "${req.params.pad}" in ${req.params.type} format.` +
                       ' There is no converter configured');
 

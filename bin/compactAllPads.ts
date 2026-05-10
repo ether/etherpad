@@ -24,7 +24,6 @@
 import path from 'node:path';
 import fs from 'node:fs';
 import process from 'node:process';
-import axios from 'axios';
 
 export type CompactAllOpts = {
   keepRevisions: number | null;
@@ -33,8 +32,8 @@ export type CompactAllOpts = {
 
 // Minimal interface mirroring the API endpoints the script needs. Tests
 // substitute their own implementation that goes through supertest+JWT
-// instead of axios+APIKEY, so the loop logic is exercised against a real
-// running server without dragging in apikey-file or axios setup.
+// instead of fetch+APIKEY, so the loop logic is exercised against a real
+// running server without dragging in apikey-file or fetch setup.
 export type CompactAllApi = {
   listAllPads(): Promise<string[]>;
   getRevisionsCount(padId: string): Promise<number>;
@@ -182,8 +181,18 @@ if (isMain) {
   process.on('unhandledRejection', (err) => { throw err; });
 
   const settings = require('ep_etherpad-lite/tests/container/loadSettings').loadSettings();
-  axios.defaults.baseURL =
-      `${settings.ssl ? 'https' : 'http'}://${settings.ip}:${settings.port}`;
+  const baseURL = `${settings.ssl ? 'https' : 'http'}://${settings.ip}:${settings.port}`;
+
+  const apiGet = async (p: string): Promise<any> => {
+    const r = await fetch(baseURL + p);
+    if (!r.ok) throw new Error(`HTTP ${r.status} ${r.statusText}`);
+    return r.json();
+  };
+  const apiPost = async (p: string): Promise<any> => {
+    const r = await fetch(baseURL + p, {method: 'POST'});
+    if (!r.ok) throw new Error(`HTTP ${r.status} ${r.statusText}`);
+    return r.json();
+  };
 
   const opts = parseArgs(process.argv.slice(2));
   if (!opts) usage();
@@ -191,32 +200,32 @@ if (isMain) {
   const apikey = fs.readFileSync(
       path.join(__dirname, '../APIKEY.txt'), {encoding: 'utf-8'}).trim();
 
-  // Bind the abstract API to axios + APIKEY auth for the CLI shell.
+  // Bind the abstract API to fetch + APIKEY auth for the CLI shell.
   const cliApi: CompactAllApi = {
     async listAllPads() {
-      const apiInfo = await axios.get('/api/');
-      const apiVersion: string | undefined = apiInfo.data.currentVersion;
+      const apiInfo = await apiGet('/api/');
+      const apiVersion: string | undefined = apiInfo.currentVersion;
       if (!apiVersion) throw new Error('No version set in API');
       // Stash on this for subsequent calls. Avoids a per-call /api/ ping.
       (cliApi as any)._apiVersion = apiVersion;
-      const r = await axios.get(`/api/${apiVersion}/listAllPads?apikey=${apikey}`);
-      if (r.data.code !== 0) throw new Error(JSON.stringify(r.data));
-      return r.data.data.padIDs ?? [];
+      const r = await apiGet(`/api/${apiVersion}/listAllPads?apikey=${apikey}`);
+      if (r.code !== 0) throw new Error(JSON.stringify(r));
+      return r.data.padIDs ?? [];
     },
     async getRevisionsCount(padId: string) {
       const v = (cliApi as any)._apiVersion;
-      const r = await axios.get(
+      const r = await apiGet(
           `/api/${v}/getRevisionsCount?apikey=${apikey}` +
           `&padID=${encodeURIComponent(padId)}`);
-      if (r.data.code !== 0) throw new Error(JSON.stringify(r.data));
-      return r.data.data.revisions;
+      if (r.code !== 0) throw new Error(JSON.stringify(r));
+      return r.data.revisions;
     },
     async compactPad(padId: string, keepRevisions: number | null) {
       const v = (cliApi as any)._apiVersion;
       const params = new URLSearchParams({apikey, padID: padId});
       if (keepRevisions != null) params.set('keepRevisions', String(keepRevisions));
-      const r = await axios.post(`/api/${v}/compactPad?${params.toString()}`);
-      if (r.data.code !== 0) throw new Error(JSON.stringify(r.data));
+      const r = await apiPost(`/api/${v}/compactPad?${params.toString()}`);
+      if (r.code !== 0) throw new Error(JSON.stringify(r));
     },
   };
 
