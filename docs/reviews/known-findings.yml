@@ -1,0 +1,12 @@
+# /release-review suppression file.
+# Entries are appended automatically by `/release-review` when the user
+# triages a finding as wontfix / accepted-risk / deferred.
+#
+# Manual edits are supported for re-triaging:
+#   - Remove an entry to make the finding resurface in the next run.
+#   - Change `status` to reclassify.
+#   - DO NOT hand-edit `fingerprint` — it must come from a real run.
+#
+# See docs/reviews/README.md for the schema and triage workflow.
+
+findings: []
