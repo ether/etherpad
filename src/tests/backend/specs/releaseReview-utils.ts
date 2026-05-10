@@ -201,6 +201,46 @@ describe(__filename, function () {
     });
   });
 
+  describe('runDir', function () {
+    const tmpBase = path.join(FIXTURE_DIR, '_tmp-runs');
+
+    beforeEach(function () {
+      if (fs.existsSync(tmpBase)) fs.rmSync(tmpBase, {recursive: true});
+      fs.mkdirSync(tmpBase, {recursive: true});
+    });
+    after(function () {
+      if (fs.existsSync(tmpBase)) fs.rmSync(tmpBase, {recursive: true});
+    });
+
+    it('generates run-id format run-YYYY-MM-DD-N starting at 1', function () {
+      const {nextRunId} = require('../../../node/utils/releaseReview/runDir');
+      const id = nextRunId(tmpBase, '2026-05-09');
+      assert.equal(id, 'run-2026-05-09-1');
+    });
+
+    it('increments N when same-day runs already exist', function () {
+      const {nextRunId} = require('../../../node/utils/releaseReview/runDir');
+      fs.mkdirSync(path.join(tmpBase, 'run-2026-05-09-1'));
+      fs.mkdirSync(path.join(tmpBase, 'run-2026-05-09-2'));
+      const id = nextRunId(tmpBase, '2026-05-09');
+      assert.equal(id, 'run-2026-05-09-3');
+    });
+
+    it('starts at 1 for a new day even if older days exist', function () {
+      const {nextRunId} = require('../../../node/utils/releaseReview/runDir');
+      fs.mkdirSync(path.join(tmpBase, 'run-2026-05-08-5'));
+      const id = nextRunId(tmpBase, '2026-05-09');
+      assert.equal(id, 'run-2026-05-09-1');
+    });
+
+    it('ensureRunDir creates the dir and returns the absolute path', function () {
+      const {ensureRunDir} = require('../../../node/utils/releaseReview/runDir');
+      const p = ensureRunDir(tmpBase, 'run-2026-05-09-1');
+      assert.equal(fs.existsSync(p), true);
+      assert.equal(p, path.join(tmpBase, 'run-2026-05-09-1'));
+    });
+  });
+
   describe('suppression', function () {
     const valid = path.join(FIXTURE_DIR, 'suppression-valid.yml');
     const malformed = path.join(FIXTURE_DIR, 'suppression-malformed.yml');
