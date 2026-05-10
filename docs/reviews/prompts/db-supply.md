@@ -6,7 +6,7 @@ You are auditing Etherpad's DB layer and supply-chain surface (CI, Docker, packa
 
 Find Medium+ severity bugs, CVE-relevant patterns, and supply-chain hygiene issues. **No style or lint.**
 
-## Scope
+## Scope (read only these globs, all relative to `{{repo_root}}`)
 
 - `src/node/db/DB.ts`
 - `src/node/db/SessionStore.ts`
