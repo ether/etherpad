@@ -241,6 +241,53 @@ describe(__filename, function () {
     });
   });
 
+  describe('summary', function () {
+    const tmpDir = path.join(FIXTURE_DIR, '_tmp-summary');
+    beforeEach(function () {
+      if (fs.existsSync(tmpDir)) fs.rmSync(tmpDir, {recursive: true});
+      fs.mkdirSync(tmpDir, {recursive: true});
+    });
+    after(function () {
+      if (fs.existsSync(tmpDir)) fs.rmSync(tmpDir, {recursive: true});
+    });
+
+    it('writes a markdown file with run-id, version, counts, decisions', function () {
+      const {writeSummary} = require('../../../node/utils/releaseReview/summary');
+      const out = path.join(tmpDir, '2.8.0-summary.md');
+      writeSummary({
+        runId: 'run-2026-05-09-1',
+        version: '2.8.0',
+        counts: {high: 2, medium: 5},
+        decisions: [
+          {fingerprint: 'a'.repeat(64), action: 'fix', file: 'src/x.ts', ruleId: 'r1'},
+          {fingerprint: 'b'.repeat(64), action: 'wontfix', file: 'src/y.ts', ruleId: 'r2', rationale: 'not exploitable'},
+          {fingerprint: 'c'.repeat(64), action: 'issue', file: 'src/z.ts', ruleId: 'r3', issueUrl: 'https://github.com/ether/etherpad-lite/issues/9999'},
+        ],
+      }, out);
+      const md = fs.readFileSync(out, 'utf8');
+      assert.match(md, /run-2026-05-09-1/);
+      assert.match(md, /2\.8\.0/);
+      assert.match(md, /high.*2/i);
+      assert.match(md, /medium.*5/i);
+      assert.match(md, /src\/x\.ts/);
+      assert.match(md, /not exploitable/);
+      assert.match(md, /issues\/9999/);
+    });
+
+    it('handles a session with no decisions', function () {
+      const {writeSummary} = require('../../../node/utils/releaseReview/summary');
+      const out = path.join(tmpDir, 'empty-summary.md');
+      writeSummary({
+        runId: 'run-2026-05-09-2',
+        version: '2.8.0',
+        counts: {high: 0, medium: 0},
+        decisions: [],
+      }, out);
+      const md = fs.readFileSync(out, 'utf8');
+      assert.match(md, /no decisions/i);
+    });
+  });
+
   describe('suppression', function () {
     const valid = path.join(FIXTURE_DIR, 'suppression-valid.yml');
     const malformed = path.join(FIXTURE_DIR, 'suppression-malformed.yml');
