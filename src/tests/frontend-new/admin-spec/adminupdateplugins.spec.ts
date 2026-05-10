@@ -48,23 +48,22 @@ test.describe('Plugins page',  ()=> {
 
         // Select Installation button
         await pluginRow.locator('td').nth(4).locator('button').first().click()
-        await page.waitForTimeout(100)
         await page.waitForSelector('table tbody')
+
+        // The installed-plugins table can grow by more than one row if the
+        // installed plugin pulls in transitive plugin deps (e.g.
+        // ep_set_title_on_pad depends on ep_plugin_helpers as of 0.7.2), so
+        // assert by name rather than by row count.
         const installedPlugins = page.locator('table tbody').first()
-        const installedPluginsRows = installedPlugins.locator('tr')
-        await expect(installedPluginsRows).toHaveCount(2, {
-            timeout: 15000
-        })
+        const installedPluginRow = installedPlugins.locator('tr', {hasText: 'ep_set_title_on_pad'})
+        await expect(installedPluginRow).toHaveCount(1, {timeout: 15000})
 
-        const installedPluginRow = installedPluginsRows.nth(1)
-
-        await expect(installedPluginRow).toContainText('ep_set_title_on_pad')
         await installedPluginRow.locator('td').nth(2).locator('button').first().click()
 
-        // Wait for the uninstallation to complete
-        await expect(installedPluginsRows).toHaveCount(1, {
-            timeout: 15000
-        })
+        // Wait for the uninstallation to complete: the row for
+        // ep_set_title_on_pad should disappear. Other installed plugins
+        // (etherpad-lite itself, transitive plugin deps) may stay.
+        await expect(installedPluginRow).toHaveCount(0, {timeout: 15000})
         await page.waitForTimeout(5000)
     })
 })
