@@ -46,9 +46,19 @@ exports.init = async () => {
       stats.gauge(`ueberdb_${metric}`, () => exports.db.metrics()[metric]);
     }
   }
+  // napi-rs converts JS values to serde_json::Value directly without calling toJSON() or
+  // dropping functions like JSON.stringify does. Sanitize write args to match ueberdb2 behavior.
+  const sanitize = (v: any): any => v == null ? v : JSON.parse(JSON.stringify(v));
+
   for (const fn of ['get', 'set', 'findKeys', 'getSub', 'setSub', 'remove']) {
     const f = exports.db[fn];
-    exports[fn] = async (...args:string[]) => await f.call(exports.db, ...args);
+    if (fn === 'set') {
+      exports[fn] = async (key: string, value: any) => await f.call(exports.db, key, sanitize(value));
+    } else if (fn === 'setSub') {
+      exports[fn] = async (key: string, path: string[], value: any) => await f.call(exports.db, key, path, sanitize(value));
+    } else {
+      exports[fn] = async (...args: string[]) => await f.call(exports.db, ...args);
+    }
     Object.setPrototypeOf(exports[fn], Object.getPrototypeOf(f));
     Object.defineProperties(exports[fn], Object.getOwnPropertyDescriptors(f));
   }
