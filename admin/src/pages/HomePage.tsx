@@ -58,45 +58,63 @@ export const HomePage = () => {
   useEffect(() => {
     if (!pluginsSocket) return
 
-    pluginsSocket.on('results:installed', (data: {installed: InstalledPlugin[]}) => {
+    const onInstalled = (data: {installed: InstalledPlugin[]}) => {
       setInstalledPlugins(data.installed)
-    })
-
-    pluginsSocket.on('results:updatable', (data) => {
+    }
+    const onUpdatable = (data: {updatable: string[]}) => {
       const updated = useStore.getState().installedPlugins.map(plugin =>
         data.updatable.includes(plugin.name) ? {...plugin, updatable: true} : plugin
       )
       setInstalledPlugins(updated)
-    })
-
-    pluginsSocket.on('finished:install', () => {
+    }
+    const onFinishedInstall = () => {
       pluginsSocket.emit('getInstalled')
-    })
-
-    pluginsSocket.on('finished:uninstall', () => {
+    }
+    const onFinishedUninstall = () => {
       console.log('Finished uninstall')
-    })
-
-    pluginsSocket.on('connect', () => {
+    }
+    const onConnect = () => {
       pluginsSocket.emit('getInstalled')
       pluginsSocket.emit('search', searchParams)
-    })
+    }
+
+    pluginsSocket.on('results:installed', onInstalled)
+    pluginsSocket.on('results:updatable', onUpdatable)
+    pluginsSocket.on('finished:install', onFinishedInstall)
+    pluginsSocket.on('finished:uninstall', onFinishedUninstall)
+    pluginsSocket.on('connect', onConnect)
 
     pluginsSocket.emit('getInstalled')
 
     const interval = setInterval(() => pluginsSocket.emit('checkUpdates'), 1000 * 60 * 5)
-    return () => clearInterval(interval)
+    return () => {
+      clearInterval(interval)
+      pluginsSocket.off('results:installed', onInstalled)
+      pluginsSocket.off('results:updatable', onUpdatable)
+      pluginsSocket.off('finished:install', onFinishedInstall)
+      pluginsSocket.off('finished:uninstall', onFinishedUninstall)
+      pluginsSocket.off('connect', onConnect)
+    }
   }, [pluginsSocket])
 
   useEffect(() => {
     if (!pluginsSocket) return
-    pluginsSocket.emit('search', searchParams)
-    pluginsSocket.on('results:search', (data: {results: PluginDef[]}) => {
+
+    const onSearchResults = (data: {results: PluginDef[]}) => {
       setPlugins(data.results)
-    })
-    pluginsSocket.on('results:searcherror', () => {
+    }
+    const onSearchError = () => {
       useStore.getState().setToastState({open: true, title: 'Error retrieving plugins', success: false})
-    })
+    }
+
+    pluginsSocket.emit('search', searchParams)
+    pluginsSocket.on('results:search', onSearchResults)
+    pluginsSocket.on('results:searcherror', onSearchError)
+
+    return () => {
+      pluginsSocket.off('results:search', onSearchResults)
+      pluginsSocket.off('results:searcherror', onSearchError)
+    }
   }, [searchParams, pluginsSocket])
 
   const uninstallPlugin = (pluginName: string) => {
@@ -137,7 +155,7 @@ export const HomePage = () => {
           </button>
           <a
             className="pm-btn pm-btn-primary pm-btn-link"
-            href={`https://www.npmjs.com/search?q=${encodeURIComponent(searchTerm ? `keywords:etherpad ${searchTerm}` : 'keywords:etherpad')}`}
+            href={`//www.npmjs.com/search?q=${encodeURIComponent(searchTerm ? `keywords:etherpad ${searchTerm}` : 'keywords:etherpad')}`}
             target="_blank"
             rel="noreferrer"
           >
