@@ -65,6 +65,86 @@ describe(__filename, function () {
     });
   });
 
+  describe('aggregate', function () {
+    const mkFinding = (over: any) => ({
+      source: 'semgrep',
+      fingerprint: 'x'.repeat(64),
+      severity: 'medium',
+      category: 'bug',
+      file: 'src/a.ts',
+      line: 1,
+      ruleId: 'r',
+      message: 'm',
+      ...over,
+    });
+
+    it('drops findings below severity floor', function () {
+      const {aggregate} = require('../../../node/utils/releaseReview/aggregate');
+      const out = aggregate(
+        [[mkFinding({severity: 'low'}), mkFinding({severity: 'medium', fingerprint: 'a'.repeat(64)})]],
+        [],
+        'medium',
+      );
+      assert.equal(out.length, 1);
+      assert.equal(out[0].severity, 'medium');
+    });
+
+    it('drops findings whose fingerprint appears in suppression with wontfix or accepted-risk', function () {
+      const {aggregate} = require('../../../node/utils/releaseReview/aggregate');
+      const fp = 'a'.repeat(64);
+      const out = aggregate(
+        [[mkFinding({fingerprint: fp, severity: 'high'})]],
+        [{fingerprint: fp, status: 'wontfix', decidedAt: 'd', decidedInRun: 'r', rationale: 'r'}],
+        'medium',
+      );
+      assert.equal(out.length, 0);
+    });
+
+    it('keeps deferred findings but annotates them', function () {
+      const {aggregate} = require('../../../node/utils/releaseReview/aggregate');
+      const fp = 'a'.repeat(64);
+      const out = aggregate(
+        [[mkFinding({fingerprint: fp, severity: 'high'})]],
+        [{fingerprint: fp, status: 'deferred', decidedAt: 'd', decidedInRun: 'old-run', rationale: 'r', targetRelease: '2.9.0'}],
+        'medium',
+      );
+      assert.equal(out.length, 1);
+      assert.equal(out[0].firstSeen, 'old-run');
+    });
+
+    it('dedupes by fingerprint, keeping highest severity', function () {
+      const {aggregate} = require('../../../node/utils/releaseReview/aggregate');
+      const fp = 'a'.repeat(64);
+      const out = aggregate(
+        [
+          [mkFinding({fingerprint: fp, severity: 'medium', source: 'semgrep'})],
+          [mkFinding({fingerprint: fp, severity: 'high', source: 'auth-sessions'})],
+        ],
+        [],
+        'medium',
+      );
+      assert.equal(out.length, 1);
+      assert.equal(out[0].severity, 'high');
+      assert.match(out[0].source, /semgrep/);
+      assert.match(out[0].source, /auth-sessions/);
+    });
+
+    it('sorts by severity (high first) then category (cve > bug > perf > supply-chain)', function () {
+      const {aggregate} = require('../../../node/utils/releaseReview/aggregate');
+      const out = aggregate(
+        [[
+          mkFinding({fingerprint: 'a'.repeat(64), severity: 'medium', category: 'bug'}),
+          mkFinding({fingerprint: 'b'.repeat(64), severity: 'high', category: 'perf'}),
+          mkFinding({fingerprint: 'c'.repeat(64), severity: 'high', category: 'cve'}),
+          mkFinding({fingerprint: 'd'.repeat(64), severity: 'medium', category: 'cve'}),
+        ]],
+        [],
+        'medium',
+      );
+      assert.deepEqual(out.map((f: any) => f.fingerprint[0]), ['c', 'b', 'd', 'a']);
+    });
+  });
+
   describe('suppression', function () {
     const valid = path.join(FIXTURE_DIR, 'suppression-valid.yml');
     const malformed = path.join(FIXTURE_DIR, 'suppression-malformed.yml');
