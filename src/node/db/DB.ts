@@ -38,6 +38,12 @@ exports.db = null;
  */
 exports.init = async () => {
   exports.db = new Database(settings.dbType, settings.dbSettings, null);
+  // Expose dbSettings for plugin compatibility. ueberdb2 had this property;
+  // plugins (e.g. ep_set_title_on_pad) write to it to tune cache behaviour.
+  // fast-kv configures its cache via wrapperSettings at construction time, so
+  // mutations here are no-ops at the Rust level, but the property must exist
+  // to prevent plugins from throwing on load.
+  (exports.db as any).dbSettings = settings.dbSettings ?? {};
   await exports.db.init();
   const m = exports.db.metrics();
   if (m != null) {
