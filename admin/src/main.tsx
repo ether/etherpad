@@ -14,6 +14,7 @@ import {PadPage} from "./pages/PadPage.tsx";
 import {ToastDialog} from "./utils/Toast.tsx";
 import {ShoutPage} from "./pages/ShoutPage.tsx";
 import {UpdatePage} from "./pages/UpdatePage.tsx";
+import {QueryProvider} from './api/QueryProvider.tsx';
 
 const router = createBrowserRouter(createRoutesFromElements(
     <><Route element={<App/>}>
@@ -34,11 +35,13 @@ const router = createBrowserRouter(createRoutesFromElements(
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-      <I18nextProvider i18n={i18n}>
-      <Toast.Provider>
-          <ToastDialog/>
-          <RouterProvider router={router}/>
-      </Toast.Provider>
-      </I18nextProvider>
+      <QueryProvider>
+          <I18nextProvider i18n={i18n}>
+          <Toast.Provider>
+              <ToastDialog/>
+              <RouterProvider router={router}/>
+          </Toast.Provider>
+          </I18nextProvider>
+      </QueryProvider>
   </React.StrictMode>,
 )
