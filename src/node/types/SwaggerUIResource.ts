@@ -3,8 +3,9 @@ export type SwaggerUIResource = {
     [secondKey: string]: {
       operationId: string,
       summary?: string,
-      description?:string
-      responseSchema?: object
+      description?: string,
+      responseSchema?: object,
+      tags?: string[],
     }
   }
 }
