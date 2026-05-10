@@ -56,7 +56,7 @@ exports.setPadRaw = async (padId: string, r: string, authorId = '') => {
 
   const data = new Map();
   const existingAuthors = new Set();
-  const padDb = new Database('memory', {data});
+  const padDb = new Database('memory', {});
   await padDb.init();
   try {
     const processRecord = async (key:string, value: null|{
@@ -101,6 +101,7 @@ exports.setPadRaw = async (padId: string, r: string, authorId = '') => {
       }
       // @ts-ignore
       await padDb.set(key, value);
+      data.set(key, value);
     };
     // @ts-ignore
     const readOps = new Stream(Object.entries(records)).map(([k, v]) => processRecord(k, v));

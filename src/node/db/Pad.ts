@@ -712,13 +712,13 @@ class Pad {
     // delete all chat messages
     // @ts-ignore
     p.push(timesLimit(this.chatHead + 1, 500, async (i: string) => {
-      await this.db.remove(`pad:${this.id}:chat:${i}`, null);
+      await this.db.remove(`pad:${this.id}:chat:${i}`);
     }));
 
     // delete all revisions
     // @ts-ignore
     p.push(timesLimit(this.head + 1, 500, async (i: string) => {
-      await this.db.remove(`pad:${this.id}:revs:${i}`, null);
+      await this.db.remove(`pad:${this.id}:revs:${i}`);
     }));
 
     // remove pad from all authors who contributed
