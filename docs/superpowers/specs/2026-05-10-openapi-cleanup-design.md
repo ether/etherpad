@@ -63,7 +63,7 @@ tags: [
 
 ### Backfill missing entries
 
-14 operations added to `resources` with proper summaries. Most go under `pad`; `anonymizeAuthor` under `author`; `getStats` and (re-tagged) `checkToken` under a new `server` resource group.
+14 operations added to `resources` with proper summaries. Most go under `pad`; `anonymizeAuthor` under `author`; `getStats` under a new `server` resource group.
 
 | Tag    | Operation                  | Summary                                                       |
 |--------|----------------------------|---------------------------------------------------------------|
@@ -82,7 +82,7 @@ tags: [
 | author | `anonymizeAuthor`          | anonymizes an author across all their edits                   |
 | server | `getStats`                 | returns server-wide statistics                                |
 
-`checkToken` moves from pad → server (was previously the only "system-level" op nested under pad).
+`checkToken` stays under `pad` in the resources map (preserves `/rest/<ver>/pad/checkToken`) but gains an explicit `tags: ['server']` override so it groups correctly in OpenAPI without changing its REST URL.
 
 ### Runtime vs published spec split
 

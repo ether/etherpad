@@ -237,6 +237,11 @@ const resources:SwaggerUIResource = {
       operationId: 'sendClientsMessage',
       summary: 'sends a custom message of type msg to the pad',
     },
+    checkToken: {
+      operationId: 'checkToken',
+      summary: 'returns ok when the current API token is valid',
+      tags: ['server'],
+    },
     getChatHistory: {
       operationId: 'getChatHistory',
       summary: 'returns the chat history',
@@ -307,10 +312,6 @@ const resources:SwaggerUIResource = {
 
   // Server
   server: {
-    checkToken: {
-      operationId: 'checkToken',
-      summary: 'returns ok when the current API token is valid',
-    },
     getStats: {
       operationId: 'getStats',
       summary: 'returns server-wide statistics',

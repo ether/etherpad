@@ -208,5 +208,13 @@ describe(__filename, function () {
       const r = await agent.post(endPoint('checkToken'));
       assertResolved('POST checkToken', r.body);
     });
+
+    // Regression for the REST-style routes — checkToken's _restPath is
+    // derived from its position in the resources map (pad/checkToken).
+    // Tagging it as 'server' must not move it to /rest/X/server/checkToken.
+    it('REST-style /rest/<ver>/pad/checkToken still resolves', async function () {
+      const r = await agent.get(`/rest/${apiVersion}/pad/checkToken`);
+      assertResolved('GET /rest pad/checkToken', r.body);
+    });
   });
 });
