@@ -3,269 +3,344 @@ import {useEffect, useMemo, useState} from "react";
 import {InstalledPlugin, PluginDef, SearchParams} from "./Plugin.ts";
 import {useDebounce} from "../utils/useDebounce.ts";
 import {Trans, useTranslation} from "react-i18next";
-import {SearchField} from "../components/SearchField.tsx";
-import {ArrowUpFromDot, Download, Trash} from "lucide-react";
+import {ArrowUpFromDot, Download, ExternalLink, Plug, RefreshCw, Search, Trash, X} from "lucide-react";
 import {IconButton} from "../components/IconButton.tsx";
-import {determineSorting} from "../utils/sorting.ts";
 
+const POPULAR_THRESHOLD = 10_000
+
+const fmtDownloads = (n: number): string => {
+  if (n >= 10_000) return `${Math.round(n / 1000)}k`
+  if (n >= 1_000) return `${(n / 1000).toFixed(1)}k`
+  return String(n)
+}
 
 export const HomePage = () => {
-    const pluginsSocket = useStore(state=>state.pluginsSocket)
-    const [plugins,setPlugins] = useState<PluginDef[]>([])
-  const installedPlugins = useStore(state=>state.installedPlugins)
-  const setInstalledPlugins = useStore(state=>state.setInstalledPlugins)
+  const pluginsSocket = useStore(state => state.pluginsSocket)
+  const [plugins, setPlugins] = useState<PluginDef[]>([])
+  const installedPlugins = useStore(state => state.installedPlugins)
+  const setInstalledPlugins = useStore(state => state.setInstalledPlugins)
   const [searchParams, setSearchParams] = useState<SearchParams>({
     offset: 0,
     limit: 99999,
-    sortBy: 'name',
-    sortDir: 'asc',
-    searchTerm: ''
+    sortBy: 'downloads',
+    sortDir: 'desc',
+    searchTerm: '',
   })
+  const [searchTerm, setSearchTerm] = useState<string>('')
+  const {t} = useTranslation()
 
-  const filteredInstallablePlugins = useMemo(()=>{
-    return plugins.sort((a, b)=>{
-      if(searchParams.sortBy === "version"){
-        if(searchParams.sortDir === "asc"){
-          return a.version.localeCompare(b.version)
-        }
-        return b.version.localeCompare(a.version)
+  const updatableCount = useMemo(
+    () => installedPlugins.filter(p => p.updatable).length,
+    [installedPlugins]
+  )
+
+  const sortedInstalledPlugins = useMemo(
+    () => [...installedPlugins].sort((a, b) => a.name.localeCompare(b.name)),
+    [installedPlugins]
+  )
+
+  const filteredInstallablePlugins = useMemo(() => {
+    return [...plugins].sort((a, b) => {
+      const dir = searchParams.sortDir === 'asc' ? 1 : -1
+      if (searchParams.sortBy === 'downloads') {
+        return ((b.downloads ?? 0) - (a.downloads ?? 0)) * (dir * -1)
       }
-
-      if(searchParams.sortBy === "last-updated"){
-        if(searchParams.sortDir === "asc"){
-          return a.time.localeCompare(b.time)
-        }
-        return b.time.localeCompare(a.time)
+      if (searchParams.sortBy === 'version') {
+        return a.version.localeCompare(b.version) * dir
       }
-
-
-      if (searchParams.sortBy === "name") {
-        if(searchParams.sortDir === "asc"){
-          return a.name.localeCompare(b.name)
-        }
-        return b.name.localeCompare(a.name)
+      if (searchParams.sortBy === 'last-updated') {
+        return a.time.localeCompare(b.time) * dir
       }
-      return 0
+      return a.name.localeCompare(b.name) * dir
     })
   }, [plugins, searchParams])
 
-    const sortedInstalledPlugins = useMemo(()=>{
-        return useStore.getState().installedPlugins.sort((a, b)=>{
+  useEffect(() => {
+    if (!pluginsSocket) return
 
-            if(a.name < b.name){
-                return -1
-            }
-            if(a.name > b.name){
-                return 1
-            }
-            return 0
-        })
+    pluginsSocket.on('results:installed', (data: {installed: InstalledPlugin[]}) => {
+      setInstalledPlugins(data.installed)
+    })
 
-    } ,[installedPlugins, searchParams])
+    pluginsSocket.on('results:updatable', (data) => {
+      const updated = useStore.getState().installedPlugins.map(plugin =>
+        data.updatable.includes(plugin.name) ? {...plugin, updatable: true} : plugin
+      )
+      setInstalledPlugins(updated)
+    })
 
-    const [searchTerm, setSearchTerm] = useState<string>('')
-    const {t} = useTranslation()
+    pluginsSocket.on('finished:install', () => {
+      pluginsSocket.emit('getInstalled')
+    })
 
+    pluginsSocket.on('finished:uninstall', () => {
+      console.log('Finished uninstall')
+    })
 
-    useEffect(() => {
-        if(!pluginsSocket){
-            return
-        }
+    pluginsSocket.on('connect', () => {
+      pluginsSocket.emit('getInstalled')
+      pluginsSocket.emit('search', searchParams)
+    })
 
-        pluginsSocket.on('results:installed', (data:{
-            installed: InstalledPlugin[]
-        })=>{
-            setInstalledPlugins(data.installed)
-        })
+    pluginsSocket.emit('getInstalled')
 
-        pluginsSocket.on('results:updatable', (data) => {
-          const newInstalledPlugins = useStore.getState().installedPlugins.map(plugin => {
-            if (data.updatable.includes(plugin.name)) {
-              return {
-                ...plugin,
-                updatable: true
-              }
-            }
-            return plugin
-          })
-         setInstalledPlugins(newInstalledPlugins)
-        })
+    const interval = setInterval(() => pluginsSocket.emit('checkUpdates'), 1000 * 60 * 5)
+    return () => clearInterval(interval)
+  }, [pluginsSocket])
 
-        pluginsSocket.on('finished:install', () => {
-            pluginsSocket!.emit('getInstalled');
-        })
+  useEffect(() => {
+    if (!pluginsSocket) return
+    pluginsSocket.emit('search', searchParams)
+    pluginsSocket.on('results:search', (data: {results: PluginDef[]}) => {
+      setPlugins(data.results)
+    })
+    pluginsSocket.on('results:searcherror', () => {
+      useStore.getState().setToastState({open: true, title: 'Error retrieving plugins', success: false})
+    })
+  }, [searchParams, pluginsSocket])
 
-        pluginsSocket.on('finished:uninstall', () => {
-            console.log("Finished uninstall")
-        })
+  const uninstallPlugin = (pluginName: string) => {
+    pluginsSocket!.emit('uninstall', pluginName)
+    setInstalledPlugins(installedPlugins.filter(i => i.name !== pluginName))
+  }
 
+  const installPlugin = (pluginName: string) => {
+    pluginsSocket!.emit('install', pluginName)
+    setPlugins(plugins.filter(p => p.name !== pluginName))
+  }
 
-        // Reload on reconnect
-        pluginsSocket.on('connect', ()=>{
-            // Initial retrieval of installed plugins
-            pluginsSocket.emit('getInstalled');
-            pluginsSocket.emit('search', searchParams)
-        })
+  useDebounce(() => {
+    setSearchParams({...searchParams, offset: 0, searchTerm})
+  }, 500, [searchTerm])
 
-        pluginsSocket.emit('getInstalled');
+  return (
+    <div className="pm-page">
 
-        // check for updates every 5mins
-        const interval = setInterval(() => {
-            pluginsSocket.emit('checkUpdates');
-        }, 1000 * 60 * 5);
-
-        return ()=>{
-            clearInterval(interval)
-        }
-        }, [pluginsSocket]);
-
-
-    useEffect(() => {
-        if (!pluginsSocket) {
-            return
-        }
-        pluginsSocket?.emit('search', searchParams)
-        pluginsSocket!.on('results:search', (data: {
-            results: PluginDef[]
-        }) => {
-            setPlugins(data.results)
-        })
-        pluginsSocket!.on('results:searcherror', (data: {error: string}) => {
-            console.log(data.error)
-            useStore.getState().setToastState({
-                open: true,
-                title: "Error retrieving plugins",
-                success: false
-            })
-        })
-    }, [searchParams, pluginsSocket]);
-
-    const uninstallPlugin  = (pluginName: string)=>{
-        pluginsSocket!.emit('uninstall', pluginName);
-        // Remove plugin
-        setInstalledPlugins(installedPlugins.filter(i=>i.name !== pluginName))
-    }
-
-    const installPlugin = (pluginName: string)=>{
-        pluginsSocket!.emit('install', pluginName);
-        setPlugins(plugins.filter(plugin=>plugin.name !== pluginName))
-    }
-
-    useDebounce(()=>{
-        setSearchParams({
-            ...searchParams,
-            offset: 0,
-            searchTerm: searchTerm
-        })
-    }, 500, [searchTerm])
-
-
-    return <div>
-        <h1><Trans i18nKey="admin_plugins"/></h1>
-
-        <h2><Trans i18nKey="admin_plugins.installed"/></h2>
-
-        <table id="installed-plugins">
-            <thead>
-            <tr>
-                <th><Trans i18nKey="admin_plugins.name"/></th>
-                <th><Trans i18nKey="admin_plugins.version"/></th>
-                <th><Trans i18nKey="ep_admin_pads:ep_adminpads2_action"/></th>
-            </tr>
-            </thead>
-            <tbody style={{overflow: 'auto'}}>
-            {sortedInstalledPlugins.map((plugin, index) => {
-                return <tr key={index}>
-                    <td><a rel="noopener noreferrer" href={`https://npmjs.com/${plugin.name}`} target="_blank">{plugin.name}</a></td>
-                    <td>{plugin.version}</td>
-                    <td>
-                    {
-                        plugin.updatable ?
-                            <IconButton onClick={() => installPlugin(plugin.name)} icon={<ArrowUpFromDot/>} title="Update"></IconButton>
-                            : <IconButton disabled={plugin.name == "ep_etherpad-lite"} icon={<Trash/>} title={<Trans i18nKey="admin_plugins.installed_uninstall.value"/>} onClick={() => uninstallPlugin(plugin.name)}/>
-                    }
-                    </td>
-                        </tr>
-                    })}
-            </tbody>
-        </table>
-
-
-        <h2><Trans i18nKey="admin_plugins.available"/></h2>
-        <SearchField onChange={v=>{setSearchTerm(v.target.value)}} placeholder={t('admin_plugins.available_search.placeholder')} value={searchTerm}/>
-
-      <div className="table-container">
-        <table id="available-plugins">
-            <thead>
-            <tr>
-                <th className={determineSorting(searchParams.sortBy, searchParams.sortDir == "asc", 'name')} onClick={()=>{
-                  setSearchParams({
-                    ...searchParams,
-                    sortBy: 'name',
-                    sortDir: searchParams.sortDir === "asc"? "desc": "asc"
-                  })
-                }}>
-                  <Trans i18nKey="admin_plugins.name" /></th>
-                <th style={{width: '30%'}}><Trans i18nKey="admin_plugins.description"/></th>
-                <th className={determineSorting(searchParams.sortBy, searchParams.sortDir == "asc", 'version')} onClick={()=>{
-                  setSearchParams({
-                    ...searchParams,
-                    sortBy: 'version',
-                    sortDir: searchParams.sortDir === "asc"? "desc": "asc"
-                  })
-                }}><Trans i18nKey="admin_plugins.version"/></th>
-                <th className={determineSorting(searchParams.sortBy, searchParams.sortDir == "asc", 'last-updated')} onClick={()=>{
-                  setSearchParams({
-                    ...searchParams,
-                    sortBy: 'last-updated',
-                    sortDir: searchParams.sortDir === "asc"? "desc": "asc"
-                  })
-                }}><Trans i18nKey="admin_plugins.last-update"/></th>
-                <th><Trans i18nKey="ep_admin_pads:ep_adminpads2_action"/></th>
-            </tr>
-            </thead>
-            <tbody style={{overflow: 'auto'}}>
-            {(filteredInstallablePlugins.length > 0) ?
-              filteredInstallablePlugins.map((plugin) => {
-                        return <tr key={plugin.name}>
-                            <td><a rel="noopener noreferrer" href={`https://npmjs.com/${plugin.name}`} target="_blank">{plugin.name}</a></td>
-                            <td>
-                              {plugin.description}
-                              {plugin.disables && plugin.disables.length > 0 && (
-                                <div
-                                  className="plugin-disables"
-                                  role="alert"
-                                  title={t('admin_plugins.disables.warning_title')}
-                                  style={{
-                                    marginTop: '0.25rem',
-                                    padding: '0.2rem 0.5rem',
-                                    borderRadius: '4px',
-                                    fontSize: '0.85em',
-                                    background: 'rgba(180, 83, 9, 0.15)',
-                                    border: '1px solid rgba(180, 83, 9, 0.4)',
-                                    color: '#92400e',
-                                    display: 'inline-block',
-                                  }}
-                                >
-                                  <strong><Trans i18nKey="admin_plugins.disables.label"/></strong>{' '}
-                                  {plugin.disables
-                                      .map((tag) => tag.replace(/^@feature:/, ''))
-                                      .join(', ')}
-                                </div>
-                              )}
-                            </td>
-                            <td>{plugin.version}</td>
-                            <td>{plugin.time}</td>
-                            <td>
-                                <IconButton icon={<Download/>} onClick={() => installPlugin(plugin.name)} title={<Trans i18nKey="admin_plugins.available_install.value"/>}/>
-                            </td>
-                        </tr>
-                    })
-                :
-                <tr><td colSpan={5}>{searchTerm == '' ? <Trans i18nKey="pad.loading"/>: <Trans i18nKey="admin_plugins.available_not-found"/>}</td></tr>
-            }
-            </tbody>
-        </table>
+      {/* ── Page header ────────────────────────────────────────────────── */}
+      <div className="pm-header">
+        <div>
+          <div className="pm-crumbs">
+            Admin <span className="pm-crumbs-sep">›</span> Plugins
+          </div>
+          <h1 className="pm-title">{t('admin_plugins')}</h1>
+          <p className="pm-subtitle">
+            Installiere, aktualisiere und entferne Etherpad-Plugins.
+            Änderungen erfordern einen Server-Neustart.
+          </p>
+        </div>
+        <div className="pm-header-actions">
+          <button
+            className="pm-btn pm-btn-ghost"
+            onClick={() => pluginsSocket?.emit('search', searchParams)}
+          >
+            <RefreshCw size={14}/> Katalog neu laden
+          </button>
+          <a
+            className="pm-btn pm-btn-primary pm-btn-link"
+            href={`https://www.npmjs.com/search?q=${encodeURIComponent(searchTerm ? `keywords:etherpad ${searchTerm}` : 'keywords:etherpad')}`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            <ExternalLink size={14}/> Auf npm suchen
+          </a>
+        </div>
       </div>
+
+      {/* ── Stats row ──────────────────────────────────────────────────── */}
+      <div className="pm-stats">
+        <div className="pm-stat pm-stat--primary">
+          <div className="pm-stat-label"><Trans i18nKey="admin_plugins.installed"/></div>
+          <div className="pm-stat-value">{installedPlugins.length}</div>
+          <div className="pm-stat-hint">Davon 1 Core</div>
+        </div>
+        <div className="pm-stat">
+          <div className="pm-stat-label"><Trans i18nKey="admin_plugins.available"/></div>
+          <div className="pm-stat-value">{plugins.length}</div>
+        </div>
+        <div className={`pm-stat${updatableCount > 0 ? ' pm-stat--warn' : ''}`}>
+          <div className="pm-stat-label">Updates verfügbar</div>
+          <div className="pm-stat-value">{updatableCount}</div>
+          {updatableCount > 0 && (
+            <button
+              className="pm-stat-action"
+              onClick={() => pluginsSocket?.emit('checkUpdates')}
+            >
+              Aktualisieren →
+            </button>
+          )}
+        </div>
+        <div className="pm-stat">
+          <div className="pm-stat-label">Plugin-Quelle</div>
+          <div className="pm-stat-value pm-stat-value--sm">npm</div>
+          <div className="pm-stat-hint">registry.npmjs.org</div>
+        </div>
+      </div>
+
+      {/* ── Installed plugins ──────────────────────────────────────────── */}
+      <section className="pm-section">
+        <div className="pm-section-header">
+          <h2><Trans i18nKey="admin_plugins.installed"/></h2>
+          <span className="pm-count-badge">{installedPlugins.length}</span>
+          <div className="pm-spacer"/>
+          <button
+            className="pm-btn pm-btn-ghost"
+            onClick={() => pluginsSocket?.emit('checkUpdates')}
+          >
+            <RefreshCw size={14}/> Nach Updates suchen
+          </button>
+        </div>
+
+        <div className="pm-installed">
+          {sortedInstalledPlugins.map(plugin => (
+            <div key={plugin.name} className="pm-installed-row">
+              <div className="pm-installed-icon">
+                <Plug size={16}/>
+              </div>
+              <div className="pm-installed-main">
+                <div className="pm-installed-title">
+                  <span className="pm-mono">{plugin.name}</span>
+                  {plugin.name === 'ep_etherpad-lite' && (
+                    <span className="pm-tag pm-tag--core">Core</span>
+                  )}
+                  <span className="pm-tag pm-tag--ver">v{plugin.version}</span>
+                </div>
+                {plugin.description && (
+                  <div className="pm-installed-desc">{plugin.description}</div>
+                )}
+              </div>
+              <div className="pm-installed-actions">
+                {plugin.updatable ? (
+                  <IconButton
+                    onClick={() => installPlugin(plugin.name)}
+                    icon={<ArrowUpFromDot size={14}/>}
+                    title="Update"
+                  />
+                ) : (
+                  <IconButton
+                    disabled={plugin.name === 'ep_etherpad-lite'}
+                    icon={<Trash size={14}/>}
+                    title={<Trans i18nKey="admin_plugins.installed_uninstall.value"/>}
+                    onClick={() => uninstallPlugin(plugin.name)}
+                  />
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── Available plugins ──────────────────────────────────────────── */}
+      <section className="pm-section">
+        <div className="pm-section-header">
+          <h2><Trans i18nKey="admin_plugins.available"/></h2>
+          <span className="pm-count-badge">{filteredInstallablePlugins.length}</span>
+          <div className="pm-spacer"/>
+          <div className="pm-toolbar">
+            <div className="pm-search">
+              <Search size={14} className="pm-search-icon"/>
+              <input
+                className="pm-search-input"
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                placeholder={t('admin_plugins.available_search.placeholder')}
+              />
+              {searchTerm && (
+                <button className="pm-search-clear" onClick={() => setSearchTerm('')}>
+                  <X size={12}/>
+                </button>
+              )}
+            </div>
+            <select
+              className="pm-select"
+              value={searchParams.sortBy}
+              onChange={e => {
+                const sortBy = e.target.value as SearchParams['sortBy']
+                setSearchParams({
+                  ...searchParams,
+                  sortBy,
+                  sortDir: sortBy === 'downloads' ? 'desc' : 'asc',
+                })
+              }}
+            >
+              <option value="downloads">Beliebteste</option>
+              <option value="name">Name (A–Z)</option>
+              <option value="version">Version</option>
+              <option value="last-updated">Zuletzt aktualisiert</option>
+            </select>
+          </div>
+        </div>
+
+        {filteredInstallablePlugins.length > 0 ? (
+          <div className="pm-table-wrap">
+            <table className="pm-table">
+              <thead>
+                <tr>
+                  <th><Trans i18nKey="admin_plugins.name"/></th>
+                  <th><Trans i18nKey="admin_plugins.description"/></th>
+                  <th style={{width: 62, textAlign: 'right'}}><Trans i18nKey="admin_plugins.version"/></th>
+                  <th style={{width: 96}}><Trans i18nKey="admin_plugins.last-update"/></th>
+                  <th style={{width: 68, textAlign: 'right'}}>Downloads</th>
+                  <th style={{width: 108, textAlign: 'right'}}></th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredInstallablePlugins.map(plugin => (
+                  <tr key={plugin.name}>
+                    <td>
+                      <div className="pm-cell-name">
+                        <span className="pm-cell-icon"><Plug size={13}/></span>
+                        <div className="pm-cell-title">
+                          <span className="pm-mono">{plugin.name}</span>
+                          {(plugin.downloads ?? 0) >= POPULAR_THRESHOLD && (
+                            <span className="pm-tag pm-tag--popular">Beliebt</span>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="pm-cell-desc">
+                      {plugin.description}
+                      {plugin.disables && plugin.disables.length > 0 && (
+                        <div
+                          className="plugin-disables"
+                          role="alert"
+                          title={t('admin_plugins.disables.warning_title')}
+                        >
+                          <strong><Trans i18nKey="admin_plugins.disables.label"/></strong>{' '}
+                          {plugin.disables
+                            .map(tag => tag.replace(/^@feature:/, ''))
+                            .join(', ')}
+                        </div>
+                      )}
+                    </td>
+                    <td className="pm-num">{plugin.version}</td>
+                    <td className="pm-cell-date">{plugin.time}</td>
+                    <td className="pm-num">
+                      {plugin.downloads != null ? fmtDownloads(plugin.downloads) : '—'}
+                    </td>
+                    <td className="pm-cell-action">
+                      <button
+                        className="pm-btn pm-btn-primary pm-btn--sm"
+                        onClick={() => installPlugin(plugin.name)}
+                      >
+                        <Download size={13}/> <Trans i18nKey="admin_plugins.available_install.value"/>
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="pm-empty">
+            <div className="pm-empty-icon">∅</div>
+            <div className="pm-empty-title">
+              {searchTerm === ''
+                ? <Trans i18nKey="pad.loading"/>
+                : <Trans i18nKey="admin_plugins.available_not-found"/>}
+            </div>
+          </div>
+        )}
+      </section>
     </div>
+  )
 }
