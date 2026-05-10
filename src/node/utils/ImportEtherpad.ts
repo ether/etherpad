@@ -26,7 +26,7 @@ const db = require('../db/DB');
 const hooks = require('../../static/js/pluginfw/hooks');
 import log4js from 'log4js';
 const supportedElems = require('../../static/js/contentcollector').supportedElems;
-import {Database} from 'ueberdb2';
+import {Database} from '@samtv12345/ueberdb-rs';
 
 const logger = log4js.getLogger('ImportEtherpad');
 
