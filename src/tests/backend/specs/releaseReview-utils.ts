@@ -288,6 +288,64 @@ describe(__filename, function () {
     });
   });
 
+  describe('cli', function () {
+    const {execFileSync} = require('child_process');
+    const tmpDir = path.join(FIXTURE_DIR, '_tmp-cli');
+    const cliPath = path.join(__dirname, '..', '..', '..', 'node', 'utils', 'releaseReview', 'cli.ts');
+
+    beforeEach(function () {
+      if (fs.existsSync(tmpDir)) fs.rmSync(tmpDir, {recursive: true});
+      fs.mkdirSync(tmpDir, {recursive: true});
+    });
+    after(function () {
+      if (fs.existsSync(tmpDir)) fs.rmSync(tmpDir, {recursive: true});
+    });
+
+    const runCli = (args: string[]): string =>
+      execFileSync('node', ['--import', 'tsx', cliPath, ...args], {encoding: 'utf8'});
+
+    it('next-run-id prints expected id for empty base dir', function () {
+      this.timeout(15000);
+      const out = runCli(['next-run-id', tmpDir]).trim();
+      assert.match(out, /^run-\d{4}-\d{2}-\d{2}-1$/);
+    });
+
+    it('aggregate reads runDir JSONs, writes merged.json with severity floor applied', function () {
+      this.timeout(15000);
+      const runDir = path.join(tmpDir, 'run-2026-05-09-1');
+      fs.mkdirSync(runDir);
+      fs.writeFileSync(path.join(runDir, 'tool-findings.json'), JSON.stringify([
+        {source: 'semgrep', fingerprint: 'a'.repeat(64), severity: 'high', category: 'cve', file: 'x.ts', line: 1, ruleId: 'r1', message: 'm1'},
+        {source: 'semgrep', fingerprint: 'b'.repeat(64), severity: 'low', category: 'lint', file: 'x.ts', line: 2, ruleId: 'r2', message: 'm2'},
+      ]));
+      const supPath = path.join(tmpDir, 'sup.yml');
+      fs.writeFileSync(supPath, 'findings: []\n');
+      runCli(['aggregate', runDir, supPath, 'medium']);
+      const merged = JSON.parse(fs.readFileSync(path.join(runDir, 'merged.json'), 'utf8'));
+      assert.equal(merged.length, 1);
+      assert.equal(merged[0].severity, 'high');
+    });
+
+    it('aggregate enriches findings without fingerprint by computing from file content', function () {
+      this.timeout(15000);
+      const runDir = path.join(tmpDir, 'run-2026-05-09-2');
+      fs.mkdirSync(runDir);
+      // Use the sample fixture as the "source under review".
+      const sampleAbs = path.join(FIXTURE_DIR, 'sample-source.ts');
+      fs.writeFileSync(path.join(runDir, 'auth-sessions.json'), JSON.stringify({
+        findings: [
+          {source: 'auth-sessions', severity: 'high', category: 'bug', file: sampleAbs, line: 6, ruleId: 'auth-sessions.token-equality', message: 'token == null'},
+        ],
+      }));
+      const supPath = path.join(tmpDir, 'sup-empty.yml');
+      fs.writeFileSync(supPath, 'findings: []\n');
+      runCli(['aggregate', runDir, supPath, 'medium']);
+      const merged = JSON.parse(fs.readFileSync(path.join(runDir, 'merged.json'), 'utf8'));
+      assert.equal(merged.length, 1);
+      assert.match(merged[0].fingerprint, /^[0-9a-f]{64}$/);
+    });
+  });
+
   describe('suppression', function () {
     const valid = path.join(FIXTURE_DIR, 'suppression-valid.yml');
     const malformed = path.join(FIXTURE_DIR, 'suppression-malformed.yml');
