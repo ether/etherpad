@@ -1,5 +1,5 @@
 'use strict';
-import {Database} from "ueberdb2";
+import {Database} from '@samtv12345/ueberdb-rs';
 import {AChangeSet, APool, AText} from "../types/PadType";
 import {MapArrayType} from "../types/MapType";
 
