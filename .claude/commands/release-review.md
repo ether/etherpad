@@ -18,7 +18,7 @@ If the user passed `--resume <run-id>`, set `RESUME=1` and `RUN_ID=<run-id>`. Sk
 
 Run:
 ```bash
-pnpm --filter ep_etherpad-lite exec tsx src/node/utils/releaseReview/cli.ts next-run-id /tmp/release-review
+pnpm --filter ep_etherpad-lite exec tsx node/utils/releaseReview/cli.ts next-run-id /tmp/release-review
 ```
 
 This prints the next run-id (e.g. `run-2026-05-09-1`). **Remember the run-id in your conversation state** — Bash tool calls do not persist shell variables across invocations, so every later step that needs the run-id or run-dir path must inline the literal values.
@@ -54,7 +54,7 @@ Block until all four complete. Verify each output JSON exists. For any that didn
 ### 3a. Aggregate
 
 ```bash
-pnpm --filter ep_etherpad-lite exec tsx src/node/utils/releaseReview/cli.ts \
+pnpm --filter ep_etherpad-lite exec tsx node/utils/releaseReview/cli.ts \
   aggregate /tmp/release-review/<run-id> docs/reviews/known-findings.yml medium
 ```
 (Replace `<run-id>` with the literal run-id from Phase 0.)
@@ -63,7 +63,7 @@ Reads all `*.json` from the run-dir except `merged.json` / `triage.json`. Writes
 ### 3b. Triage
 
 ```bash
-pnpm --filter ep_etherpad-lite exec tsx src/node/utils/releaseReview/cli.ts \
+pnpm --filter ep_etherpad-lite exec tsx node/utils/releaseReview/cli.ts \
   triage /tmp/release-review/<run-id>
 ```
 (Replace `<run-id>` with the literal run-id from Phase 0.)
@@ -131,7 +131,7 @@ Write a `SummaryInput` JSON to `/tmp/release-review/<run-id>/summary-input.json`
 
 Then run:
 ```bash
-pnpm --filter ep_etherpad-lite exec tsx src/node/utils/releaseReview/cli.ts \
+pnpm --filter ep_etherpad-lite exec tsx node/utils/releaseReview/cli.ts \
   summary /tmp/release-review/<run-id>/summary-input.json \
   "docs/reviews/<version>-summary.md"
 ```

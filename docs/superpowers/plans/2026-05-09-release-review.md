@@ -1182,7 +1182,7 @@ git commit -m "feat(reviews): add session summary writer"
 
 ## Task 9: CLI entry point
 
-A single `cli.ts` that dispatches to all helper modules. Invoked from the slash command via `pnpm --filter ep_etherpad-lite exec tsx src/node/utils/releaseReview/cli.ts <command> [args...]`. Reads finding JSON files from a run-dir, writes results back to the run-dir.
+A single `cli.ts` that dispatches to all helper modules. Invoked from the slash command via `pnpm --filter ep_etherpad-lite exec tsx node/utils/releaseReview/cli.ts <command> [args...]`. Reads finding JSON files from a run-dir, writes results back to the run-dir.
 
 Commands:
 - `next-run-id <baseDir>` → prints next run-id
@@ -1923,7 +1923,7 @@ If the user passed `--resume <run-id>`, set `RESUME=1` and `RUN_ID=<run-id>`. Sk
 Run:
 ```bash
 RUN_DIR_BASE=/tmp/release-review
-RUN_ID=$(pnpm --filter ep_etherpad-lite exec tsx src/node/utils/releaseReview/cli.ts next-run-id "$RUN_DIR_BASE")
+RUN_ID=$(pnpm --filter ep_etherpad-lite exec tsx node/utils/releaseReview/cli.ts next-run-id "$RUN_DIR_BASE")
 mkdir -p "$RUN_DIR_BASE/$RUN_ID"
 echo "$RUN_ID"
 ```
@@ -1952,7 +1952,7 @@ Block until all four complete. Verify each output JSON exists. For any that didn
 ### 3a. Aggregate
 
 ```bash
-pnpm --filter ep_etherpad-lite exec tsx src/node/utils/releaseReview/cli.ts \
+pnpm --filter ep_etherpad-lite exec tsx node/utils/releaseReview/cli.ts \
   aggregate "$RUN_DIR_BASE/$RUN_ID" docs/reviews/known-findings.yml medium
 ```
 Reads all `*.json` from the run-dir except `merged.json` / `triage.json`. Writes `merged.json`.
@@ -1960,7 +1960,7 @@ Reads all `*.json` from the run-dir except `merged.json` / `triage.json`. Writes
 ### 3b. Triage
 
 ```bash
-pnpm --filter ep_etherpad-lite exec tsx src/node/utils/releaseReview/cli.ts \
+pnpm --filter ep_etherpad-lite exec tsx node/utils/releaseReview/cli.ts \
   triage "$RUN_DIR_BASE/$RUN_ID"
 ```
 Writes `triage.json` with `{fixNow, issue, suppress}` buckets.
@@ -2027,7 +2027,7 @@ Write a `SummaryInput` JSON to `$RUN_DIR_BASE/$RUN_ID/summary-input.json`:
 
 Then run:
 ```bash
-pnpm --filter ep_etherpad-lite exec tsx src/node/utils/releaseReview/cli.ts \
+pnpm --filter ep_etherpad-lite exec tsx node/utils/releaseReview/cli.ts \
   summary "$RUN_DIR_BASE/$RUN_ID/summary-input.json" \
   "docs/reviews/<version>-summary.md"
 ```
@@ -2206,7 +2206,7 @@ cat > /tmp/release-review-smoke/run-2026-05-09-1/seed.json <<'EOF'
 EOF
 echo 'findings: []' > /tmp/release-review-smoke/sup.yml
 
-pnpm --filter ep_etherpad-lite exec tsx src/node/utils/releaseReview/cli.ts \
+pnpm --filter ep_etherpad-lite exec tsx node/utils/releaseReview/cli.ts \
   aggregate /tmp/release-review-smoke/run-2026-05-09-1 /tmp/release-review-smoke/sup.yml medium
 
 cat /tmp/release-review-smoke/run-2026-05-09-1/merged.json
@@ -2217,7 +2217,7 @@ Expected: `merged.json` contains exactly one entry (the `high` finding); the `lo
 - [ ] **Step 3: Verify triage writes buckets**
 
 ```bash
-pnpm --filter ep_etherpad-lite exec tsx src/node/utils/releaseReview/cli.ts \
+pnpm --filter ep_etherpad-lite exec tsx node/utils/releaseReview/cli.ts \
   triage /tmp/release-review-smoke/run-2026-05-09-1
 cat /tmp/release-review-smoke/run-2026-05-09-1/triage.json
 ```
@@ -2227,7 +2227,7 @@ Expected: JSON with `fixNow`, `issue`, `suppress` keys; the high finding (no rem
 - [ ] **Step 4: Verify suppression append is idempotent on file shape**
 
 ```bash
-pnpm --filter ep_etherpad-lite exec tsx src/node/utils/releaseReview/cli.ts \
+pnpm --filter ep_etherpad-lite exec tsx node/utils/releaseReview/cli.ts \
   append-suppression docs/reviews/known-findings.yml \
   '{"fingerprint":"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","status":"wontfix","decidedAt":"2026-05-09","decidedInRun":"smoke","rationale":"smoke test"}'
 
