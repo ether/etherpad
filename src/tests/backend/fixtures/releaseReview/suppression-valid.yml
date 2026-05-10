@@ -1,0 +1,15 @@
+findings:
+  - fingerprint: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    status: wontfix
+    ruleId: semgrep.test.rule
+    file: src/x.ts
+    line: 14
+    decidedAt: 2026-05-09
+    decidedInRun: run-2026-05-09-1
+    rationale: "Used only for non-security pad IDs."
+  - fingerprint: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+    status: deferred
+    decidedAt: 2026-05-09
+    decidedInRun: run-2026-05-09-1
+    rationale: "Tracked in #7712."
+    targetRelease: "2.9.0"
