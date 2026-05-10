@@ -6,7 +6,7 @@ You are auditing Etherpad's core editing engine — changesets, attribute pool, 
 
 Find Medium+ severity bugs, CVE-relevant patterns, and operational-correctness issues in the editing engine. **No style or lint.**
 
-## Scope
+## Scope (read only these globs, all relative to `{{repo_root}}`)
 
 - `src/static/js/Changeset.ts`
 - `src/static/js/AttributePool.ts`
