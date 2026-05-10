@@ -658,24 +658,28 @@ export class Html10n {
       prop = document.body.textContent ? 'textContent' : 'innerText'
     }
 
-    // Apply translation
-    if (node.children.length === 0 || prop != 'textContent') {
-      // @ts-ignore
-      node[prop] = str.str!
-      // Populate aria-label from the translation so screen readers get a
-      // localized accessible name. Preserve an author-supplied aria-label
-      // (one present in the template without a marker), but keep our own
-      // html10n-generated values in sync across language changes by
-      // overwriting them. The `data-l10n-aria-label` marker distinguishes
-      // the two: set when we populate it, checked on subsequent passes so
-      // `pad.applyLanguage()` refreshes the accessible name.
-      // See PR #7584 review feedback.
-      const generatedMarker = 'data-l10n-aria-label';
+    // Populate aria-label from the translation so screen readers get a
+    // localized accessible name. Preserve an author-supplied aria-label
+    // (one present in the template without a marker), but keep our own
+    // html10n-generated values in sync across language changes by
+    // overwriting them. The `data-l10n-aria-label` marker distinguishes
+    // the two: set when we populate it, checked on subsequent passes so
+    // `pad.applyLanguage()` refreshes the accessible name.
+    // See PR #7584 review feedback.
+    const generatedMarker = 'data-l10n-aria-label';
+    const populateAriaLabel = () => {
       if (!node.hasAttribute('aria-label') ||
           node.getAttribute(generatedMarker) === 'true') {
         node.setAttribute('aria-label', str.str!);
         node.setAttribute(generatedMarker, 'true');
       }
+    }
+
+    // Apply translation
+    if (node.children.length === 0 || prop != 'textContent') {
+      // @ts-ignore
+      node[prop] = str.str!
+      populateAriaLabel()
     } else {
       let children = node.childNodes,
         found = false
@@ -692,6 +696,17 @@ export class Html10n {
       }
       if (!found) {
         console.warn('Unexpected error: could not translate element content for key '+str.id, node)
+      }
+      // Form-controllable elements (<select>, <input>, <textarea>) carry their
+      // accessible name on aria-label rather than as text content (a <select>'s
+      // text is its <option> labels, not its own name). The textContent branch
+      // above doesn't fall through to populateAriaLabel(), so plugins that put
+      // data-l10n-id on a <select> and rely on the auto-population (introduced
+      // in #7584) end up with no accessible name. Populate aria-label here so
+      // those controls stay localized too. See ether/ep_align#182 review.
+      const tag = node.tagName;
+      if (tag === 'SELECT' || tag === 'INPUT' || tag === 'TEXTAREA') {
+        populateAriaLabel()
       }
     }
   }
