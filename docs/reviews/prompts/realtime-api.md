@@ -6,7 +6,7 @@ You are auditing Etherpad's realtime (socket.io) and HTTP API surface for Medium
 
 Find Medium+ severity bugs, CVE-relevant patterns, race conditions, rate-limit gaps, and resource exhaustion issues in the assigned subsystem. **No style or lint findings.**
 
-## Scope
+## Scope (read only these globs, all relative to `{{repo_root}}`)
 
 - `src/node/handler/PadMessageHandler.ts`
 - `src/node/handler/SocketIO*.ts`
