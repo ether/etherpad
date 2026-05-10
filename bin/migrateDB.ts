@@ -1,6 +1,6 @@
 // DB migration
 import {readFileSync} from 'node:fs'
-import {Database, DatabaseType} from "ueberdb2";
+import {Database} from '@samtv12345/ueberdb-rs';
 import path from "node:path";
 import settings from 'ep_etherpad-lite/node/utils/Settings';
 
@@ -60,8 +60,8 @@ if ("filename" in settingsfile2.dbSettings) {
   console.log(settingsfile2.dbType + " location is "+ settingsfile2.dbSettings.filename)
 }
 
-const ueberdb1 = new Database(settingsfile.dbType as DatabaseType, settingsfile.dbSettings)
-const ueberdb2 = new Database(settingsfile2.dbType as DatabaseType, settingsfile2.dbSettings)
+const ueberdb1 = new Database(settingsfile.dbType, settingsfile.dbSettings)
+const ueberdb2 = new Database(settingsfile2.dbType, settingsfile2.dbSettings)
 
 const handleSync = async ()=>{
   await ueberdb1.init()

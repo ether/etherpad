@@ -6,7 +6,7 @@ import util from "node:util";
 import fs from 'node:fs';
 import log4js from 'log4js';
 import readline from 'readline';
-import {Database, DatabaseType} from "ueberdb2";
+import {Database} from '@samtv12345/ueberdb-rs';
 import process from "node:process";
 
 import settings from 'ep_etherpad-lite/node/utils/Settings';
@@ -58,7 +58,7 @@ const unescape = (val: string) => {
     json: false, // data is already json encoded
   };
   const db = new Database( // eslint-disable-line new-cap
-      settings.dbType as DatabaseType,
+      settings.dbType,
       settings.dbSettings,
       dbWrapperSettings,
       log4js.getLogger('ueberDB'));

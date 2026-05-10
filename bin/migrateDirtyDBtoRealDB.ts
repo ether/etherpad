@@ -1,7 +1,7 @@
 'use strict';
 
 import process from 'node:process';
-import {Database, DatabaseType} from "ueberdb2";
+import {Database} from '@samtv12345/ueberdb-rs';
 import log4js from 'log4js';
 import settings from 'ep_etherpad-lite/node/utils/Settings';
 
@@ -23,7 +23,7 @@ process.on('unhandledRejection', (err) => { throw err; });
     writeInterval: 0, // Write directly to the database, don't buffer
   };
   const db = new Database( // eslint-disable-line new-cap
-      settings.dbType as DatabaseType,
+      settings.dbType,
       settings.dbSettings,
       dbWrapperSettings,
       log4js.getLogger('ueberDB'));
