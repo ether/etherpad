@@ -18,18 +18,24 @@ If the user passed `--resume <run-id>`, set `RESUME=1` and `RUN_ID=<run-id>`. Sk
 
 Run:
 ```bash
-RUN_DIR_BASE=/tmp/release-review
-RUN_ID=$(pnpm --filter ep_etherpad-lite exec tsx src/node/utils/releaseReview/cli.ts next-run-id "$RUN_DIR_BASE")
-mkdir -p "$RUN_DIR_BASE/$RUN_ID"
-echo "$RUN_ID"
+pnpm --filter ep_etherpad-lite exec tsx src/node/utils/releaseReview/cli.ts next-run-id /tmp/release-review
 ```
-State the run-id to the user before continuing.
+
+This prints the next run-id (e.g. `run-2026-05-09-1`). **Remember the run-id in your conversation state** — Bash tool calls do not persist shell variables across invocations, so every later step that needs the run-id or run-dir path must inline the literal values.
+
+Create the run-dir:
+
+```bash
+mkdir -p /tmp/release-review/<run-id>
+```
+
+Replace `<run-id>` with the actual id from above. State the run-id to the user before continuing.
 
 ## Phase 1 — Tool sweep (skip if --resume)
 
 Read `docs/reviews/prompts/tools.md`. Substitute `{{run_id}}` and `{{repo_root}}` with the live values. Dispatch a single general-purpose Agent with the substituted prompt.
 
-Block until the subagent completes. Verify `/tmp/release-review/$RUN_ID/tool-findings.json` exists. If it doesn't, surface the failure and ask the user whether to continue with Phase 2 only.
+Block until the subagent completes. Verify `/tmp/release-review/<run-id>/tool-findings.json` exists (replacing `<run-id>` with the literal run-id from Phase 0). If it doesn't, surface the failure and ask the user whether to continue with Phase 2 only.
 
 ## Phase 2 — AI subsystem sweep (skip if --resume)
 
@@ -39,7 +45,7 @@ Read all four prompt files:
 - `docs/reviews/prompts/pad-changeset.md`
 - `docs/reviews/prompts/db-supply.md`
 
-Substitute placeholders. Dispatch four general-purpose Agents IN PARALLEL — single message, four Agent tool calls.
+For each prompt, substitute `{{run_id}}` (with the run-id from Phase 0) and `{{repo_root}}` (with the absolute path of the current repo, available via `git rev-parse --show-toplevel`). Then dispatch four general-purpose Agents IN PARALLEL — single message, four Agent tool calls, one per substituted prompt.
 
 Block until all four complete. Verify each output JSON exists. For any that didn't run / failed, record `"missing: <name>"` in the merged report so the user knows coverage was partial.
 
@@ -49,23 +55,25 @@ Block until all four complete. Verify each output JSON exists. For any that didn
 
 ```bash
 pnpm --filter ep_etherpad-lite exec tsx src/node/utils/releaseReview/cli.ts \
-  aggregate "$RUN_DIR_BASE/$RUN_ID" docs/reviews/known-findings.yml medium
+  aggregate /tmp/release-review/<run-id> docs/reviews/known-findings.yml medium
 ```
+(Replace `<run-id>` with the literal run-id from Phase 0.)
 Reads all `*.json` from the run-dir except `merged.json` / `triage.json`. Writes `merged.json`.
 
 ### 3b. Triage
 
 ```bash
 pnpm --filter ep_etherpad-lite exec tsx src/node/utils/releaseReview/cli.ts \
-  triage "$RUN_DIR_BASE/$RUN_ID"
+  triage /tmp/release-review/<run-id>
 ```
+(Replace `<run-id>` with the literal run-id from Phase 0.)
 Writes `triage.json` with `{fixNow, issue, suppress}` buckets.
 
 ### 3c. First-run check
 
 If `docs/reviews/known-findings.yml` has `findings: []` (empty list) AND `merged.json` has 20+ findings, this is a first run. Tell the user:
 
-> First /release-review with no baseline. Found N Medium+ findings. Mark all as accepted-risk baseline (rationale: "baseline at $RUN_ID; not yet triaged") and only show new findings in future runs? [Y/n]
+> First /release-review with no baseline. Found N Medium+ findings. Mark all as accepted-risk baseline (rationale: "baseline at <run-id>; not yet triaged") and only show new findings in future runs? [Y/n]
 
 If Y: bulk-append all `merged.json` fingerprints to known-findings.yml via the `append-suppression` CLI command (one call per entry), exit cleanly.
 
@@ -111,10 +119,10 @@ Track decisions in an array. For EACH finding, in this order:
 
 Determine the version: read `package.json`'s `version` field; if it ends in a release-track suffix, use as-is. Otherwise ask the user for the upcoming version (e.g. "2.8.0").
 
-Write a `SummaryInput` JSON to `$RUN_DIR_BASE/$RUN_ID/summary-input.json`:
+Write a `SummaryInput` JSON to `/tmp/release-review/<run-id>/summary-input.json` (replacing `<run-id>` with the literal run-id from Phase 0):
 ```json
 {
-  "runId": "$RUN_ID",
+  "runId": "<run-id>",
   "version": "<resolved>",
   "counts": { "high": <count>, "medium": <count> },
   "decisions": [ ...recorded above... ]
@@ -124,9 +132,10 @@ Write a `SummaryInput` JSON to `$RUN_DIR_BASE/$RUN_ID/summary-input.json`:
 Then run:
 ```bash
 pnpm --filter ep_etherpad-lite exec tsx src/node/utils/releaseReview/cli.ts \
-  summary "$RUN_DIR_BASE/$RUN_ID/summary-input.json" \
+  summary /tmp/release-review/<run-id>/summary-input.json \
   "docs/reviews/<version>-summary.md"
 ```
+(Replace `<run-id>` with the literal run-id from Phase 0.)
 
 Print final instructions:
 > Session complete. Suggested next step:
@@ -138,7 +147,7 @@ Print final instructions:
 
 When `--resume <run-id>` is passed:
 - Skip Phase 1 + Phase 2.
-- Verify `$RUN_DIR_BASE/$RUN_ID/` exists; if not, fail with a clear message.
+- Verify `/tmp/release-review/<run-id>/` exists (replacing `<run-id>` with the supplied id); if not, fail with a clear message.
 - Skip 3a/3b if `merged.json` and `triage.json` already exist; otherwise re-run them.
 - Walk from where the user left off. (For now: walkthrough always restarts from the top of the buckets. The user should track in their head which they've handled, OR `git diff` will show which already have applied fixes — the second run will see those fixes as new code, breaking the fingerprint and dropping them naturally on re-aggregate.)
 
