@@ -145,6 +145,62 @@ describe(__filename, function () {
     });
   });
 
+  describe('triage', function () {
+    const mkFinding = (over: any) => ({
+      source: 'semgrep',
+      fingerprint: 'x'.repeat(64),
+      severity: 'medium',
+      category: 'bug',
+      file: 'src/a.ts',
+      line: 1,
+      ruleId: 'r',
+      message: 'm',
+      ...over,
+    });
+
+    it('classifies a single-file finding with remediationHint as fix-now', function () {
+      const {classify} = require('../../../node/utils/releaseReview/triage');
+      const buckets = classify([
+        mkFinding({remediationHint: 'replace == with ===', severity: 'high'}),
+      ]);
+      assert.equal(buckets.fixNow.length, 1);
+      assert.equal(buckets.issue.length, 0);
+      assert.equal(buckets.suppress.length, 0);
+    });
+
+    it('classifies a category=lint finding as suppress', function () {
+      const {classify} = require('../../../node/utils/releaseReview/triage');
+      const buckets = classify([mkFinding({category: 'lint'})]);
+      assert.equal(buckets.suppress.length, 1);
+    });
+
+    it('classifies medium-severity tool finding without remediation as suppress', function () {
+      const {classify} = require('../../../node/utils/releaseReview/triage');
+      const buckets = classify([mkFinding({severity: 'medium', source: 'semgrep'})]);
+      assert.equal(buckets.suppress.length, 1);
+    });
+
+    it('classifies a high-severity AI finding without remediation as issue (needs design)', function () {
+      const {classify} = require('../../../node/utils/releaseReview/triage');
+      const buckets = classify([mkFinding({severity: 'high', source: 'auth-sessions'})]);
+      assert.equal(buckets.issue.length, 1);
+    });
+
+    it('returns disjoint buckets summing to input length', function () {
+      const {classify} = require('../../../node/utils/releaseReview/triage');
+      const findings = [
+        mkFinding({fingerprint: 'a'.repeat(64), category: 'lint'}),
+        mkFinding({fingerprint: 'b'.repeat(64), severity: 'high', remediationHint: 'fix it'}),
+        mkFinding({fingerprint: 'c'.repeat(64), severity: 'high', source: 'pad-changeset'}),
+      ];
+      const buckets = classify(findings);
+      assert.equal(
+        buckets.fixNow.length + buckets.issue.length + buckets.suppress.length,
+        findings.length,
+      );
+    });
+  });
+
   describe('suppression', function () {
     const valid = path.join(FIXTURE_DIR, 'suppression-valid.yml');
     const malformed = path.join(FIXTURE_DIR, 'suppression-malformed.yml');
