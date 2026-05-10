@@ -7,10 +7,14 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-test('client module exports fetchClient and $api', async () => {
+test('client module exports public + admin clients and query hooks', async () => {
   const mod = await import('../client.ts');
   assert.ok(mod.fetchClient, 'fetchClient export is present');
+  assert.ok(mod.adminFetchClient, 'adminFetchClient export is present');
   assert.ok(mod.$api, '$api export is present');
+  assert.ok(mod.$adminApi, '$adminApi export is present');
   assert.equal(typeof mod.fetchClient.GET, 'function', 'fetchClient.GET is a function');
+  assert.equal(typeof mod.adminFetchClient.GET, 'function', 'adminFetchClient.GET is a function');
   assert.equal(typeof mod.$api.useQuery, 'function', '$api.useQuery is a function');
+  assert.equal(typeof mod.$adminApi.useQuery, 'function', '$adminApi.useQuery is a function');
 });

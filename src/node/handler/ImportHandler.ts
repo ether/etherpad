@@ -65,6 +65,11 @@ if (settings.soffice != null) {
   exportExtension = 'html';
 }
 
+// Office formats with no in-process import path (issue #7538). When soffice
+// is null these are rejected explicitly so users see a clear error instead
+// of a silent ASCII-only fallback. .docx has a native path via mammoth.
+const SOFFICE_ONLY_IMPORT_FORMATS = new Set(['.pdf', '.odt', '.doc', '.rtf']);
+
 const tmpDirectory = os.tmpdir();
 
 /**
@@ -128,6 +133,67 @@ const doImport = async (req:any, res:any, padId:string, authorId:string) => {
       logger.warn(`Not allowing unknown file type to be imported: ${fileEnding}`);
       throw new ImportError('uploadFailed');
     }
+  }
+
+  // Detect once whether the contentcollector treats h1-h6/code as block
+  // elements server-side. ep_headings2 v0.2.118+ (after the
+  // ep_plugin_helpers ccRegisterBlockElements wiring lands) registers
+  // them; older versions don't. The two preprocessors below are only
+  // needed when the plugin hook is missing — they're harmful otherwise
+  // (each adds an extra blank pad line per heading transition).
+  const ccBlockElems: string[] =
+      ([] as string[]).concat(...(hooks.callAll('ccRegisterBlockElements') || []));
+  const ccBlockSet = new Set(ccBlockElems.map((t: string) => t.toLowerCase()));
+  // ep_headings2 registers 'h1' along with the others when its server
+  // hook is wired (ccRegisterBlockElements). h1 is sufficient as the
+  // detection probe; the absence of h5/h6 in the set is a quirk of
+  // ep_headings2 (it only handles h1-h4) and not a sign of a broken
+  // hook.
+  const headingsAreBlocks = ccBlockSet.has('h1');
+
+  // Native DOCX import (issue #7538): when soffice isn't configured we
+  // hand .docx files to mammoth, which produces HTML — then we feed that
+  // through the existing setPadHTML pipeline.
+  if (settings.soffice == null && fileEnding === '.docx') {
+    const buf = await fs.readFile(srcFile);
+    const {docxBufferToHtml} = require('../utils/ImportDocxNative');
+    const {separateAdjacentHeadingBlocks} = require('../utils/ExportSanitizeHtml');
+    let nativeHtml: string;
+    try {
+      nativeHtml = await docxBufferToHtml(buf);
+      // When the plugin hook is missing, contentcollector treats h1-h6
+      // as inline and adjacent headings merge into a single pad line.
+      // Insert <br> between them as a defensive workaround. Skipped when
+      // the plugin already registers the tags (otherwise the <br> becomes
+      // an extra blank line per heading transition).
+      if (!headingsAreBlocks) {
+        nativeHtml = separateAdjacentHeadingBlocks(nativeHtml);
+      }
+    } catch (err: any) {
+      logger.warn(`Native DOCX import failed: ${err.stack || err}`);
+      throw new ImportError('convertFailed');
+    }
+    const pad = await padManager.getPad(padId, '\n', authorId);
+    try {
+      await importHtml.setPadHTML(pad, nativeHtml, authorId);
+    } catch (err: any) {
+      logger.warn(`Error importing native DOCX HTML: ${err.stack || err}`);
+      throw new ImportError('convertFailed');
+    }
+    padManager.unloadPad(padId);
+    const reloaded = await padManager.getPad(padId, '\n', authorId);
+    padManager.unloadPad(padId);
+    await padMessageHandler.updatePadClients(reloaded);
+    rm(srcFile);
+    return false;
+  }
+
+  // Without soffice, the legacy office formats (pdf, odt, doc, rtf) have
+  // no in-process path. Reject explicitly so the user sees a clear error
+  // instead of a silent ASCII-only fallback.
+  if (settings.soffice == null && SOFFICE_ONLY_IMPORT_FORMATS.has(fileEnding)) {
+    logger.warn(`Cannot import ${fileEnding} without soffice configured`);
+    throw new ImportError('uploadFailed');
   }
 
   const destFile = path.join(tmpDirectory, `etherpad_import_${randNum}.${exportExtension}`);
@@ -205,7 +271,20 @@ const doImport = async (req:any, res:any, padId:string, authorId:string) => {
   if (!directDatabaseAccess) {
     if (importHandledByPlugin || useConverter || fileIsHTML) {
       try {
-        await importHtml.setPadHTML(pad, text, authorId);
+        // Etherpad's HTML export wraps each pad line in `<p>...</p>`
+        // (or `<h1>`, `<code>`, etc.) and then appends a `<br>` between
+        // lines. The closing block tag already ends the line for
+        // contentcollector, so the trailing `<br>` is redundant and
+        // doubles every blank line on import. Collapse `</block><br>`
+        // before handing to setPadHTML so HTML round-trips don't drift.
+        // Only applied to HTML imports (and converted-via-soffice
+        // outputs, which look the same shape) -- the docx native path
+        // above doesn't go through here.
+        const {collapseRedundantBrAfterBlocks} =
+            require('../utils/ExportSanitizeHtml');
+        const cleaned = (fileIsHTML || useConverter)
+            ? collapseRedundantBrAfterBlocks(text) : text;
+        await importHtml.setPadHTML(pad, cleaned, authorId);
       } catch (err:any) {
         logger.warn(`Error importing, possibly caused by malformed HTML: ${err.stack || err}`);
       }

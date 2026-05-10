@@ -90,7 +90,72 @@ exports.doExport = async (req: any, res: any, padId: string, readOnlyId: string,
       return;
     }
 
-    // else write the html export to a file
+    // Soffice-first dispatch (issue #7538). When soffice is configured
+    // we keep the legacy convert-via-tempfile path; when it's not, we
+    // hand DOCX to html-to-docx and PDF to our pdfkit walker — both
+    // pure-JS, in-process. No fallback chain: native errors surface as
+    // 5xx so admins see real failures instead of silent shadowing.
+    const {sofficeAvailable} = require('../utils/Settings');
+    const sofState = sofficeAvailable();
+    const goNative = sofState === 'no'
+        || (sofState === 'withoutPDF' && type === 'pdf');
+
+    if (goNative) {
+      const {
+        stripRemoteImages, extractBody, wrapLooseLines, dropEmptyBlocks,
+        applyMonospaceToCode,
+      } = require('../utils/ExportSanitizeHtml');
+      // The HTML pipeline returns a full document (head, style, body); the
+      // legacy soffice path renders that fine, but the in-process
+      // converters need just the body content to avoid leaking CSS into
+      // the output and to drop the document-level whitespace that creates
+      // stray paragraph breaks at the top of the result.
+      // dropEmptyBlocks strips heading-styled blank-line wrappers that
+      // ep_headings2 emits between every styled line.
+      const bodyHtml = dropEmptyBlocks(stripRemoteImages(extractBody(html)));
+      html = null;
+      try {
+        if (type === 'docx') {
+          // applyMonospaceToCode strips `<code>`/`<pre>`/`<tt>` wrappers
+          // (html-to-docx ignores them AND has a bug where it drops
+          // `<a href>` children of those tags) and emits styled
+          // monospace spans, forwarding any block-level alignment style
+          // to a wrapping `<p>`. Run BEFORE wrapLooseLines so the
+          // resulting `<p>` lands at the loose-line boundary instead
+          // of getting double-wrapped.
+          //
+          // wrapLooseLines then handles `<br>` semantics: bare `<br>`
+          // outside `<p>` becomes a soft break, `<br><br>` becomes a
+          // paragraph boundary plus blank-line markers.
+          const docxHtml = wrapLooseLines(applyMonospaceToCode(bodyHtml));
+          const htmlToDocx = require('html-to-docx');
+          const buf = await htmlToDocx(docxHtml);
+          res.contentType(
+              'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+          res.send(buf);
+          return;
+        }
+        if (type === 'pdf') {
+          const {htmlToPdfBuffer} = require('../utils/ExportPdfNative');
+          const buf = await htmlToPdfBuffer(bodyHtml);
+          res.contentType('application/pdf');
+          res.send(buf);
+          return;
+        }
+        // soffice-only formats (odt, doc) are blocked at the route guard
+        // when soffice is null; reaching here means the guard is wrong.
+        res.status(500).send(`Cannot export ${type} without soffice configured`);
+        return;
+      } catch (err) {
+        console.error(
+            `native ${type} export failed for pad "${padId}":`,
+            err && (err as Error).stack ? (err as Error).stack : err);
+        res.status(500).send(`Failed to export pad as ${type}.`);
+        return;
+      }
+    }
+
+    // soffice path — write the html export to a file
     const randNum = Math.floor(Math.random() * 0xFFFFFFFF);
     const srcFile = `${tempDirectory}/etherpad_export_${randNum}.html`;
     await fsp_writeFile(srcFile, html);

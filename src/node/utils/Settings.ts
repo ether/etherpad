@@ -184,6 +184,7 @@ export type SettingsType = {
   updateServer: string,
   enableDarkMode: boolean,
   enablePadWideSettings: boolean,
+  enablePluginPadOptions: boolean,
   allowPadDeletionByAllUsers: boolean,
   privacyBanner: {
     enabled: boolean,
@@ -331,8 +332,11 @@ export type SettingsType = {
     githubRepo: string,
     requireAdminForStatus: boolean,
   },
+  adminOpenAPI: {
+    enabled: boolean,
+  },
   adminEmail: string | null,
-  getPublicSettings: () => Pick<SettingsType, "title" | "skinVariants"|"randomVersionString"|"skinName"|"toolbar"| "exposeVersion"| "gitVersion" | "enablePadWideSettings" | "privacyBanner">,
+  getPublicSettings: () => Pick<SettingsType, "title" | "skinVariants"|"randomVersionString"|"skinName"|"toolbar"| "exposeVersion"| "gitVersion" | "enablePadWideSettings" | "enablePluginPadOptions" | "privacyBanner">,
 }
 
 const settings: SettingsType = {
@@ -397,6 +401,11 @@ const settings: SettingsType = {
   updateServer: "https://static.etherpad.org",
   enableDarkMode: true,
   enablePadWideSettings: true,
+  // New plugin-padOption passthrough is opt-in per AGENTS.MD §52 ("New
+  // features should be placed behind feature flags and disabled by
+  // default"). Flip to true to let plugins (e.g. ep_plugin_helpers'
+  // padToggle) ride the existing padoptions broadcast/persist rail.
+  enablePluginPadOptions: false,
   allowPadDeletionByAllUsers: false,
   privacyBanner: {
     enabled: false,
@@ -509,6 +518,18 @@ const settings: SettingsType = {
     // Set true to require an authenticated admin session for the endpoint without
     // disabling the updater itself.
     requireAdminForStatus: false,
+  },
+  /**
+   * Admin OpenAPI document endpoint at /admin/openapi.json.
+   *
+   * Disabled by default per Etherpad's "new features behind a flag, off by
+   * default" policy (see CONTRIBUTING.md). The codegen pipeline imports
+   * generateAdminDefinition() in-process and does not depend on the route;
+   * enable this only if you want third-party tooling (Postman, swagger-ui,
+   * downstream clients) to consume the spec at runtime.
+   */
+  adminOpenAPI: {
+    enabled: false,
   },
   /**
    * Contact address for admin notifications (updates, future security advisories).
@@ -770,6 +791,7 @@ const settings: SettingsType = {
       skinName: settings.skinName,
       skinVariants: settings.skinVariants,
       enablePadWideSettings: settings.enablePadWideSettings,
+      enablePluginPadOptions: settings.enablePluginPadOptions,
       privacyBanner: getPublicPrivacyBanner(),
     }
   },
