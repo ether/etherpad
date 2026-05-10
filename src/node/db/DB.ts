@@ -21,7 +21,7 @@
  * limitations under the License.
  */
 
-import {Database, DatabaseType} from 'ueberdb2';
+import {Database} from '@samtv12345/ueberdb-rs';
 import settings from '../utils/Settings';
 import log4js from 'log4js';
 const stats = require('../stats')
@@ -37,12 +37,13 @@ exports.db = null;
  * Initializes the database with the settings provided by the settings module
  */
 exports.init = async () => {
-  exports.db = new Database(settings.dbType as DatabaseType, settings.dbSettings, null, logger);
+  exports.db = new Database(settings.dbType, settings.dbSettings, null);
   await exports.db.init();
-  if (exports.db.metrics != null) {
-    for (const [metric, value] of Object.entries(exports.db.metrics)) {
+  const m = exports.db.metrics();
+  if (m != null) {
+    for (const [metric, value] of Object.entries(m)) {
       if (typeof value !== 'number') continue;
-      stats.gauge(`ueberdb_${metric}`, () => exports.db.metrics[metric]);
+      stats.gauge(`ueberdb_${metric}`, () => exports.db.metrics()[metric]);
     }
   }
   for (const fn of ['get', 'set', 'findKeys', 'getSub', 'setSub', 'remove']) {
