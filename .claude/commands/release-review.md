@@ -106,13 +106,15 @@ Track decisions in an array. For EACH finding, in this order:
 2. **issue bucket**:
    - Print finding. Draft a GitHub issue body (Title: `<rule>: <one-liner>`. Body: severity, file:line, message, remediation, links).
    - Ask: "Create issue / edit body / skip?"
-   - On create: run `gh issue create --title "..." --body-file -` (with confirmation). Capture issue URL. Append `{action: 'issue', issueUrl}`.
+   - On create: run `gh issue create --title "..." --body-file -` (with confirmation). Capture issue URL. Append `{fingerprint, action: 'issue', file, ruleId, issueUrl}`.
+   - On skip: append `{fingerprint, action: 'skip', file, ruleId}`.
    - If `gh` is missing: print the body, append `{action: 'skip', rationale: 'gh not available'}`.
 
 3. **suppress bucket**:
    - Print finding + propose `status: accepted-risk` (default) and a one-line rationale based on the message.
    - Ask: "Accept / edit rationale / fix-instead / skip?"
-   - On accept: invoke `cli.ts append-suppression` with the entry. Append `{action: 'accepted-risk', rationale}`.
+   - On accept: invoke `cli.ts append-suppression` with the entry. Append `{fingerprint, action: 'accepted-risk', file, ruleId, rationale}`.
+   - On skip: append `{fingerprint, action: 'skip', file, ruleId}`.
    - On fix-instead: jump to the fixNow flow for this finding.
 
 ### 3e. End-of-session summary
