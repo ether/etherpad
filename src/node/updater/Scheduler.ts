@@ -89,6 +89,32 @@ export const decideSchedule = (input: DecideScheduleInput): SchedulerDecision =>
   return {action: 'schedule', newExecution, emails, newEmailState};
 };
 
+export type TriggerApplyDecision =
+  | {action: 'fire'}
+  | {action: 'abort'; reason: string}
+  | {action: 'clear-schedule'; reason: string};
+
+/**
+ * Decide whether the scheduler's timer-fire callback should actually run the
+ * apply pipeline. Pure — no I/O. The runner re-checks at fire time because
+ * arming-to-firing has a long delay (the grace window) during which the
+ * admin can cancel, click Apply now, or flip the tier. SchedulerRunnerDeps
+ * documents this contract; this helper is the canonical implementation.
+ */
+export const decideTriggerApply = ({
+  state, targetTag, policy,
+}: {state: UpdateState; targetTag: string; policy: PolicyResult}): TriggerApplyDecision => {
+  if (state.execution.status !== 'scheduled') {
+    return {action: 'abort', reason: `state=${state.execution.status}`};
+  }
+  if ((state.execution as {targetTag: string}).targetTag !== targetTag) {
+    return {action: 'abort', reason: `tag=${(state.execution as {targetTag: string}).targetTag}`};
+  }
+  if (!state.latest) return {action: 'abort', reason: 'no-latest'};
+  if (!policy.canAuto) return {action: 'clear-schedule', reason: policy.reason || 'policy-denied'};
+  return {action: 'fire'};
+};
+
 export interface SchedulerRunnerDeps {
   now: () => Date;
   setTimer: (cb: () => void, ms: number) => NodeJS.Timeout;

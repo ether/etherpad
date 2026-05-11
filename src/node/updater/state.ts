@@ -26,6 +26,14 @@ const EXEC_REQUIRED_FIELDS: Record<string, readonly string[]> = {
   'rollback-failed': ['reason', 'targetTag', 'fromSha', 'at'],
 };
 
+// Fields that must parse as valid timestamps. The Scheduler computes its delay
+// via `new Date(scheduledFor).getTime()`; an invalid string would yield NaN
+// and effectively fire the timer immediately. Defence-in-depth against a
+// hand-edited update-state.json (Qodo #4).
+const EXEC_TIMESTAMP_FIELDS: ReadonlySet<string> = new Set([
+  'scheduledFor', 'startedAt', 'drainEndsAt', 'deadlineAt', 'verifiedAt', 'at',
+]);
+
 const isValidExecution = (v: unknown): boolean => {
   if (!isPlainObject(v)) return false;
   if (typeof v.status !== 'string') return false;
@@ -33,8 +41,10 @@ const isValidExecution = (v: unknown): boolean => {
   const required = EXEC_REQUIRED_FIELDS[v.status];
   if (!required) return false; // unknown status — fail closed
   for (const field of required) {
-    if (typeof (v as Record<string, unknown>)[field] !== 'string') return false;
-    if (((v as Record<string, unknown>)[field] as string).length === 0) return false;
+    const value = (v as Record<string, unknown>)[field];
+    if (typeof value !== 'string') return false;
+    if (value.length === 0) return false;
+    if (EXEC_TIMESTAMP_FIELDS.has(field) && Number.isNaN(Date.parse(value))) return false;
   }
   return true;
 };

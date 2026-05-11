@@ -11,7 +11,7 @@ import {evaluatePolicy} from './UpdatePolicy';
 import {decideEmails} from './Notifier';
 import {checkPendingVerification, CheckResult, RollbackDeps, performRollback} from './RollbackHandler';
 import {executeUpdate, SpawnFn} from './UpdateExecutor';
-import {createSchedulerRunner, decideSchedule, SchedulerRunner} from './Scheduler';
+import {createSchedulerRunner, decideSchedule, decideTriggerApply, SchedulerRunner} from './Scheduler';
 import {applyUpdate, ApplyPipelineDeps} from './applyPipeline';
 import {acquireLock, releaseLock} from './lock';
 import {runPreflight} from './preflight';
@@ -299,6 +299,46 @@ const buildSchedulerApplyDeps = (): ApplyPipelineDeps => ({
 /** Allow the cancel handler to drop the pending scheduler timer. */
 export const cancelScheduler = (): void => { scheduler?.cancel(); };
 
+/**
+ * Timer-fire callback. Re-reads persisted state and re-evaluates policy
+ * *before* invoking applyUpdate so a last-moment cancel, a manual Apply now
+ * (which flips status away from `scheduled`), or a tier/policy flip during
+ * the grace window cannot lead to an unintended auto-apply.
+ *
+ * SchedulerRunnerDeps.triggerApply documents this contract; doing the check
+ * here keeps the runner itself pure (no state I/O). Qodo #2.
+ */
+const schedulerTriggerApply = async (targetTag: string): Promise<void> => {
+  try {
+    const state = await loadState(stateFilePath());
+    const policy = state.latest
+      ? evaluatePolicy({
+          installMethod: detectedMethod,
+          tier: settings.updates.tier,
+          current: getEpVersion(),
+          latest: state.latest.version,
+          executionStatus: state.execution.status,
+        })
+      : {canNotify: false, canManual: false, canAuto: false, canAutonomous: false, reason: 'no-latest'};
+    const decision = decideTriggerApply({state, targetTag, policy});
+    if (decision.action === 'abort') {
+      logger.info(`scheduler fired for ${targetTag} but aborting (${decision.reason})`);
+      return;
+    }
+    if (decision.action === 'clear-schedule') {
+      logger.info(
+        `scheduler fired for ${targetTag} but policy denies auto ` +
+        `(${decision.reason}); clearing schedule`);
+      await saveState(stateFilePath(), {...state, execution: {status: 'idle'}});
+      return;
+    }
+    const result = await applyUpdate({targetTag, deps: buildSchedulerApplyDeps()});
+    logger.info(`scheduler apply finished: ${result.outcome}`);
+  } catch (err) {
+    logger.warn(`scheduler apply failed: ${(err as Error).message}`);
+  }
+};
+
 /** Hook entry point — called by ep.json on createServer. */
 export const expressCreateServer = async (): Promise<void> => {
   detectedMethod = await detectInstallMethod({
@@ -314,28 +354,34 @@ export const expressCreateServer = async (): Promise<void> => {
   const state = await getCurrentState();
   pendingVerification = checkPendingVerification(state, getRollbackDeps());
 
-  // Tier 3: instantiate the scheduler. The runner is purely in-memory — the
-  // persisted state file is the source of truth for "is something scheduled."
-  // Rehydrate the timer when the previous boot left a scheduled state.
-  scheduler = createSchedulerRunner({
-    now: () => new Date(),
-    setTimer: (cb, ms) => setTimeout(cb, ms),
-    clearTimer: clearTimeout,
-    triggerApply: async (targetTag) => {
-      try {
-        const result = await applyUpdate({targetTag, deps: buildSchedulerApplyDeps()});
-        logger.info(`scheduler apply finished: ${result.outcome}`);
-      } catch (err) {
-        logger.warn(`scheduler apply failed: ${(err as Error).message}`);
-      }
-    },
-  });
-  if (state.execution.status === 'scheduled') {
-    logger.info(`updater: rehydrating Tier 3 schedule for ${state.execution.targetTag} at ${state.execution.scheduledFor}`);
-    scheduler.arm({
-      targetTag: state.execution.targetTag,
-      scheduledFor: state.execution.scheduledFor,
+  // Tier 3: instantiate the scheduler unless updates are entirely disabled.
+  // The runner is purely in-memory — the persisted state file is the source
+  // of truth for "is something scheduled." On `tier: "off"` we explicitly
+  // clear any previously-persisted scheduled state to idle so a stale
+  // schedule from a prior boot can't auto-fire after the operator opted
+  // out (Qodo #1).
+  if (settings.updates.tier === 'off') {
+    if (state.execution.status === 'scheduled') {
+      logger.info(
+        `updater: discarding pending Tier 3 schedule for ${state.execution.targetTag} ` +
+        `because updates.tier="off"`);
+      state.execution = {status: 'idle'};
+      await saveState(stateFilePath(), state);
+    }
+  } else {
+    scheduler = createSchedulerRunner({
+      now: () => new Date(),
+      setTimer: (cb, ms) => setTimeout(cb, ms),
+      clearTimer: clearTimeout,
+      triggerApply: schedulerTriggerApply,
     });
+    if (state.execution.status === 'scheduled') {
+      logger.info(`updater: rehydrating Tier 3 schedule for ${state.execution.targetTag} at ${state.execution.scheduledFor}`);
+      scheduler.arm({
+        targetTag: state.execution.targetTag,
+        scheduledFor: state.execution.scheduledFor,
+      });
+    }
   }
 
   if (settings.updates.tier !== 'off') startPolling();

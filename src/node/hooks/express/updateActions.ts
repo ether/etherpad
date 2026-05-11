@@ -164,6 +164,12 @@ export const expressCreateServer = (
       return res.status(409).json({error: 'policy-denied', reason: policy.reason});
     }
 
+    // Admin clicked "Apply now" during the Tier 3 grace window. Drop the
+    // pending scheduler timer so it doesn't later fire and attempt a second
+    // apply (Qodo #3). The pipeline will overwrite execution → preflight
+    // momentarily, but cancelling the timer is what guarantees we don't race.
+    if (state.execution.status === 'scheduled') cancelScheduler();
+
     const targetTag = state.latest.tag;
     let responded = false;
 

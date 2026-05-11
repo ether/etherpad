@@ -340,4 +340,46 @@ describe('Tier 3 state extensions', () => {
     const state = await loadState(statePath());
     expect(state).toEqual(EMPTY_STATE);
   });
+
+  it('rejects scheduled with non-parseable timestamp strings (Qodo #4)', async () => {
+    await fs.writeFile(statePath(), JSON.stringify({
+      schemaVersion: 1, lastCheckAt: null, lastEtag: null, latest: null,
+      vulnerableBelow: [],
+      email: {severeAt: null, vulnerableAt: null, vulnerableNewReleaseTag: null, graceStartTag: null},
+      execution: {
+        status: 'scheduled', targetTag: 'v9.9.9',
+        scheduledFor: 'not-a-real-date', startedAt: 'also-bogus',
+      },
+    }));
+    const state = await loadState(statePath());
+    expect(state).toEqual(EMPTY_STATE);
+  });
+
+  it('accepts scheduled with valid ISO timestamps', async () => {
+    const valid = {
+      schemaVersion: 1, lastCheckAt: null, lastEtag: null, latest: null,
+      vulnerableBelow: [],
+      email: {severeAt: null, vulnerableAt: null, vulnerableNewReleaseTag: null, graceStartTag: null},
+      execution: {
+        status: 'scheduled', targetTag: 'v9.9.9',
+        scheduledFor: '2026-05-11T12:15:00.000Z',
+        startedAt: '2026-05-11T12:00:00.000Z',
+      },
+      bootCount: 0, lastResult: null,
+    };
+    await fs.writeFile(statePath(), JSON.stringify(valid));
+    const state = await loadState(statePath());
+    expect(state.execution.status).toBe('scheduled');
+  });
+
+  it('rejects preflight with a non-parseable startedAt (timestamp validation applies across statuses)', async () => {
+    await fs.writeFile(statePath(), JSON.stringify({
+      schemaVersion: 1, lastCheckAt: null, lastEtag: null, latest: null,
+      vulnerableBelow: [],
+      email: {severeAt: null, vulnerableAt: null, vulnerableNewReleaseTag: null, graceStartTag: null},
+      execution: {status: 'preflight', targetTag: 'v9.9.9', startedAt: 'garbage'},
+    }));
+    const state = await loadState(statePath());
+    expect(state).toEqual(EMPTY_STATE);
+  });
 });

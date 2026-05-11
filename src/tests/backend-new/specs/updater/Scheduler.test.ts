@@ -1,5 +1,5 @@
 import {describe, it, expect} from 'vitest';
-import {decideSchedule, createSchedulerRunner} from '../../../../node/updater/Scheduler';
+import {decideSchedule, createSchedulerRunner, decideTriggerApply} from '../../../../node/updater/Scheduler';
 import {EMPTY_STATE, UpdateState, ReleaseInfo, PolicyResult} from '../../../../node/updater/types';
 
 const fakeRelease = (tag: string, version = tag.replace(/^v/, '')): ReleaseInfo => ({
@@ -280,5 +280,75 @@ describe('createSchedulerRunner', () => {
     await new Promise((r) => setImmediate(r));
     runner.cancel();
     expect(cleared).toEqual([]);
+  });
+});
+
+describe('decideTriggerApply', () => {
+  const release: ReleaseInfo = {
+    tag: 'v2.0.1', version: '2.0.1', body: '', publishedAt: '2026-05-11T00:00:00.000Z',
+    prerelease: false, htmlUrl: 'https://example.com',
+  };
+  const scheduledState: UpdateState = {
+    ...EMPTY_STATE,
+    latest: release,
+    execution: {
+      status: 'scheduled', targetTag: 'v2.0.1',
+      scheduledFor: '2026-05-11T12:15:00.000Z', startedAt: '2026-05-11T12:00:00.000Z',
+    },
+  };
+  const policyAllow: PolicyResult = {
+    canNotify: true, canManual: true, canAuto: true, canAutonomous: false, reason: 'ok',
+  };
+  const policyDeny: PolicyResult = {
+    canNotify: true, canManual: true, canAuto: false, canAutonomous: false, reason: 'install-method-not-writable',
+  };
+
+  it('fires when state is scheduled for the same tag and policy allows', () => {
+    const d = decideTriggerApply({state: scheduledState, targetTag: 'v2.0.1', policy: policyAllow});
+    expect(d).toEqual({action: 'fire'});
+  });
+
+  it('aborts when persisted state is no longer scheduled (admin cancelled at the boundary)', () => {
+    const d = decideTriggerApply({
+      state: {...scheduledState, execution: {status: 'idle'}},
+      targetTag: 'v2.0.1', policy: policyAllow,
+    });
+    expect(d.action).toBe('abort');
+    if (d.action === 'abort') expect(d.reason).toContain('state=idle');
+  });
+
+  it('aborts when persisted state is scheduled for a different tag (manual apply already overwrote it)', () => {
+    const d = decideTriggerApply({
+      state: {
+        ...scheduledState,
+        execution: {status: 'scheduled', targetTag: 'v2.0.2',
+          scheduledFor: '2026-05-11T13:00:00.000Z', startedAt: '2026-05-11T12:30:00.000Z'},
+      },
+      targetTag: 'v2.0.1', policy: policyAllow,
+    });
+    expect(d.action).toBe('abort');
+    if (d.action === 'abort') expect(d.reason).toContain('tag=v2.0.2');
+  });
+
+  it('aborts when there is no known latest release (rare race with state corruption)', () => {
+    const d = decideTriggerApply({
+      state: {...scheduledState, latest: null},
+      targetTag: 'v2.0.1', policy: policyAllow,
+    });
+    expect(d).toEqual({action: 'abort', reason: 'no-latest'});
+  });
+
+  it('clears the schedule when policy now denies auto (tier flipped during grace)', () => {
+    const d = decideTriggerApply({state: scheduledState, targetTag: 'v2.0.1', policy: policyDeny});
+    expect(d.action).toBe('clear-schedule');
+    if (d.action === 'clear-schedule') expect(d.reason).toBe('install-method-not-writable');
+  });
+
+  it('falls back to a generic reason when the policy result has no reason', () => {
+    const d = decideTriggerApply({
+      state: scheduledState, targetTag: 'v2.0.1',
+      policy: {canNotify: true, canManual: true, canAuto: false, canAutonomous: false, reason: ''},
+    });
+    expect(d).toEqual({action: 'clear-schedule', reason: 'policy-denied'});
   });
 });
