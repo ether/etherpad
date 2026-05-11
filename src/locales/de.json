@@ -1,6 +1,7 @@
 {
 	"@metadata": {
 		"authors": [
+			"AnupamM",
 			"Bjarncraft",
 			"Brettchenweber",
 			"Dom",
@@ -122,6 +123,7 @@
 	"pad.importExport.exportword": "Microsoft Word",
 	"pad.importExport.exportpdf": "PDF",
 	"pad.importExport.exportopen": "ODF (Open Document Format)",
+	"pad.importExport.exportpdfa.title": "Als PDF exportieren",
 	"pad.modals.connected": "Verbunden.",
 	"pad.modals.reconnecting": "Dein Pad wird neu verbunden...",
 	"pad.modals.forcereconnect": "Erneutes Verbinden erzwingen",
