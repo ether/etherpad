@@ -58,7 +58,7 @@ For more than a decade, Etherpad has quietly underpinned the documents that matt
 - **Newsrooms and investigative journalism teams** — where authorship and editing history matter for legal and editorial integrity.
 - **Tens of thousands of self-hosted instances** worldwide, run by IT teams who chose Etherpad because it is theirs.
 
-If your organisation runs Etherpad and would be willing to be listed publicly, please [add it to the wiki](https://github.com/ether/etherpad/wiki/Sites-That-Run-Etherpad).
+[Public Etherpad Instances for you to try out.  Third party instances not provided by the Etherpad foundation](https://scanner.etherpad.org/).
 
 ## Installation
 
