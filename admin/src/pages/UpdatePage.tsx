@@ -11,6 +11,14 @@ type FetchState =
 
 const IN_FLIGHT_STATUSES = ['preflight', 'draining', 'executing', 'rolling-back'];
 
+const fmtRemaining = (ms: number): string => {
+  if (ms <= 0) return '0s';
+  const s = Math.floor(ms / 1000);
+  const m = Math.floor(s / 60);
+  const sec = s % 60;
+  return m > 0 ? `${m}m ${sec}s` : `${sec}s`;
+};
+
 export const UpdatePage = () => {
   const {t} = useTranslation();
   const us = useStore((s) => s.updateStatus);
@@ -79,6 +87,21 @@ export const UpdatePage = () => {
     }
   };
 
+  // Tier 3 countdown — derive scheduledFor outside the conditional returns so
+  // the hook order is stable on every render.
+  const scheduledFor = us?.execution?.status === 'scheduled'
+    ? (us.execution as {scheduledFor: string}).scheduledFor
+    : null;
+  const [remainingMs, setRemainingMs] = useState<number>(() =>
+    scheduledFor ? Math.max(0, new Date(scheduledFor).getTime() - Date.now()) : 0);
+  useEffect(() => {
+    if (!scheduledFor) return;
+    const target = new Date(scheduledFor).getTime();
+    setRemainingMs(Math.max(0, target - Date.now()));
+    const id = setInterval(() => setRemainingMs(Math.max(0, target - Date.now())), 1000);
+    return () => clearInterval(id);
+  }, [scheduledFor]);
+
   if (fetchState.kind === 'loading') {
     return <div>{t('admin.loading', {defaultValue: 'Loading...'})}</div>;
   }
@@ -110,11 +133,15 @@ export const UpdatePage = () => {
 
   const upToDate = !us.latest || us.currentVersion === us.latest.version;
   const showApply = !!us.policy?.canManual
-    && (status === 'idle' || status === 'verified')
+    && (status === 'idle' || status === 'verified' || status === 'scheduled')
     && !us.lockHeld
     && !upToDate;
-  const showCancel = status === 'preflight' || status === 'draining';
+  const showCancel = status === 'preflight' || status === 'draining' || status === 'scheduled';
   const showAcknowledge = status === 'preflight-failed' || status === 'rolled-back' || status === 'rollback-failed';
+
+  const scheduled = us.execution.status === 'scheduled'
+    ? us.execution as {targetTag: string; scheduledFor: string}
+    : null;
 
   return (
     <div className="update-page">
@@ -152,10 +179,24 @@ export const UpdatePage = () => {
         </p>
       )}
 
+      {scheduled && (
+        <section className="update-scheduled" aria-live="polite">
+          <h2><Trans i18nKey="update.page.scheduled.title"/></h2>
+          <p>
+            <Trans
+              i18nKey="update.page.scheduled.countdown"
+              values={{tag: scheduled.targetTag, remaining: fmtRemaining(remainingMs)}}
+            />
+          </p>
+        </section>
+      )}
+
       <div className="update-actions">
         {showApply && (
           <button onClick={() => post('/admin/update/apply')} disabled={actionInFlight}>
-            {t('update.page.apply')}
+            {status === 'scheduled'
+              ? t('update.page.scheduled.apply_now')
+              : t('update.page.apply')}
           </button>
         )}
         {showCancel && (

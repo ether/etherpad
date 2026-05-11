@@ -5,6 +5,7 @@ import {InstalledPlugin} from "../pages/Plugin.ts";
 
 export type Execution =
   | {status: 'idle'}
+  | {status: 'scheduled'; targetTag: string; scheduledFor: string; startedAt: string}
   | {status: 'preflight'; targetTag: string; startedAt: string}
   | {status: 'preflight-failed'; targetTag: string; reason: string; at: string}
   | {status: 'draining'; targetTag: string; drainEndsAt: string; startedAt: string}
