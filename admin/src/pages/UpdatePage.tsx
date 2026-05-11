@@ -139,7 +139,11 @@ export const UpdatePage = () => {
   const showCancel = status === 'preflight' || status === 'draining' || status === 'scheduled';
   const showAcknowledge = status === 'preflight-failed' || status === 'rolled-back' || status === 'rollback-failed';
 
-  const scheduled = us.execution.status === 'scheduled'
+  // Optional-chain the execution lookup: some integration-test stubs of
+  // /admin/update/status omit Tier 2/3 fields entirely (see
+  // update-banner.spec.ts), and accessing `.status` on an undefined
+  // execution would crash the whole page before the h1 renders.
+  const scheduled = us.execution?.status === 'scheduled'
     ? us.execution as {targetTag: string; scheduledFor: string}
     : null;
 

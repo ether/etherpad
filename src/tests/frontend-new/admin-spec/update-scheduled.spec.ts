@@ -41,9 +41,11 @@ test.describe('admin update page — Tier 3 scheduled state', () => {
 
     await page.goto('http://localhost:9001/admin/update');
     await expect(page.getByRole('heading', {name: /update scheduled/i})).toBeVisible({timeout: 30000});
-    // Countdown copy mentions the target tag and a remaining-time string.
-    await expect(page.getByText(/v2\.7\.2/)).toBeVisible();
-    await expect(page.getByText(/\d+s|\d+m \d+s/)).toBeVisible();
+    // Scope to the countdown panel — /v2\.7\.2/ also matches the banner and
+    // the changelog link, which would trip strict-mode locators.
+    const panel = page.locator('section.update-scheduled');
+    await expect(panel.getByText(/v2\.7\.2/)).toBeVisible();
+    await expect(panel.getByText(/\d+s|\d+m \d+s/)).toBeVisible();
     // Apply now relabel (not the regular "Apply update" copy).
     await expect(page.getByRole('button', {name: /apply now/i})).toBeVisible();
     await expect(page.getByRole('button', {name: /^cancel$/i})).toBeVisible();
