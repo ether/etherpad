@@ -1,0 +1,415 @@
+/* ════════════════════════════════════════════════════════════════════════
+ * margin / pad.css — a standalone Etherpad skin with 5 themes.
+ *
+ * Drop the entire `margin/` folder into src/static/skins/, then in
+ * settings.json set:
+ *
+ *     "skinName": "margin"
+ *
+ * Choose a theme by setting data-theme on <html> in src/templates/pad.html:
+ *
+ *     <html data-theme="editorial">
+ *
+ * Themes: editorial · brutalist · paper · crt · industrial
+ *
+ * Switch live in devtools:  document.documentElement.dataset.theme='crt'
+ *
+ * This file inherits the same variable contract colibris uses
+ * (--primary-color, --text-color, --bg-color, --main-font-family, …) so
+ * Etherpad's built-in components pick up the theme automatically.
+ * ════════════════════════════════════════════════════════════════════════ */
+
+/* Google Fonts powering the five themed type stacks (Newsreader/Editorial,
+ * Space Mono/Brutalist, Lora/Paper, IBM Plex Mono+VT323/CRT, IBM Plex
+ * Sans/Industrial, plus Instrument Serif for display H1/H2). */
+@import url("https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..700&family=Instrument+Serif:ital@0;1&family=Lora:ital,wght@0,400..700;1,400..700&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&family=VT323&family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700&display=swap");
+
+/* Component partials — vendored from colibris so this skin is standalone. */
+@import url("src/general.css");
+@import url("src/layout.css");
+@import url("src/pad-editor.css");
+@import url("src/components/scrollbars.css");
+@import url("src/components/buttons.css");
+@import url("src/components/popup.css");
+@import url("src/components/chat.css");
+@import url("src/components/sidediv.css");
+@import url("src/components/gritter.css");
+@import url("src/components/table-of-content.css");
+@import url("src/components/toolbar.css");
+@import url("src/components/users.css");
+@import url("src/components/form.css");
+@import url("src/components/import-export.css");
+@import url("src/plugins/brightcolorpicker.css");
+@import url("src/plugins/font_color.css");
+@import url("src/plugins/tables2.css");
+@import url("src/plugins/set_title_on_pad.css");
+@import url("src/plugins/author_hover.css");
+@import url("src/plugins/comments.css");
+
+/* Default theme if data-theme isn't set */
+:root { color-scheme: light; }
+html:not([data-theme]) { /* fallback */ }
+
+/* Mirror colibris's narrow-viewport behavior: the per-theme blocks below
+ * each set --editor-horizontal-padding (40-64px) so the editor frame has
+ * room to breathe on desktop. Below 1000px (matching the layout.css media
+ * query that drops `max-width: 900px` on the iframe), zero them so the
+ * editor surface fills the available container width. */
+@media (max-width: 1000px) {
+  [data-theme] {
+    --editor-horizontal-padding: 0px !important;
+    --editor-vertical-padding: 0px !important;
+  }
+}
+
+/* ─── 1. EDITORIAL ───────────────────────────────────────────────────── */
+[data-theme="editorial"] {
+  --super-dark-color:#1c1916; --dark-color:#5a534a;
+  --primary-color:#a8442b;   --middle-color:rgba(28,25,22,.18);
+  --light-color:#f0eadd;     --super-light-color:#fbf8f2;
+  --text-color:#1c1916;      --text-soft-color:#5a534a;
+  --border-color:rgba(28,25,22,.18);
+  --bg-soft-color:#f0eadd;   --bg-color:#fbf8f2;
+  --toolbar-border:1px solid rgba(28,25,22,.12);
+  --main-font-family:"Newsreader",Georgia,serif;
+  --editor-horizontal-padding:64px; --editor-vertical-padding:40px;
+  --m-bg:#f5f0e8; --m-rule:rgba(28,25,22,.12);
+  --m-radius:2px; --m-shadow:0 12px 36px -18px rgba(28,25,22,.20);
+  --m-ui-style:italic; --m-ui-case:none; --m-ui-track:.04em;
+}
+
+/* ─── 2. BRUTALIST ──────────────────────────────────────────────────── */
+[data-theme="brutalist"] {
+  --super-dark-color:#000; --dark-color:#222;
+  --primary-color:#ff3b00; --middle-color:#000;
+  --light-color:#f3f3f0;   --super-light-color:#fff;
+  --text-color:#000;       --text-soft-color:#222;
+  --border-color:#000;
+  --bg-soft-color:#f3f3f0; --bg-color:#fff;
+  --toolbar-border:2px solid #000;
+  --main-font-family:"Space Mono",ui-monospace,monospace;
+  --editor-horizontal-padding:48px; --editor-vertical-padding:32px;
+  --m-bg:#f3f3f0; --m-rule:#000;
+  --m-radius:0; --m-shadow:4px 4px 0 #000;
+  --m-ui-style:normal; --m-ui-case:uppercase; --m-ui-track:.06em;
+}
+
+/* ─── 3. PAPER ──────────────────────────────────────────────────────── */
+[data-theme="paper"] {
+  --super-dark-color:#2a2520; --dark-color:#6b6259;
+  --primary-color:#b87333;    --middle-color:rgba(42,37,32,.18);
+  --light-color:#efe7d4;      --super-light-color:#fbf6ec;
+  --text-color:#2a2520;       --text-soft-color:#6b6259;
+  --border-color:rgba(42,37,32,.18);
+  --bg-soft-color:#efe7d4;    --bg-color:#fbf6ec;
+  --toolbar-border:1px solid rgba(42,37,32,.08);
+  --main-font-family:"Lora",Georgia,serif;
+  --editor-horizontal-padding:56px; --editor-vertical-padding:40px;
+  --m-bg:#f6f1e8; --m-rule:rgba(42,37,32,.08);
+  --m-radius:10px; --m-shadow:0 14px 40px -16px rgba(42,37,32,.18);
+  --m-ui-style:normal; --m-ui-case:none; --m-ui-track:0;
+  --m-display-font:"Instrument Serif",Georgia,serif;
+}
+
+/* ─── 4. CRT TERMINAL ───────────────────────────────────────────────── */
+[data-theme="crt"] {
+  color-scheme: dark;
+  --super-dark-color:#7fffae; --dark-color:#4ed188;
+  --primary-color:#ffb84d;    --middle-color:rgba(127,255,174,.45);
+  --light-color:#0c2a14;      --super-light-color:#08200f;
+  --text-color:#7fffae;       --text-soft-color:#4ed188;
+  --border-color:rgba(127,255,174,.45);
+  --bg-soft-color:#0c2a14;    --bg-color:#08200f;
+  --toolbar-border:1px solid rgba(127,255,174,.45);
+  --main-font-family:"IBM Plex Mono",ui-monospace,monospace;
+  --editor-horizontal-padding:48px; --editor-vertical-padding:32px;
+  --m-bg:#04140a; --m-rule:rgba(127,255,174,.20);
+  --m-radius:0; --m-shadow:0 0 0 1px rgba(127,255,174,.25),0 0 24px rgba(127,255,174,.10);
+  --m-ui-style:normal; --m-ui-case:uppercase; --m-ui-track:.10em;
+  --m-display-font:"VT323",ui-monospace,monospace;
+}
+
+/* ─── 5. INDUSTRIAL ─────────────────────────────────────────────────── */
+[data-theme="industrial"] {
+  color-scheme: dark;
+  --super-dark-color:#e6e8eb; --dark-color:#9aa0a8;
+  --primary-color:#ffcc00;    --middle-color:rgba(255,255,255,.18);
+  --light-color:#1c2027;      --super-light-color:#14171c;
+  --text-color:#e6e8eb;       --text-soft-color:#9aa0a8;
+  --border-color:rgba(255,255,255,.18);
+  --bg-soft-color:#1c2027;    --bg-color:#14171c;
+  --toolbar-border:1px solid rgba(255,255,255,.08);
+  --main-font-family:"IBM Plex Sans",ui-sans-serif,system-ui,sans-serif;
+  --editor-horizontal-padding:56px; --editor-vertical-padding:36px;
+  --m-bg:#0d0f12; --m-rule:rgba(255,255,255,.08);
+  --m-radius:3px; --m-shadow:0 12px 32px rgba(0,0,0,.4);
+  --m-ui-style:normal; --m-ui-case:uppercase; --m-ui-track:.08em;
+}
+
+/* ─── 0. COLIBRIS (default, mirrors colibris/pad.css) ──────────────── */
+[data-theme="colibris"] {
+  --super-dark-color:#485365; --dark-color:#576273;
+  --primary-color:#64d29b;    --middle-color:#dadada;
+  --light-color:#f2f3f4;      --super-light-color:#ffffff;
+  --text-color:#485365;       --text-soft-color:#576273;
+  --border-color:#dadada;
+  --bg-soft-color:#f2f3f4;    --bg-color:#ffffff;
+  --toolbar-border:none;
+  --main-font-family:Quicksand, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+  --editor-horizontal-padding:40px; --editor-vertical-padding:25px;
+  --m-bg:#f2f3f4; --m-rule:#dadada;
+  --m-radius:3px; --m-shadow:0 2px 8px rgba(68,68,68,.08);
+  --m-ui-style:normal; --m-ui-case:none; --m-ui-track:0;
+}
+
+/* ─── 1b. EDITORIAL — DARK ─────────────────────────────────────────── */
+[data-theme="editorial-dark"] {
+  color-scheme:dark;
+  --super-dark-color:#f0eadd; --dark-color:#a8a098;
+  --primary-color:#d27047;    --middle-color:rgba(240,234,221,.18);
+  --light-color:#221e1a;      --super-light-color:#1c1916;
+  --text-color:#f0eadd;       --text-soft-color:#a8a098;
+  --border-color:rgba(240,234,221,.18);
+  --bg-soft-color:#221e1a;    --bg-color:#1c1916;
+  --toolbar-border:1px solid rgba(240,234,221,.12);
+  --main-font-family:"Newsreader",Georgia,serif;
+  --editor-horizontal-padding:64px; --editor-vertical-padding:40px;
+  --m-bg:#16130f; --m-rule:rgba(240,234,221,.12);
+  --m-radius:2px; --m-shadow:0 12px 36px -18px rgba(0,0,0,.6);
+  --m-ui-style:italic; --m-ui-case:none; --m-ui-track:.04em;
+}
+
+/* ─── 2b. BRUTALIST — DARK ─────────────────────────────────────────── */
+[data-theme="brutalist-dark"] {
+  color-scheme:dark;
+  --super-dark-color:#fff; --dark-color:#ddd;
+  --primary-color:#ff3b00; --middle-color:#fff;
+  --light-color:#111;      --super-light-color:#000;
+  --text-color:#fff;       --text-soft-color:#ddd;
+  --border-color:#fff;
+  --bg-soft-color:#111;    --bg-color:#000;
+  --toolbar-border:2px solid #fff;
+  --main-font-family:"Space Mono",ui-monospace,monospace;
+  --editor-horizontal-padding:48px; --editor-vertical-padding:32px;
+  --m-bg:#0c0c09; --m-rule:#fff;
+  --m-radius:0; --m-shadow:4px 4px 0 #fff;
+  --m-ui-style:normal; --m-ui-case:uppercase; --m-ui-track:.06em;
+}
+
+/* ─── 3b. PAPER — DARK ─────────────────────────────────────────────── */
+[data-theme="paper-dark"] {
+  color-scheme:dark;
+  --super-dark-color:#efe7d4; --dark-color:#a89e8d;
+  --primary-color:#d99560;    --middle-color:rgba(239,231,212,.18);
+  --light-color:#332c25;      --super-light-color:#2a2520;
+  --text-color:#efe7d4;       --text-soft-color:#a89e8d;
+  --border-color:rgba(239,231,212,.18);
+  --bg-soft-color:#332c25;    --bg-color:#2a2520;
+  --toolbar-border:1px solid rgba(239,231,212,.10);
+  --main-font-family:"Lora",Georgia,serif;
+  --editor-horizontal-padding:56px; --editor-vertical-padding:40px;
+  --m-bg:#231e19; --m-rule:rgba(239,231,212,.10);
+  --m-radius:10px; --m-shadow:0 14px 40px -16px rgba(0,0,0,.6);
+  --m-ui-style:normal; --m-ui-case:none; --m-ui-track:0;
+  --m-display-font:"Instrument Serif",Georgia,serif;
+}
+
+/* ─── 4b. CRT — LIGHT (paper-terminal, less iconic but readable) ──── */
+[data-theme="crt-light"] {
+  --super-dark-color:#04200d; --dark-color:#1c4a2b;
+  --primary-color:#006b3f;    --middle-color:rgba(0,107,63,.30);
+  --light-color:#dfeee2;      --super-light-color:#e9f5ed;
+  --text-color:#04200d;       --text-soft-color:#1c4a2b;
+  --border-color:rgba(0,107,63,.30);
+  --bg-soft-color:#dfeee2;    --bg-color:#e9f5ed;
+  --toolbar-border:1px solid rgba(0,107,63,.30);
+  --main-font-family:"IBM Plex Mono",ui-monospace,monospace;
+  --editor-horizontal-padding:48px; --editor-vertical-padding:32px;
+  --m-bg:#edf6ee; --m-rule:rgba(0,107,63,.20);
+  --m-radius:0; --m-shadow:0 0 0 1px rgba(0,107,63,.25);
+  --m-ui-style:normal; --m-ui-case:uppercase; --m-ui-track:.10em;
+  --m-display-font:"VT323",ui-monospace,monospace;
+}
+
+/* ─── 5b. INDUSTRIAL — LIGHT ──────────────────────────────────────── */
+[data-theme="industrial-light"] {
+  --super-dark-color:#14171c; --dark-color:#525965;
+  --primary-color:#cc9900;    --middle-color:rgba(20,23,28,.18);
+  --light-color:#e6e8eb;      --super-light-color:#f5f6f8;
+  --text-color:#14171c;       --text-soft-color:#525965;
+  --border-color:rgba(20,23,28,.18);
+  --bg-soft-color:#e6e8eb;    --bg-color:#f5f6f8;
+  --toolbar-border:1px solid rgba(20,23,28,.08);
+  --main-font-family:"IBM Plex Sans",ui-sans-serif,system-ui,sans-serif;
+  --editor-horizontal-padding:56px; --editor-vertical-padding:36px;
+  --m-bg:#f0f1f4; --m-rule:rgba(20,23,28,.08);
+  --m-radius:3px; --m-shadow:0 12px 32px rgba(20,23,28,.10);
+  --m-ui-style:normal; --m-ui-case:uppercase; --m-ui-track:.08em;
+}
+
+/* ════════════════════════════════════════════════════════════════════
+ * Cross-theme overrides (apply to anything under [data-theme])
+ * ════════════════════════════════════════════════════════════════════ */
+[data-theme] body { background: var(--m-bg); color: var(--text-color); }
+[data-theme] #editorcontainerbox,
+[data-theme] #editorcontainer,
+[data-theme] #padeditor,
+[data-theme] #outerdocbody,
+[data-theme] iframe[name="ace_outer"],
+[data-theme] iframe[name="ace_inner"] { background: var(--m-bg) !important; }
+
+/* Editor frame outline — gives the pad surface a visible edge against
+ * the page background when both share dark/light tones. */
+[data-theme] iframe[name="ace_outer"] {
+  border: 1px solid var(--border-color) !important;
+  border-radius: 4px;
+  box-shadow: 0 1px 0 rgba(0,0,0,.04);
+}
+[data-theme^="brutalist"] iframe[name="ace_outer"] { border-radius: 0; border-width: 2px !important; box-shadow: var(--m-shadow); border-color: var(--m-rule) !important; }
+[data-theme="crt"] iframe[name="ace_outer"] { box-shadow: 0 0 0 1px var(--border-color), 0 0 18px rgba(127,255,174,.18) inset; }
+[data-theme="crt-light"] iframe[name="ace_outer"] { box-shadow: 0 0 0 1px var(--border-color); }
+
+/* Show-users / chat / share buttons in the menu_right have hard-coded
+ * background colors in upstream — force them to follow the theme.
+ * No left-borders: keep the right-side icons visually flush like the left. */
+[data-theme] .toolbar .menu_right li a,
+[data-theme] #chaticon,
+[data-theme] #chaticon a {
+  background: transparent !important;
+  color: var(--text-color) !important;
+  border-left: 0 !important;
+}
+[data-theme] #chaticon .chatlabel { color: var(--text-color) !important; }
+[data-theme] .toolbar ul li[data-key=showusers] > a {
+  background: var(--primary-color) !important;
+  color: var(--bg-color) !important;
+}
+
+/* Normalize <select> chrome inside popups so Font type / Language / Theme
+ * align with the rest of the form fields. line-height matches height so the
+ * selected option text sits on the vertical centerline. */
+[data-theme] .popup-content select,
+[data-theme] #settings select,
+[data-theme] #users select {
+  height: 32px;
+  line-height: 30px;
+  padding: 0 26px 0 10px;
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font: inherit;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, currentColor 50%),
+                    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position: calc(100% - 14px) 14px, calc(100% - 9px) 14px;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+}
+
+/* In the toolbar the .nice-select widget is a flex child of its <li>, which
+ * stretches it past the natural inline-block centering the popups get. Pin
+ * .current to the vertical centerline with flex alignment so the selected
+ * text reads right regardless of the row line-height. */
+[data-theme] .toolbar .nice-select {
+  display: inline-flex;
+  align-items: center;
+}
+[data-theme] .toolbar .nice-select .current {
+  line-height: 1;
+}
+
+/* Cap every open dropdown list (toolbar AND popups) — long font-family
+ * / heading / theme labels would otherwise stretch the <ul> to fit the
+ * widest <li> and could run a long way across the viewport. Truncate
+ * overflowing option labels with ellipsis. */
+[data-theme] .nice-select .list {
+  max-width: 220px;
+}
+[data-theme] .nice-select .option {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ep_comments_page hard-codes #ffffff / #f9f9f9 / #eeeeed on the sidebar
+ * + popup wrappers, which clashes with dark themes (crt, industrial) and
+ * out-of-palette light themes (paper, editorial). Pull them onto the
+ * margin variable palette so the comment UI reads against any theme. */
+[data-theme] .full-display-content,
+[data-theme] .comment-modal-comment .full-display-content {
+  background: var(--bg-color);
+  color: var(--text-color);
+  box-shadow: var(--m-shadow);
+}
+[data-theme] .compact-display-content {
+  background: var(--bg-soft-color);
+  color: var(--text-color);
+}
+[data-theme] .comment-reply {
+  background: var(--bg-soft-color);
+  border-top: 1px solid var(--border-color);
+  color: var(--text-color);
+}
+[data-theme] .new-comment textarea,
+[data-theme] .new-comment input[type="text"],
+[data-theme] .comment-edit-form textarea {
+  background: var(--bg-color);
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
+}
+
+[data-theme] .toolbar { background: var(--bg-color); border-bottom: var(--toolbar-border); font-family: var(--main-font-family); }
+[data-theme] .toolbar ul li a {
+  border-radius: var(--m-radius) !important;
+  letter-spacing: var(--m-ui-track);
+  text-transform: var(--m-ui-case);
+  font-style: var(--m-ui-style);
+}
+[data-theme] .toolbar ul li a:hover,
+[data-theme] .toolbar ul li a.selected { background: var(--bg-soft-color); color: var(--text-color); }
+[data-theme] .toolbar ul li a.pressed  { color: var(--primary-color); }
+[data-theme] .toolbar ul li.separator  { background: var(--border-color); }
+
+[data-theme] .popup, [data-theme] #chatbox {
+  background: var(--bg-color); color: var(--text-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--m-radius); box-shadow: var(--m-shadow);
+  font-family: var(--main-font-family);
+}
+[data-theme] #chatbox #titlebar { background: var(--bg-soft-color); border-bottom: 1px solid var(--border-color); }
+[data-theme] #chattext, [data-theme] #chatinput { background: var(--bg-color); color: var(--text-color); border-color: var(--border-color); }
+
+[data-theme] button, [data-theme] input[type="text"], [data-theme] input[type="submit"], [data-theme] select {
+  font-family: var(--main-font-family); border-radius: var(--m-radius);
+}
+
+/* ─── per-theme touches ──────────────────────────────────────────── */
+[data-theme^="editorial"] .toolbar { font-style: italic; }
+[data-theme="editorial"] iframe[name="ace_outer"] {
+  background:
+    repeating-linear-gradient(transparent, transparent calc(1.65em - 1px),
+      rgba(28,25,22,.025) calc(1.65em - 1px), rgba(28,25,22,.025) 1.65em),
+    var(--m-bg) !important;
+}
+
+[data-theme^="brutalist"] .toolbar, [data-theme^="brutalist"] #editbar { border-bottom: 2px solid var(--m-rule) !important; }
+[data-theme^="brutalist"] .popup { box-shadow: var(--m-shadow); border: 2px solid var(--m-rule) !important; }
+[data-theme^="brutalist"] button { box-shadow: none; border: 0 !important; }
+
+[data-theme^="paper"] .popup, [data-theme^="paper"] button { border-radius: 12px; }
+
+[data-theme="crt"] body::before {
+  content:""; position:fixed; inset:0; pointer-events:none; z-index:9998;
+  background: repeating-linear-gradient(to bottom, transparent 0, transparent 2px, rgba(0,0,0,.18) 2px, rgba(0,0,0,.18) 3px);
+  mix-blend-mode: multiply;
+}
+[data-theme="crt"] body::after {
+  content:""; position:fixed; inset:0; pointer-events:none; z-index:9997;
+  background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,.55) 100%);
+}
+[data-theme="crt"] h1, [data-theme="crt"] h2 { font-family: var(--m-display-font); text-shadow: 0 0 6px rgba(127,255,174,.55); }
+
+[data-theme^="industrial"] .toolbar ul li a.pressed,
+[data-theme^="industrial"] .toolbar ul li a.selected { box-shadow: inset 0 -2px 0 var(--primary-color); }
