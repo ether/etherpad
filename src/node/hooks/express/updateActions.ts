@@ -19,6 +19,7 @@ import {performRollback} from '../../updater/RollbackHandler';
 import {UpdateState} from '../../updater/types';
 import {isValidTag} from '../../updater/refSafety';
 import {applyUpdate} from '../../updater/applyPipeline';
+import {cancelScheduler} from '../../updater';
 import {getIo} from './socketio';
 
 const logger = log4js.getLogger('updater');
@@ -283,10 +284,13 @@ export const expressCreateServer = (
     const state = await loadState(stateFilePath());
     // Cancel is allowed only during pre-execute states. Once executing begins
     // (filesystem mutated) we either complete or rollback — see spec section
-    // "Error handling" / state machine.
-    if (state.execution.status !== 'preflight' && state.execution.status !== 'draining') {
+    // "Error handling" / state machine. Tier 3's `scheduled` is also pre-execute.
+    const cancellable: ReadonlySet<string> = new Set(['scheduled', 'preflight', 'draining']);
+    if (!cancellable.has(state.execution.status)) {
       return res.status(409).json({error: 'not-cancellable', status: state.execution.status});
     }
+    // Tier 3: drop the pending scheduler timer if we're cancelling a schedule.
+    if (state.execution.status === 'scheduled') cancelScheduler();
     if (drainer) drainer.cancel();
     const at = new Date().toISOString();
     await saveState(stateFilePath(), {

@@ -125,6 +125,30 @@ describe(__filename, function () {
       installAdminAuth();
       await agent.post('/admin/update/cancel').auth('admin', 'admin-pw').expect(409);
     });
+
+    it('cancels a Tier 3 scheduled update and returns the state to idle', async () => {
+      installAdminAuth();
+      const scheduledFor = new Date(Date.now() + 60_000).toISOString();
+      const startedAt = new Date().toISOString();
+      await saveState(statePath(), {
+        ...EMPTY_STATE,
+        latest: {
+          version: '99.0.0', tag: 'v99.0.0', body: '',
+          publishedAt: '2099-01-01T00:00:00Z', prerelease: false,
+          htmlUrl: 'https://example/r/v99.0.0',
+        },
+        execution: {status: 'scheduled', targetTag: 'v99.0.0', scheduledFor, startedAt},
+      });
+      const r = await agent.post('/admin/update/cancel')
+        .auth('admin', 'admin-pw')
+        .expect(200);
+      assert.deepEqual(r.body, {cancelled: true});
+
+      const status = await agent.get('/admin/update/status').expect(200);
+      assert.equal(status.body.execution.status, 'idle');
+      assert.equal(status.body.lastResult.outcome, 'cancelled');
+      assert.equal(status.body.lastResult.targetTag, 'v99.0.0');
+    });
   });
 
   describe('POST /admin/update/acknowledge', function () {
