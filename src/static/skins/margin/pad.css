@@ -22,7 +22,7 @@
 /* Google Fonts powering the five themed type stacks (Newsreader/Editorial,
  * Space Mono/Brutalist, Lora/Paper, IBM Plex Mono+VT323/CRT, IBM Plex
  * Sans/Industrial, plus Instrument Serif for display H1/H2). */
-@import url("https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..700&family=Instrument+Serif:ital@0;1&family=Lora:ital,wght@0,400..700;1,400..700&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&family=VT323&family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700&display=swap");
+@import url("//fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..700&family=Instrument+Serif:ital@0;1&family=Lora:ital,wght@0,400..700;1,400..700&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&family=VT323&family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700&display=swap");
 
 /* Component partials — vendored from colibris so this skin is standalone. */
 @import url("src/general.css");
