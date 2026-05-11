@@ -18,7 +18,7 @@ The code is Apache 2.0. The data format is open. It [scales to thousands of simu
 
 ## Try it out
 
-[Try out a public Etherpad instance](https://github.com/ether/etherpad/wiki/Sites-That-Run-Etherpad#sites-that-run-etherpad)
+[Try out a public Etherpad instance](https://scanner.etherpad.org)
 
 ## Project Status
 
