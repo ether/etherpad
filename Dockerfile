@@ -214,4 +214,15 @@ HEALTHCHECK --interval=5s --timeout=3s \
   CMD wget -qO- http://127.0.0.1:9001/health | grep -E "pass|ok|up" > /dev/null || exit 1
 
 EXPOSE 9001
-CMD ["pnpm", "run", "prod"]
+# Run node directly instead of via `pnpm run prod`. pnpm 11's
+# `runDepsStatusCheck` fires before every `pnpm run …` and spuriously
+# decides node_modules is out of sync on first start under the named-
+# volume layout used by docker-compose (mounting src/plugin_packages).
+# It then tries to `pnpm install --production`, which either prompts to
+# wipe node_modules (tty: true) or aborts with
+# ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY (no tty). Bypassing pnpm
+# at runtime sidesteps the check; the image's node_modules was already
+# verified during build. See ether/etherpad#7718.
+# `exec` makes node PID 1 so it receives SIGTERM directly and shuts down
+# cleanly.
+CMD ["sh", "-c", "cd src && exec node --require tsx/cjs node/server.ts"]
