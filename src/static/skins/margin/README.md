@@ -1,14 +1,17 @@
 # margin — Etherpad skin
 
-A standalone drop-in skin with eleven themes — one neutral default and five named themes each available in light and dark mode:
+A standalone drop-in skin with six themes and an orthogonal Light/Dark toggle:
 
-| Default | Light | Dark |
-| --- | --- | --- |
-| `colibris` | `editorial` | `editorial-dark` |
-|  | `brutalist` | `brutalist-dark` |
-|  | `paper` | `paper-dark` |
-|  | `crt-light` | `crt` |
-|  | `industrial-light` | `industrial` |
+| Theme | Light | Dark | Natural mode |
+| --- | --- | --- | --- |
+| `colibris` | ✓ | — | light (no dark palette) |
+| `editorial` | ✓ | ✓ | light |
+| `brutalist` | ✓ | ✓ | light |
+| `paper` | ✓ | ✓ | light |
+| `crt` | ✓ | ✓ | dark |
+| `industrial` | ✓ | ✓ | dark |
+
+The current `data-theme` and `data-mode` attributes live on `<html>`. Mode is paired with theme in CSS via `[data-theme="X"][data-mode="light|dark"]`.
 
 No external dependency on colibris — all component partials are vendored under `src/`.
 
@@ -20,16 +23,21 @@ No external dependency on colibris — all component partials are vendored under
    "skinName": "margin"
    ```
 
-No template edits are required. The skin applies the user's saved theme on load (defaulting to `colibris`), the Google Fonts stylesheet is `@import`-ed from `pad.css` / `index.css`, and a **Theme** dropdown is injected into the User Settings and Pad-wide Settings popups.
+No template edits are required. The skin applies the user's saved theme + mode on load (defaulting to `colibris` + the theme's natural mode), the Google Fonts stylesheet is `@import`-ed from `pad.css` / `index.css`, and a **Theme** dropdown plus a **Dark mode** checkbox are injected into both the User Settings and Pad-wide Settings columns of the Settings popup.
 
 ## Switch themes at runtime
 
-The Settings popup (the gear icon in the toolbar) has a **Theme** dropdown in both User Settings and Pad-wide Settings columns. Selecting a theme persists the choice in `localStorage` under the `marginTheme` key and reflects across the pad and the lobby.
+The Settings popup (gear icon in the toolbar) has:
+- a **Theme** dropdown with the six themes,
+- a **Dark mode** checkbox (orthogonal — flips light↔dark for any theme that has a dark palette).
+
+Choices persist in `localStorage` under `marginTheme` + `marginMode` and propagate across the pad and the lobby.
 
 Programmatically, from DevTools:
 
 ```js
-document.documentElement.dataset.theme = 'crt'
+document.documentElement.dataset.theme = 'crt';
+document.documentElement.dataset.mode = 'dark';
 ```
 
 ## Folder layout

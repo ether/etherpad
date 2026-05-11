@@ -1,15 +1,24 @@
 'use strict';
 
-// Apply the user's saved theme as early as possible so the lobby paints in
-// the same theme as the last pad they visited. The dropdown that writes
-// this localStorage key lives in the pad's Settings popup (see pad.js).
+// Apply the user's saved theme + light/dark mode as early as possible so the
+// lobby paints in the same theme as the last pad they visited. The controls
+// that write these localStorage keys live in the pad's Settings popup
+// (see pad.js).
 const MARGIN_THEME_KEY = 'marginTheme';
+const MARGIN_MODE_KEY = 'marginMode';
 const MARGIN_THEME_DEFAULT = 'colibris';
+const MARGIN_MODE_DEFAULTS = {
+  colibris: 'light', editorial: 'light', brutalist: 'light',
+  paper: 'light', crt: 'dark', industrial: 'dark',
+};
 try {
-  const saved = localStorage.getItem(MARGIN_THEME_KEY);
-  document.documentElement.setAttribute('data-theme', saved || MARGIN_THEME_DEFAULT);
+  const theme = localStorage.getItem(MARGIN_THEME_KEY) || MARGIN_THEME_DEFAULT;
+  const mode = localStorage.getItem(MARGIN_MODE_KEY) || MARGIN_MODE_DEFAULTS[theme] || 'light';
+  document.documentElement.setAttribute('data-theme', theme);
+  document.documentElement.setAttribute('data-mode', mode);
 } catch (_) {
   document.documentElement.setAttribute('data-theme', MARGIN_THEME_DEFAULT);
+  document.documentElement.setAttribute('data-mode', MARGIN_MODE_DEFAULTS[MARGIN_THEME_DEFAULT]);
 }
 
 window.addEventListener('pageshow', (event) => {
