@@ -217,11 +217,20 @@ window.customStart = () => {
 
   const pathSegments = window.location.pathname.split('/');
   const padName = pathSegments[pathSegments.length - 1];
-  const recentPads = localStorage.getItem('recentPads');
-  if (recentPads == null) {
-    localStorage.setItem('recentPads', JSON.stringify([]));
-  }
-  const recentPadsList = JSON.parse(localStorage.getItem('recentPads'));
+  // localStorage access and JSON.parse can both throw (private mode,
+  // restricted storage, corrupted value). Treat any failure as "no recent
+  // pads yet" rather than aborting customStart().
+  let recentPadsList = [];
+  try {
+    const raw = localStorage.getItem('recentPads');
+    if (raw != null) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        recentPadsList = parsed.filter(
+            (p) => p && typeof p === 'object' && typeof p.name === 'string');
+      }
+    }
+  } catch (_) { /* private mode / corrupted entry */ }
   if (!recentPadsList.some((pad) => pad.name === padName)) {
     if (recentPadsList.length >= MAX_PADS_IN_HISTORY) {
       recentPadsList.shift(); // Remove the oldest pad if we have more than 10
@@ -231,13 +240,14 @@ window.customStart = () => {
       timestamp: new Date().toISOString(), // Store the timestamp for sorting
       members: 1,
     });
-    localStorage.setItem('recentPads', JSON.stringify(recentPadsList));
   } else {
     // Update the timestamp if the pad already exists
     const existingPad = recentPadsList.find((pad) => pad.name === padName);
     if (existingPad) {
       existingPad.timestamp = new Date().toISOString();
     }
-    localStorage.setItem('recentPads', JSON.stringify(recentPadsList));
   }
+  try {
+    localStorage.setItem('recentPads', JSON.stringify(recentPadsList));
+  } catch (_) { /* quota / private mode — skip silently */ }
 };

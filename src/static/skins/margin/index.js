@@ -52,11 +52,21 @@ window.customStart = () => {
 
 
   const recentPadListHeading = document.querySelector('[data-l10n-id="index.recentPads"]');
-  const recentPadsFromLocalStorage = localStorage.getItem('recentPads');
+  // localStorage may be unavailable (private mode, disabled cookies) and the
+  // stored value may be malformed if another tab corrupted it. Either case
+  // would throw out of customStart() and break the rest of the lobby init,
+  // so swallow both and fall back to an empty list.
   let recentPadListData = [];
-  if (recentPadsFromLocalStorage != null) {
-    recentPadListData = JSON.parse(recentPadsFromLocalStorage);
-  }
+  try {
+    const recentPadsFromLocalStorage = localStorage.getItem('recentPads');
+    if (recentPadsFromLocalStorage != null) {
+      const parsed = JSON.parse(recentPadsFromLocalStorage);
+      if (Array.isArray(parsed)) {
+        recentPadListData = parsed.filter(
+            (p) => p && typeof p === 'object' && typeof p.name === 'string');
+      }
+    }
+  } catch (_) { /* private mode / corrupted entry */ }
 
   // Remove duplicates based on pad name and sort by timestamp
   recentPadListData = recentPadListData.filter(
@@ -91,7 +101,11 @@ window.customStart = () => {
       li.style.cursor = 'pointer';
 
       li.className = 'recent-pad';
-      const padPath = `${window.location.href}p/${pad.name}`;
+      // Use new URL() so a trailing slash, query string, or hash on
+      // window.location.href doesn't produce a broken link, and so pad
+      // names with characters that need encoding still resolve.
+      const padPath = new URL(`p/${encodeURIComponent(pad.name)}`,
+          window.location.href).href;
       const link = document.createElement('a');
       link.style.textDecoration = 'none';
 
