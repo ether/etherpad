@@ -36,16 +36,14 @@ Etherpad has been doing the same thing — well — since 2009. No pivots, no ac
 [![Simulated Load](https://github.com/ether/etherpad/actions/workflows/load-test.yml/badge.svg?color=%2344b492)](https://github.com/ether/etherpad/actions/workflows/load-test.yml)
 [![Rate Limit](https://github.com/ether/etherpad/actions/workflows/rate-limit.yml/badge.svg?color=%2344b492)](https://github.com/ether/etherpad/actions/workflows/rate-limit.yml)
 [![Docker file](https://github.com/ether/etherpad/actions/workflows/docker.yml/badge.svg?color=%2344b492)](https://github.com/ether/etherpad/actions/workflows/docker.yml)
-[![Frontend admin tests powered by Sauce Labs](https://github.com/ether/etherpad/actions/workflows/frontend-admin-tests.yml/badge.svg?color=%2344b492)](https://github.com/ether/etherpad/actions/workflows/frontend-admin-tests.yml)
-[![Frontend tests powered by Sauce Labs](https://github.com/ether/etherpad/actions/workflows/frontend-tests.yml/badge.svg?color=%2344b492)](https://github.com/ether/etherpad/actions/workflows/frontend-tests.yml)
-[![Sauce Test Status](https://saucelabs.com/buildstatus/etherpad.svg)](https://saucelabs.com/u/etherpad)
-[![Windows Build](https://github.com/ether/etherpad/actions/workflows/windows.yml/badge.svg?color=%2344b492)](https://github.com/ether/etherpad/actions/workflows/windows.yml)
+[![Frontend admin tests](https://github.com/ether/etherpad/actions/workflows/frontend-admin-tests.yml/badge.svg?color=%2344b492)](https://github.com/ether/etherpad/actions/workflows/frontend-admin-tests.yml)
+[![Frontend tests](https://github.com/ether/etherpad/actions/workflows/frontend-tests.yml/badge.svg?color=%2344b492)](https://github.com/ether/etherpad/actions/workflows/frontend-tests.yml)
 
 ### Engagement
 
 [![Docker Pulls](https://img.shields.io/docker/pulls/etherpad/etherpad?color=%2344b492)](https://hub.docker.com/r/etherpad/etherpad)
 [![Discord](https://img.shields.io/discord/741309013593030667?color=%2344b492)](https://discord.com/invite/daEjfhw)
-[![Etherpad plugins](https://img.shields.io/endpoint?url=https%3A%2F%2Fstatic.etherpad.org%2Fshields.json&color=%2344b492 "Etherpad plugins")](https://static.etherpad.org/index.html)
+[![Etherpad plugins](https://img.shields.io/endpoint?url=https%3A%2F%2Fstatic.etherpad.org%2Fshields.json&color=%2344b492 "Etherpad plugins")](https://etherpad.org/plugins)
 ![Languages](https://img.shields.io/static/v1?label=Languages&message=105&color=%2344b492)
 ![Translation Coverage](https://img.shields.io/static/v1?label=Languages&message=98%&color=%2344b492)
 
