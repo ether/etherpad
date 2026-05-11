@@ -12,6 +12,12 @@ import {EMPTY_STATE, UpdateState} from '../../../node/updater/types';
 const sh = (cmd: string, opts: any = {}) =>
   execSync(cmd, {stdio: 'pipe', ...opts}).toString().trim();
 
+// On Windows, git's child processes can briefly hold file handles after exit
+// (NTFS lazy-release / antivirus / pack files), so an immediate rmdir on the
+// temp repo hits EBUSY. fs.rm's built-in retry clears the flake.
+const cleanupTmp = (dir: string) =>
+  fs.rm(dir, {recursive: true, force: true, maxRetries: 10, retryDelay: 100});
+
 const buildTmpRepo = async (): Promise<{dir: string; v1Sha: string; v2Sha: string}> => {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'updater-it-'));
   sh('git init -b main', {cwd: dir});
@@ -94,7 +100,7 @@ describe(__filename, function () {
       // The fromSha recorded in state matches the v0.0.1 SHA.
       assert.equal((states.at(-1)!.execution as {fromSha: string}).fromSha, v1Sha);
     } finally {
-      await fs.rm(dir, {recursive: true, force: true});
+      await cleanupTmp(dir);
     }
   });
 
@@ -140,7 +146,7 @@ describe(__filename, function () {
       const lock = await fs.readFile(path.join(dir, 'pnpm-lock.yaml'), 'utf8');
       assert.match(lock, /lockfileVersion: x/);
     } finally {
-      await fs.rm(dir, {recursive: true, force: true});
+      await cleanupTmp(dir);
     }
   });
 
@@ -182,7 +188,7 @@ describe(__filename, function () {
       assert.equal(states.at(-1)!.execution.status, 'rolled-back');
       assert.equal(sh('git rev-parse HEAD', {cwd: dir}), v1Sha);
     } finally {
-      await fs.rm(dir, {recursive: true, force: true});
+      await cleanupTmp(dir);
     }
   });
 
@@ -225,7 +231,7 @@ describe(__filename, function () {
       assert.equal(sh('git rev-parse HEAD', {cwd: dir}), v1Sha);
       assert.equal(exitedWith, 75);
     } finally {
-      await fs.rm(dir, {recursive: true, force: true});
+      await cleanupTmp(dir);
     }
   });
 
@@ -259,7 +265,7 @@ describe(__filename, function () {
       assert.equal(states.at(-1)!.lastResult!.outcome, 'rollback-failed');
       assert.equal(exitedWith, 75);
     } finally {
-      await fs.rm(dir, {recursive: true, force: true});
+      await cleanupTmp(dir);
     }
   });
 });
