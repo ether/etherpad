@@ -282,3 +282,62 @@ describe('Tier 2 state extensions', () => {
     expect(loaded.lastResult?.outcome).toBe('verified');
   });
 });
+
+describe('Tier 3 state extensions', () => {
+  it('EMPTY_STATE carries a null graceStartTag', () => {
+    expect(EMPTY_STATE.email.graceStartTag).toBeNull();
+  });
+
+  it('round-trips a scheduled execution', async () => {
+    const s = {
+      ...EMPTY_STATE,
+      execution: {
+        status: 'scheduled' as const,
+        targetTag: 'v9.9.9',
+        scheduledFor: '2026-05-11T12:15:00.000Z',
+        startedAt: '2026-05-11T12:00:00.000Z',
+      },
+      email: {...EMPTY_STATE.email, graceStartTag: 'v9.9.9'},
+    };
+    await saveState(statePath(), s);
+    const loaded = await loadState(statePath());
+    expect(loaded.execution).toEqual(s.execution);
+    expect(loaded.email.graceStartTag).toBe('v9.9.9');
+  });
+
+  it('backfills graceStartTag=null on a Tier 1/2 file that pre-dates the field', async () => {
+    await fs.writeFile(statePath(), JSON.stringify({
+      schemaVersion: 1, lastCheckAt: null, lastEtag: null, latest: null,
+      vulnerableBelow: [],
+      // graceStartTag intentionally missing — legacy Tier 1/2 shape.
+      email: {severeAt: null, vulnerableAt: null, vulnerableNewReleaseTag: null},
+      execution: {status: 'idle'},
+      bootCount: 0, lastResult: null,
+    }));
+    const s = await loadState(statePath());
+    expect(s.email.graceStartTag).toBeNull();
+    expect(s.execution).toEqual({status: 'idle'});
+  });
+
+  it('rejects scheduled missing targetTag / scheduledFor', async () => {
+    await fs.writeFile(statePath(), JSON.stringify({
+      schemaVersion: 1, lastCheckAt: null, lastEtag: null, latest: null,
+      vulnerableBelow: [],
+      email: {severeAt: null, vulnerableAt: null, vulnerableNewReleaseTag: null, graceStartTag: null},
+      execution: {status: 'scheduled', startedAt: '2026-05-11T12:00:00.000Z'},
+    }));
+    const state = await loadState(statePath());
+    expect(state).toEqual(EMPTY_STATE);
+  });
+
+  it('rejects email.graceStartTag of wrong type', async () => {
+    await fs.writeFile(statePath(), JSON.stringify({
+      schemaVersion: 1, lastCheckAt: null, lastEtag: null, latest: null,
+      vulnerableBelow: [],
+      email: {severeAt: null, vulnerableAt: null, vulnerableNewReleaseTag: null, graceStartTag: 42},
+      execution: {status: 'idle'},
+    }));
+    const state = await loadState(statePath());
+    expect(state).toEqual(EMPTY_STATE);
+  });
+});
