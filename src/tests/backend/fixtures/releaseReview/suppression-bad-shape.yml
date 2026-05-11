@@ -1,0 +1,3 @@
+findings:
+  - status: wontfix
+    rationale: "missing fingerprint and other required fields"
