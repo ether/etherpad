@@ -18,6 +18,7 @@ import {tailLines, appendLine} from '../../updater/updateLog';
 import {performRollback} from '../../updater/RollbackHandler';
 import {UpdateState} from '../../updater/types';
 import {isValidTag} from '../../updater/refSafety';
+import {applyUpdate} from '../../updater/applyPipeline';
 import {getIo} from './socketio';
 
 const logger = log4js.getLogger('updater');
@@ -136,24 +137,20 @@ export const expressCreateServer = (
   app.post('/admin/update/apply', wrapAsync(async (req: any, res: any) => {
     if (!requireAdmin(req, res)) return;
 
+    // HTTP-specific pre-checks: produce structured 4xx error codes the UI
+    // localises. The pipeline duplicates these as safety, but mapping cleanly
+    // to status codes is easier when we know the failure kind up-front.
     const state = await loadState(stateFilePath());
     if (!state.latest) return res.status(409).json({error: 'no-known-latest'});
-
-    // Defence in depth: VersionChecker validates tag_name before persisting,
-    // but a hand-edited update-state.json could still surface an unsafe tag
-    // here. Reject up-front rather than throw later when the executor calls
-    // assertValidTag, so the admin sees a clear 409 instead of a 500.
     if (!isValidTag(state.latest.tag)) {
       return res.status(409).json({error: 'invalid-tag-in-state'});
     }
-
-    // Allowed entry statuses: idle / verified / preflight-failed / rolled-back.
-    // Anything else means an in-flight or terminal-needs-acknowledge state.
-    const allowedEntry = ['idle', 'verified', 'preflight-failed', 'rolled-back'];
+    // Allowed entry statuses: idle / verified / preflight-failed / rolled-back / scheduled.
+    // `scheduled` lets the admin "Apply now" during the Tier 3 grace window.
+    const allowedEntry = ['idle', 'verified', 'preflight-failed', 'rolled-back', 'scheduled'];
     if (!allowedEntry.includes(state.execution.status)) {
       return res.status(409).json({error: `execution-busy:${state.execution.status}`});
     }
-
     const installMethod = getDetectedInstallMethod();
     const policy = evaluatePolicy({
       installMethod,
@@ -166,144 +163,118 @@ export const expressCreateServer = (
       return res.status(409).json({error: 'policy-denied', reason: policy.reason});
     }
 
-    if (!await acquireLock(lockPath())) {
-      return res.status(409).json({error: 'lock-held'});
-    }
-
     const targetTag = state.latest.tag;
-    let cleanupLock = true;
+    let responded = false;
 
     try {
-      // Persist preflight state.
-      const startedAt = new Date().toISOString();
-      const preState: UpdateState = {
-        ...state,
-        execution: {status: 'preflight', targetTag, startedAt},
-      };
-      await saveState(stateFilePath(), preState);
-      appendLine(logPath(), `[${startedAt}] PREFLIGHT target=${targetTag}`);
-
-      const baseDeps = buildPreflightDeps(installMethod);
-      const pf = await runPreflight(
-        {
-          targetTag,
-          diskSpaceMinMB: Number(settings.updates.diskSpaceMinMB) || 500,
-          requireSignature: settings.updates.requireSignature,
-          trustedKeysPath: settings.updates.trustedKeysPath,
-        },
-        {
-          ...baseDeps,
-          verifyTag: () => verifyReleaseTag({
-            tag: targetTag,
+      const result = await applyUpdate({
+        targetTag,
+        deps: {
+          loadState: () => loadState(stateFilePath()),
+          saveState: (s: UpdateState) => saveState(stateFilePath(), s),
+          acquireLock: () => acquireLock(lockPath()),
+          releaseLock: async () => {
+            try { await releaseLock(lockPath()); }
+            catch (err) { logger.warn(`releaseLock: ${(err as Error).message}`); }
+          },
+          isValidTag,
+          runPreflight: async (tag) => {
+            const baseDeps = buildPreflightDeps(installMethod);
+            return runPreflight(
+              {
+                targetTag: tag,
+                diskSpaceMinMB: Number(settings.updates.diskSpaceMinMB) || 500,
+                requireSignature: settings.updates.requireSignature,
+                trustedKeysPath: settings.updates.trustedKeysPath,
+              },
+              {
+                ...baseDeps,
+                verifyTag: () => verifyReleaseTag({
+                  tag,
+                  repoDir: settings.root,
+                  requireSignature: settings.updates.requireSignature,
+                  trustedKeysPath: settings.updates.trustedKeysPath,
+                }),
+              },
+            );
+          },
+          createDrainer: (opts) => {
+            drainer = createDrainer(opts);
+            return drainer;
+          },
+          executeUpdate: async ({targetTag: tag, initialState}) => executeUpdate({
             repoDir: settings.root,
+            backupDir: backupDir(),
+            spawnFn: spawn as unknown as SpawnFn,
+            readSha: () => new Promise<string>((resolve, reject) => {
+              const c = spawn('git', ['rev-parse', 'HEAD'],
+                              {cwd: settings.root, stdio: ['ignore', 'pipe', 'ignore']});
+              let out = '';
+              c.stdout.on('data', (b) => { out += b.toString(); });
+              c.on('close', (code) => code === 0
+                ? resolve(out.trim())
+                : reject(new Error(`git rev-parse exit ${code}`)));
+              c.on('error', reject);
+            }),
+            copyFile: async (src: string, dst: string) => {
+              await fs.mkdir(path.dirname(dst), {recursive: true});
+              await fs.copyFile(src, dst);
+            },
+            saveState: (s: UpdateState) => saveState(stateFilePath(), s),
+            initialState,
+            targetTag: tag,
+            now: () => new Date(),
+            exit: (code: number) => process.exit(code),
+          }),
+          performRollback: (s) => performRollback(s, getRollbackDeps()),
+          appendLog: (line) => appendLine(logPath(), line),
+          broadcast: (key, values) => broadcastShout(key, values),
+          onAccepted: ({drainEndsAt}) => {
+            if (!responded) {
+              responded = true;
+              res.status(202).json({accepted: true, drainEndsAt});
+            }
+          },
+          now: () => new Date(),
+          installMethod,
+          settings: {
+            tier: settings.updates.tier,
+            drainSeconds: Number(settings.updates.drainSeconds) || 60,
+            diskSpaceMinMB: Number(settings.updates.diskSpaceMinMB) || 500,
             requireSignature: settings.updates.requireSignature,
             trustedKeysPath: settings.updates.trustedKeysPath,
-          }),
-        },
-      );
-
-      if (!pf.ok) {
-        const at = new Date().toISOString();
-        await saveState(stateFilePath(), {
-          ...preState,
-          execution: {status: 'preflight-failed', targetTag, reason: pf.reason, at},
-          lastResult: {
-            targetTag, fromSha: '',
-            outcome: 'preflight-failed', reason: pf.reason, at,
+            adminEmail: settings.adminEmail,
           },
-        });
-        appendLine(logPath(), `[${at}] PREFLIGHT_FAILED ${pf.reason}`);
-        cleanupLock = true;
-        return res.status(409).json({error: 'preflight-failed', reason: pf.reason});
-      }
-
-      // Re-check state after preflight: /admin/update/cancel may have flipped
-      // execution back to 'idle' while we were running the slow checks. The
-      // cancel handler intentionally leaves the lock alone (we own it) and
-      // signals via state instead, so a stale apply can detect cancellation
-      // here before mutating the filesystem.
-      const afterPreflight = await loadState(stateFilePath());
-      if (afterPreflight.execution.status !== 'preflight'
-          || (afterPreflight.execution as {targetTag?: string}).targetTag !== targetTag) {
-        appendLine(logPath(),
-          `[${new Date().toISOString()}] APPLY aborted post-preflight (state=${afterPreflight.execution.status})`);
-        return res.status(409).json({error: 'cancelled-during-preflight'});
-      }
-
-      // Drain — respond 202 first so the UI starts polling /log without waiting.
-      const drainSeconds = Number(settings.updates.drainSeconds) || 60;
-      drainer = createDrainer({
-        drainSeconds,
-        broadcast: (key, values) => broadcastShout(key, values),
-      });
-      const drainEndsAt = new Date(Date.now() + drainSeconds * 1000).toISOString();
-      await saveState(stateFilePath(), {
-        ...preState,
-        execution: {status: 'draining', targetTag, drainEndsAt, startedAt: new Date().toISOString()},
-      });
-      appendLine(logPath(), `[${new Date().toISOString()}] DRAIN start drainSeconds=${drainSeconds}`);
-
-      res.status(202).json({accepted: true, drainEndsAt});
-
-      const drainResult = await drainer.start();
-      drainer = null;
-      if (drainResult.outcome === 'cancelled') {
-        // /admin/update/cancel already updated state and lastResult; just release the lock.
-        appendLine(logPath(), `[${new Date().toISOString()}] DRAIN cancelled by admin`);
-        return;
-      }
-
-      // Re-load state right before the executor runs so anything the cancel
-      // endpoint or another concurrent handler wrote is honoured.
-      const fresh = await loadState(stateFilePath());
-
-      const r = await executeUpdate({
-        repoDir: settings.root,
-        backupDir: backupDir(),
-        spawnFn: spawn as unknown as SpawnFn,
-        readSha: () => new Promise<string>((resolve, reject) => {
-          const c = spawn('git', ['rev-parse', 'HEAD'],
-                          {cwd: settings.root, stdio: ['ignore', 'pipe', 'ignore']});
-          let out = '';
-          c.stdout.on('data', (b) => { out += b.toString(); });
-          c.on('close', (code) => code === 0
-            ? resolve(out.trim())
-            : reject(new Error(`git rev-parse exit ${code}`)));
-          c.on('error', reject);
-        }),
-        copyFile: async (src: string, dst: string) => {
-          await fs.mkdir(path.dirname(dst), {recursive: true});
-          await fs.copyFile(src, dst);
         },
-        saveState: (s: UpdateState) => saveState(stateFilePath(), s),
-        initialState: fresh,
-        targetTag,
-        now: () => new Date(),
-        // executeUpdate calls exit on success (75) — that takes the process down,
-        // so anything after this is the failure path.
-        exit: (code: number) => process.exit(code),
       });
+      drainer = null;
 
-      // Failure paths: executor returned without exiting, state is rolling-back.
-      if (r.outcome !== 'pending-verification') {
-        const after = await loadState(stateFilePath());
-        if (after.execution.status === 'rolling-back') {
-          // performRollback will exit 75 on either success or terminal failure.
-          // We do not release the lock — exit takes the process down and the
-          // next-boot acquireLock reaps the stale PID.
-          cleanupLock = false;
-          await performRollback(after, getRollbackDeps());
-        }
+      if (responded) return; // already 202'd in onAccepted; nothing more to send.
+
+      switch (result.outcome) {
+        case 'no-known-latest':
+          return res.status(409).json({error: 'no-known-latest'});
+        case 'invalid-tag':
+          return res.status(409).json({error: 'invalid-tag-in-state'});
+        case 'busy':
+          return res.status(409).json({error: `execution-busy:${result.status}`});
+        case 'lock-held':
+          return res.status(409).json({error: 'lock-held'});
+        case 'preflight-failed':
+          return res.status(409).json({error: 'preflight-failed', reason: result.reason});
+        case 'cancelled':
+          return res.status(409).json({error: 'cancelled-during-preflight'});
+        case 'pending-verification':
+        case 'rolled-back':
+        default:
+          // Process should have exited via executor.exit(75) or performRollback.
+          // If we reach here in a test stub, surface the outcome as a 200.
+          return res.json({outcome: result.outcome});
       }
     } catch (err) {
       logger.error(`apply failed: ${(err as Error).stack || err}`);
       appendLine(logPath(), `[${new Date().toISOString()}] APPLY_ERROR ${(err as Error).message}`);
       if (!res.headersSent) res.status(500).json({error: 'internal'});
-    } finally {
-      if (cleanupLock) {
-        try { await releaseLock(lockPath()); }
-        catch (err) { logger.warn(`releaseLock: ${(err as Error).message}`); }
-      }
     }
   }));
 
