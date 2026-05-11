@@ -1,5 +1,5 @@
 import {describe, it, expect} from 'vitest';
-import {decideSchedule} from '../../../../node/updater/Scheduler';
+import {decideSchedule, createSchedulerRunner} from '../../../../node/updater/Scheduler';
 import {EMPTY_STATE, UpdateState, ReleaseInfo, PolicyResult} from '../../../../node/updater/types';
 
 const fakeRelease = (tag: string, version = tag.replace(/^v/, '')): ReleaseInfo => ({
@@ -202,5 +202,83 @@ describe('decideSchedule', () => {
       const delta = new Date(d.newExecution.scheduledFor).getTime() - NOW.getTime();
       expect(delta).toBe(7 * 24 * 60 * 60 * 1000);
     }
+  });
+});
+
+describe('createSchedulerRunner', () => {
+  it('arms a timer for `scheduledFor` and fires triggerApply once', async () => {
+    let fired = 0;
+    let lastTag = '';
+    const runner = createSchedulerRunner({
+      now: () => new Date('2026-05-11T12:00:00.000Z'),
+      setTimer: (cb) => setImmediate(cb) as unknown as NodeJS.Timeout,
+      clearTimer: (h) => clearImmediate(h as unknown as NodeJS.Immediate),
+      triggerApply: async (tag) => { fired++; lastTag = tag; },
+    });
+    runner.arm({targetTag: 'v2.0.1', scheduledFor: '2026-05-11T12:15:00.000Z'});
+    await new Promise((r) => setImmediate(r));
+    await new Promise((r) => setImmediate(r));
+    expect(fired).toBe(1);
+    expect(lastTag).toBe('v2.0.1');
+  });
+
+  it('clears the previous timer when arm() is called again', () => {
+    const cleared: unknown[] = [];
+    let next = 0;
+    const runner = createSchedulerRunner({
+      now: () => new Date('2026-05-11T12:00:00.000Z'),
+      setTimer: () => (++next) as unknown as NodeJS.Timeout,
+      clearTimer: (h) => { cleared.push(h); },
+      triggerApply: async () => {},
+    });
+    runner.arm({targetTag: 'v2.0.1', scheduledFor: '2026-05-11T12:15:00.000Z'});
+    runner.arm({targetTag: 'v2.0.2', scheduledFor: '2026-05-11T12:30:00.000Z'});
+    expect(cleared).toEqual([1]);
+  });
+
+  it('cancel() clears the timer; idempotent', () => {
+    const cleared: unknown[] = [];
+    let next = 0;
+    const runner = createSchedulerRunner({
+      now: () => new Date('2026-05-11T12:00:00.000Z'),
+      setTimer: () => (++next) as unknown as NodeJS.Timeout,
+      clearTimer: (h) => { cleared.push(h); },
+      triggerApply: async () => {},
+    });
+    runner.arm({targetTag: 'v2.0.1', scheduledFor: '2026-05-11T12:15:00.000Z'});
+    runner.cancel();
+    runner.cancel();
+    expect(cleared).toEqual([1]);
+  });
+
+  it('fires immediately (delay=0) when scheduledFor is in the past', async () => {
+    let fired = 0;
+    let observedDelay = -1;
+    const runner = createSchedulerRunner({
+      now: () => new Date('2026-05-11T13:00:00.000Z'),
+      setTimer: (cb, ms) => { observedDelay = ms; return setImmediate(cb) as any; },
+      clearTimer: (h) => clearImmediate(h as any),
+      triggerApply: async () => { fired++; },
+    });
+    runner.arm({targetTag: 'v2.0.1', scheduledFor: '2026-05-11T12:15:00.000Z'});
+    await new Promise((r) => setImmediate(r));
+    await new Promise((r) => setImmediate(r));
+    expect(observedDelay).toBe(0);
+    expect(fired).toBe(1);
+  });
+
+  it('cancel() after fire is a no-op (does not crash, no double-clear)', async () => {
+    const cleared: unknown[] = [];
+    const runner = createSchedulerRunner({
+      now: () => new Date('2026-05-11T12:00:00.000Z'),
+      setTimer: (cb) => setImmediate(cb) as any,
+      clearTimer: (h) => { cleared.push(h); },
+      triggerApply: async () => {},
+    });
+    runner.arm({targetTag: 'v2.0.1', scheduledFor: '2026-05-11T12:15:00.000Z'});
+    await new Promise((r) => setImmediate(r));
+    await new Promise((r) => setImmediate(r));
+    runner.cancel();
+    expect(cleared).toEqual([]);
   });
 });

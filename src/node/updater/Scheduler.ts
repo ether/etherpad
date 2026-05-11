@@ -88,3 +88,49 @@ export const decideSchedule = (input: DecideScheduleInput): SchedulerDecision =>
 
   return {action: 'schedule', newExecution, emails, newEmailState};
 };
+
+export interface SchedulerRunnerDeps {
+  now: () => Date;
+  setTimer: (cb: () => void, ms: number) => NodeJS.Timeout;
+  clearTimer: (h: NodeJS.Timeout) => void;
+  /**
+   * Invoked when the timer fires. Should re-check persisted state before
+   * acting — the runner guarantees one fire per arm() call, but does not
+   * coordinate with state changes that happen between arm() and fire.
+   */
+  triggerApply: (targetTag: string) => Promise<void>;
+}
+
+export interface SchedulerRunner {
+  /** Arm or re-arm the timer for `scheduledFor`. Idempotent: re-arming clears prior. */
+  arm: (s: {targetTag: string; scheduledFor: string}) => void;
+  /** Cancel a pending timer. Idempotent; no-op after the timer has fired. */
+  cancel: () => void;
+}
+
+export const createSchedulerRunner = ({
+  now, setTimer, clearTimer, triggerApply,
+}: SchedulerRunnerDeps): SchedulerRunner => {
+  let timer: NodeJS.Timeout | null = null;
+  let armedFor: string | null = null;
+
+  return {
+    arm: ({targetTag, scheduledFor}) => {
+      if (timer) { clearTimer(timer); timer = null; }
+      armedFor = targetTag;
+      const delay = Math.max(0, new Date(scheduledFor).getTime() - now().getTime());
+      timer = setTimer(() => {
+        timer = null;
+        const tag = armedFor;
+        armedFor = null;
+        if (!tag) return;
+        // Discard promise — apply pipeline owns its own error reporting.
+        void triggerApply(tag);
+      }, delay);
+    },
+    cancel: () => {
+      if (timer) { clearTimer(timer); timer = null; }
+      armedFor = null;
+    },
+  };
+};
