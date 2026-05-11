@@ -200,3 +200,47 @@ Tick every line before approving the release that introduces this code:
 - [ ] `var/log/update.log` is rotated when it crosses 10 MB (force this by writing >10 MB into the file and triggering an Apply).
 
 If any line is unticked, do not ship the release.
+
+## 11. Tier 3 — grace window, scheduled apply, cancel, restart-in-grace
+
+Configure the VM for tier 3:
+
+```jsonc
+{
+  "updates": {
+    "tier": "auto",
+    "preApplyGraceMinutes": 2,        // short for smoke
+    "drainSeconds": 15,
+    "checkIntervalHours": 1
+  }
+}
+```
+
+1. As in §3, `git checkout v2.7.2`. Restart Etherpad. Wait for the immediate first version check (~5s after boot).
+2. Confirm a schedule was created:
+
+   ```bash
+   curl -fsSL http://localhost:9001/admin/update/status | jq '.execution'
+   # Expect: {"status":"scheduled","targetTag":"v...","scheduledFor":"...","startedAt":"..."}
+   ```
+
+3. Visit `/admin/update`. Confirm:
+    - A countdown panel renders with the localised "Etherpad will start updating to vX.Y.Z in Nm Ms." copy.
+    - Two buttons: **Cancel** and **Apply now**.
+4. **Happy path:** wait for the timer to fire. The same flow as §4 (drain, executor, exit 75) runs. State lands on `verified` after the supervisor restarts on the new version.
+5. **Cancel path:** repeat steps 1–3 in a fresh setup. Click **Cancel** during the countdown. Expected:
+    - State transitions to `idle`; `lastResult.outcome: "cancelled"`.
+    - `journalctl -u etherpad` shows `cancelled pending schedule (admin-cancellation)`.
+    - The next version check (within `checkIntervalHours`) re-schedules the same release — this is correct: the schedule was cancelled but the policy still wants the update. To opt out completely, set `updates.tier: "notify"` instead.
+6. **Apply-now path:** repeat steps 1–3. Click **Apply now**. The regular Tier 2 pipeline starts immediately; the previously-armed timer is harmlessly stale (the executor takes over before it fires).
+7. **Restart-in-grace path:** repeat steps 1–3, then `sudo systemctl restart etherpad` mid-countdown. On boot, the journal logs `updater: rehydrating Tier 3 schedule for vX.Y.Z at ...`. `/admin/update` resumes the countdown from the persisted `scheduledFor` (no re-arming, no re-emailing).
+8. **Email path** (if `adminEmail` is set): the journal logs `(would send email) ... [Etherpad] Auto-update scheduled for ...` exactly once per scheduled tag. Re-arming for the same tag does not re-email. A different tag arming over the top does.
+
+If any step diverges, capture `var/log/update.log` and stop. Add to the §10 sign-off checklist:
+
+- [ ] Tier 3 schedule transitions execution → `scheduled` after the version check.
+- [ ] Countdown panel renders the localised string (not the i18n key).
+- [ ] Cancel during scheduled returns to `idle`.
+- [ ] Apply now during scheduled runs the Tier 2 pipeline immediately.
+- [ ] Restart-in-grace rehydrates the timer.
+- [ ] `grace-start` email fires once per tag when `adminEmail` is set.

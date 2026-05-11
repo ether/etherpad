@@ -8,7 +8,10 @@
   - Terminal `rollback-failed` state surfaces a strong banner; the admin clicks Acknowledge once they've manually recovered to clear the lock and re-allow Tier 2 attempts.
   - New settings under `updates.*`: `preApplyGraceMinutes`, `drainSeconds`, `rollbackHealthCheckSeconds`, `diskSpaceMinMB`, `requireSignature`, `trustedKeysPath`. Tag signature verification is opt-in (default `false`) — see `doc/admin/updates.md` for the keyring setup.
   - **A process supervisor (systemd / pm2 / docker `--restart=unless-stopped`) is required to apply updates.** Without one, exit 75 leaves the instance down.
-  - Tiers 3 (auto with grace window) and 4 (autonomous in maintenance window) remain designed but unimplemented and will land in subsequent releases.
+- **Self-update subsystem — Tier 3 (auto with grace window).**
+  - On a git install, set `updates.tier: "auto"` to have new releases applied automatically after `preApplyGraceMinutes`. During the grace window, `/admin/update` shows a live countdown plus Cancel and Apply now buttons. Schedules are persisted to `var/update-state.json`, so an Etherpad restart during the grace window rehydrates the timer instead of losing the schedule. A new release tag detected mid-grace re-arms the timer; if `adminEmail` is set, a one-shot `grace-start` notification fires per scheduled tag (issue #7607).
+  - The terminal `rollback-failed` state continues to disable auto/autonomous attempts globally until acknowledged; manual click stays available because an admin click *is* the intervention the terminal state requires.
+  - Tier 4 (autonomous in a maintenance window) remains designed but unimplemented and will land in a subsequent release.
 
 # 2.7.3
 
