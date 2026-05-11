@@ -64,6 +64,25 @@ jobs:
         name: install dependencies and create symlink for ep_etherpad-lite
         run: pnpm install --frozen-lockfile
       -
+        # The etherpad container is started in the background above; without
+        # this wait the test step can hit nginx before etherpad is listening
+        # and nginx returns 502, failing the run on a cold cache. Poll the
+        # nginx-proxied endpoint (which is also what the test hits) until it
+        # stops returning 5xx.
+        name: Wait for etherpad behind nginx to be ready
+        run: |
+          for i in $(seq 1 60); do
+            if curl -fsS -o /dev/null --max-time 2 http://127.0.0.1:8081/; then
+              echo "etherpad is ready behind nginx"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "ERROR: etherpad behind nginx did not become ready in time"
+          echo "--- etherpad-docker logs ---"
+          docker logs etherpad-docker || true
+          exit 1
+      -
         name: run rate limit test
         run: |
           cd src/tests/ratelimit
