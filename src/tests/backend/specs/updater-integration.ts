@@ -225,8 +225,17 @@ describe(__filename, function () {
         rollbackHealthCheckSeconds: 60,
       });
       assert.equal(r.armed, false);
-      // Wait for the fire-and-forget rollback to finish.
-      await new Promise((resolve) => setTimeout(resolve, 250));
+      // Poll for the fire-and-forget rollback to land in its terminal state.
+      // A flat sleep here was racy on Windows (git checkout + spawned-process
+      // bookkeeping can push past several hundred ms).
+      const deadline = Date.now() + 10_000;
+      while (
+        states.at(-1)?.execution.status !== 'rolled-back' &&
+        states.at(-1)?.execution.status !== 'rollback-failed' &&
+        Date.now() < deadline
+      ) {
+        await new Promise((resolve) => setTimeout(resolve, 25));
+      }
       assert.equal(states.at(-1)!.execution.status, 'rolled-back');
       assert.equal(sh('git rev-parse HEAD', {cwd: dir}), v1Sha);
       assert.equal(exitedWith, 75);
