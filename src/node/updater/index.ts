@@ -9,8 +9,16 @@ import {loadState, saveState} from './state';
 import {isMajorBehind, isVulnerable} from './versionCompare';
 import {evaluatePolicy} from './UpdatePolicy';
 import {decideEmails} from './Notifier';
-import {checkPendingVerification, CheckResult, RollbackDeps} from './RollbackHandler';
-import type {SpawnFn} from './UpdateExecutor';
+import {checkPendingVerification, CheckResult, RollbackDeps, performRollback} from './RollbackHandler';
+import {executeUpdate, SpawnFn} from './UpdateExecutor';
+import {createSchedulerRunner, decideSchedule, SchedulerRunner} from './Scheduler';
+import {applyUpdate, ApplyPipelineDeps} from './applyPipeline';
+import {acquireLock, releaseLock} from './lock';
+import {runPreflight} from './preflight';
+import {verifyReleaseTag} from './trustedKeys';
+import {createDrainer} from './SessionDrainer';
+import {appendLine} from './updateLog';
+import {isValidTag} from './refSafety';
 import {InstallMethod, UpdateState} from './types';
 
 const logger = log4js.getLogger('updater');
@@ -21,6 +29,7 @@ let initialTimer: NodeJS.Timeout | null = null;
 let checkInFlight = false;
 let inMemoryState: UpdateState | null = null;
 let pendingVerification: CheckResult | null = null;
+let scheduler: SchedulerRunner | null = null;
 
 export const stateFilePath = () => path.join(settings.root, 'var', 'update-state.json');
 
@@ -105,6 +114,43 @@ const performCheck = async (): Promise<void> => {
       }
     }
 
+    // Tier 3 scheduler pass: decide whether to schedule, reschedule, or cancel.
+    if (state.latest && scheduler) {
+      const current = getEpVersion();
+      const policy = evaluatePolicy({
+        installMethod: detectedMethod,
+        tier: settings.updates.tier,
+        current,
+        latest: state.latest.version,
+        executionStatus: state.execution.status,
+      });
+      const decision = decideSchedule({
+        state, now, policy,
+        latest: state.latest, current,
+        preApplyGraceMinutes: Number(settings.updates.preApplyGraceMinutes) || 0,
+        adminEmail: settings.adminEmail,
+      });
+      if (decision.action === 'schedule') {
+        state.execution = decision.newExecution;
+        state.email = decision.newEmailState;
+        for (const e of decision.emails) {
+          // adminEmail is guaranteed non-null by decideSchedule when emails.length>0,
+          // but the type doesn't carry that — re-check to keep TS happy.
+          if (settings.adminEmail) {
+            await sendEmailViaSmtp(settings.adminEmail, e.subject, e.body);
+          }
+        }
+        scheduler.arm({
+          targetTag: decision.newExecution.targetTag,
+          scheduledFor: decision.newExecution.scheduledFor,
+        });
+      } else if (decision.action === 'cancel-schedule') {
+        state.execution = {status: 'idle'};
+        scheduler.cancel();
+        logger.info(`updater: cancelled pending schedule (${decision.reason})`);
+      }
+    }
+
     await saveState(stateFilePath(), state);
   } catch (err) {
     logger.warn(`Updater check failed: ${(err as Error).message}`);
@@ -146,6 +192,113 @@ export const getRollbackDeps = (): RollbackDeps => ({
   rollbackHealthCheckSeconds: Number(settings.updates.rollbackHealthCheckSeconds) || 60,
 });
 
+const lockPath = (): string => path.join(settings.root, 'var', 'update.lock');
+const logPath = (): string => path.join(settings.root, 'var', 'log', 'update.log');
+
+/**
+ * Build the ApplyPipelineDeps the scheduler uses when its timer fires.
+ * Production wiring only — no HTTP response semantics, no Socket.IO broadcast
+ * (the drain announcements live in the route handler today; wiring them
+ * from the scheduler path is a follow-up — for now scheduler-triggered
+ * updates skip the broadcast and rely on the admin UI countdown).
+ */
+const buildSchedulerApplyDeps = (): ApplyPipelineDeps => ({
+  loadState: () => loadState(stateFilePath()),
+  saveState: (s: UpdateState) => saveState(stateFilePath(), s),
+  acquireLock: () => acquireLock(lockPath()),
+  releaseLock: async () => {
+    try { await releaseLock(lockPath()); }
+    catch (err) { logger.warn(`releaseLock: ${(err as Error).message}`); }
+  },
+  isValidTag,
+  runPreflight: async (tag) => runPreflight(
+    {
+      targetTag: tag,
+      diskSpaceMinMB: Number(settings.updates.diskSpaceMinMB) || 500,
+      requireSignature: settings.updates.requireSignature,
+      trustedKeysPath: settings.updates.trustedKeysPath,
+    },
+    {
+      installMethod: detectedMethod,
+      workingTreeClean: () => new Promise<boolean>((resolve) => {
+        const c = spawn('git', ['status', '--porcelain'], {cwd: settings.root});
+        let out = '';
+        c.stdout.on('data', (b) => { out += b.toString(); });
+        c.on('close', () => resolve(out.trim().length === 0));
+        c.on('error', () => resolve(false));
+      }),
+      freeDiskMB: async (): Promise<number> => {
+        try {
+          const s = await (fs as any).statfs?.(settings.root);
+          if (!s) return Number.POSITIVE_INFINITY;
+          return Math.floor((Number(s.bavail) * Number(s.bsize)) / (1024 * 1024));
+        } catch {
+          return Number.POSITIVE_INFINITY;
+        }
+      },
+      pnpmOnPath: () => new Promise<boolean>((resolve) => {
+        const c = spawn('pnpm', ['--version'], {stdio: 'ignore'});
+        c.on('close', (code) => resolve(code === 0));
+        c.on('error', () => resolve(false));
+      }),
+      lockHeld: async () => false, // pipeline already holds the lock here
+      remoteHasTag: (tagName: string) => new Promise<boolean>((resolve) => {
+        const c = spawn('git', ['ls-remote', '--tags', 'origin', tagName],
+                        {cwd: settings.root, stdio: ['ignore', 'pipe', 'ignore']});
+        let out = '';
+        c.stdout.on('data', (b) => { out += b.toString(); });
+        c.on('close', () => resolve(out.trim().length > 0));
+        c.on('error', () => resolve(false));
+      }),
+      verifyTag: () => verifyReleaseTag({
+        tag,
+        repoDir: settings.root,
+        requireSignature: settings.updates.requireSignature,
+        trustedKeysPath: settings.updates.trustedKeysPath,
+      }),
+    },
+  ),
+  createDrainer: (opts) => createDrainer(opts),
+  executeUpdate: async ({targetTag, initialState}) => executeUpdate({
+    repoDir: settings.root,
+    backupDir: path.join(settings.root, 'var', 'update-backup'),
+    spawnFn: spawn as unknown as SpawnFn,
+    readSha: () => new Promise<string>((resolve, reject) => {
+      const c = spawn('git', ['rev-parse', 'HEAD'], {cwd: settings.root, stdio: ['ignore', 'pipe', 'ignore']});
+      let out = '';
+      c.stdout.on('data', (b) => { out += b.toString(); });
+      c.on('close', (code) => code === 0
+        ? resolve(out.trim())
+        : reject(new Error(`git rev-parse exit ${code}`)));
+      c.on('error', reject);
+    }),
+    copyFile: async (src: string, dst: string) => {
+      await fs.mkdir(path.dirname(dst), {recursive: true});
+      await fs.copyFile(src, dst);
+    },
+    saveState: (s: UpdateState) => saveState(stateFilePath(), s),
+    initialState,
+    targetTag,
+    now: () => new Date(),
+    exit: (code: number) => process.exit(code),
+  }),
+  performRollback: (s) => performRollback(s, getRollbackDeps()),
+  appendLog: (line: string) => appendLine(logPath(), line),
+  now: () => new Date(),
+  installMethod: detectedMethod,
+  settings: {
+    tier: settings.updates.tier,
+    drainSeconds: Number(settings.updates.drainSeconds) || 60,
+    diskSpaceMinMB: Number(settings.updates.diskSpaceMinMB) || 500,
+    requireSignature: settings.updates.requireSignature,
+    trustedKeysPath: settings.updates.trustedKeysPath,
+    adminEmail: settings.adminEmail,
+  },
+});
+
+/** Allow the cancel handler to drop the pending scheduler timer. */
+export const cancelScheduler = (): void => { scheduler?.cancel(); };
+
 /** Hook entry point — called by ep.json on createServer. */
 export const expressCreateServer = async (): Promise<void> => {
   detectedMethod = await detectInstallMethod({
@@ -160,6 +313,30 @@ export const expressCreateServer = async (): Promise<void> => {
   // rollback can fire even if the version checker is misconfigured.
   const state = await getCurrentState();
   pendingVerification = checkPendingVerification(state, getRollbackDeps());
+
+  // Tier 3: instantiate the scheduler. The runner is purely in-memory — the
+  // persisted state file is the source of truth for "is something scheduled."
+  // Rehydrate the timer when the previous boot left a scheduled state.
+  scheduler = createSchedulerRunner({
+    now: () => new Date(),
+    setTimer: (cb, ms) => setTimeout(cb, ms),
+    clearTimer: clearTimeout,
+    triggerApply: async (targetTag) => {
+      try {
+        const result = await applyUpdate({targetTag, deps: buildSchedulerApplyDeps()});
+        logger.info(`scheduler apply finished: ${result.outcome}`);
+      } catch (err) {
+        logger.warn(`scheduler apply failed: ${(err as Error).message}`);
+      }
+    },
+  });
+  if (state.execution.status === 'scheduled') {
+    logger.info(`updater: rehydrating Tier 3 schedule for ${state.execution.targetTag} at ${state.execution.scheduledFor}`);
+    scheduler.arm({
+      targetTag: state.execution.targetTag,
+      scheduledFor: state.execution.scheduledFor,
+    });
+  }
 
   if (settings.updates.tier !== 'off') startPolling();
 };
@@ -180,6 +357,7 @@ export const markBootHealthy = (): void => {
 export const shutdown = async (): Promise<void> => {
   if (timer) { clearInterval(timer); timer = null; }
   if (initialTimer) { clearTimeout(initialTimer); initialTimer = null; }
+  if (scheduler) { scheduler.cancel(); scheduler = null; }
 };
 
 /** Exposed for tests / route handlers. */
