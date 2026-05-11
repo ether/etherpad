@@ -79,7 +79,43 @@ jobs:
             esac
           done
           (cd src && pnpm run test-container)
+          docker rm -f test
           git clean -dxf .
+      -
+        # Regression test for #7718. Reproduces the production
+        # docker-compose layout reported in that issue: a named volume
+        # mounted on src/plugin_packages with no TTY allocated. Under
+        # the previous `CMD ["pnpm", "run", "prod"]`, pnpm 11's
+        # runDepsStatusCheck spuriously decided node_modules was out of
+        # sync at boot and tried to wipe + reinstall, aborting with
+        # ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY before the HTTP
+        # server ever came up. If the CMD is ever reverted to go
+        # through `pnpm run`, this step will time out waiting for the
+        # health endpoint and fail.
+        name: Regression — boot with named volume on plugin_packages (#7718)
+        working-directory: etherpad
+        run: |
+          docker volume create ep7718-plugins
+          docker run --rm -d -p 9001:9001 \
+            -v ep7718-plugins:/opt/etherpad-lite/src/plugin_packages \
+            --name test-7718 ${{ env.TEST_TAG }}
+          docker logs -f test-7718 &
+          ok=0
+          for i in $(seq 1 60); do
+            status=$(docker container inspect -f '{{.State.Health.Status}}' test-7718 2>/dev/null) || {
+              echo "container exited prematurely — likely #7718 regression"
+              docker logs test-7718 || true
+              break
+            }
+            case ${status} in
+              healthy) ok=1; echo "container healthy after $((i*2))s"; break;;
+              starting) sleep 2;;
+              *) echo "unexpected status: ${status}"; docker logs test-7718; break;;
+            esac
+          done
+          docker rm -f test-7718 >/dev/null 2>&1 || true
+          docker volume rm ep7718-plugins >/dev/null 2>&1 || true
+          [ "$ok" = "1" ] || exit 1
 
   build-test-local-plugin:
     # Regression coverage for #7687: the Docker image's
