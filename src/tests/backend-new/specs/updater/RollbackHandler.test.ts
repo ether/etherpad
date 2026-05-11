@@ -1,3 +1,4 @@
+import path from 'node:path';
 import {describe, it, expect, vi, beforeEach, afterEach} from 'vitest';
 import {checkPendingVerification, performRollback, RollbackDeps} from '../../../../node/updater/RollbackHandler';
 import {EMPTY_STATE} from '../../../../node/updater/types';
@@ -120,8 +121,8 @@ describe('performRollback', () => {
     };
     await performRollback(state, deps);
     expect(deps.copyFile).toHaveBeenCalledWith(
-      '/srv/etherpad/var/update-backup/pnpm-lock.yaml',
-      '/srv/etherpad/pnpm-lock.yaml',
+      path.join(deps.backupDir, 'pnpm-lock.yaml'),
+      path.join(deps.repoDir, 'pnpm-lock.yaml'),
     );
     const lastSave = (deps.saveState as any).mock.calls.at(-1)[0];
     expect(lastSave.execution.status).toBe('rolled-back');

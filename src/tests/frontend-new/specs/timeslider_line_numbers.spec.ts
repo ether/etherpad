@@ -1,6 +1,5 @@
 import {expect, test} from "@playwright/test";
 import {clearPadContent, goToNewPad, writeToPad} from "../helper/padHelper";
-import {showSettings} from "../helper/settingsHelper";
 
 test.describe('timeslider line numbers', function () {
   test.beforeEach(async ({context}) => {
@@ -13,7 +12,7 @@ test.describe('timeslider line numbers', function () {
     await writeToPad(page, 'One\nTwo\nThree');
     await page.waitForTimeout(1000);
 
-    await page.goto(`http://localhost:9001/p/${padId}/timeslider`);
+    await page.goto(`http://localhost:9001/p/${padId}/timeslider?embed=1`);
     await page.waitForSelector('#timeslider-wrapper', {state: 'visible'});
     await page.waitForSelector('#sidediv.sidedivdelayed', {state: 'attached'});
     await page.waitForTimeout(1000);
@@ -53,14 +52,21 @@ test.describe('timeslider line numbers', function () {
       url: 'http://localhost:9001',
     }]);
 
-    await page.goto(`http://localhost:9001/p/${padId}/timeslider`);
+    await page.goto(`http://localhost:9001/p/${padId}/timeslider?embed=1`);
     await page.waitForSelector('#timeslider-wrapper', {state: 'visible'});
-    await showSettings(page);
 
+    // Issue #7659: in embedded mode the outer pad owns the Settings popup,
+    // so the inner #settings popup is hidden via CSS. The cookie-driven
+    // initial state still applies to the iframe's body and checkbox; this
+    // test verifies that contract by reading state without opening the
+    // popup, then flipping the checkbox programmatically.
     await expect(page.locator('#options-linenoscheck')).not.toBeChecked();
     await expect(page.locator('body')).toHaveClass(/line-numbers-hidden/);
 
-    await page.locator('label[for="options-linenoscheck"]').click();
+    await page.locator('#options-linenoscheck').evaluate((el: HTMLInputElement) => {
+      el.checked = true;
+      el.dispatchEvent(new Event('change'));
+    });
     await expect(page.locator('#options-linenoscheck')).toBeChecked();
     await expect(page.locator('body')).not.toHaveClass(/line-numbers-hidden/);
 

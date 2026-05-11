@@ -107,3 +107,182 @@ input {
 }
 #version-badge[data-level="severe"]   { background: #fff3cd; color: #664d03; border: 1px solid #ffe69c; }
 #version-badge[data-level="vulnerable"] { background: #f8d7da; color: #58151c; border: 1px solid #f1aeb5; }
+
+/* ----------------------------------------------------------------------- */
+/* History mode (issue #7659): timeslider rendered in-place inside the     */
+/* pad page. The live editor stays mounted but hidden; a sibling iframe    */
+/* hosts the existing timeslider replay code.                              */
+/* ----------------------------------------------------------------------- */
+
+.history-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: #fff8e1;
+  border-bottom: 1px solid #f0d27a;
+  color: #5b4b00;
+  font-size: 14px;
+  z-index: 5;
+}
+.history-banner[hidden] { display: none; }
+.history-banner-label   { font-weight: 600; }
+.history-banner-rev,
+.history-banner-date    { opacity: 0.85; }
+.history-banner #history-banner-return { margin-left: auto; }
+
+/* The history iframe takes the place of the live ACE editor. We use the    */
+/* same positioning model (absolute, fill the editor area) so the page      */
+/* layout is identical between modes.                                       */
+.history-frame-mount {
+  display: none;
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: var(--bg-color, #f2f3f4);
+  z-index: 4;
+}
+.history-frame-mount[hidden] { display: none; }
+.history-frame-mount > iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+}
+
+/* While in history mode, hide the live ACE editor and show the history    */
+/* iframe in its place. The formatting menu on the left side of the        */
+/* toolbar (Bold/Italic/Lists/Indent/Undo/etc.) targets the hidden live    */
+/* editor, so we swap it for the history controls (slider + play/step      */
+/* buttons) that drive the iframe. The right-side menu (Settings / Share / */
+/* Users / Chat / Home) stays fully interactive across modes.              */
+body.history-mode #editorcontainer { display: none; }
+body.history-mode #editorcontainerbox { position: relative; }
+body.history-mode .history-frame-mount { display: block; }
+body.history-mode #editbar .menu_left { display: none; }
+body.history-mode #editbar .show-more-icon-btn { display: none; }
+body.history-mode #history-controls { display: flex; }
+
+/* History toolbar controls (issue #7659): a slider + play/pause/step      */
+/* buttons + Follow/Speed controls that remote-control the embedded        */
+/* timeslider iframe. Take the place of the formatting menu while          */
+/* scrubbing. align-items + min-height keep the toolbar the same vertical  */
+/* size as in live mode so swapping modes doesn't reflow the layout.       */
+.history-controls {
+  display: none;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  min-width: 0;
+  min-height: 40px;
+}
+.history-controls[hidden] { display: none; }
+.history-controls button.buttonicon {
+  flex: 0 0 auto;
+  /* Match the live-toolbar buttonicon visual weight (no <li><a> wrapper  */
+  /* gives us a smaller default; bump padding so the icon hit area lines */
+  /* up vertically with menu_right's settings/share/users/etc. icons).   */
+  padding: 6px 8px;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  font-size: 15px;
+  color: inherit;
+}
+.history-controls button.buttonicon:hover { background: rgba(0,0,0,0.06); border-radius: 4px; }
+.history-controls button.buttonicon.buttonicon-play.pause::before {
+  content: "\e829";
+}
+.history-slider-input {
+  flex: 1 1 auto;
+  min-width: 80px;
+  margin: 0 6px;
+  cursor: pointer;
+}
+.history-timer {
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.85;
+  white-space: nowrap;
+}
+.history-toggle {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.history-toggle input[type="checkbox"] { margin: 0; }
+
+/* Follow toggle — eye icon, with a diagonal slash that appears only when
+ * the underlying checkbox is unchecked (auto-follow disabled). The hidden
+ * input still drives state (so pad_mode.ts's bridge code reads .checked
+ * and the existing label-for relationship handles click). */
+.history-follow-toggle {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  cursor: pointer;
+  border-radius: 4px;
+  color: inherit;
+}
+.history-follow-toggle:hover { background: rgba(0,0,0,0.06); }
+.history-follow-eye-slash { display: none; }
+#history-options-followContents:not(:checked) + .history-follow-toggle .history-follow-eye-slash {
+  display: inline;
+}
+#history-options-followContents:not(:checked) + .history-follow-toggle {
+  opacity: 0.55;
+}
+/* Keep the checkbox in the DOM (label-for needs a present target) but
+ * hidden visually + accessibly redundant since the label conveys state. */
+#history-options-followContents.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  margin: -1px; padding: 0; border: 0;
+  clip: rect(0 0 0 0); overflow: hidden;
+}
+.history-speed {
+  flex: 0 0 auto;
+  font-size: 13px;
+  padding: 2px 4px;
+  max-width: 130px;
+}
+
+/* Responsive — Follow + Speed inherit .hide-for-mobile (already collapses */
+/* at <=800px). Pack the remaining play/slider/step buttons tighter so     */
+/* they always fit. At ultra-narrow widths the step buttons compact too.   */
+@media (max-width: 800px) {
+  .history-controls { padding: 0 6px; gap: 4px; min-height: 36px; }
+  .history-controls button.buttonicon { padding: 4px 6px; min-width: 32px; }
+  .history-slider-input { min-width: 60px; margin: 0 2px; }
+}
+@media (max-width: 480px) {
+  .history-controls #history-leftstep,
+  .history-controls #history-rightstep { min-width: 28px; padding: 2px; }
+}
+
+/* Chat replay header — appears above the chat log while scrubbing so the  */
+/* user knows the message list is filtered to a historical timestamp.      */
+.history-chat-header {
+  display: none;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  background: #fff8e1;
+  color: #5b4b00;
+  border-bottom: 1px solid #f0d27a;
+}
+body.history-mode .history-chat-header { display: block; }
+body.history-mode .history-authors-row {
+  font-style: italic;
+  opacity: 0.85;
+  padding: 6px 8px;
+}

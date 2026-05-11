@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "pnpm gen:api && vite",
+    "dev:only": "vite",
     "gen:api": "node scripts/gen-api.mjs",
     "build": "pnpm gen:api && tsc && vite build",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",

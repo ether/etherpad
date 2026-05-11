@@ -418,6 +418,12 @@ exports.handleMessage = async (socket:any, message: ClientVarMessage) => {
       padID: message.padId,
       token: resolvedToken,
     };
+    // Issue #7659: connections from the in-place history iframe must not
+    // trigger the duplicate-author kick — they share the parent's author
+    // by design, and kicking the parent on iframe load would tear down
+    // the live editor mid-session. The iframe sets `embed=1` in its
+    // socket.io handshake query.
+    thisSession.embed = socket.handshake?.query?.embed === '1';
 
     // Pad does not exist, so we need to sanitize the id
     if (!(await padManager.doesPadExist(thisSession.auth.padID))) {
@@ -1051,12 +1057,16 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
   // stable identity across windows and devices, so concurrent same-author
   // sessions are legitimate and must not be kicked.
   const roomSockets = _getRoomSockets(pad.id);
-  if (user == null) {
+  if (user == null && !sessionInfo.embed) {
     for (const otherSocket of roomSockets) {
       // The user shouldn't have joined the room yet, but check anyway just in case.
       if (otherSocket.id === socket.id) continue;
       const sinfo = sessioninfos[otherSocket.id];
-      if (sinfo && sinfo.author === sessionInfo.author) {
+      // Embedded sessions (issue #7659 — in-place history iframe) share
+      // the parent's author by design, so they neither kick same-author
+      // sockets nor get kicked by them. Only non-embedded same-author
+      // duplicates (real stale tabs) hit the kick path.
+      if (sinfo && sinfo.author === sessionInfo.author && !sinfo.embed) {
         // fix user's counter, works on page refresh or if user closes browser window and then rejoins
         sessioninfos[otherSocket.id] = {};
         otherSocket.leave(sessionInfo.padId);

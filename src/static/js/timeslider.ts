@@ -73,6 +73,26 @@ const init = () => {
     // start the custom js
     if (typeof customStart === 'function') customStart(); // eslint-disable-line no-undef
 
+    // Issue #7659: when this timeslider is mounted as the in-place history
+    // iframe inside a pad page, mark the body so CSS can hide the inner
+    // editbar (the outer pad's toolbar owns the slider) and inherit the
+    // parent's skin tokens so dark mode (and any other skinVariants the
+    // user toggled at runtime) is applied immediately on first paint.
+    // Direct visits to /p/:pad/timeslider?embed=1 (existing test/legacy
+    // entry points) keep their full chrome because parent === window.
+    try {
+      if (window.parent !== window) {
+        document.body.classList.add('iframe-mode');
+        const parentClasses = window.parent.document.documentElement.className || '';
+        const tokens = parentClasses.split(/\s+/).filter((c) =>
+            /^(super-light|light|dark|super-dark)-(toolbar|editor|background)$/.test(c) ||
+            c === 'full-width-editor');
+        if (tokens.length) {
+          document.documentElement.classList.add(...tokens);
+        }
+      }
+    } catch (_e) { /* cross-origin parent — leave defaults */ }
+
     // get the padId out of the url
     const urlParts = document.location.pathname.split('/');
     padId = decodeURIComponent(urlParts[urlParts.length - 2]);
@@ -85,7 +105,19 @@ const init = () => {
     // or writes it; the server picks it up from the socket.io handshake.
     cp = (window as any).clientVars?.cookiePrefix || '';
 
-    socket = socketio.connect(exports.baseURL, '/', {query: {padId}});
+    // Pass `embed` to the server when this timeslider is the in-place
+    // history iframe inside a pad page (issue #7659). Without this the
+    // server's duplicate-author kick treats the iframe's connection as a
+    // stale tab and disconnects the parent pad's live socket.
+    const embed = (() => {
+      try {
+        if (window.parent === window) return false;
+        const params = new URLSearchParams(window.location.search);
+        return params.get('embed') === '1';
+      } catch (_e) { return false; }
+    })();
+    socket = socketio.connect(
+        exports.baseURL, '/', {query: embed ? {padId, embed: '1'} : {padId}});
 
     // send the ready message once we're connected
     socket.on('connect', () => {
@@ -159,6 +191,9 @@ const handleClientVars = (message) => {
   // load all script that doesn't work without the clientVars
   BroadcastSlider = require('./broadcast_slider')
       .loadBroadcastSliderJS(fireWhenAllScriptsAreLoaded);
+  // Exposed on window so the outer pad shell (issue #7659 in-place history
+  // mode) can subscribe to slider movement without postMessage round-trips.
+  (window as any).BroadcastSlider = BroadcastSlider;
 
   require('./broadcast_revisions').loadBroadcastRevisionsJS();
   changesetLoader = require('./broadcast')

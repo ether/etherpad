@@ -21,7 +21,7 @@ test.describe('timeslider playback speed', function () {
     await writeToPad(page, 'One');
     await page.waitForTimeout(1000);
 
-    await page.goto(`http://localhost:9001/p/${padId}/timeslider#0`);
+    await page.goto(`http://localhost:9001/p/${padId}/timeslider?embed=1#0`);
     await waitForTimesliderReady(page);
 
     await expect.poll(async () => await page.evaluate(() => {
@@ -46,7 +46,7 @@ test.describe('timeslider playback speed', function () {
     await writeToPad(page, ' Two');
     await page.waitForTimeout(1000);
 
-    await page.goto(`http://localhost:9001/p/${padId}/timeslider#1`);
+    await page.goto(`http://localhost:9001/p/${padId}/timeslider?embed=1#1`);
     await waitForTimesliderReady(page);
 
     await page.evaluate(() => {
@@ -79,7 +79,7 @@ test.describe('timeslider playback speed', function () {
     await writeToPad(page, 'A');
     await page.waitForTimeout(1000);
 
-    await page.goto(`http://localhost:9001/p/${padId}/timeslider#0`);
+    await page.goto(`http://localhost:9001/p/${padId}/timeslider?embed=1#0`);
     await waitForTimesliderReady(page);
 
     const scheduledDelays = await page.evaluate(() => {

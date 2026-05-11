@@ -40,7 +40,7 @@ test.describe('Timeslider with identity changesets (bug #5214)', function () {
     await page.waitForTimeout(1000);
 
     // Navigate to timeslider at revision 0 so playback has revisions to advance through
-    await page.goto(`http://localhost:9001/p/${padId}/timeslider#0`);
+    await page.goto(`http://localhost:9001/p/${padId}/timeslider?embed=1#0`);
     await page.waitForSelector('#timeslider-slider', {timeout: 10000});
     await page.waitForTimeout(1000);
 
@@ -82,7 +82,7 @@ test.describe('Timeslider with identity changesets (bug #5214)', function () {
     await page.waitForTimeout(1000);
 
     // Go to timeslider
-    await page.goto(`http://localhost:9001/p/${padId}/timeslider`);
+    await page.goto(`http://localhost:9001/p/${padId}/timeslider?embed=1`);
     await page.waitForSelector('#timeslider-slider', {timeout: 10000});
 
     // Get the total number of revisions from the slider
@@ -92,7 +92,7 @@ test.describe('Timeslider with identity changesets (bug #5214)', function () {
 
     // Scrub through each revision from 0 to latest
     for (let rev = 0; rev <= sliderLength; rev++) {
-      await page.goto(`http://localhost:9001/p/${padId}/timeslider#${rev}`);
+      await page.goto(`http://localhost:9001/p/${padId}/timeslider?embed=1#${rev}`);
       await page.waitForTimeout(300);
 
       // Check no errors appeared

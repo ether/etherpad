@@ -8,7 +8,7 @@ window.clientVars = {
 let BroadcastSlider;
 
 
-(function () {
+(async function () {
   const timeSlider = require('ep_etherpad-lite/static/js/timeslider')
   const pathComponents = location.pathname.split('/');
 
@@ -24,12 +24,17 @@ let BroadcastSlider;
   const socket = timeSlider.socket;
   BroadcastSlider = timeSlider.BroadcastSlider;
   plugins.baseURL = baseURL;
-  plugins.update(function () {
-
-
-    /* TODO: These globals shouldn't exist. */
-
-  });
+  // Pre-load plugin modules so client_hooks resolve (issue #7659): without
+  // a populated Map the loadFn fallback calls require(path) which the
+  // esbuild-bundled timeslider can't resolve at runtime, so plugins like
+  // ep_headings2 silently fail to register their aceRegisterBlockElements
+  // hook and historical revisions render without plugin chrome. Mirrors
+  // padBootstrap.js — same pluginModules list, same per-module require.
+  await plugins.update(new Map([
+    <% for (const module of pluginModules) { %>
+    [<%- JSON.stringify(module) %>, require("../../src/plugin_packages/"+<%- JSON.stringify(module) %>)],
+    <% } %>
+  ]));
   const padeditbar = require('ep_etherpad-lite/static/js/pad_editbar').padeditbar;
   const padimpexp = require('ep_etherpad-lite/static/js/pad_impexp').padimpexp;
   timeSlider.baseURL = baseURL;

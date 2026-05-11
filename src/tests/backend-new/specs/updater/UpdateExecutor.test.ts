@@ -1,3 +1,4 @@
+import path from 'node:path';
 import {describe, it, expect, vi, beforeEach} from 'vitest';
 import {executeUpdate, ExecutorDeps} from '../../../../node/updater/UpdateExecutor';
 import {EMPTY_STATE, UpdateState} from '../../../../node/updater/types';
@@ -64,7 +65,10 @@ describe('executeUpdate', () => {
     const r = await executeUpdate(deps);
     expect(r).toEqual({outcome: 'pending-verification'});
     expect(copies).toEqual([
-      {src: '/srv/etherpad/pnpm-lock.yaml', dst: '/srv/etherpad/var/update-backup/pnpm-lock.yaml'},
+      {
+        src: path.join(deps.repoDir, 'pnpm-lock.yaml'),
+        dst: path.join(deps.backupDir, 'pnpm-lock.yaml'),
+      },
     ]);
     expect(states.at(-1)?.execution.status).toBe('pending-verification');
     expect((states.at(-1)?.execution as any).fromSha).toBe('abc123');

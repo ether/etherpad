@@ -198,6 +198,10 @@ exports.chat = (() => {
           // ctx.text was HTML-escaped before calling the hook. Hook functions are trusted to not
           // introduce an XSS vulnerability by adding unescaped user input.
           .append($('<div>').html(ctx.text).contents());
+      // The outer pad's history mode (issue #7659) filters rendered messages
+      // by this attribute when scrubbing; a missing attribute would always
+      // show the message regardless of timestamp.
+      chatMsg.attr('data-timestamp', String(msg.time));
       if (isHistoryAdd) chatMsg.insertAfter('#chatloadmessagesbutton');
       else $('#chattext').append(chatMsg);
       chatMsg.each((i, e) => html10n.translateElement(html10n.translations, e));

@@ -78,6 +78,55 @@
           <%- toolbar.menu(settings.toolbar.left, isReadOnly, 'left', 'pad') %>
           <% e.end_block(); %>
       </ul>
+      <!-- HISTORY-MODE CONTROLS — slider + play/step buttons swap into the
+           toolbar's left zone while scrubbing pad history. The formatting
+           menu_left is hidden in history mode so this fills its space. The
+           outer slider is just a remote control for the embedded
+           timeslider iframe's BroadcastSlider; pad_mode.ts owns the
+           bridging.
+
+           Accessible names + tooltip titles are populated by pad_mode.ts
+           after html10n is ready, reusing the existing `timeslider.*`
+           translation keys. We deliberately do NOT put data-l10n-id on
+           the icon buttons — that would set their textContent, which on
+           a buttonicon glyph would draw the localized string on screen. -->
+      <div id="history-controls" class="history-controls" role="toolbar" hidden>
+        <button type="button" id="history-playpause" class="buttonicon buttonicon-play"
+                aria-pressed="false"></button>
+        <button type="button" id="history-leftstep" class="buttonicon buttonicon-step-backward">
+        </button>
+        <button type="button" id="history-rightstep" class="buttonicon buttonicon-step-forward">
+        </button>
+        <input type="range" id="history-slider-input" class="history-slider-input"
+               min="0" max="0" value="0" step="1">
+        <span id="history-timer" class="history-timer hide-for-mobile" aria-live="polite"></span>
+        <!-- Follow toggle: an icon-only button. The eye is always rendered;
+             the diagonal slash overlay is shown only when aria-pressed is
+             false. Backed by a hidden checkbox so existing pad_mode.ts
+             bridge code (which reads .checked) keeps working. -->
+        <input type="checkbox" id="history-options-followContents" class="sr-only" checked>
+        <label for="history-options-followContents" class="history-follow-toggle hide-for-mobile"
+               aria-hidden="true">
+          <svg class="history-follow-eye" width="16" height="16" viewBox="0 0 16 16"
+               aria-hidden="true" focusable="false">
+            <path class="history-follow-eye-shape"
+                  d="M1.2 8C2.7 4.4 5.1 2.5 8 2.5s5.3 1.9 6.8 5.5c-1.5 3.6-3.9 5.5-6.8 5.5S2.7 11.6 1.2 8z"
+                  fill="none" stroke="currentColor" stroke-width="1.4"/>
+            <circle class="history-follow-eye-pupil" cx="8" cy="8" r="2.3" fill="currentColor"/>
+            <line class="history-follow-eye-slash" x1="2" y1="14" x2="14" y2="2"
+                  stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+          </svg>
+        </label>
+        <select id="history-playbackspeed" class="history-speed hide-for-mobile"
+                aria-label="Playback speed"
+                data-l10n-aria-label="true">
+          <option value="100" data-l10n-id="timeslider.settings.playbackSpeed.original">Original speed</option>
+          <option value="realtime" data-l10n-id="timeslider.settings.playbackSpeed.realtime">Realtime</option>
+          <option value="200" data-l10n-id="timeslider.settings.playbackSpeed.200ms">200 ms</option>
+          <option value="500" data-l10n-id="timeslider.settings.playbackSpeed.500ms">500 ms</option>
+          <option value="1000" data-l10n-id="timeslider.settings.playbackSpeed.1000ms">1000 ms</option>
+        </select>
+      </div>
       <ul class="menu_right" role="toolbar">
           <% e.begin_block("editbarMenuRight"); %>
           <%- toolbar.menu(settings.toolbar.right, isReadOnly, 'right', 'pad') %>
@@ -88,6 +137,17 @@
 
   <% e.begin_block("afterEditbar"); %><% e.end_block(); %>
 
+  <!--------------------------------------------------------------->
+  <!-- HISTORY-MODE BANNER (visible only when scrubbing history) -->
+  <!--------------------------------------------------------------->
+  <div id="history-banner" class="history-banner" role="status" aria-live="polite" hidden>
+    <span class="history-banner-label" data-l10n-id="pad.historyMode.banner">Viewing history</span>
+    <span class="history-banner-rev" id="history-banner-rev"></span>
+    <span class="history-banner-date" id="history-banner-date"></span>
+    <button type="button" id="history-banner-return" class="btn btn-primary"
+            data-l10n-id="pad.historyMode.return">Return to live</button>
+  </div>
+
   <div id="editorcontainerbox" class="flex-layout">
 
       <% e.begin_block("editorContainerBox"); %>
@@ -97,6 +157,11 @@
       <!----------------------------->
 
       <div id="editorcontainer" class="editorcontainer" aria-label="Document editor"></div>
+
+      <!--------------------------------------------------------------------->
+      <!-- HISTORY-MODE IFRAME (mounted only while scrubbing pad history) -->
+      <!--------------------------------------------------------------------->
+      <div id="history-frame-mount" class="history-frame-mount" hidden></div>
 
       <div id="editorloadingbox">
         <% e.begin_block("permissionDenied"); %>

@@ -112,7 +112,9 @@ describe(__filename, function () {
 
   describe('timeslider', function () {
     it('og:title contains the (history) marker', async function () {
-      const res = await agent.get('/p/TestPad7599/timeslider').expect(200);
+      // Issue #7659: /p/:pad/timeslider redirects unless ?embed=1 — that
+      // query is the iframe path that still serves the timeslider HTML.
+      const res = await agent.get('/p/TestPad7599/timeslider?embed=1').expect(200);
       const title = ogTag(res.text, 'og:title');
       assert.ok(title && title.includes('(history)'),
           `unexpected timeslider og:title: ${title}`);

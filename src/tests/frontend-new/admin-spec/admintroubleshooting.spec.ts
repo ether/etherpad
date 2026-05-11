@@ -17,30 +17,27 @@ test('Shows troubleshooting page manager', async ({page}) => {
   // Sidebar nav: plugins, settings, help, pads, shout, update.
   // The Authors link only renders when gdprAuthorErasure.enabled = true,
   // which the test environment leaves false by default.
-  await expect(menu.locator('li')).toHaveCount(6);
+  await expect(menu.locator('.sidebar-nav-item')).toHaveCount(6);
 })
 
 test('Shows a version number', async function ({page}) {
   await page.goto('http://localhost:9001/admin/help')
-  await page.waitForSelector('.menu')
-  const helper = page.locator('.help-block').locator('div').nth(1)
-  const version = (await helper.textContent())!.split('.');
+  await page.waitForSelector('.pm-hv-num')
+  const version = (await page.locator('.pm-hv-num').textContent())!.split('.');
   expect(version.length).toBe(3)
 });
 
 test('Lists installed parts', async function ({page}) {
   await page.goto('http://localhost:9001/admin/help')
-  await page.waitForSelector('.menu')
-  await page.waitForSelector('.innerwrapper ul')
-  const parts = page.locator('.innerwrapper ul').nth(1);
+  await page.waitForSelector('.pm-tag-cloud')
+  // First tag cloud = installed plugins, second = installed parts
+  const parts = page.locator('.pm-tag-cloud').nth(1);
   expect(await parts.textContent()).toContain('ep_etherpad-lite/adminsettings');
 });
 
 test('Lists installed hooks', async function ({page}) {
   await page.goto('http://localhost:9001/admin/help')
-  await page.waitForSelector('.menu')
-  await page.waitForSelector('.innerwrapper ul')
-  const helper = page.locator('.innerwrapper ul').nth(2);
-  expect(await helper.textContent()).toContain('express');
+  await page.waitForSelector('.pm-hooks')
+  const hooks = page.locator('.pm-hooks');
+  expect(await hooks.textContent()).toContain('express');
 });
-

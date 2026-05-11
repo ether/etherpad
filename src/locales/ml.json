@@ -9,7 +9,8 @@
 			"Jinoytommanjaly",
 			"Nesi",
 			"Praveenp",
-			"Santhosh.thottingal"
+			"Santhosh.thottingal",
+			"Shem.iz"
 		]
 	},
 	"index.newPad": "പുതിയ പാഡ്",
@@ -92,6 +93,12 @@
 	"pad.chat.writeMessage.placeholder": "താങ്കളുടെ സന്ദേശങ്ങൾ ഇവിടെ കുറിക്കുക",
 	"timeslider.pageTitle": "{{appTitle}} സമയരേഖ",
 	"timeslider.toolbar.returnbutton": "പാഡിലേക്ക് മടങ്ങുക",
+	"pad.historyMode.banner": "നാൾവഴി കാണുക",
+	"pad.historyMode.revisionLabel": "പുനരവലോകനം {{rev}}",
+	"pad.historyMode.settings.title": "ചരിത്ര പ്ലേബാക്ക്",
+	"pad.historyMode.settings.followShort": "പിന്തുടരുക",
+	"pad.historyMode.settings.playbackSpeed": "പ്ലേബാക്ക് വേഗത:",
+	"pad.historyMode.users.authorsHeader": "ഈ പുനരവലോകനത്തിലെ രചയിതാക്കൾ",
 	"timeslider.toolbar.authors": "രചയിതാക്കൾ:",
 	"timeslider.toolbar.authorsList": "ആരും എഴുതിയിട്ടില്ല",
 	"timeslider.toolbar.exportlink.title": "കയറ്റുമതി",
