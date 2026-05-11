@@ -86,7 +86,7 @@
     "swagger-ui-express": "^5.0.1",
     "tinycon": "0.6.8",
     "tsx": "4.22.0",
-    "ueberdb2": "^5.0.48",
+    "ueberdb2": "^6.0.2",
     "underscore": "1.13.8",
     "undici": "^8.3.0",
     "unorm": "1.6.0",
