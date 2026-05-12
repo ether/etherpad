@@ -46,6 +46,25 @@ pnpm --filter ep_etherpad-lite run prod         # Start production server
 - **Comments:** Provide clear comments for complex logic only.
 - **Backward Compatibility:** Always ensure compatibility with older versions of the database and configuration files.
 
+### Internationalisation (i18n) — Mandatory
+- **Every user-facing string MUST go through i18n.** That means JSX text, `placeholder`, `title`, `aria-label`, `alt`, toast/alert titles, `<option>` labels, error messages, breadcrumbs, empty-state copy — anything a user can see or hear via a screen reader.
+- **React (admin SPA):** use `<Trans i18nKey="…"/>` for JSX text and `t('…')` for attribute values. The `t` comes from `useTranslation()`.
+- **Pad UI (legacy):** use `data-l10n-id="…"` (html10n) — never bind `window._` directly to `html10n.get` and call it (it's unbound; returns `undefined`).
+- **String keys live in `src/locales/en.json`.** Other locales sync from translatewiki on its own cadence — never hand-edit non-EN locale files.
+- **Reuse existing keys before inventing new ones.** Check `src/locales/en.json` and the relevant plugin's `static/locale/en.json` (e.g. `admin/public/ep_admin_pads/en.json`) for an existing match. Duplicating a key like `ep_admin_pads:ep_adminpads2_last-edited` as a fresh `admin_pads.col.last_edited` fragments the translation surface for translatewiki.
+- **Naming:** dot-namespaced, kebab-or-underscore-cased: `admin_plugins.subtitle`, `admin_pads.filter.all`. Group by page/feature.
+- **Pluralisation:** use i18next's `_one`/`_other` suffix forms with `t('key', {count: n})` — never `n > 1 ? 'X items' : '1 item'`.
+- **Locale-aware formatters:** pass a sanitised locale to `Intl.*` / `toLocaleString`. `i18n.language` is influenced by `?lng=` (user-controlled) and a malformed tag throws `RangeError`. Use a `sanitizeLocale()` helper that normalises `_`→`-` and validates via `Intl.DateTimeFormat.supportedLocalesOf()`, falling back to `'en'`.
+- **`defaultValue:` in `t()` is for safety, not a substitute** for adding the key to `en.json`. If you're tempted to inline English with `defaultValue:` and skip the key, you're shipping a future-broken translation.
+- **Hard prohibition:** literal German / French / Spanish / any non-English in JSX. The denylist test at `src/tests/backend-new/specs/admin-i18n-source-lint.test.ts` enforces this for the admin SPA — extend it when adding new admin files or new known-bad words.
+
+### Accessibility (a11y) — Mandatory
+- **Icon-only buttons MUST have `aria-label` AND `title`** (both — screen readers prefer `aria-label`; hover users get `title`). Lucide icons inside a button are not text content. Both labels must be `t('…')`-localised.
+- **Sort controls are focusable.** A `<select>` plus a paired direction toggle is fine; a clickable column header is fine; "click invisible part of the row to sort" is not. When restyling, never strip a direction toggle without adding back an equivalent.
+- **Semantic HTML over `<div>` soup.** Use `<nav>`, `<main>`, `<button>`, `<a>` (for navigation), `<table>` for tabular data. If a thing navigates externally, it is `<a target="_blank" rel="noopener noreferrer">`, not a click-handler on a `<span>`.
+- **Don't drop existing affordances when restyling.** A UI refresh that removes `<a href="https://npmjs.com/{plugin}">` links, removes a sort-direction control, or replaces semantic elements with non-focusable divs is a regression even if it looks nicer. Audit the before/after for: focus order, keyboard reachability, external links, aria-labels, alt text.
+- **Tests assert rendered strings + structural affordances.** For UI changes, the Playwright spec must assert at least one rendered translated string (catches broken i18n loading) and one structural affordance you added/preserved (links, toggles, headings).
+
 ### Development Workflow
 - **Branching:** Work in feature branches. Issue PRs against the `develop` branch. Never PR directly to `master`.
 - **Commits:** Maintain a linear history (no merge commits). Use meaningful messages in the format: `submodule: description`.
