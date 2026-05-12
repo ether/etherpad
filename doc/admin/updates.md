@@ -4,7 +4,7 @@ Etherpad ships with a built-in update subsystem.
 
 - **Tier 1 (notify)** — default. A banner appears in the admin UI when a new release is available, and pad users see a discreet badge if the running version is severely outdated or flagged as vulnerable. No execution.
 - **Tier 2 (manual click)** — admins on a git install can click "Apply update" at `/admin/update`. Etherpad drains active sessions, runs `git fetch / checkout / pnpm install / pnpm run build:ui`, and exits with code 75 so a process supervisor restarts it on the new version. Auto-rolls back on failure.
-- **Tier 3 (auto with grace window)** — designed, not yet implemented.
+- **Tier 3 (auto with grace window)** — opt-in. On a git install, a newly detected release transitions execution state to `scheduled` and is applied after `preApplyGraceMinutes`. During the grace window, `/admin/update` shows a live countdown plus Cancel and Apply now buttons; an admin email (if `adminEmail` is set) fires once per scheduled tag.
 - **Tier 4 (autonomous in maintenance window)** — designed, not yet implemented.
 
 ## Settings
@@ -42,7 +42,7 @@ In `settings.json`:
 | `updates.checkIntervalHours` | `6` | How often to poll GitHub Releases. |
 | `updates.githubRepo` | `"ether/etherpad"` | Override for forks. |
 | `updates.requireAdminForStatus` | `false` | Lock the `/admin/update/status` endpoint to authenticated admin sessions. Default `false` matches existing Etherpad behavior — `/health` already exposes `releaseId` publicly, and changelog data comes from a public GitHub release. Set `true` to hide the full update payload from non-admins without disabling the updater (`tier: "off"` is the heavier opt-out that removes the endpoints entirely). |
-| `updates.preApplyGraceMinutes` | `0` | **Tier 3 only.** Wait this many minutes between detecting a new release and starting the drain so the admin can cancel. Has no effect at tier `"manual"`. |
+| `updates.preApplyGraceMinutes` | `0` | **Tier 3 only.** Wait this many minutes between detecting a new release and starting the drain so the admin can cancel via `/admin/update`. `0` applies immediately when allowed. Clamped to `[0, 7*24*60]` (one week). Has no effect at tier `"manual"`. |
 | `updates.drainSeconds` | `60` | How long to broadcast "restart imminent" announcements to active pads before exiting. T-60 / T-30 / T-10 broadcasts fire automatically at the matching offsets within this window. |
 | `updates.rollbackHealthCheckSeconds` | `60` | After a fresh boot post-update, give `/health` this long to come up. If it doesn't, RollbackHandler restores the previous SHA. |
 | `updates.diskSpaceMinMB` | `500` | Pre-flight refuses to start an update unless the install volume has at least this many MB free. |
@@ -155,6 +155,36 @@ The check shells out to `git verify-tag <tag>`. The keyring at `trustedKeysPath`
 ### Docker-friendly update flows (future work)
 
 Tier 2 deliberately refuses to apply on `installMethod: "docker"` because in-container `git fetch / pnpm install / build:ui` doesn't survive a container restart — the orchestrator brings the container back up on the same image tag and the work is lost. Docker installs stay on Tier 1 (banner + version status) for now.
+
+## Tier 3 — auto with grace window
+
+Tier 3 builds on Tier 2 by scheduling the apply automatically when a new release is detected. The same `git fetch / checkout / pnpm install / build:ui / exit 75` pipeline runs — only the trigger changes.
+
+To enable, on a git install: set `updates.tier: "auto"` and (optionally) `updates.preApplyGraceMinutes` to the grace duration you want.
+
+### What happens when a new release lands
+
+1. The periodic version checker (`updates.checkIntervalHours`) hits GitHub Releases.
+2. If `policy.canAuto` is true (install is git, no terminal `rollback-failed` state, tier is `"auto"` or `"autonomous"`), the scheduler transitions `execution.status` to `scheduled` with `scheduledFor = now + preApplyGraceMinutes`.
+3. The schedule is persisted to `var/update-state.json`, so an Etherpad restart inside the grace window rehydrates the timer rather than losing the schedule.
+4. `/admin/update` shows a live countdown panel plus two buttons:
+    - **Cancel** — `POST /admin/update/cancel` returns the state to `idle` and drops the in-process timer.
+    - **Apply now** — `POST /admin/update/apply` skips the remaining grace; the regular Tier 2 pipeline runs immediately.
+5. When the timer fires, the scheduler runs the exact same pipeline as a manual Tier 2 click: pre-flight → drain → execute → exit 75.
+
+### Re-scheduling and stale state
+
+- If a newer release tag appears while a schedule is pending, the scheduler re-arms the timer for the new tag. The `email.graceStartTag` dedupe field guards against duplicate `grace-start` notifications.
+- If `updates.tier` is flipped back to `"manual"` or `"notify"` while a schedule is pending, the next periodic check cancels the schedule (state back to `idle`).
+- `rollback-failed` disables Tier 3 globally. The admin must `POST /admin/update/acknowledge` (or visit `/admin/update` and click Acknowledge) before any further auto-schedules are armed. Tier 2 manual click stays available because the admin click *is* the intervention the terminal state requires.
+
+### Email (`adminEmail` set)
+
+A single `grace-start` notification fires per scheduled tag:
+
+> [Etherpad] Auto-update scheduled for 2.7.2
+
+with the `scheduledFor` timestamp. Etherpad core does not yet wire SMTP; the message logs as `(would send email)` until a future PR adds a transport. Cadence and dedupe still update correctly.
 
 The right way to give docker admins an in-product Apply button is to delegate to the orchestrator rather than mutate the container. Two patterns to consider in a follow-up PR:
 

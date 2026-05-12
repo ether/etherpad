@@ -230,7 +230,10 @@
     "requireAdminForStatus": false,
     /*
      * Tier 2+ knobs. Only meaningful at tier "manual" or higher.
-     * - preApplyGraceMinutes: tier 3 only — countdown before an auto-update applies.
+     * - preApplyGraceMinutes: tier 3 only — grace minutes between detecting a new
+     *     release and starting the drain. Clamped to [0, 7*24*60] (one week).
+     *     Default 0 applies immediately when allowed; raise it to give admins
+     *     time to cancel via /admin/update.
      * - drainSeconds: how long to broadcast "restart imminent" before exiting.
      * - rollbackHealthCheckSeconds: window after restart for /health to come up.
      * - diskSpaceMinMB: pre-flight refuses to start an update without this much free.

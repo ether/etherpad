@@ -13,7 +13,7 @@ export interface NotifierInput {
   now: Date;
 }
 
-export type EmailKind = 'severe' | 'vulnerable' | 'vulnerable-new-release';
+export type EmailKind = 'severe' | 'vulnerable' | 'vulnerable-new-release' | 'grace-start';
 
 export interface PlannedEmail {
   kind: EmailKind;

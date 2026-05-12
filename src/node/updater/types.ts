@@ -43,6 +43,8 @@ export interface EmailSendLog {
   vulnerableAt: string | null;
   /** Tag of the release the last "new release while vulnerable" email referenced. */
   vulnerableNewReleaseTag: string | null;
+  /** Tag of the most recent release for which we sent a Tier 3 `grace-start` email. */
+  graceStartTag: string | null;
 }
 
 /**
@@ -55,6 +57,7 @@ export interface EmailSendLog {
  */
 export type ExecutionStatus =
   | {status: 'idle'}
+  | {status: 'scheduled'; targetTag: string; scheduledFor: string; startedAt: string}
   | {status: 'preflight'; targetTag: string; startedAt: string}
   | {status: 'preflight-failed'; targetTag: string; reason: string; at: string}
   | {status: 'draining'; targetTag: string; drainEndsAt: string; startedAt: string}
@@ -67,7 +70,7 @@ export type ExecutionStatus =
 
 /** All recognised execution statuses — used by the state validator. */
 export const EXECUTION_STATUSES = [
-  'idle', 'preflight', 'preflight-failed', 'draining', 'executing',
+  'idle', 'scheduled', 'preflight', 'preflight-failed', 'draining', 'executing',
   'pending-verification', 'verified', 'rolling-back', 'rolled-back', 'rollback-failed',
 ] as const;
 
@@ -119,6 +122,7 @@ export const EMPTY_STATE: UpdateState = {
     severeAt: null,
     vulnerableAt: null,
     vulnerableNewReleaseTag: null,
+    graceStartTag: null,
   },
   execution: {status: 'idle'},
   bootCount: 0,

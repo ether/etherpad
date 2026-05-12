@@ -14,6 +14,7 @@ const isStringOrNull = (v: unknown): v is string | null =>
 // loadState resets to EMPTY_STATE when any required field is missing.
 const EXEC_REQUIRED_FIELDS: Record<string, readonly string[]> = {
   'idle': [],
+  'scheduled': ['targetTag', 'scheduledFor', 'startedAt'],
   'preflight': ['targetTag', 'startedAt'],
   'preflight-failed': ['targetTag', 'reason', 'at'],
   'draining': ['targetTag', 'drainEndsAt', 'startedAt'],
@@ -25,6 +26,14 @@ const EXEC_REQUIRED_FIELDS: Record<string, readonly string[]> = {
   'rollback-failed': ['reason', 'targetTag', 'fromSha', 'at'],
 };
 
+// Fields that must parse as valid timestamps. The Scheduler computes its delay
+// via `new Date(scheduledFor).getTime()`; an invalid string would yield NaN
+// and effectively fire the timer immediately. Defence-in-depth against a
+// hand-edited update-state.json (Qodo #4).
+const EXEC_TIMESTAMP_FIELDS: ReadonlySet<string> = new Set([
+  'scheduledFor', 'startedAt', 'drainEndsAt', 'deadlineAt', 'verifiedAt', 'at',
+]);
+
 const isValidExecution = (v: unknown): boolean => {
   if (!isPlainObject(v)) return false;
   if (typeof v.status !== 'string') return false;
@@ -32,8 +41,10 @@ const isValidExecution = (v: unknown): boolean => {
   const required = EXEC_REQUIRED_FIELDS[v.status];
   if (!required) return false; // unknown status — fail closed
   for (const field of required) {
-    if (typeof (v as Record<string, unknown>)[field] !== 'string') return false;
-    if (((v as Record<string, unknown>)[field] as string).length === 0) return false;
+    const value = (v as Record<string, unknown>)[field];
+    if (typeof value !== 'string') return false;
+    if (value.length === 0) return false;
+    if (EXEC_TIMESTAMP_FIELDS.has(field) && Number.isNaN(Date.parse(value))) return false;
   }
   return true;
 };
@@ -77,9 +88,14 @@ const isValidVulnerableBelow = (v: unknown): boolean => {
 
 const isValidEmail = (v: unknown): boolean => {
   if (!isPlainObject(v)) return false;
+  // graceStartTag was added in Tier 3. Treat as optional for backwards
+  // compatibility with state files written by Tier 1/2 installs; loadState
+  // backfills the missing field to null. If present, must be string|null.
+  const graceOk = v.graceStartTag === undefined || isStringOrNull(v.graceStartTag);
   return isStringOrNull(v.severeAt)
     && isStringOrNull(v.vulnerableAt)
-    && isStringOrNull(v.vulnerableNewReleaseTag);
+    && isStringOrNull(v.vulnerableNewReleaseTag)
+    && graceOk;
 };
 
 // Validate the full shape so loadState() actually delivers on its "safely
@@ -120,13 +136,16 @@ export const loadState = async (filePath: string): Promise<UpdateState> => {
     return structuredClone(EMPTY_STATE);
   }
   if (!isValid(parsed)) return structuredClone(EMPTY_STATE);
-  // Backfill Tier 2 fields on a Tier 1 state file. Spread defaults first,
-  // parsed second so explicit values win, then explicit fallback for the
-  // three fields that might be undefined.
+  // Backfill Tier 2 / Tier 3 fields on a legacy state file. Spread defaults
+  // first, parsed second so explicit values win, then explicit fallback for
+  // the fields that might be undefined. email.graceStartTag is backfilled
+  // separately because email validator allows it to be absent.
   const partial = parsed as Partial<UpdateState>;
+  const email = partial.email ?? structuredClone(EMPTY_STATE.email);
   return {
     ...structuredClone(EMPTY_STATE),
     ...partial,
+    email: {...email, graceStartTag: email.graceStartTag ?? null},
     execution: partial.execution ?? structuredClone(EMPTY_STATE.execution),
     bootCount: partial.bootCount ?? 0,
     lastResult: partial.lastResult ?? null,
