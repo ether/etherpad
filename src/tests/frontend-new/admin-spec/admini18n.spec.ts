@@ -60,6 +60,24 @@ test.describe('admin i18n', () => {
     await expect(page.getByText(/Plugin source/, {exact: false})).toBeVisible();
   });
 
+  test('HomePage plugin names link to npmjs.com (restored regression)', async ({page}) => {
+    // PR #7716 dropped <a href="https://npmjs.com/..."> wrappers on the
+    // installed-plugin rows. Restored — assert at least the core plugin
+    // row has an external link to npm so the regression cannot return.
+    await open(page, '/admin/');
+    const link = page.locator('a.pm-plugin-link', {hasText: 'ep_etherpad-lite'});
+    await expect(link).toBeVisible({timeout: 30000});
+    await expect(link).toHaveAttribute('href', /npmjs\.com\/ep_etherpad-lite/);
+    await expect(link).toHaveAttribute('target', '_blank');
+  });
+
+  test('HomePage available-plugins toolbar has a sort-direction toggle', async ({page}) => {
+    // PR #7716 removed clickable sort headers and left a sort dropdown
+    // with no way to invert direction. Restored as a ↑/↓ button.
+    await open(page, '/admin/');
+    await expect(page.locator('button.pm-sort-dir')).toBeVisible({timeout: 30000});
+  });
+
   test('PadPage filters + headers translate (English)', async ({page}) => {
     await open(page, '/admin/pads');
     // Wait for the page to actually render — pad load is async.

@@ -36,13 +36,32 @@ function fmtDate(locale: string, ts: number): string {
   )
 }
 
+// i18next's language detector reads ?lng= from the URL, so the value can be
+// attacker-controlled and structurally invalid (e.g. "en_US", "💥", "  ").
+// Intl.* throws RangeError on bad tags, which would crash the pads page
+// during render. Normalise underscores → dashes and let the Intl runtime
+// tell us which subset of the tag it can support; on failure, fall back to
+// 'en' to mirror i18next's fallbackLng so dates render in a sane locale
+// rather than the user's browser default fighting the page copy.
+function sanitizeLocale(lng?: string): string {
+  if (!lng) return 'en'
+  const normalized = lng.trim().replace(/_/g, '-')
+  if (!normalized) return 'en'
+  try {
+    const [supported] = Intl.DateTimeFormat.supportedLocalesOf([normalized])
+    return supported ?? 'en'
+  } catch {
+    return 'en'
+  }
+}
+
 export const PadPage = () => {
   const settingsSocket = useStore(state => state.settingsSocket)
   const [searchParams, setSearchParams] = useState<PadSearchQuery>({
     offset: 0, limit: 12, pattern: '', sortBy: 'lastEdited', ascending: false,
   })
   const {t, i18n} = useTranslation()
-  const locale = i18n.language || 'en'
+  const locale = sanitizeLocale(i18n.resolvedLanguage ?? i18n.language)
   const [searchTerm, setSearchTerm] = useState('')
   const [filter, setFilter] = useState<FilterId>('all')
   const [selected, setSelected] = useState<Set<string>>(new Set())
@@ -252,7 +271,8 @@ export const PadPage = () => {
               onChange={e => setSearchParams({
                 ...searchParams,
                 sortBy: e.target.value,
-                ascending: e.target.value === 'padName',
+                // Keep current direction when only the column changes; the
+                // ↑/↓ button below is the sole control for direction.
               })}
             >
               <option value="lastEdited">{t('ep_admin_pads:ep_adminpads2_last-edited')}</option>
@@ -260,6 +280,21 @@ export const PadPage = () => {
               <option value="userCount">{t('admin_pads.sort.user_count')}</option>
               <option value="revisionNumber">{t('admin_pads.sort.revision_number')}</option>
             </select>
+            <button
+              className="pm-sort-dir"
+              onClick={() => setSearchParams({
+                ...searchParams,
+                ascending: !searchParams.ascending,
+              })}
+              title={t(searchParams.ascending
+                ? 'admin_plugins.sort_ascending'
+                : 'admin_plugins.sort_descending')}
+              aria-label={t(searchParams.ascending
+                ? 'admin_plugins.sort_ascending'
+                : 'admin_plugins.sort_descending')}
+            >
+              {searchParams.ascending ? '↑' : '↓'}
+            </button>
           </div>
         </div>
 

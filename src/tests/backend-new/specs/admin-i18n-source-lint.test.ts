@@ -61,6 +61,51 @@ describe('admin i18n source lint', () => {
       .toBe(false);
   });
 
+  it('PadPage sanitises i18n.language before passing to Intl', () => {
+    // Qodo finding: i18n.language flows from user-controlled ?lng= and a
+    // malformed tag would throw RangeError in toLocale*(). Guard the
+    // sanitiser pattern so a future refactor cannot quietly remove it.
+    const src = read('admin/src/pages/PadPage.tsx');
+    expect(src.includes('sanitizeLocale'),
+      'PadPage no longer wraps i18n.language in sanitizeLocale()').toBe(true);
+    expect(src.includes('Intl.DateTimeFormat.supportedLocalesOf'),
+      'sanitizeLocale no longer validates via Intl.supportedLocalesOf').toBe(true);
+  });
+
+  it('PluginDef no longer exposes the dead downloads field', () => {
+    // Backend (src/static/js/pluginfw/installer.ts::search) never populates
+    // downloads. PR #7716 wired it through the frontend anyway, producing a
+    // dead Downloads column, "Most popular" default sort, and a "Popular"
+    // tag that never appeared. Guard the cleanup.
+    const src = read('admin/src/pages/Plugin.ts');
+    expect(src.match(/downloads\??:\s*number/),
+      'PluginDef still declares downloads — dead UI field').toBeNull();
+    expect(src.includes("'downloads'"),
+      "SearchParams['sortBy'] still includes 'downloads'").toBe(false);
+  });
+
+  it('orphan modules from pre-rework admin are gone', () => {
+    // SearchField.tsx and sorting.ts were imported by the pre-rework admin
+    // pages but the rework dropped both. Delete-then-grep here so a future
+    // unrelated import accidentally re-adding them fails review.
+    const fs = require('fs');
+    const join = require('path').join;
+    expect(fs.existsSync(join(repoRoot, 'admin/src/components/SearchField.tsx')),
+      'admin/src/components/SearchField.tsx is dead code from pre-rework admin').toBe(false);
+    expect(fs.existsSync(join(repoRoot, 'admin/src/utils/sorting.ts')),
+      'admin/src/utils/sorting.ts is dead code from pre-rework admin').toBe(false);
+  });
+
+  it('PadPage sort dropdown is paired with a direction toggle', () => {
+    // PR #7716 hardcoded `ascending: e.target.value === 'padName'`, leaving
+    // no way to invert sort direction. The fix is an explicit ↑/↓ button.
+    const src = read('admin/src/pages/PadPage.tsx');
+    expect(src.includes('pm-sort-dir'),
+      'PadPage no longer renders the .pm-sort-dir direction toggle').toBe(true);
+    expect(src.includes("ascending: e.target.value === 'padName'"),
+      'PadPage still hardcodes ascending direction in onChange').toBe(false);
+  });
+
   it('UpdatePage referenced keys exist in en.json', () => {
     const en = JSON.parse(read('src/locales/en.json')) as Record<string, string>;
     // Keys added in this PR — guard against accidental rename/typo.
@@ -76,7 +121,8 @@ describe('admin i18n source lint', () => {
       'admin_pads.filter.stale',
       'admin_plugins.subtitle', 'admin_plugins.reload_catalog',
       'admin_plugins.search_npm', 'admin_plugins.updates_available',
-      'admin_plugins.popular_tag', 'admin_plugins.update_tooltip',
+      'admin_plugins.update_tooltip',
+      'admin_plugins.sort_ascending', 'admin_plugins.sort_descending',
       'admin_plugins.error_retrieving',
       'admin_plugins_info.subtitle', 'admin_plugins_info.copy_diagnostics',
       'admin_plugins_info.up_to_date', 'admin_plugins_info.update_available',

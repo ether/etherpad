@@ -4,7 +4,6 @@ export type PluginDef = {
   version: string,
   time: string,
   official: boolean,
-  downloads?: number,
   /**
    * `@feature:*` Playwright tags for core specs the plugin intentionally
    * disables. See doc/PLUGIN_FEATURE_DISABLES.md. May be undefined for
@@ -28,7 +27,7 @@ export type SearchParams = {
   searchTerm: string,
   offset: number,
   limit: number,
-  sortBy: 'name'|'version'|'last-updated'|'downloads',
+  sortBy: 'name'|'version'|'last-updated',
   sortDir: 'asc'|'desc'
 }
 

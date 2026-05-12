@@ -6,24 +6,20 @@ import {Trans, useTranslation} from "react-i18next";
 import {ArrowUpFromDot, Download, ExternalLink, Plug, RefreshCw, Search, Trash, X} from "lucide-react";
 import {IconButton} from "../components/IconButton.tsx";
 
-const POPULAR_THRESHOLD = 10_000
-
-const fmtDownloads = (n: number): string => {
-  if (n >= 10_000) return `${Math.round(n / 1000)}k`
-  if (n >= 1_000) return `${(n / 1000).toFixed(1)}k`
-  return String(n)
-}
-
 export const HomePage = () => {
   const pluginsSocket = useStore(state => state.pluginsSocket)
   const [plugins, setPlugins] = useState<PluginDef[]>([])
   const installedPlugins = useStore(state => state.installedPlugins)
   const setInstalledPlugins = useStore(state => state.setInstalledPlugins)
+  // Default sort: name ascending. PR #7716 set this to "downloads desc" but
+  // the backend (src/static/js/pluginfw/installer.ts) never populates
+  // `downloads`, so the "Most popular" sort/"Popular" tag/Downloads column
+  // were dead UI — removed alongside this default.
   const [searchParams, setSearchParams] = useState<SearchParams>({
     offset: 0,
     limit: 99999,
-    sortBy: 'downloads',
-    sortDir: 'desc',
+    sortBy: 'name',
+    sortDir: 'asc',
     searchTerm: '',
   })
   const [searchTerm, setSearchTerm] = useState<string>('')
@@ -31,6 +27,14 @@ export const HomePage = () => {
 
   const updatableCount = useMemo(
     () => installedPlugins.filter(p => p.updatable).length,
+    [installedPlugins]
+  )
+
+  // "Core" plugins are the ones Etherpad ships as part of the runtime
+  // (currently just ep_etherpad-lite). Derive from data rather than
+  // hardcoding 1 — future packaging changes may bundle more.
+  const coreCount = useMemo(
+    () => installedPlugins.filter(p => p.name === 'ep_etherpad-lite').length,
     [installedPlugins]
   )
 
@@ -42,9 +46,6 @@ export const HomePage = () => {
   const filteredInstallablePlugins = useMemo(() => {
     return [...plugins].sort((a, b) => {
       const dir = searchParams.sortDir === 'asc' ? 1 : -1
-      if (searchParams.sortBy === 'downloads') {
-        return ((b.downloads ?? 0) - (a.downloads ?? 0)) * (dir * -1)
-      }
       if (searchParams.sortBy === 'version') {
         return a.version.localeCompare(b.version) * dir
       }
@@ -168,7 +169,7 @@ export const HomePage = () => {
         <div className="pm-stat pm-stat--primary">
           <div className="pm-stat-label"><Trans i18nKey="admin_plugins.installed"/></div>
           <div className="pm-stat-value">{installedPlugins.length}</div>
-          <div className="pm-stat-hint">{t('admin_plugins.core_count', {count: 1})}</div>
+          <div className="pm-stat-hint">{t('admin_plugins.core_count', {count: coreCount})}</div>
         </div>
         <div className="pm-stat">
           <div className="pm-stat-label"><Trans i18nKey="admin_plugins.available"/></div>
@@ -215,7 +216,12 @@ export const HomePage = () => {
               </div>
               <div className="pm-installed-main">
                 <div className="pm-installed-title">
-                  <span className="pm-mono">{plugin.name}</span>
+                  <a
+                    className="pm-mono pm-plugin-link"
+                    href={`https://npmjs.com/${plugin.name}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >{plugin.name}</a>
                   {plugin.name === 'ep_etherpad-lite' && (
                     <span className="pm-tag pm-tag--core"><Trans i18nKey="admin_plugins.tag_core"/></span>
                   )}
@@ -275,15 +281,29 @@ export const HomePage = () => {
                 setSearchParams({
                   ...searchParams,
                   sortBy,
-                  sortDir: sortBy === 'downloads' ? 'desc' : 'asc',
+                  sortDir: 'asc',
                 })
               }}
             >
-              <option value="downloads">{t('admin_plugins.sort.popular')}</option>
               <option value="name">{t('admin_plugins.sort.name')}</option>
               <option value="version">{t('admin_plugins.sort.version')}</option>
               <option value="last-updated">{t('admin_plugins.sort.last_updated')}</option>
             </select>
+            <button
+              className="pm-sort-dir"
+              onClick={() => setSearchParams({
+                ...searchParams,
+                sortDir: searchParams.sortDir === 'asc' ? 'desc' : 'asc',
+              })}
+              title={t(searchParams.sortDir === 'asc'
+                ? 'admin_plugins.sort_ascending'
+                : 'admin_plugins.sort_descending')}
+              aria-label={t(searchParams.sortDir === 'asc'
+                ? 'admin_plugins.sort_ascending'
+                : 'admin_plugins.sort_descending')}
+            >
+              {searchParams.sortDir === 'asc' ? '↑' : '↓'}
+            </button>
           </div>
         </div>
 
@@ -296,7 +316,6 @@ export const HomePage = () => {
                   <th><Trans i18nKey="admin_plugins.description"/></th>
                   <th style={{width: 62, textAlign: 'right'}}><Trans i18nKey="admin_plugins.version"/></th>
                   <th style={{width: 96}}><Trans i18nKey="admin_plugins.last-update"/></th>
-                  <th style={{width: 68, textAlign: 'right'}}><Trans i18nKey="admin_plugins.downloads"/></th>
                   <th style={{width: 108, textAlign: 'right'}}></th>
                 </tr>
               </thead>
@@ -307,10 +326,12 @@ export const HomePage = () => {
                       <div className="pm-cell-name">
                         <span className="pm-cell-icon"><Plug size={13}/></span>
                         <div className="pm-cell-title">
-                          <span className="pm-mono">{plugin.name}</span>
-                          {(plugin.downloads ?? 0) >= POPULAR_THRESHOLD && (
-                            <span className="pm-tag pm-tag--popular"><Trans i18nKey="admin_plugins.popular_tag"/></span>
-                          )}
+                          <a
+                            className="pm-mono pm-plugin-link"
+                            href={`https://npmjs.com/${plugin.name}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >{plugin.name}</a>
                         </div>
                       </div>
                     </td>
@@ -331,9 +352,6 @@ export const HomePage = () => {
                     </td>
                     <td className="pm-num">{plugin.version}</td>
                     <td className="pm-cell-date">{plugin.time}</td>
-                    <td className="pm-num">
-                      {plugin.downloads != null ? fmtDownloads(plugin.downloads) : '—'}
-                    </td>
                     <td className="pm-cell-action">
                       <button
                         className="pm-btn pm-btn-primary pm-btn--sm"
