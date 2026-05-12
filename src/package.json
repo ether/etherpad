@@ -36,6 +36,7 @@
     "cookie-parser": "^1.4.7",
     "cross-env": "^10.1.0",
     "cross-spawn": "^7.0.6",
+    "dirty-ts": "^1.1.8",
     "ejs": "^5.0.2",
     "esbuild": "^0.28.0",
     "express": "^5.2.1",
