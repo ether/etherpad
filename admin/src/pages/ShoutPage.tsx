@@ -3,6 +3,7 @@ import {SendHorizonal} from 'lucide-react'
 import {useStore} from "../store/store.ts";
 import * as Switch from '@radix-ui/react-switch';
 import {ShoutType} from "../components/ShoutType.ts";
+import {Trans, useTranslation} from "react-i18next";
 
 export const ShoutPage = ()=>{
     const [totalUsers, setTotalUsers] = useState(0);
@@ -11,6 +12,7 @@ export const ShoutPage = ()=>{
     const socket = useStore(state => state.settingsSocket);
     const pluginSocket = useStore(state => state.pluginsSocket);
     const [shouts, setShouts] = useState<ShoutType[]>([]);
+    const {t} = useTranslation()
 
 
     useEffect(() => {
@@ -42,8 +44,8 @@ export const ShoutPage = ()=>{
 
     return (
         <div>
-            <h1>Communication</h1>
-            {totalUsers > 0 && <p>There  {totalUsers>1?"are":"is"} currently {totalUsers} user{totalUsers>1?"s":""} online</p>}
+            <h1><Trans i18nKey="admin.shout"/></h1>
+            {totalUsers > 0 && <p>{t('admin_shout.online', {count: totalUsers})}</p>}
             <div style={{height: '80vh', display: 'flex', flexDirection: 'column'}}>
                 <div style={{flexGrow: 1, backgroundColor: 'white', overflowY: "auto"}}>
                     {
@@ -66,7 +68,7 @@ export const ShoutPage = ()=>{
                     e.preventDefault()
                     sendMessage()
                 }} className="send-message search-field" style={{display: 'flex', gap: '10px'}}>
-                    <Switch.Root title="Change sticky message" className="SwitchRoot" checked={sticky}
+                    <Switch.Root title={t('admin_shout.sticky_toggle')} className="SwitchRoot" checked={sticky}
                                  onCheckedChange={() => {
                                      setSticky(!sticky);
              }}>

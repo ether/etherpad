@@ -1,12 +1,13 @@
 import {useStore} from "../store/store.ts";
 import {isJSONClean, cleanComments} from "../utils/utils.ts";
-import {Trans} from "react-i18next";
+import {Trans, useTranslation} from "react-i18next";
 import {IconButton} from "../components/IconButton.tsx";
 import {RotateCw, Save} from "lucide-react";
 
 export const SettingsPage = ()=>{
   const settingsSocket = useStore(state=>state.settingsSocket)
   const settings = cleanComments(useStore(state=>state.settings))
+  const {t} = useTranslation()
 
   return <div className="settings-page">
     <h1><Trans i18nKey="admin_settings.current"/></h1>
@@ -21,13 +22,13 @@ export const SettingsPage = ()=>{
           settingsSocket!.emit('saveSettings', settings!);
           useStore.getState().setToastState({
             open: true,
-            title: "Successfully saved settings",
+            title: t('admin_settings.saved_success'),
             success: true
           })
         } else {
           useStore.getState().setToastState({
             open: true,
-            title: "Error saving settings",
+            title: t('admin_settings.save_error'),
             success: false
           })
         }

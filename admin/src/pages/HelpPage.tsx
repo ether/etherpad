@@ -75,11 +75,11 @@ export const HelpPage = () => {
         <div>
           <div className="pm-crumbs">Admin <span className="pm-crumbs-sep">›</span> <Trans i18nKey="admin_plugins_info"/></div>
           <h1 className="pm-title"><Trans i18nKey="admin_plugins_info"/></h1>
-          <p className="pm-subtitle">System-Diagnose: installierte Version, registrierte Teile und Hooks.</p>
+          <p className="pm-subtitle"><Trans i18nKey="admin_plugins_info.subtitle"/></p>
         </div>
         <div className="pm-header-actions">
           <button className="pm-btn pm-btn-ghost" onClick={copyDiag}>
-            <Copy size={14}/> Diagnose kopieren
+            <Copy size={14}/> <Trans i18nKey="admin_plugins_info.copy_diagnostics"/>
           </button>
         </div>
       </div>
@@ -92,8 +92,8 @@ export const HelpPage = () => {
           <div className={`pm-hv-status${updateAvailable ? ' is-warn' : ' is-ok'}`}>
             <span className="pm-hv-dot"/>
             {updateAvailable
-              ? `Update verfügbar: ${helpData.latestVersion}`
-              : 'Auf dem neuesten Stand'}
+              ? t('admin_plugins_info.update_available', {version: helpData.latestVersion})
+              : t('admin_plugins_info.up_to_date')}
           </div>
         </div>
         <div className="pm-hv-meta">
@@ -102,13 +102,13 @@ export const HelpPage = () => {
             <div className="pm-hv-cell-val">{helpData.latestVersion}</div>
           </div>
           <div className="pm-hv-cell">
-            <div className="pm-hv-cell-lbl">Git SHA</div>
+            <div className="pm-hv-cell-lbl"><Trans i18nKey="admin_plugins_info.git_sha"/></div>
             <div className="pm-hv-cell-val pm-mono">
               {helpData.gitCommit}
               <button
                 className="pm-mini-btn"
                 onClick={() => navigator.clipboard?.writeText(helpData.gitCommit)}
-                title={t('admin_plugins_info.version') + ' kopieren'}
+                title={t('admin_plugins_info.copy_value', {label: t('admin_plugins_info.git_sha')})}
               >
                 <Copy size={11}/>
               </button>
@@ -123,7 +123,7 @@ export const HelpPage = () => {
             <div className="pm-hv-cell-val">{helpData.installedParts.length}</div>
           </div>
           <div className="pm-hv-cell">
-            <div className="pm-hv-cell-lbl">Hook-Bindings</div>
+            <div className="pm-hv-cell-lbl"><Trans i18nKey="admin_plugins_info.hook_bindings"/></div>
             <div className="pm-hv-cell-val">{totalBindings}</div>
           </div>
         </div>
@@ -178,10 +178,10 @@ export const HelpPage = () => {
           <div className="pm-toolbar">
             <div className="pm-tabs">
               <button className={`pm-tab${tab === 'server' ? ' is-on' : ''}`} onClick={() => setTab('server')}>
-                Server <span className="pm-tab-n">{serverHooks.length}</span>
+                <Trans i18nKey="admin_plugins_info.tab_server"/> <span className="pm-tab-n">{serverHooks.length}</span>
               </button>
               <button className={`pm-tab${tab === 'client' ? ' is-on' : ''}`} onClick={() => setTab('client')}>
-                Client <span className="pm-tab-n">{clientHooks.length}</span>
+                <Trans i18nKey="admin_plugins_info.tab_client"/> <span className="pm-tab-n">{clientHooks.length}</span>
               </button>
             </div>
             <div className="pm-search">
@@ -190,7 +190,7 @@ export const HelpPage = () => {
                 className="pm-search-input"
                 value={q}
                 onChange={e => setQ(e.target.value)}
-                placeholder="Hook oder Teil suchen…"
+                placeholder={t('admin_plugins_info.search_placeholder')}
               />
               {q && <button className="pm-search-clear" onClick={() => setQ('')}><X size={12}/></button>}
             </div>
@@ -203,7 +203,7 @@ export const HelpPage = () => {
               <div key={h.name} className="pm-hook">
                 <div className="pm-hook-h">
                   <span className="pm-hook-name">{h.name}</span>
-                  <span className="pm-hook-count">{h.parts.length} Bindings</span>
+                  <span className="pm-hook-count">{t('admin_plugins_info.bindings_label', {count: h.parts.length})}</span>
                 </div>
                 <div className="pm-hook-parts">
                   {h.parts.map(p => (
@@ -216,7 +216,7 @@ export const HelpPage = () => {
         ) : (
           <div className="pm-empty">
             <div className="pm-empty-icon">∅</div>
-            <div className="pm-empty-title">Keine Hooks gefunden</div>
+            <div className="pm-empty-title"><Trans i18nKey="admin_plugins_info.no_hooks"/></div>
           </div>
         )}
       </section>

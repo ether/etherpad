@@ -104,7 +104,7 @@ export const HomePage = () => {
       setPlugins(data.results)
     }
     const onSearchError = () => {
-      useStore.getState().setToastState({open: true, title: 'Error retrieving plugins', success: false})
+      useStore.getState().setToastState({open: true, title: t('admin_plugins.error_retrieving'), success: false})
     }
 
     pluginsSocket.emit('search', searchParams)
@@ -138,12 +138,11 @@ export const HomePage = () => {
       <div className="pm-header">
         <div>
           <div className="pm-crumbs">
-            Admin <span className="pm-crumbs-sep">›</span> Plugins
+            Admin <span className="pm-crumbs-sep">›</span> <Trans i18nKey="admin_plugins.crumbs"/>
           </div>
           <h1 className="pm-title">{t('admin_plugins')}</h1>
           <p className="pm-subtitle">
-            Installiere, aktualisiere und entferne Etherpad-Plugins.
-            Änderungen erfordern einen Server-Neustart.
+            <Trans i18nKey="admin_plugins.subtitle"/>
           </p>
         </div>
         <div className="pm-header-actions">
@@ -151,7 +150,7 @@ export const HomePage = () => {
             className="pm-btn pm-btn-ghost"
             onClick={() => pluginsSocket?.emit('search', searchParams)}
           >
-            <RefreshCw size={14}/> Katalog neu laden
+            <RefreshCw size={14}/> <Trans i18nKey="admin_plugins.reload_catalog"/>
           </button>
           <a
             className="pm-btn pm-btn-primary pm-btn-link"
@@ -159,7 +158,7 @@ export const HomePage = () => {
             target="_blank"
             rel="noreferrer"
           >
-            <ExternalLink size={14}/> Auf npm suchen
+            <ExternalLink size={14}/> <Trans i18nKey="admin_plugins.search_npm"/>
           </a>
         </div>
       </div>
@@ -169,26 +168,26 @@ export const HomePage = () => {
         <div className="pm-stat pm-stat--primary">
           <div className="pm-stat-label"><Trans i18nKey="admin_plugins.installed"/></div>
           <div className="pm-stat-value">{installedPlugins.length}</div>
-          <div className="pm-stat-hint">Davon 1 Core</div>
+          <div className="pm-stat-hint">{t('admin_plugins.core_count', {count: 1})}</div>
         </div>
         <div className="pm-stat">
           <div className="pm-stat-label"><Trans i18nKey="admin_plugins.available"/></div>
           <div className="pm-stat-value">{plugins.length}</div>
         </div>
         <div className={`pm-stat${updatableCount > 0 ? ' pm-stat--warn' : ''}`}>
-          <div className="pm-stat-label">Updates verfügbar</div>
+          <div className="pm-stat-label"><Trans i18nKey="admin_plugins.updates_available"/></div>
           <div className="pm-stat-value">{updatableCount}</div>
           {updatableCount > 0 && (
             <button
               className="pm-stat-action"
               onClick={() => pluginsSocket?.emit('checkUpdates')}
             >
-              Aktualisieren →
+              <Trans i18nKey="admin_plugins.update_now"/> →
             </button>
           )}
         </div>
         <div className="pm-stat">
-          <div className="pm-stat-label">Plugin-Quelle</div>
+          <div className="pm-stat-label"><Trans i18nKey="admin_plugins.source"/></div>
           <div className="pm-stat-value pm-stat-value--sm">npm</div>
           <div className="pm-stat-hint">registry.npmjs.org</div>
         </div>
@@ -204,7 +203,7 @@ export const HomePage = () => {
             className="pm-btn pm-btn-ghost"
             onClick={() => pluginsSocket?.emit('checkUpdates')}
           >
-            <RefreshCw size={14}/> Nach Updates suchen
+            <RefreshCw size={14}/> <Trans i18nKey="admin_plugins.check_updates"/>
           </button>
         </div>
 
@@ -218,7 +217,7 @@ export const HomePage = () => {
                 <div className="pm-installed-title">
                   <span className="pm-mono">{plugin.name}</span>
                   {plugin.name === 'ep_etherpad-lite' && (
-                    <span className="pm-tag pm-tag--core">Core</span>
+                    <span className="pm-tag pm-tag--core"><Trans i18nKey="admin_plugins.tag_core"/></span>
                   )}
                   <span className="pm-tag pm-tag--ver">v{plugin.version}</span>
                 </div>
@@ -231,7 +230,7 @@ export const HomePage = () => {
                   <IconButton
                     onClick={() => installPlugin(plugin.name)}
                     icon={<ArrowUpFromDot size={14}/>}
-                    title="Update"
+                    title={t('admin_plugins.update_tooltip')}
                   />
                 ) : (
                   <IconButton
@@ -280,10 +279,10 @@ export const HomePage = () => {
                 })
               }}
             >
-              <option value="downloads">Beliebteste</option>
-              <option value="name">Name (A–Z)</option>
-              <option value="version">Version</option>
-              <option value="last-updated">Zuletzt aktualisiert</option>
+              <option value="downloads">{t('admin_plugins.sort.popular')}</option>
+              <option value="name">{t('admin_plugins.sort.name')}</option>
+              <option value="version">{t('admin_plugins.sort.version')}</option>
+              <option value="last-updated">{t('admin_plugins.sort.last_updated')}</option>
             </select>
           </div>
         </div>
@@ -297,7 +296,7 @@ export const HomePage = () => {
                   <th><Trans i18nKey="admin_plugins.description"/></th>
                   <th style={{width: 62, textAlign: 'right'}}><Trans i18nKey="admin_plugins.version"/></th>
                   <th style={{width: 96}}><Trans i18nKey="admin_plugins.last-update"/></th>
-                  <th style={{width: 68, textAlign: 'right'}}>Downloads</th>
+                  <th style={{width: 68, textAlign: 'right'}}><Trans i18nKey="admin_plugins.downloads"/></th>
                   <th style={{width: 108, textAlign: 'right'}}></th>
                 </tr>
               </thead>
@@ -310,7 +309,7 @@ export const HomePage = () => {
                         <div className="pm-cell-title">
                           <span className="pm-mono">{plugin.name}</span>
                           {(plugin.downloads ?? 0) >= POPULAR_THRESHOLD && (
-                            <span className="pm-tag pm-tag--popular">Beliebt</span>
+                            <span className="pm-tag pm-tag--popular"><Trans i18nKey="admin_plugins.popular_tag"/></span>
                           )}
                         </div>
                       </div>

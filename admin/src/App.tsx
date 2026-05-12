@@ -54,7 +54,7 @@ export const App = () => {
         return;
       }
       if (isJSONClean(settings.results)) setSettings(settings.results);
-      else alert('Invalid JSON');
+      else alert(t('admin_settings.invalid_json'));
       useStore.getState().setShowLoading(false);
     });
 
@@ -79,7 +79,7 @@ export const App = () => {
             <button
               className="sidebar-burger"
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              aria-label="Toggle sidebar"
+              aria-label={t('admin.toggle_sidebar')}
             >
               <LucideMenu size={20}/>
             </button>
@@ -127,10 +127,10 @@ export const App = () => {
             <NavLink
               to="/shout"
               className={({isActive}) => `sidebar-nav-item${isActive ? ' is-active' : ''}`}
-              title={sidebarOpen ? undefined : 'Communication'}
+              title={sidebarOpen ? undefined : t('admin.shout')}
             >
               <span className="sidebar-nav-icon"><PhoneCall size={18}/></span>
-              {sidebarOpen && <span className="sidebar-nav-label">Communication</span>}
+              {sidebarOpen && <span className="sidebar-nav-label"><Trans i18nKey="admin.shout"/></span>}
             </NavLink>
             <NavLink
               to="/update"
