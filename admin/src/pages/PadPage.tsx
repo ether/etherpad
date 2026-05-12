@@ -255,7 +255,7 @@ export const PadPage = () => {
                 ascending: e.target.value === 'padName',
               })}
             >
-              <option value="lastEdited">{t('admin_pads.sort.last_edited')}</option>
+              <option value="lastEdited">{t('ep_admin_pads:ep_adminpads2_last-edited')}</option>
               <option value="padName">{t('admin_pads.sort.name')}</option>
               <option value="userCount">{t('admin_pads.sort.user_count')}</option>
               <option value="revisionNumber">{t('admin_pads.sort.revision_number')}</option>
@@ -308,8 +308,8 @@ export const PadPage = () => {
                   <th><Trans i18nKey="admin_pads.col.pad"/></th>
                   <th style={{width: 100, textAlign: 'center'}}><Trans i18nKey="admin_pads.col.users"/></th>
                   <th style={{width: 110, textAlign: 'right'}}><Trans i18nKey="admin_pads.col.revisions"/></th>
-                  <th style={{width: 210}}><Trans i18nKey="admin_pads.col.last_edited"/></th>
-                  <th style={{width: 170, textAlign: 'right'}}><Trans i18nKey="admin_pads.col.action"/></th>
+                  <th style={{width: 210}}><Trans i18nKey="ep_admin_pads:ep_adminpads2_last-edited"/></th>
+                  <th style={{width: 170, textAlign: 'right'}}><Trans i18nKey="ep_admin_pads:ep_adminpads2_action"/></th>
                 </tr>
               </thead>
               <tbody>
@@ -385,7 +385,7 @@ export const PadPage = () => {
         ) : (
           <div className="pm-empty">
             <div className="pm-empty-icon">∅</div>
-            <div className="pm-empty-title"><Trans i18nKey="admin_pads.empty_state"/></div>
+            <div className="pm-empty-title"><Trans i18nKey="ep_admin_pads:ep_adminpads2_no-results"/></div>
           </div>
         )}
 

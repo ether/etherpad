@@ -69,7 +69,7 @@ describe('admin i18n source lint', () => {
       'admin_login.failed', 'admin_login.username', 'admin_login.password',
       'admin_login.submit', 'admin_login.title',
       'admin_pads.subtitle', 'admin_pads.refresh', 'admin_pads.cancel',
-      'admin_pads.empty_state', 'admin_pads.relative.just_now',
+      'admin_pads.relative.just_now',
       'admin_pads.relative.minutes', 'admin_pads.relative.years',
       'admin_pads.filter.all', 'admin_pads.filter.active',
       'admin_pads.filter.recent', 'admin_pads.filter.empty',
