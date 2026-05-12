@@ -1,5 +1,5 @@
 'use strict';
-import {Database} from "ueberdb2";
+import type {Database} from "ueberdb2";
 import {AChangeSet, APool, AText} from "../types/PadType";
 import {MapArrayType} from "../types/MapType";
 
@@ -347,8 +347,8 @@ class Pad {
           Stream.range(keyRev + 1, targetRev + 1).map(this.getRevisionChangeset.bind(this))),
     ]);
     const apool = this.apool();
-    let atext = keyAText;
-    for (const cs of changesets) atext = applyToAText(cs, atext, apool);
+    let atext = keyAText as AText;
+    for (const cs of changesets) atext = applyToAText(cs as string, atext, apool);
     return atext;
   }
 
@@ -494,7 +494,7 @@ class Pad {
   async getChatMessage(entryNum: number) {
     const entry = await this.db.get(`pad:${this.id}:chat:${entryNum}`);
     if (entry == null) return null;
-    const message = ChatMessage.fromObject(entry);
+    const message = ChatMessage.fromObject(entry as ChatMessage);
     message.displayName = await authorManager.getAuthorName(message.authorId);
     return message;
   }
@@ -524,7 +524,7 @@ class Pad {
 
   async init(text:string, authorId = '') {
     // try to load the pad
-    const value = await this.db.get(`pad:${this.id}`);
+    const value = await this.db.get(`pad:${this.id}`) as Record<string, any> | null;
 
     // if this pad exists, load it
     if (value != null) {
@@ -733,13 +733,13 @@ class Pad {
     // delete all chat messages
     // @ts-ignore
     p.push(timesLimit(this.chatHead + 1, 500, async (i: string) => {
-      await this.db.remove(`pad:${this.id}:chat:${i}`, null);
+      await this.db.remove(`pad:${this.id}:chat:${i}`);
     }));
 
     // delete all revisions
     // @ts-ignore
     p.push(timesLimit(this.head + 1, 500, async (i: string) => {
-      await this.db.remove(`pad:${this.id}:revs:${i}`, null);
+      await this.db.remove(`pad:${this.id}:revs:${i}`);
     }));
 
     // remove pad from all authors who contributed

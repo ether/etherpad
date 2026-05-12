@@ -26,11 +26,12 @@ const db = require('../db/DB');
 const hooks = require('../../static/js/pluginfw/hooks');
 import log4js from 'log4js';
 const supportedElems = require('../../static/js/contentcollector').supportedElems;
-import {Database} from 'ueberdb2';
 
 const logger = log4js.getLogger('ImportEtherpad');
 
 exports.setPadRaw = async (padId: string, r: string, authorId = '') => {
+  // ueberdb2 v6 is ESM-only; load via dynamic import so CJS consumers work.
+  const {Database} = await import('ueberdb2');
   const records = JSON.parse(r);
 
   // get supported block Elements from plugins, we will use this later.
