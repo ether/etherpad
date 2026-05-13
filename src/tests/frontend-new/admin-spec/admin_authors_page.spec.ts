@@ -8,6 +8,10 @@ const ADMIN_URL = 'http://localhost:9001/admin';
 
 const setErasureFlag = async (page: any, enabled: boolean) => {
   await page.goto(`${ADMIN_URL}/settings`);
+  // /admin/settings now defaults to the parsed form view; the raw
+  // textarea (.settings) is only mounted after switching modes.
+  await page.waitForSelector('[data-testid="settings-form-view"]', {timeout: 30000});
+  await page.getByTestId('mode-toggle-raw').click();
   await page.waitForSelector('.settings');
   const settings = page.locator('.settings');
   await expect(settings).not.toHaveValue('', {timeout: 30000});

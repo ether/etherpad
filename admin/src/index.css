@@ -272,16 +272,9 @@ td, th {
   display: flex;
   flex-direction: column;
   gap: 20px;
-  height: 100%;
+  min-height: 100%;
 }
 
-.settings {
-  flex-grow: max(1, 1);
-  outline: none;
-  width: 100%;
-  resize: none;
-  font-family: monospace;
-}
 
 #response {
   display: inline;

@@ -63,7 +63,15 @@ export const App = () => {
       useStore.getState().setShowLoading(false);
     });
 
-    settingSocket.on('saveprogress', (status) => console.log(status))
+    settingSocket.on('saveprogress', (status: string, payload?: {message?: string}) => {
+      const {setToastState} = useStore.getState();
+      if (status === 'saved') {
+        setToastState({open: true, title: t('admin_settings.toast.saved'), success: true});
+      } else {
+        const detail = payload?.message ?? '';
+        setToastState({open: true, title: t('admin_settings.toast.save_failed') + (detail ? ` (${detail})` : ''), success: false});
+      }
+    })
 
     return () => {
       settingSocket.disconnect();
