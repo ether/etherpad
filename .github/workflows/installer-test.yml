@@ -50,8 +50,8 @@ jobs:
       - name: Run bin/installer.sh against this commit
         env:
           ETHERPAD_DIR: ${{ runner.temp }}/etherpad-installer-test
-          ETHERPAD_REPO: ${{ github.server_url }}/${{ github.repository }}.git
-          ETHERPAD_BRANCH: ${{ github.head_ref || github.ref_name }}
+          ETHERPAD_REPO: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.clone_url || format('{0}/{1}.git', github.server_url, github.repository) }}
+          ETHERPAD_BRANCH: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
           NO_COLOR: "1"
         run: sh ./bin/installer.sh
 
@@ -113,8 +113,8 @@ jobs:
         shell: pwsh
         env:
           ETHERPAD_DIR: ${{ runner.temp }}\etherpad-installer-test
-          ETHERPAD_REPO: ${{ github.server_url }}/${{ github.repository }}.git
-          ETHERPAD_BRANCH: ${{ github.head_ref || github.ref_name }}
+          ETHERPAD_REPO: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.clone_url || format('{0}/{1}.git', github.server_url, github.repository) }}
+          ETHERPAD_BRANCH: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
           NO_COLOR: "1"
         run: ./bin/installer.ps1
 
