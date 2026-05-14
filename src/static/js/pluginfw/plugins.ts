@@ -14,6 +14,7 @@ import settings, {
 } from '../../../node/utils/Settings';
 
 const logger = log4js.getLogger('plugins');
+const pnpmCmd = ['corepack', 'pnpm'];
 
 // Log the version of pnpm at startup. pnpm is only used for dev workflows
 // and plugin migration; it isn't required at runtime (admin-UI plugin
@@ -22,11 +23,11 @@ const logger = log4js.getLogger('plugins');
 // ERROR in the logs.
 (async () => {
   try {
-    const version = await runCmd(['pnpm', '--version'], {stdio: [null, 'string']});
-    logger.info(`pnpm --version: ${version}`);
+    const version = await runCmd([...pnpmCmd, '--version'], {stdio: [null, 'string']});
+    logger.info(`corepack pnpm --version: ${version}`);
   } catch (err) {
     if ((err as any).code === 'ENOENT') {
-      logger.debug('pnpm not found on PATH (only needed for dev workflows)');
+      logger.debug('corepack not found on PATH (only needed for dev workflows)');
     } else {
       logger.warn(`Failed to get pnpm version: ${err.stack || err}`);
     }

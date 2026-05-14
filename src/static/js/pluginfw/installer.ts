@@ -20,6 +20,7 @@ import {LinkInstaller} from "./LinkInstaller";
 
 import {findEtherpadRoot} from '../../../node/utils/AbsolutePaths';
 const logger = log4js.getLogger('plugins');
+const pnpmCmd = ['corepack', 'pnpm'];
 
 export const pluginInstallPath = path.join(settings.root, 'src','plugin_packages');
 export const node_modules = path.join(findEtherpadRoot(),'src', 'node_modules');
@@ -59,7 +60,7 @@ const migratePluginsFromNodeModules = async () => {
   //   * The `--no-production` flag is required (or the `NODE_ENV` environment variable must be
   //     unset or set to `development`) because otherwise `npm ls` will not mention any packages
   //     that are not included in `package.json` (which is expected to not exist).
-  const cmd = ['pnpm', 'ls', '--long', '--json', '--depth=0', '--no-production'];
+  const cmd = [...pnpmCmd, 'ls', '--long', '--json', '--depth=0', '--no-production'];
   const [{dependencies = {}}] = JSON.parse(await runCmd(cmd,
       {stdio: [null, 'string']}));
 

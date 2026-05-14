@@ -13,25 +13,25 @@
     "etherpad-healthcheck": "bin/etherpad-healthcheck"
   },
   "scripts": {
-    "lint": "pnpm --filter ep_etherpad-lite run lint",
-    "test": "pnpm --filter ep_etherpad-lite run test",
-    "test-utils": "pnpm --filter ep_etherpad-lite run test-utils",
-    "test-container": "pnpm --filter ep_etherpad-lite run test-container",
-    "dev": "pnpm --filter ep_etherpad-lite run dev",
-    "prod": "pnpm --filter ep_etherpad-lite run prod",
-    "ts-check": "pnpm --filter ep_etherpad-lite run ts-check",
-    "ts-check:watch": "pnpm --filter ep_etherpad-lite run ts-check:watch",
-    "test-ui": "pnpm --filter ep_etherpad-lite run test-ui",
-    "test-ui:ui": "pnpm --filter ep_etherpad-lite run test-ui:ui",
-    "test-admin": "pnpm --filter ep_etherpad-lite run test-admin",
-    "test-admin:ui": "pnpm --filter ep_etherpad-lite run test-admin:ui",
-    "plugins": "pnpm --filter bin run plugins",
-    "install-plugins": "pnpm --filter bin run plugins i",
-    "remove-plugins": "pnpm --filter bin run remove-plugins",
-    "list-plugins": "pnpm --filter bin run list-plugins",
-    "build:etherpad": "pnpm --filter admin run build-copy && pnpm --filter ui run build-copy",
-    "build:ui": "pnpm --filter ui run build-copy && pnpm --filter admin run build-copy",
-    "makeDocs": "pnpm --filter bin run makeDocs"
+    "lint": "corepack pnpm --filter ep_etherpad-lite run lint",
+    "test": "corepack pnpm --filter ep_etherpad-lite run test",
+    "test-utils": "corepack pnpm --filter ep_etherpad-lite run test-utils",
+    "test-container": "corepack pnpm --filter ep_etherpad-lite run test-container",
+    "dev": "corepack pnpm --filter ep_etherpad-lite run dev",
+    "prod": "corepack pnpm --filter ep_etherpad-lite run prod",
+    "ts-check": "corepack pnpm --filter ep_etherpad-lite run ts-check",
+    "ts-check:watch": "corepack pnpm --filter ep_etherpad-lite run ts-check:watch",
+    "test-ui": "corepack pnpm --filter ep_etherpad-lite run test-ui",
+    "test-ui:ui": "corepack pnpm --filter ep_etherpad-lite run test-ui:ui",
+    "test-admin": "corepack pnpm --filter ep_etherpad-lite run test-admin",
+    "test-admin:ui": "corepack pnpm --filter ep_etherpad-lite run test-admin:ui",
+    "plugins": "corepack pnpm --filter bin run plugins",
+    "install-plugins": "corepack pnpm --filter bin run plugins i",
+    "remove-plugins": "corepack pnpm --filter bin run remove-plugins",
+    "list-plugins": "corepack pnpm --filter bin run list-plugins",
+    "build:etherpad": "corepack pnpm --filter admin run build-copy && corepack pnpm --filter ui run build-copy",
+    "build:ui": "corepack pnpm --filter ui run build-copy && corepack pnpm --filter admin run build-copy",
+    "makeDocs": "corepack pnpm --filter bin run makeDocs"
   },
   "dependencies": {
     "ep_etherpad-lite": "link:src"
@@ -42,9 +42,10 @@
     "ui": "link:ui"
   },
   "engines": {
-    "node": ">=22.13.0"
+    "node": ">=22.13.0",
+    "pnpm": ">=11.0.0"
   },
-  "packageManager": "pnpm@11.0.6",
+  "packageManager": "pnpm@11.1.2",
   "repository": {
     "type": "git",
     "url": "https://github.com/ether/etherpad.git"
