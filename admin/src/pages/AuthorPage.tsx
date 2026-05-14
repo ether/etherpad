@@ -1,17 +1,22 @@
 import {Trans, useTranslation} from "react-i18next";
 import {useEffect, useMemo, useState} from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import {ChevronLeft, ChevronRight, Trash2} from "lucide-react";
+import {ChevronLeft, ChevronRight, Search, Trash2} from "lucide-react";
 import {useStore} from "../store/store.ts";
-import {SearchField} from "../components/SearchField.tsx";
 import {ColorSwatch} from "../components/ColorSwatch.tsx";
 import {IconButton} from "../components/IconButton.tsx";
-import {determineSorting} from "../utils/sorting.ts";
 import {useDebounce} from "../utils/useDebounce.ts";
 import {
   AnonymizePreview, AnonymizeResult, AuthorRow, AuthorSearchQuery,
   AuthorSearchResult, AuthorSortBy,
 } from "../utils/AuthorSearch.ts";
+
+const determineSorting = (sortBy: string, ascending: boolean, currentSymbol: string) => {
+  if (sortBy === currentSymbol) {
+    return ascending ? 'sort up' : 'sort down';
+  }
+  return 'sort none';
+};
 
 type DialogState =
   | {phase: 'closed'}
@@ -203,9 +208,12 @@ export const AuthorPage = () => {
       </h1>
     </span>
 
-    <SearchField value={searchTerm}
-                 onChange={(v) => setSearchTerm(v.target.value)}
-                 placeholder={t('ep_admin_authors:search-placeholder')}/>
+    <span className="search-field">
+      <input value={searchTerm}
+             onChange={(e) => setSearchTerm(e.target.value)}
+             placeholder={t('ep_admin_authors:search-placeholder')}/>
+      <Search/>
+    </span>
 
     <label style={{display: 'inline-flex', alignItems: 'center', gap: 6,
                    margin: '8px 0'}}>
