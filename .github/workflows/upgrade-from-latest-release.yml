@@ -37,7 +37,7 @@ jobs:
           fetch-depth: 0
       -
         name: Check out latest release tag
-        run: git checkout "$(git tag --sort=-version:refname 'v*' | head -n1)"
+        run: git checkout "$(git tag --list 'v*' --sort=-version:refname | head -n1)"
       - uses: actions/cache@v5
         name: Cache pnpm store
         with:
