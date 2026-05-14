@@ -2,6 +2,7 @@
 	"@metadata": {
 		"authors": [
 			"Cedric31",
+			"Nicolas Eynaud",
 			"Quentí"
 		]
 	},
@@ -115,6 +116,7 @@
 	"pad.chat.writeMessage.placeholder": "Escrivètz lo vòstre messatge aicí",
 	"timeslider.pageTitle": "Istoric dinamic de {{appTitle}}",
 	"timeslider.toolbar.returnbutton": "Retorn a aqueste Pad.",
+	"pad.historyMode.settings.followShort": "Seguir",
 	"timeslider.toolbar.authors": "Autors :",
 	"timeslider.toolbar.authorsList": "Pas cap d'autor",
 	"timeslider.toolbar.exportlink.title": "Exportar",

@@ -13,6 +13,7 @@
 			"Tensama0415",
 			"YeBoy371",
 			"Ykhwong",
+			"解浪",
 			"그냥기여자",
 			"아라"
 		]
@@ -173,6 +174,10 @@
 	"timeslider.followContents": "패드 콘텐츠의 갱신 주시하기",
 	"timeslider.pageTitle": "{{appTitle}} 시간슬라이더",
 	"timeslider.toolbar.returnbutton": "패드로 돌아가기",
+	"pad.historyMode.banner": "역사 보는 중",
+	"pad.historyMode.revisionLabel": "판 {{rev}}",
+	"pad.historyMode.settings.followShort": "팔로우",
+	"pad.historyMode.users.authorsHeader": "이 판의 작성자",
 	"timeslider.toolbar.authors": "작성자:",
 	"timeslider.toolbar.authorsList": "저자 없음",
 	"timeslider.toolbar.exportlink.title": "내보내기",

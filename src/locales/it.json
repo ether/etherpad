@@ -49,6 +49,7 @@
 	"admin_settings.page-title": "Impostazioni - Etherpad",
 	"update.page.cancel": "Annulla",
 	"update.execution.verified": "Verificato",
+	"update.page.scheduled.title": "Aggiornamento programmato",
 	"index.newPad": "Nuovo pad",
 	"index.settings": "Impostazioni",
 	"index.transferSessionTitle": "Sessione di trasferimento",
