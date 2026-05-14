@@ -210,7 +210,7 @@ COPY --chown=etherpad:etherpad ${SETTINGS} "${EP_DIR}"/settings.json
 
 USER etherpad
 
-HEALTHCHECK --interval=5s --timeout=3s \
+HEALTHCHECK --interval=5s --timeout=3s --start-period=30s \
   CMD wget -qO- http://127.0.0.1:9001/health | grep -E "pass|ok|up" > /dev/null || exit 1
 
 EXPOSE 9001

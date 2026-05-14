@@ -34,7 +34,10 @@ jobs:
         name: Check out latest release
         uses: actions/checkout@v6
         with:
-          ref: develop #FIXME change to master when doing release
+          fetch-depth: 0
+      -
+        name: Check out latest release tag
+        run: git checkout "$(git tag --sort=-version:refname 'v*' | head -n1)"
       - uses: actions/cache@v5
         name: Cache pnpm store
         with:
@@ -84,13 +87,10 @@ jobs:
       -
         name: Install all dependencies and symlink for ep_etherpad-lite
         run: pnpm install --frozen-lockfile
-      # Because actions/checkout@v6 is called with "ref: master" and without
-      # "fetch-depth: 0", the local clone does not have the ${GITHUB_SHA}
-      # commit. Fetch ${GITHUB_REF} to get the ${GITHUB_SHA} commit. Note that a
-      # plain "git fetch" only fetches "normal" references (refs/heads/* and
-      # refs/tags/*), and for pull requests none of the normal references
-      # include ${GITHUB_SHA}, so we have to explicitly tell Git to fetch
-      # ${GITHUB_REF}.
+      # The job starts from the latest release tag, so fetch the pull-request
+      # ref explicitly before checking out ${GITHUB_SHA}. A plain "git fetch"
+      # only brings "normal" references (refs/heads/* and refs/tags/*), and for
+      # pull requests none of those include the synthetic merge commit.
       -
         name: Fetch the new Git commits
         run: git fetch --depth=1 origin "${GITHUB_REF}"
