@@ -254,6 +254,8 @@ git switch -c v2.2.5
 ```sh
 ./bin/run.sh
 ```
+   This uses the pinned pnpm from `package.json`, via `pnpm` when available or
+   `corepack pnpm` otherwise.
 6. Stop with [CTRL-C]
 7. Restart your Etherpad service
 

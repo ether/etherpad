@@ -35,8 +35,8 @@ if [ -z "$NODE_ENV" ] || [ "$NODE_ENV" = "development" ]; then
   ADMIN_UI_PATH="$(dirname "$0")/../admin"
   UI_PATH="$(dirname "$0")/../ui"
   log "Creating the admin UI..."
-  (cd "$ADMIN_UI_PATH" && pnpm run build)
-  (cd "$UI_PATH" && pnpm run build)
+  (cd "$ADMIN_UI_PATH" && run_pnpm run build)
+  (cd "$UI_PATH" && run_pnpm run build)
 else
   log "Cannot create the admin UI in production mode"
 fi
@@ -45,4 +45,4 @@ fi
 log "Starting Etherpad..."
 
 # cd src
-exec pnpm run prod "$@"
+exec_pnpm run prod "$@"

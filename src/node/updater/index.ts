@@ -20,6 +20,7 @@ import {createDrainer} from './SessionDrainer';
 import {appendLine} from './updateLog';
 import {isValidTag} from './refSafety';
 import {InstallMethod, UpdateState} from './types';
+import {defaultPnpmCommand, resolvePnpmCommandSync} from './pnpm';
 
 const logger = log4js.getLogger('updater');
 
@@ -190,6 +191,7 @@ export const getRollbackDeps = (): RollbackDeps => ({
   exit: (code: number) => process.exit(code),
   now: () => new Date(),
   rollbackHealthCheckSeconds: Number(settings.updates.rollbackHealthCheckSeconds) || 60,
+  pnpmCommand: resolvePnpmCommandSync(settings.root) ?? defaultPnpmCommand,
 });
 
 const lockPath = (): string => path.join(settings.root, 'var', 'update.lock');
@@ -236,11 +238,7 @@ const buildSchedulerApplyDeps = (): ApplyPipelineDeps => ({
           return Number.POSITIVE_INFINITY;
         }
       },
-      pnpmOnPath: () => new Promise<boolean>((resolve) => {
-        const c = spawn('pnpm', ['--version'], {stdio: 'ignore'});
-        c.on('close', (code) => resolve(code === 0));
-        c.on('error', () => resolve(false));
-      }),
+      pnpmOnPath: async () => resolvePnpmCommandSync(settings.root) != null,
       lockHeld: async () => false, // pipeline already holds the lock here
       remoteHasTag: (tagName: string) => new Promise<boolean>((resolve) => {
         const c = spawn('git', ['ls-remote', '--tags', 'origin', tagName],
@@ -281,6 +279,7 @@ const buildSchedulerApplyDeps = (): ApplyPipelineDeps => ({
     targetTag,
     now: () => new Date(),
     exit: (code: number) => process.exit(code),
+    pnpmCommand: resolvePnpmCommandSync(settings.root) ?? defaultPnpmCommand,
   }),
   performRollback: (s) => performRollback(s, getRollbackDeps()),
   appendLog: (line: string) => appendLine(logPath(), line),

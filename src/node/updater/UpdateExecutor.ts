@@ -4,6 +4,7 @@ import {SpawnOptions} from 'node:child_process';
 import {UpdateState} from './types';
 import {appendLine} from './updateLog';
 import {assertValidTag, refsTagsForm} from './refSafety';
+import {pnpmInvocation, PnpmCommand} from './pnpm';
 
 const logger = log4js.getLogger('updater');
 
@@ -39,6 +40,8 @@ export interface ExecutorDeps {
   now: () => Date;
   /** process.exit injection so tests can assert exit code without actually exiting. */
   exit: (code: number) => void;
+  /** Production callers may override this to run pnpm via Corepack. */
+  pnpmCommand?: PnpmCommand;
 }
 
 export type ExecutorResult =
@@ -53,6 +56,7 @@ const runStep = (
   logPath: string,
   cmd: string,
   args: string[],
+  tag = `${cmd} ${args.join(' ')}`,
 ): Promise<{code: number | null; stderr: string}> => new Promise((resolve) => {
   let stderr = '';
   let settled = false;
@@ -62,7 +66,6 @@ const runStep = (
     resolve(v);
   };
   const child = spawnFn(cmd, args, {cwd: repoDir, stdio: ['ignore', 'pipe', 'pipe']});
-  const tag = `${cmd} ${args.join(' ')}`;
   child.stdout.on('data', (chunk: Buffer) => {
     const txt = chunk.toString().trimEnd();
     logger.info(`[${tag}] ${txt}`);
@@ -166,10 +169,16 @@ export const executeUpdate = async (deps: ExecutorDeps): Promise<ExecutorResult>
       deps.spawnFn, deps.repoDir, logPath, 'git', ['checkout', refsTagsForm(safeTag)]);
     if (r.code !== 0) return fail('failed-checkout', `git checkout exit ${r.code}: ${r.stderr.trim()}`);
 
-    r = await runStep(deps.spawnFn, deps.repoDir, logPath, 'pnpm', ['install', '--frozen-lockfile']);
+    const pnpmInstall = pnpmInvocation(deps.pnpmCommand, ['install', '--frozen-lockfile']);
+    r = await runStep(
+      deps.spawnFn, deps.repoDir, logPath,
+      pnpmInstall.command, pnpmInstall.args, pnpmInstall.label);
     if (r.code !== 0) return fail('failed-install', `pnpm install exit ${r.code}: ${r.stderr.trim()}`);
 
-    r = await runStep(deps.spawnFn, deps.repoDir, logPath, 'pnpm', ['run', 'build:ui']);
+    const pnpmBuild = pnpmInvocation(deps.pnpmCommand, ['run', 'build:ui']);
+    r = await runStep(
+      deps.spawnFn, deps.repoDir, logPath,
+      pnpmBuild.command, pnpmBuild.args, pnpmBuild.label);
     if (r.code !== 0) return fail('failed-build', `pnpm run build:ui exit ${r.code}: ${r.stderr.trim()}`);
 
     // pending-verification: the next boot's RollbackHandler arms the health-check timer.

@@ -3,6 +3,7 @@ import log4js from 'log4js';
 import {UpdateState} from './types';
 import type {SpawnFn} from './UpdateExecutor';
 import {appendLine} from './updateLog';
+import {pnpmInvocation, PnpmCommand} from './pnpm';
 
 const logger = log4js.getLogger('updater');
 
@@ -18,6 +19,8 @@ export interface RollbackDeps {
   now: () => Date;
   /** Health-check window after a fresh boot. Default 60s; set via updates.rollbackHealthCheckSeconds. */
   rollbackHealthCheckSeconds: number;
+  /** Production callers may override this to run pnpm via Corepack. */
+  pnpmCommand?: PnpmCommand;
 }
 
 const runStep = (
@@ -26,6 +29,7 @@ const runStep = (
   logPath: string,
   cmd: string,
   args: string[],
+  tag = `${cmd} ${args.join(' ')}`,
 ): Promise<number | null> => new Promise((resolve) => {
   let settled = false;
   const settle = (c: number | null) => {
@@ -34,7 +38,6 @@ const runStep = (
     resolve(c);
   };
   const child = spawnFn(cmd, args, {cwd, stdio: ['ignore', 'pipe', 'pipe']});
-  const tag = `${cmd} ${args.join(' ')}`;
   child.stdout.on('data', (b: Buffer) => {
     const t = b.toString().trimEnd();
     logger.info(`[rollback ${tag}] ${t}`);
@@ -129,7 +132,10 @@ export const performRollback = async (state: UpdateState, deps: RollbackDeps): P
     }
   }
 
-  const installCode = await runStep(deps.spawnFn, deps.repoDir, logPath, 'pnpm', ['install', '--frozen-lockfile']);
+  const pnpmInstall = pnpmInvocation(deps.pnpmCommand, ['install', '--frozen-lockfile']);
+  const installCode = await runStep(
+    deps.spawnFn, deps.repoDir, logPath,
+    pnpmInstall.command, pnpmInstall.args, pnpmInstall.label);
   if (installCode !== 0) return failTerminal(`pnpm install exit ${installCode}`);
 
   const at = deps.now().toISOString();

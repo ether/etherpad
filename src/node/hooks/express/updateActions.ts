@@ -18,6 +18,7 @@ import {tailLines, appendLine} from '../../updater/updateLog';
 import {performRollback} from '../../updater/RollbackHandler';
 import {UpdateState} from '../../updater/types';
 import {isValidTag} from '../../updater/refSafety';
+import {defaultPnpmCommand, resolvePnpmCommandSync} from '../../updater/pnpm';
 import {applyUpdate} from '../../updater/applyPipeline';
 import {cancelScheduler} from '../../updater';
 import {getIo} from './socketio';
@@ -83,11 +84,7 @@ const buildPreflightDeps = (installMethod: ReturnType<typeof getDetectedInstallM
       return Number.POSITIVE_INFINITY;
     }
   },
-  pnpmOnPath: () => new Promise<boolean>((resolve) => {
-    const c = spawn('pnpm', ['--version'], {stdio: 'ignore'});
-    c.on('close', (code) => resolve(code === 0));
-    c.on('error', () => resolve(false));
-  }),
+  pnpmOnPath: async () => resolvePnpmCommandSync(settings.root) != null,
   // We just acquired the lock in the apply endpoint, so don't double-check it here.
   lockHeld: async () => false,
   remoteHasTag: (tag: string) => new Promise<boolean>((resolve) => {
@@ -172,6 +169,7 @@ export const expressCreateServer = (
 
     const targetTag = state.latest.tag;
     let responded = false;
+    const pnpmCommand = resolvePnpmCommandSync(settings.root) ?? defaultPnpmCommand;
 
     try {
       const result = await applyUpdate({
@@ -232,6 +230,7 @@ export const expressCreateServer = (
             targetTag: tag,
             now: () => new Date(),
             exit: (code: number) => process.exit(code),
+            pnpmCommand,
           }),
           performRollback: (s) => performRollback(s, getRollbackDeps()),
           appendLog: (line) => appendLine(logPath(), line),

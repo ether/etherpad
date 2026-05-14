@@ -8,7 +8,7 @@ cd "${MY_DIR}/.." || exit 1
 # Source constants and useful functions
 . bin/functions.sh
 
-is_cmd pnpm || npm install pnpm -g
+ensure_pnpm
 
 
 # Is node installed?
@@ -36,10 +36,10 @@ fi
 log "Installing dependencies..."
 if [ -z "${ETHERPAD_PRODUCTION}" ]; then
   log "Installing dev dependencies with pnpm"
-  pnpm --recursive i  || exit 1
+  run_pnpm --recursive i  || exit 1
 else
   log "Installing production dependencies with pnpm"
-  pnpm --recursive i --production || exit 1
+  run_pnpm --recursive i --production || exit 1
 fi
 
 # Remove all minified data to force node creating it new

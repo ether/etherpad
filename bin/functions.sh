@@ -12,6 +12,29 @@ error() { log "ERROR: $@" >&2; }
 fatal() { error "$@"; exit 1; }
 is_cmd() { command -v "$@" >/dev/null 2>&1; }
 
+ensure_pnpm() {
+  if is_cmd pnpm; then return 0; fi
+  is_cmd corepack || fatal "Please install pnpm or corepack."
+  corepack pnpm --version >/dev/null 2>&1 || \
+    fatal "corepack is available but could not provision pnpm."
+}
+
+run_pnpm() {
+  if is_cmd pnpm; then
+    pnpm "$@"
+  else
+    corepack pnpm "$@"
+  fi
+}
+
+exec_pnpm() {
+  if is_cmd pnpm; then
+    exec pnpm "$@"
+  else
+    exec corepack pnpm "$@"
+  fi
+}
+
 
 get_program_version() {
   PROGRAM="$1"
