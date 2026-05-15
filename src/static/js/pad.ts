@@ -702,6 +702,13 @@ const pad = {
 
     const postAceInit = () => {
       padeditbar.init();
+      // Skip link (a11y, ether/etherpad#7255): href="#editorcontainer" gives
+      // a working no-JS fallback, but the real focus target is the inner
+      // contenteditable inside two nested iframes — route through ace_focus.
+      $('#skip-to-content').on('click', (e) => {
+        e.preventDefault();
+        padeditor.ace.focus();
+      });
       setTimeout(() => {
         padeditor.ace.focus();
       }, 0);

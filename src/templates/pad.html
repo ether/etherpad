@@ -67,6 +67,12 @@
 <body>
   <% e.begin_block("body"); %>
 
+  <!-- WCAG 2.4.1 — bypass the toolbar and jump straight to the editor.
+       Visible only when keyboard-focused; click handler in pad.ts routes
+       focus into the editor iframe rather than just scrolling. -->
+  <a id="skip-to-content" class="skip-link" href="#editorcontainer"
+     data-l10n-id="pad.editor.skipToContent">Skip to editor</a>
+
   <!----------------------------->
   <!--------- TOOLBAR ----------->
   <!----------------------------->

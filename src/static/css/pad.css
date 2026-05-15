@@ -26,6 +26,28 @@
   border: 0;
 }
 
+/*
+ * Skip link — hidden until keyboard focus reveals it at the top-left of the
+ * viewport, giving screen-reader and keyboard-only users an immediate jump
+ * past the toolbar to the editor (WCAG 2.4.1 Bypass Blocks).
+ */
+.skip-link {
+  position: absolute;
+  top: -100px;
+  left: 8px;
+  z-index: 10000;
+  padding: 8px 12px;
+  background: #2c3e50;
+  color: #fff;
+  text-decoration: none;
+  border-radius: 0 0 4px 4px;
+}
+.skip-link:focus {
+  top: 0;
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
 html {
   font-size: 15px;
   color: #3e3e3e;

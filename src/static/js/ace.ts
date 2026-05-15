@@ -29,6 +29,7 @@ const hooks = require('./pluginfw/hooks');
 const makeCSSManager = require('./cssmanager').makeCSSManager;
 const pluginUtils = require('./pluginfw/shared');
 const ace2_inner = require('ep_etherpad-lite/static/js/ace2_inner')
+import html10n from './vendors/html10n';
 const debugLog = (...args) => {};
 const cl_plugins = require('ep_etherpad-lite/static/js/pluginfw/client_plugins')
 const rJQuery = require('ep_etherpad-lite/static/js/rjquery')
@@ -232,6 +233,9 @@ const Ace2Editor = function () {
     const sideDiv = outerDocument.createElement('div');
     sideDiv.id = 'sidediv';
     sideDiv.classList.add('sidediv');
+    // Line numbers are visual scaffolding, not content. Without aria-hidden,
+    // screen readers iterate every number — see ether/etherpad#7255.
+    sideDiv.setAttribute('aria-hidden', 'true');
     outerDocument.body.appendChild(sideDiv);
     const sideDivInner = outerDocument.createElement('div');
     sideDivInner.id = 'sidedivinner';
@@ -297,12 +301,6 @@ const Ace2Editor = function () {
     innerDocument.body.setAttribute('aria-label', 'Pad content');
     innerDocument.body.setAttribute('aria-describedby', 'editor-keyboard-hint');
     innerDocument.body.setAttribute('spellcheck', 'false');
-    // Screen-reader-only keyboard hint inside the iframe so it's announced on focus.
-    const hint = innerDocument.createElement('div');
-    hint.id = 'editor-keyboard-hint';
-    hint.style.cssText = 'position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)';
-    hint.textContent = 'Press Escape to exit the editor. Press Alt+F9 to access the toolbar.';
-    innerDocument.body.appendChild(hint);
     innerDocument.body.appendChild(innerDocument.createTextNode('\u00A0')); // &nbsp;
 /*
     debugLog('Ace2Editor.init() waiting for require kernel load');
@@ -329,6 +327,20 @@ const Ace2Editor = function () {
       parent: makeCSSManager(document.querySelector('style[title="dynamicsyntax"]').sheet),
     });
     debugLog('Ace2Editor.init() Ace2Inner.init() returned');
+
+    // Screen-reader-only keyboard hint, target of the body's
+    // aria-describedby. We park it in <head> instead of <body> because
+    // Ace2Inner manages body children via its line model — anything
+    // unrelated inserted into body gets wiped by line splices. The ARIA
+    // spec allows the description target to live anywhere in the same
+    // document, and screen readers resolve it by ID; rendering doesn't
+    // matter because aria-describedby fetches the element's text.
+    const hint = innerDocument.createElement('div');
+    hint.id = 'editor-keyboard-hint';
+    hint.hidden = true;
+    hint.textContent = html10n.get('pad.editor.keyboardHint');
+    innerDocument.head.appendChild(hint);
+
     loaded = true;
     doActionsPendingInit();
     debugLog('Ace2Editor.init() done');
