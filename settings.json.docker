@@ -235,6 +235,19 @@
   "adminEmail": null,
 
   /*
+   * SMTP transport. host=null keeps log-only behaviour; set host+from to send
+   * real mail via nodemailer (lazy-loaded). Pulls from env vars by default —
+   * leave the template as-is and provide MAIL_HOST / MAIL_FROM at runtime.
+   */
+  "mail": {
+    "host": "${MAIL_HOST:null}",
+    "port": "${MAIL_PORT:587}",
+    "secure": "${MAIL_SECURE:false}",
+    "from": "${MAIL_FROM:null}",
+    "auth": null
+  },
+
+  /*
    * Settings for cleanup of pads
    */
   "cleanup": {

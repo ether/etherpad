@@ -273,6 +273,29 @@
   "adminEmail": null,
 
   /*
+   * SMTP transport for outbound admin notifications. host=null keeps the
+   * legacy log-only behaviour (Notifier still dedupes; nothing leaves the
+   * box). Set host+from (and optionally auth) to deliver via nodemailer.
+   * The dependency is lazy-loaded so installs without mail.host pay no
+   * runtime cost.
+   *
+   *   "mail": {
+   *     "host": "smtp.example.com",
+   *     "port": 587,
+   *     "secure": false,
+   *     "from": "etherpad@example.com",
+   *     "auth": { "user": "smtp-user", "pass": "smtp-pass" }
+   *   }
+   */
+  "mail": {
+    "host": null,
+    "port": 587,
+    "secure": false,
+    "from": null,
+    "auth": null
+  },
+
+  /*
    * Settings for cleanup of pads
    */
   "cleanup": {

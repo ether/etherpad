@@ -351,6 +351,19 @@ export type SettingsType = {
     enabled: boolean,
   },
   adminEmail: string | null,
+  /**
+   * SMTP transport for outbound admin notifications (updater + future
+   * features). Null `host` disables outbound mail — the Notifier still runs
+   * and dedupe state is updated, but messages only log `(would send email)`.
+   * `auth` is optional; omit for unauthenticated relays.
+   */
+  mail: {
+    host: string | null;
+    port: number;
+    secure: boolean;
+    from: string | null;
+    auth: {user: string; pass: string} | null;
+  },
   getPublicSettings: () => Pick<SettingsType, "title" | "skinVariants"|"randomVersionString"|"skinName"|"toolbar"| "exposeVersion"| "gitVersion" | "enablePadWideSettings" | "enablePluginPadOptions" | "privacyBanner">,
 }
 
@@ -561,6 +574,19 @@ const settings: SettingsType = {
    * Null disables outbound mail from the updater.
    */
   adminEmail: null,
+  /**
+   * SMTP transport for outbound admin notifications. Null `host` keeps the
+   * legacy log-only behaviour. Set `host`+`from` (and optionally `auth`) to
+   * deliver via nodemailer. The dependency is lazy-loaded — installs without
+   * a mail.host pay no runtime cost.
+   */
+  mail: {
+    host: null,
+    port: 587,
+    secure: false,
+    from: null,
+    auth: null,
+  },
   /**
    * Whether certain shortcut keys are enabled for a user in the pad
    */

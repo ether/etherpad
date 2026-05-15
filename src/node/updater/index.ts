@@ -43,11 +43,50 @@ export const getCurrentState = async (): Promise<UpdateState> => {
 
 export const getDetectedInstallMethod = () => detectedMethod;
 
+/**
+ * Cached nodemailer transport. Built on first use when `settings.mail.host` is
+ * set; never imported when mail is disabled (keeps boot costs predictable for
+ * installs that don't care about outbound mail).
+ *
+ * Rebuilt automatically only if the cached host doesn't match current
+ * settings — a settings reload mid-process therefore picks up new mail config
+ * without requiring a restart.
+ */
+let transportCache: {host: string; transporter: {sendMail: (m: any) => Promise<any>}} | null = null;
+
+const buildTransport = async (host: string) => {
+  const {default: nodemailer} = await import('nodemailer');
+  return nodemailer.createTransport({
+    host,
+    port: Number(settings.mail.port) || 587,
+    secure: !!settings.mail.secure,
+    auth: settings.mail.auth ?? undefined,
+  });
+};
+
 const sendEmailViaSmtp = async (to: string, subject: string, body: string): Promise<void> => {
-  // Etherpad core has no built-in SMTP. PR 1 ships the dedupe machinery without an actual sender;
-  // subsequent PRs can wire nodemailer or rely on a notification plugin.
-  logger.info(`(would send email) to=${to} subject="${subject}"`);
-  void body;
+  const host = settings.mail.host;
+  if (!host || !settings.mail.from) {
+    // Mail not configured. Log so operators running the runbook can confirm
+    // the Notifier fired even without delivery, and the dedupe state still
+    // advances so we don't re-evaluate the same trigger every tick.
+    logger.info(`(would send email) to=${to} subject="${subject}"`);
+    return;
+  }
+  if (!transportCache || transportCache.host !== host) {
+    transportCache = {host, transporter: await buildTransport(host)};
+  }
+  try {
+    await transportCache.transporter.sendMail({
+      from: settings.mail.from, to, subject, text: body,
+    });
+    logger.info(`email sent to=${to} subject="${subject}"`);
+  } catch (err) {
+    // Never throw out of the sender — a transient SMTP failure must not
+    // poison the surrounding updater state machine. The admin UI banner
+    // is still the source of truth for the underlying condition.
+    logger.warn(`email send failed: ${(err as Error).message}`);
+  }
 };
 
 const performCheck = async (): Promise<void> => {
