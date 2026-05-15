@@ -493,17 +493,23 @@ const loadBroadcastJS = (socket, sendSocketMsg, fireWhenAllScriptsAreLoaded, Bro
       if (obj.type === 'COLLABROOM') {
         obj = obj.data;
 
-        if (obj.type === 'NEW_CHANGES') {
-          const changeset = moveOpsToNewPool(
-              obj.changeset, (new AttribPool()).fromJsonable(obj.apool), padContents.apool);
+        if (obj.type === 'NEW_CHANGES' || obj.type === 'NEW_CHANGES_BATCH') {
+          // NEW_CHANGES_BATCH (#7756 lever 3b) carries an array of revisions
+          // in one emit. Each revision has the same shape as the legacy
+          // single-rev message; apply in order.
+          const changes = obj.type === 'NEW_CHANGES_BATCH' ? obj.changes : [obj];
+          for (const change of changes) {
+            const changeset = moveOpsToNewPool(
+                change.changeset, (new AttribPool()).fromJsonable(change.apool), padContents.apool);
 
-          let changesetBack = inverse(
-              obj.changeset, padContents.currentLines, padContents.alines, padContents.apool);
+            let changesetBack = inverse(
+                change.changeset, padContents.currentLines, padContents.alines, padContents.apool);
 
-          changesetBack = moveOpsToNewPool(
-              changesetBack, (new AttribPool()).fromJsonable(obj.apool), padContents.apool);
+            changesetBack = moveOpsToNewPool(
+                changesetBack, (new AttribPool()).fromJsonable(change.apool), padContents.apool);
 
-          loadedNewChangeset(changeset, changesetBack, obj.newRev - 1, obj.timeDelta);
+            loadedNewChangeset(changeset, changesetBack, change.newRev - 1, change.timeDelta);
+          }
         } else if (obj.type === 'NEW_AUTHORDATA') {
           const authorMap = {};
           authorMap[obj.author] = obj.data;

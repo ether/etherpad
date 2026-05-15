@@ -964,10 +964,28 @@ exports.updatePadClients = async (pad: PadType) => {
   // but benefit of reusing cached revision object is HUGE
   const revCache:MapArrayType<any> = {};
 
+  // When `settings.newChangesBatch` is true and a recipient is more than one
+  // revision behind, pack the queued revisions into a single NEW_CHANGES_BATCH
+  // emit per recipient. The engine.io WebSocket transport sends one frame per
+  // packet (the polling transport already batches at the HTTP-response layer),
+  // so reducing the packet count translates directly into fewer system calls
+  // on the server and fewer onmessage callbacks on the client.
+  const batchEnabled = settings.newChangesBatch === true;
+
   await Promise.all(roomSockets.map(async (socket) => {
     const sessioninfo = sessioninfos[socket.id];
     // The user might have disconnected since _getRoomSockets() was called.
     if (sessioninfo == null) return;
+
+    // Collect all queued revisions for this socket.
+    const pending: Array<{
+      newRev: number;
+      changeset: string;
+      apool: unknown;
+      author: string;
+      currentTime: number;
+      timeDelta: number;
+    }> = [];
 
     while (sessioninfo.rev < pad.getHeadRevisionNumber()) {
       const r = sessioninfo.rev + 1;
@@ -980,29 +998,40 @@ exports.updatePadClients = async (pad: PadType) => {
       const author = revision.meta.author;
       const revChangeset = revision.changeset;
       const currentTime = revision.meta.timestamp;
-
       const forWire = prepareForWire(revChangeset, pad.pool);
-      const msg = {
-        type: 'COLLABROOM',
-        data: {
-          type: 'NEW_CHANGES',
-          newRev: r,
-          changeset: forWire.translated,
-          apool: forWire.pool,
-          author,
-          currentTime,
-          timeDelta: currentTime - sessioninfo.time,
-        },
-      };
-      try {
-        socket.emit('message', msg);
-        recordSocketEmit('NEW_CHANGES');
-      } catch (err:any) {
-        messageLogger.error(`Failed to notify user of new revision: ${err.stack || err}`);
-        return;
-      }
+
+      pending.push({
+        newRev: r,
+        changeset: forWire.translated,
+        apool: forWire.pool,
+        author,
+        currentTime,
+        timeDelta: currentTime - sessioninfo.time,
+      });
       sessioninfo.time = currentTime;
       sessioninfo.rev = r;
+    }
+
+    if (pending.length === 0) return;
+
+    try {
+      if (batchEnabled && pending.length > 1) {
+        socket.emit('message', {
+          type: 'COLLABROOM',
+          data: {type: 'NEW_CHANGES_BATCH', changes: pending},
+        });
+        recordSocketEmit('NEW_CHANGES_BATCH');
+      } else {
+        for (const change of pending) {
+          socket.emit('message', {
+            type: 'COLLABROOM',
+            data: {type: 'NEW_CHANGES', ...change},
+          });
+          recordSocketEmit('NEW_CHANGES');
+        }
+      }
+    } catch (err: any) {
+      messageLogger.error(`Failed to notify user of new revision: ${err.stack || err}`);
     }
   }));
 };
