@@ -46,10 +46,11 @@ exports.socketio = (hookName: string, {io}: any) => {
       logger.info('Admin request to save settings through a socket on /admin/settings');
       try {
         await fsp.writeFile(settings.settingsFilename, newSettings);
+        socket.emit('saveprogress', 'saved');
       } catch (err) {
         logger.error(`Error saving settings: ${err}`);
+        socket.emit('saveprogress', 'error', {message: String(err)});
       }
-      socket.emit('saveprogress', 'saved');
     });
 
 
