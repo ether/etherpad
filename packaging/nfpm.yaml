@@ -20,7 +20,7 @@ homepage: https://etherpad.org
 license: Apache-2.0
 
 depends:
-  - nodejs (>= 22)
+  - nodejs (>= 25)
   - adduser
   - ca-certificates
 
@@ -110,11 +110,11 @@ scripts:
 overrides:
   deb:
     depends:
-      - nodejs (>= 22)
+      - nodejs (>= 25)
       - ca-certificates
   rpm:
     depends:
-      - nodejs >= 22
+      - nodejs >= 25
       - shadow-utils
       - ca-certificates
 

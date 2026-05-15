@@ -128,16 +128,16 @@ jobs:
         run: |
           set -eux
           # Ubuntu's default apt nodejs is 18 — too old for our
-          # `Depends: nodejs (>= 22)`. Add NodeSource's apt repo
+          # `Depends: nodejs (>= 25)`. Add NodeSource's apt repo
           # explicitly (key + sources.list) instead of `curl | sudo bash`
           # so we don't execute network-fetched code as root.
-          NODE_MAJOR=24
+          NODE_MAJOR=25
           # GitHub runner images often ship a NodeSource node_20.x list
           # preinstalled (sometimes as a .sources deb822 file). Wipe any
           # existing nodesource entries so the only Node candidate apt sees
-          # is our node_24.x repo. Otherwise `apt-get install -y nodejs`
+          # is our node_25.x repo. Otherwise `apt-get install -y nodejs`
           # picks the higher-version 20.x build that's already cached and
-          # `dpkg -i` then fails on `Depends: nodejs (>= 22)`.
+          # `dpkg -i` then fails on `Depends: nodejs (>= 25)`.
           sudo rm -f /etc/apt/sources.list.d/nodesource.list \
                      /etc/apt/sources.list.d/nodesource.sources \
                      /etc/apt/preferences.d/nodesource \
@@ -147,7 +147,7 @@ jobs:
             | sudo gpg --dearmor --yes -o "${KEYRING}"
           echo "deb [signed-by=${KEYRING}] https://deb.nodesource.com/node_${NODE_MAJOR}.x nodistro main" \
             | sudo tee /etc/apt/sources.list.d/nodesource.list
-          # Pin nodejs to the 24.x line so neither Ubuntu's noble-updates
+          # Pin nodejs to the 25.x line so neither Ubuntu's noble-updates
           # 20.x nor any leftover NodeSource cache can win the resolver.
           printf 'Package: nodejs\nPin: version %s.*\nPin-Priority: 1001\n' "${NODE_MAJOR}" \
             | sudo tee /etc/apt/preferences.d/nodesource >/dev/null

@@ -88,12 +88,18 @@ sudo systemctl start etherpad
 curl http://localhost:9001/health
 ```
 
-`apt` will pull in `nodejs (>= 22)` (matches Etherpad's `engines.node`).
-Recommended runtime is the current Node.js LTS (24); on distros without a
-new enough Node, add NodeSource first:
+`apt` will pull in `nodejs (>= 25)` (matches Etherpad's `engines.node`).
+Most distro repos don't yet ship Node.js 25, so on most systems you
+will need to add NodeSource's `node_25.x` apt repo before
+`apt install`:
 
 ```sh
-curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
+KEYRING=/usr/share/keyrings/nodesource.gpg
+curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
+  | sudo gpg --dearmor --yes -o "${KEYRING}"
+echo "deb [signed-by=${KEYRING}] https://deb.nodesource.com/node_25.x nodistro main" \
+  | sudo tee /etc/apt/sources.list.d/nodesource.list
+sudo apt-get update
 ```
 
 ## Configuration
