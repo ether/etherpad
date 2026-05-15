@@ -10,7 +10,7 @@
 
 Every keystroke is attributed to its author. Every revision is preserved. The timeslider lets you scrub through a document's entire history, character by character. Author colours make collaboration visible at a glance — not buried in a menu.
 
-Etherpad runs on your server, under your governance. No telemetry. No upsells. AI is a plugin you install, pointed at the model you choose, running on infrastructure you control — not a feature decided for you in a boardroom you weren't in.
+Etherpad runs on your server, under your governance. No telemetry. No upsells. AI is a plugin you install, pointed at the model you choose, running on infrastructure you control — not a feature decided for you in a boardroom you weren't in. See [PRIVACY.md](PRIVACY.md) for the two opt-out network calls Etherpad's own code makes and how to disable each.
 
 The code is Apache 2.0. The data format is open. It [scales to thousands of simultaneous editors per pad](http://scale.etherpad.org/). Translated into 105 languages. Extended through hundreds of plugins. Used by Wikimedia, governments, public-sector institutions, and self-hosters worldwide since 2009.
 
