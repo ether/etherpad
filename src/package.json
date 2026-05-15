@@ -85,7 +85,7 @@
     "surrealdb": "^2.0.3",
     "swagger-ui-express": "^5.0.1",
     "tinycon": "0.6.8",
-    "tsx": "4.21.0",
+    "tsx": "4.22.0",
     "ueberdb2": "^5.0.48",
     "underscore": "1.13.8",
     "undici": "^8.2.0",
