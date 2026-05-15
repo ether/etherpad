@@ -61,7 +61,7 @@
     "measured-core": "^2.0.0",
     "mime-types": "^3.0.2",
     "mongodb": "^7.1.1",
-    "mssql": "^12.5.2",
+    "mssql": "^12.5.3",
     "mysql2": "^3.22.3",
     "nano": "^11.0.5",
     "nodemailer": "^8.0.7",
@@ -86,7 +86,7 @@
     "surrealdb": "^2.0.3",
     "swagger-ui-express": "^5.0.1",
     "tinycon": "0.6.8",
-    "tsx": "4.21.0",
+    "tsx": "4.22.0",
     "ueberdb2": "^5.0.48",
     "underscore": "1.13.8",
     "undici": "^8.2.0",
@@ -114,7 +114,7 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/mime-types": "^3.0.1",
     "@types/mocha": "^10.0.9",
-    "@types/node": "^25.7.0",
+    "@types/node": "^25.8.0",
     "@types/nodemailer": "^8.0.0",
     "@types/oidc-provider": "^9.5.0",
     "@types/pdfkit": "^0.17.6",
@@ -140,9 +140,9 @@
     "vitest": "^4.1.6"
   },
   "engines": {
-    "node": ">=22.13.0",
+    "node": ">=25.0.0",
     "npm": ">=6.14.0",
-    "pnpm": ">=11.0.0"
+    "pnpm": ">=11.1.2"
   },
   "repository": {
     "type": "git",

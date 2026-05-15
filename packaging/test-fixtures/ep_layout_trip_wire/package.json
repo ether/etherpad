@@ -1,0 +1,8 @@
+{
+  "name": "ep_layout_trip_wire",
+  "version": "1.0.0",
+  "description": "Test fixture - exercises require('ep_etherpad-lite/...') from a deb-installed location. Do not publish.",
+  "main": "index.js",
+  "license": "Apache-2.0",
+  "private": true
+}

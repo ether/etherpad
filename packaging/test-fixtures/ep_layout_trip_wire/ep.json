@@ -1,0 +1,10 @@
+{
+  "parts": [
+    {
+      "name": "trip_wire",
+      "hooks": {
+        "expressCreateServer": "ep_layout_trip_wire/index"
+      }
+    }
+  ]
+}

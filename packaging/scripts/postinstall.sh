@@ -68,30 +68,39 @@ EOF
 
     # Plugin install paths. Etherpad's admin UI installs plugins into
     # ${root}/src/plugin_packages and creates symlinks under
-    # ${root}/src/node_modules. Both are under /opt and would EACCES
-    # under the etherpad user without these adjustments.
-    PLUGIN_PKG_LIVE=/var/lib/etherpad/plugin_packages
-    PLUGIN_PKG_LINK="${APP_DIR}/src/plugin_packages"
+    # ${root}/src/node_modules. Both ship root-owned but need to be
+    # group-writable by the etherpad user so the admin UI can add packages.
+    PLUGIN_PKG_DIR="${APP_DIR}/src/plugin_packages"
     NODE_MODULES_DIR="${APP_DIR}/src/node_modules"
 
-    mkdir -p "${PLUGIN_PKG_LIVE}"
-    if [ -e "${PLUGIN_PKG_LINK}" ] && [ ! -L "${PLUGIN_PKG_LINK}" ]; then
-      cp -a "${PLUGIN_PKG_LINK}/." "${PLUGIN_PKG_LIVE}/" 2>/dev/null || true
-      rm -rf "${PLUGIN_PKG_LINK}"
+    # Migrate any previous install that symlinked plugin_packages outside
+    # the tree (see ether/ep_comments_page#416). Node.js resolves symlinks
+    # to their realpath before walking node_modules, so plugins installed
+    # under /var/lib/etherpad/plugin_packages couldn't reach the bundled
+    # ep_etherpad-lite in /opt/etherpad/node_modules and every
+    # require('ep_etherpad-lite/...') threw MODULE_NOT_FOUND. Pull the
+    # symlink target's contents back in-tree and drop the symlink.
+    if [ -L "${PLUGIN_PKG_DIR}" ]; then
+      OLD_PLUGIN_PKG_LIVE=$(readlink -f "${PLUGIN_PKG_DIR}" 2>/dev/null || true)
+      rm -f "${PLUGIN_PKG_DIR}"
+      mkdir -p "${PLUGIN_PKG_DIR}"
+      if [ -n "${OLD_PLUGIN_PKG_LIVE}" ] && [ -d "${OLD_PLUGIN_PKG_LIVE}" ]; then
+        cp -a "${OLD_PLUGIN_PKG_LIVE}/." "${PLUGIN_PKG_DIR}/" 2>/dev/null || true
+      fi
     fi
-    # chown after the cp -- cp -a preserves the (root) ownership of the
-    # staged source files and would re-root anything we chowned earlier.
-    chown -hR etherpad:etherpad "${PLUGIN_PKG_LIVE}"
-    ln -sfn "${PLUGIN_PKG_LIVE}" "${PLUGIN_PKG_LINK}"
+    mkdir -p "${PLUGIN_PKG_DIR}"
 
-    # node_modules is bundled (root-owned contents); the directory itself
-    # must be group-writable by etherpad so plugin installs can create
-    # symlinks alongside the shipped packages. ReadWritePaths in the unit
-    # also exposes it as writable under ProtectSystem=strict.
-    if [ -d "${NODE_MODULES_DIR}" ]; then
-      chgrp etherpad "${NODE_MODULES_DIR}"
-      chmod 2775 "${NODE_MODULES_DIR}"
-    fi
+    # plugin_packages and node_modules contain bundled (root-owned)
+    # packages; the *directories themselves* (plus plugin_packages/.versions
+    # where live-plugin-manager stages downloads) must be group-writable by
+    # etherpad so the admin UI can install new plugins alongside the
+    # shipped deps. The unit's ReadWritePaths= also exposes both paths as
+    # writable under ProtectSystem=strict.
+    for dir in "${PLUGIN_PKG_DIR}" "${PLUGIN_PKG_DIR}/.versions" "${NODE_MODULES_DIR}"; do
+      [ -d "${dir}" ] || continue
+      chgrp etherpad "${dir}"
+      chmod 2775 "${dir}"
+    done
 
     if [ -d /run/systemd/system ] && command -v systemctl >/dev/null 2>&1; then
       systemctl daemon-reload || true

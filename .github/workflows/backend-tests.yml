@@ -179,7 +179,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: [22, 24, 25]
+        # Etherpad requires Node >= 25 (see package.json engines.node).
+        node: ${{ fromJSON('[25]') }}
     name: Windows without plugins
     runs-on: windows-latest
     steps:
@@ -246,7 +247,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: [22, 24, 25]
+        # Etherpad requires Node >= 25 (see package.json engines.node).
+        node: ${{ fromJSON('[25]') }}
     name: Windows with Plugins
     runs-on: windows-latest
 
