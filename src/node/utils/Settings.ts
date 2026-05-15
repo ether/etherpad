@@ -272,6 +272,7 @@ export type SettingsType = {
   automaticReconnectionTimeout: number,
   loadTest: boolean,
   scalingDiveMetrics: boolean,
+  fanoutDebounceMs: number,
   dumpOnUncleanExit: boolean,
   indentationOnNewLine: boolean,
   logconfig: any | null,
@@ -658,6 +659,19 @@ const settings: SettingsType = {
    * production deployments aren't paying for instrumentation they don't use.
    */
   scalingDiveMetrics: false,
+  /**
+   * Coalesce NEW_CHANGES fan-out within a debounce window of N milliseconds
+   * (#7756 lever 3). When > 0, after a USER_CHANGES is accepted the pad-wide
+   * broadcast is deferred by this many ms; further commits arriving during
+   * the window are batched into the same fan-out pass.
+   *
+   * 0 (default) = legacy behaviour: fan-out fires synchronously after every
+   * accepted commit. Increase to trade a few ms of latency for a quadratic
+   * reduction in socket.io emit volume under high concurrency. Gated behind
+   * `loadTest` AND `scalingDiveMetrics` — production deployments are not
+   * affected by default.
+   */
+  fanoutDebounceMs: 0,
   /**
    * Disable dump of objects preventing a clean exit
    */

@@ -48,6 +48,20 @@ const hooks = require('../../static/js/pluginfw/hooks');
 const stats = require('../stats')
 const assert = require('assert').strict;
 import {recordChangesetApply, recordSocketEmit} from '../prom-instruments';
+import {scheduleFanout, setErrorHandler as setFanoutErrorHandler} from './FanoutScheduler';
+
+// Route fan-out scheduler errors through the existing messageLogger so they
+// land in the regular log stream.
+setFanoutErrorHandler((padId, err) => {
+  messageLogger.error(`fan-out for pad ${padId} failed: ${(err as Error).stack ?? err}`);
+});
+
+// Cached helper that the scheduler calls back into. Goes through exports so
+// tests can still monkey-patch updatePadClients.
+const runFanout = async (padId: string): Promise<void> => {
+  const pad = await padManager.getPad(padId);
+  await exports.updatePadClients(pad);
+};
 import {RateLimiterMemory} from 'rate-limiter-flexible';
 import {ChangesetRequest, PadUserInfo, SocketClientRequest} from "../types/SocketClientRequest";
 import {APool, AText, PadAuthor, PadType} from "../types/PadType";
@@ -936,7 +950,7 @@ const handleUserChanges = async (socket:any, message: {
     socket.emit('message', {type: 'COLLABROOM', data: {type: 'ACCEPT_COMMIT', newRev}});
     thisSession.rev = newRev;
     if (newRev !== r) thisSession.time = await pad.getRevisionDate(newRev);
-    await exports.updatePadClients(pad);
+    scheduleFanout(pad.id, runFanout);
   } catch (err:any) {
     socket.emit('message', {disconnect: 'badChangeset'});
     stats.meter('failedChangesets').mark();
