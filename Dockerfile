@@ -10,12 +10,13 @@ ARG BUILD_ENV=git
 ARG PnpmVersion=11.0.6
 
 FROM node:25-alpine AS adminbuild
-# Node 25 distributions no longer ship corepack, so install it from npm
-# and use it to provision a pinned pnpm. Drop the bundled npm afterwards
+# Node 25 no longer ships corepack at all, so install pnpm directly via
+# npm. The node:25-alpine image also bundles yarn; remove it first to
+# avoid leaving an unused binary on PATH. Drop bundled npm afterwards
 # — its older transitives (picomatch, brace-expansion) carry CVEs we
-# don't otherwise need. Mirrors the install in snap/snapcraft.yaml.
-RUN npm install -g corepack@latest && \
-    corepack enable && corepack prepare pnpm@${PnpmVersion} --activate && \
+# don't otherwise need.
+RUN rm -f /usr/local/bin/yarn /usr/local/bin/yarnpkg && \
+    npm install -g pnpm@${PnpmVersion} && \
     rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
 WORKDIR /opt/etherpad-lite
 COPY . .
@@ -98,21 +99,16 @@ RUN groupadd --system ${EP_GID:+--gid "${EP_GID}" --non-unique} etherpad && \
 ARG EP_DIR=/opt/etherpad-lite
 RUN mkdir -p "${EP_DIR}" && chown etherpad:etherpad "${EP_DIR}"
 
-# Share corepack's cache between root (which activates pnpm here) and
-# the `etherpad` user (which invokes pnpm later via the corepack shim).
-# $COREPACK_HOME defaults to ~/.cache/node/corepack and is per-user;
-# without this pin the etherpad user finds an empty cache, re-resolves
-# pnpm, and corepack can fall back to "latest" from the registry. See
-# https://github.com/ether/etherpad/issues/7687.
-ENV COREPACK_HOME=/opt/corepack
-
+# Node 25 dropped corepack; install pnpm directly via npm, then drop
+# both npm and the pre-bundled yarn binary to keep the runtime image
+# free of unused tooling and known-CVE transitives.
+#
 # the mkdir is needed for configuration of openjdk-11-jre-headless, see
 # https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=863199
 RUN  \
-    mkdir -p /usr/share/man/man1 "${COREPACK_HOME}" && \
-    npm install -g corepack@latest && \
-    corepack enable && corepack prepare pnpm@${PnpmVersion} --activate && \
-    chown -R etherpad:etherpad "${COREPACK_HOME}" && \
+    mkdir -p /usr/share/man/man1 && \
+    rm -f /usr/local/bin/yarn /usr/local/bin/yarnpkg && \
+    npm install -g pnpm@${PnpmVersion} && \
     rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx && \
     apk update && apk upgrade && \
     apk add --no-cache \
