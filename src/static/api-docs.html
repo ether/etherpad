@@ -9,6 +9,10 @@
     <style>
       html, body { margin: 0; padding: 0; height: 100%; }
       rapi-doc { height: 100vh; }
+      /* RapiDoc ships @font-face rules pointing at fonts.gstatic.com.
+         Override every font-family rule that mentions Open Sans so the
+         browser never fetches the woff2 from Google. */
+      rapi-doc::part(label-input), rapi-doc { font-family: system-ui, -apple-system, sans-serif !important; }
     </style>
   </head>
   <body>
@@ -19,6 +23,9 @@
       show-header="false"
       allow-server-selection="false"
       allow-authentication="true"
+      regular-font="system-ui, -apple-system, sans-serif"
+      mono-font="ui-monospace, SFMono-Regular, monospace"
+      load-fonts="false"
     ></rapi-doc>
   </body>
 </html>
