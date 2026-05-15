@@ -40,11 +40,15 @@ SystemCallArchitectures=native
 RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
 UMask=0027
 
-# /opt/etherpad/src/node_modules must be writable so the admin UI can
-# create symlinks for newly installed plugins alongside the bundled deps.
-# /opt/etherpad/src/plugin_packages is symlinked into /var/lib/etherpad
-# by postinstall, so it's already covered by the entry below.
-ReadWritePaths=/var/lib/etherpad /var/log/etherpad /etc/etherpad /opt/etherpad/src/node_modules
+# /opt/etherpad/src/{node_modules,plugin_packages} must be writable so the
+# admin UI can install new plugins alongside the bundled deps. We expose
+# both as writable paths under ProtectSystem=strict rather than symlinking
+# plugin_packages outside the tree -- Node.js resolves symlinks to their
+# realpath before walking node_modules, so a plugin installed under
+# /var/lib/etherpad cannot reach the bundled ep_etherpad-lite in
+# /opt/etherpad/node_modules and every require('ep_etherpad-lite/...')
+# fails with MODULE_NOT_FOUND (see ether/ep_comments_page#416).
+ReadWritePaths=/var/lib/etherpad /var/log/etherpad /etc/etherpad /opt/etherpad/src/node_modules /opt/etherpad/src/plugin_packages
 
 LimitNOFILE=65536
 
