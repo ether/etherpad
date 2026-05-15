@@ -89,12 +89,16 @@ export const applyUpdate = async (
     const pf = await deps.runPreflight(targetTag);
     if (!pf.ok) {
       const at = deps.now().toISOString();
+      // Append the optional `detail` (e.g. "target requires Node >=26.0.0,
+      // running 25.0.0" for node-engine-mismatch) so the admin UI shows a
+      // version-specific message without requiring a separate API field.
+      const reasonStr = pf.detail ? `${pf.reason}: ${pf.detail}` : pf.reason;
       await deps.saveState({
         ...preState,
-        execution: {status: 'preflight-failed', targetTag, reason: pf.reason, at},
-        lastResult: {targetTag, fromSha: '', outcome: 'preflight-failed', reason: pf.reason, at},
+        execution: {status: 'preflight-failed', targetTag, reason: reasonStr, at},
+        lastResult: {targetTag, fromSha: '', outcome: 'preflight-failed', reason: reasonStr, at},
       });
-      deps.appendLog(`[${at}] PREFLIGHT_FAILED ${pf.reason}`);
+      deps.appendLog(`[${at}] PREFLIGHT_FAILED ${reasonStr}`);
       return {outcome: 'preflight-failed', reason: pf.reason};
     }
 

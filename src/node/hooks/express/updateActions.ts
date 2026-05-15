@@ -104,6 +104,20 @@ const buildPreflightDeps = (installMethod: ReturnType<typeof getDetectedInstallM
     requireSignature: settings.updates.requireSignature,
     trustedKeysPath: settings.updates.trustedKeysPath,
   }),
+  readTargetEnginesNode: (tag: string) => new Promise<string | null>((resolve) => {
+    const c = spawn('git', ['show', `${tag}:package.json`],
+                    {cwd: settings.root, stdio: ['ignore', 'pipe', 'ignore']});
+    let out = '';
+    c.stdout.on('data', (b) => { out += b.toString(); });
+    c.on('close', () => {
+      try {
+        const pkg = JSON.parse(out);
+        const range = pkg?.engines?.node;
+        resolve(typeof range === 'string' && range.trim().length > 0 ? range : null);
+      } catch { resolve(null); }
+    });
+    c.on('error', () => resolve(null));
+  }),
 });
 
 /**
@@ -193,6 +207,7 @@ export const expressCreateServer = (
                 diskSpaceMinMB: Number(settings.updates.diskSpaceMinMB) || 500,
                 requireSignature: settings.updates.requireSignature,
                 trustedKeysPath: settings.updates.trustedKeysPath,
+                currentNodeVersion: process.versions.node,
               },
               {
                 ...baseDeps,

@@ -261,6 +261,7 @@ const buildSchedulerApplyDeps = (): ApplyPipelineDeps => ({
       diskSpaceMinMB: Number(settings.updates.diskSpaceMinMB) || 500,
       requireSignature: settings.updates.requireSignature,
       trustedKeysPath: settings.updates.trustedKeysPath,
+      currentNodeVersion: process.versions.node,
     },
     {
       installMethod: detectedMethod,
@@ -299,6 +300,26 @@ const buildSchedulerApplyDeps = (): ApplyPipelineDeps => ({
         repoDir: settings.root,
         requireSignature: settings.updates.requireSignature,
         trustedKeysPath: settings.updates.trustedKeysPath,
+      }),
+      readTargetEnginesNode: (tagName: string) => new Promise<string | null>((resolve) => {
+        // Read the target tag's package.json *without* mutating the working
+        // tree: `git show <tag>:package.json` writes to stdout only. Treat
+        // any failure (missing tag, missing file, malformed JSON, missing
+        // engines.node) as "no constraint" — preflight already covers
+        // missing-tag separately; we don't want to gate updates on a
+        // package.json shape that older releases predate.
+        const c = spawn('git', ['show', `${tagName}:package.json`],
+                        {cwd: settings.root, stdio: ['ignore', 'pipe', 'ignore']});
+        let out = '';
+        c.stdout.on('data', (b) => { out += b.toString(); });
+        c.on('close', () => {
+          try {
+            const pkg = JSON.parse(out);
+            const range = pkg?.engines?.node;
+            resolve(typeof range === 'string' && range.trim().length > 0 ? range : null);
+          } catch { resolve(null); }
+        });
+        c.on('error', () => resolve(null));
       }),
     },
   ),
