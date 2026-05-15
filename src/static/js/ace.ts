@@ -328,18 +328,39 @@ const Ace2Editor = function () {
     });
     debugLog('Ace2Editor.init() Ace2Inner.init() returned');
 
-    // Screen-reader-only keyboard hint, target of the body's
-    // aria-describedby. We park it in <head> instead of <body> because
-    // Ace2Inner manages body children via its line model — anything
-    // unrelated inserted into body gets wiped by line splices. The ARIA
-    // spec allows the description target to live anywhere in the same
-    // document, and screen readers resolve it by ID; rendering doesn't
-    // matter because aria-describedby fetches the element's text.
+    // Screen-reader-only keyboard hint, target of the inner body's
+    // aria-describedby. Three things matter for AT to actually announce it:
+    //
+    //   1. Position: appended to the inner document's <head>. Anything in
+    //      <body> gets wiped by Ace2Inner's line-model rebuild during the
+    //      queued setBaseText/importText calls below. The ARIA spec lets
+    //      aria-describedby resolve to any ID in the same document, so
+    //      head placement is valid — screen readers look up by ID and
+    //      read text content, rendering position doesn't matter.
+    //   2. Exposure: NOT `hidden`. The HTML `hidden` attribute removes the
+    //      node from the accessibility tree, so aria-describedby would
+    //      resolve to a node with no exposed name. We leave the element
+    //      visible in markup but unrendered (head children don't paint).
+    //   3. Localization: html10n.get() returns undefined when translations
+    //      are still loading (and Ace2Editor.init() races with that load),
+    //      so seed with a hardcoded English fallback and re-pull the
+    //      translated string on every html10n `localized` event — that
+    //      keeps the text right both on first paint and on runtime
+    //      language changes.
+    const HINT_FALLBACK_EN =
+        'Press Escape to exit the editor. Press Alt+F9 to access the toolbar.';
     const hint = innerDocument.createElement('div');
     hint.id = 'editor-keyboard-hint';
-    hint.hidden = true;
-    hint.textContent = html10n.get('pad.editor.keyboardHint');
+    const refreshHint = () => {
+      const localized = html10n.get('pad.editor.keyboardHint');
+      hint.textContent =
+          (typeof localized === 'string' && localized) ? localized : HINT_FALLBACK_EN;
+    };
+    refreshHint();
     innerDocument.head.appendChild(hint);
+    if (html10n && typeof html10n.bind === 'function') {
+      html10n.bind('localized', refreshHint);
+    }
 
     loaded = true;
     doActionsPendingInit();

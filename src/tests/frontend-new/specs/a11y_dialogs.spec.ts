@@ -163,14 +163,38 @@ test('skip-to-content link bypasses toolbar (WCAG 2.4.1, #7255)', async ({page})
 });
 
 test('skip link is the first Tab target from a fresh page (WCAG 2.4.1, #7255)', async ({page}) => {
-  // Pre-condition: pad.ts no longer auto-focuses the editor on load
-  // (that previously trapped Tab inside the editor iframe and left the
-  // skip link unreachable from the URL bar). Initial focus is on <body>.
-  const initialTag = await page.evaluate(() => document.activeElement?.tagName);
-  expect(initialTag).toBe('BODY');
+  // Don't assert what happens to be focused after page load — plugins,
+  // banners, or the privacy-token modal can grab focus before the test
+  // runs, and the actual invariant we care about is tab order, not the
+  // starting point. Defocus first, then press Tab from a known state.
+  await page.evaluate(() => {
+    const a = document.activeElement as HTMLElement | null;
+    if (a && a !== document.body && typeof a.blur === 'function') a.blur();
+  });
   await page.keyboard.press('Tab');
   const afterTabId = await page.evaluate(() => document.activeElement?.id || '');
   expect(afterTabId).toBe('skip-to-content');
+});
+
+test('editor-keyboard-hint exists in the editor iframe with localized text (#7255)', async ({page}) => {
+  // Regression: PR #7451 added #editor-keyboard-hint as the target of the
+  // editor body's aria-describedby. The hint was being wiped by
+  // Ace2Inner.init()'s body management before it could be announced;
+  // PR #7758 reworked the insertion to run after doActionsPendingInit().
+  // Assert here that the hint actually exists post-init and carries the
+  // localized string — without this test, future ace internals changes
+  // could silently reintroduce the wipe.
+  const innerFrame = page.frameLocator('iframe[name="ace_outer"]')
+      .frameLocator('iframe[name="ace_inner"]');
+  const hint = innerFrame.locator('#editor-keyboard-hint');
+  await expect(hint).toHaveCount(1);
+  // html10n may take a moment to populate; toHaveText polls. The string is
+  // mandatory (mandatory English fallback in ace.ts), so neither '' nor
+  // 'undefined' is acceptable.
+  const text = await hint.textContent();
+  expect(text && text.length > 0).toBe(true);
+  expect(text).not.toBe('undefined');
+  expect(text).toContain('Escape');
 });
 
 test('line-number sidediv is hidden from screen readers (#7255)', async ({page}) => {
