@@ -12,6 +12,10 @@ test.describe('indentation button', function () {
     // get the first text element out of the inner iframe
     const $firstTextElement = padBody.locator('div').first();
 
+    // Click first to land focus inside the editor iframe; the load-time
+    // auto-focus that previously did this was removed in #7255 so Tab
+    // could reach the skip-to-content link.
+    await $firstTextElement.click();
     // select this text element
     await $firstTextElement.selectText()
 
