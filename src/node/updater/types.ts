@@ -2,6 +2,17 @@ export type InstallMethod = 'auto' | 'git' | 'docker' | 'npm' | 'managed';
 
 export type Tier = 'off' | 'notify' | 'manual' | 'auto' | 'autonomous';
 
+/**
+ * Tier 4 (autonomous) maintenance window. `start`/`end` are HH:MM (24h) in the
+ * configured `tz`. `end` is exclusive; `end < start` denotes a cross-midnight
+ * window. See `MaintenanceWindow.ts` for the parser/predicate implementation.
+ */
+export interface MaintenanceWindow {
+  start: string;
+  end: string;
+  tz: 'local' | 'utc';
+}
+
 /** null = up-to-date (or not yet checked); 'severe' = at least one major version behind; 'vulnerable' = matched a vulnerable-below directive. */
 export type OutdatedLevel = null | 'severe' | 'vulnerable';
 

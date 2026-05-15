@@ -224,7 +224,8 @@
     "rollbackHealthCheckSeconds": 60,
     "diskSpaceMinMB": 500,
     "requireSignature": false,
-    "trustedKeysPath": null
+    "trustedKeysPath": null,
+    "maintenanceWindow": null
   },
 
   /*

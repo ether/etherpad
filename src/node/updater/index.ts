@@ -12,6 +12,7 @@ import {decideEmails} from './Notifier';
 import {checkPendingVerification, CheckResult, RollbackDeps, performRollback} from './RollbackHandler';
 import {executeUpdate, SpawnFn} from './UpdateExecutor';
 import {createSchedulerRunner, decideSchedule, decideTriggerApply, SchedulerRunner} from './Scheduler';
+import {parseWindow} from './MaintenanceWindow';
 import {applyUpdate, ApplyPipelineDeps} from './applyPipeline';
 import {acquireLock, releaseLock} from './lock';
 import {runPreflight} from './preflight';
@@ -95,6 +96,7 @@ const performCheck = async (): Promise<void> => {
         tier: settings.updates.tier,
         current,
         latest: state.latest.version,
+        maintenanceWindow: settings.updates.maintenanceWindow,
       });
       if (policy.canNotify) {
         const decision = decideEmails({
@@ -115,6 +117,7 @@ const performCheck = async (): Promise<void> => {
     }
 
     // Tier 3 scheduler pass: decide whether to schedule, reschedule, or cancel.
+    // Tier 4 snap-forward to next maintenance window is layered in here too.
     if (state.latest && scheduler) {
       const current = getEpVersion();
       const policy = evaluatePolicy({
@@ -123,12 +126,14 @@ const performCheck = async (): Promise<void> => {
         current,
         latest: state.latest.version,
         executionStatus: state.execution.status,
+        maintenanceWindow: settings.updates.maintenanceWindow,
       });
       const decision = decideSchedule({
         state, now, policy,
         latest: state.latest, current,
         preApplyGraceMinutes: Number(settings.updates.preApplyGraceMinutes) || 0,
         adminEmail: settings.adminEmail,
+        maintenanceWindow: policy.canAutonomous ? parseWindow(settings.updates.maintenanceWindow) : null,
       });
       if (decision.action === 'schedule') {
         state.execution = decision.newExecution;
@@ -318,9 +323,14 @@ const schedulerTriggerApply = async (targetTag: string): Promise<void> => {
           current: getEpVersion(),
           latest: state.latest.version,
           executionStatus: state.execution.status,
+          maintenanceWindow: settings.updates.maintenanceWindow,
         })
       : {canNotify: false, canManual: false, canAuto: false, canAutonomous: false, reason: 'no-latest'};
-    const decision = decideTriggerApply({state, targetTag, policy});
+    const window = policy.canAutonomous ? parseWindow(settings.updates.maintenanceWindow) : null;
+    const decision = decideTriggerApply({
+      state, targetTag, policy,
+      now: new Date(), maintenanceWindow: window,
+    });
     if (decision.action === 'abort') {
       logger.info(`scheduler fired for ${targetTag} but aborting (${decision.reason})`);
       return;
@@ -330,6 +340,20 @@ const schedulerTriggerApply = async (targetTag: string): Promise<void> => {
         `scheduler fired for ${targetTag} but policy denies auto ` +
         `(${decision.reason}); clearing schedule`);
       await saveState(stateFilePath(), {...state, execution: {status: 'idle'}});
+      return;
+    }
+    if (decision.action === 'defer') {
+      // Tier 4: fire-time was outside the window. Re-arm for the next opening
+      // and persist the new scheduledFor so a restart in the gap rehydrates.
+      logger.info(`scheduler deferred ${targetTag} to next maintenance window at ${decision.nextStart}`);
+      const sched = state.execution.status === 'scheduled' ? state.execution : null;
+      if (sched) {
+        await saveState(stateFilePath(), {
+          ...state,
+          execution: {...sched, scheduledFor: decision.nextStart},
+        });
+        scheduler?.arm({targetTag, scheduledFor: decision.nextStart});
+      }
       return;
     }
     const result = await applyUpdate({targetTag, deps: buildSchedulerApplyDeps()});

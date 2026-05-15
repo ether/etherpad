@@ -340,6 +340,12 @@ export type SettingsType = {
     requireSignature: boolean,
     /** Override the OS keyring location (passed to git verify-tag via $GNUPGHOME). */
     trustedKeysPath: string | null,
+    /**
+     * Tier 4: nightly window during which the scheduler is allowed to fire.
+     * Null = tier 4 disabled (canAutonomous is denied with reason
+     * `maintenance-window-missing`). Shape validated at boot by `parseWindow`.
+     */
+    maintenanceWindow: {start: string; end: string; tz: 'local' | 'utc'} | null,
   },
   adminOpenAPI: {
     enabled: boolean,
@@ -534,6 +540,9 @@ const settings: SettingsType = {
     diskSpaceMinMB: 500,
     requireSignature: false,
     trustedKeysPath: null,
+    // Tier 4: night-window during which the scheduler may fire. Null disables tier 4 only.
+    // Example: { start: "03:00", end: "05:00", tz: "local" } or tz: "utc".
+    maintenanceWindow: null,
   },
   /**
    * Admin OpenAPI document endpoint at /admin/openapi.json.
