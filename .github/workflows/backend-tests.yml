@@ -66,7 +66,24 @@ jobs:
         run: pnpm build
       -
         name: Run the backend tests
-        run: pnpm test
+        env:
+          # --report-on-fatalerror and friends write a Node diagnostic report
+          # (V8 stack, libuv handles, OS info) on fatal errors that bypass JS
+          # handlers — the failure mode we've been chasing on Windows + Node
+          # 24 since PR #7663. Reports land in node-report/ and are uploaded
+          # as an artifact if the step fails.
+          NODE_OPTIONS: "--report-on-fatalerror --report-uncaught-exception --report-on-signal --report-compact --report-directory=${{ github.workspace }}/node-report"
+        run: |
+          mkdir -p "${{ github.workspace }}/node-report"
+          pnpm test
+      - name: Upload Node diagnostic reports on failure
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: node-diagnostic-report-${{ runner.os }}-node${{ matrix.node }}-${{ github.job }}
+          path: node-report/
+          if-no-files-found: ignore
+          retention-days: 7
       - name: Run the new vitest tests
         working-directory: src
         run: pnpm run test:vitest
@@ -136,7 +153,19 @@ jobs:
           ep_table_of_contents
       -
         name: Run the backend tests
-        run: pnpm test
+        env:
+          NODE_OPTIONS: "--report-on-fatalerror --report-uncaught-exception --report-on-signal --report-compact --report-directory=${{ github.workspace }}/node-report"
+        run: |
+          mkdir -p "${{ github.workspace }}/node-report"
+          pnpm test
+      - name: Upload Node diagnostic reports on failure
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: node-diagnostic-report-${{ runner.os }}-node${{ matrix.node }}-${{ github.job }}
+          path: node-report/
+          if-no-files-found: ignore
+          retention-days: 7
       - name: Run the new vitest tests
         working-directory: src
         run: pnpm run test:vitest
@@ -186,8 +215,21 @@ jobs:
           powershell -Command "(gc settings.json.holder) -replace '\"points\": 10', '\"points\": 1000' | Out-File -encoding ASCII settings.json"
       -
         name: Run the backend tests
+        shell: bash
         working-directory: src
-        run: pnpm test
+        env:
+          NODE_OPTIONS: "--report-on-fatalerror --report-uncaught-exception --report-on-signal --report-compact --report-directory=${{ github.workspace }}/node-report"
+        run: |
+          mkdir -p "${{ github.workspace }}/node-report"
+          pnpm test
+      - name: Upload Node diagnostic reports on failure
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: node-diagnostic-report-${{ runner.os }}-node${{ matrix.node }}-${{ github.job }}
+          path: node-report/
+          if-no-files-found: ignore
+          retention-days: 7
       - name: Run the new vitest tests
         working-directory: src
         run: pnpm run test:vitest
@@ -265,8 +307,21 @@ jobs:
           powershell -Command "(gc settings.json.holder) -replace '\"points\": 10', '\"points\": 1000' | Out-File -encoding ASCII settings.json"
       -
         name: Run the backend tests
+        shell: bash
         working-directory: src
-        run: pnpm test
+        env:
+          NODE_OPTIONS: "--report-on-fatalerror --report-uncaught-exception --report-on-signal --report-compact --report-directory=${{ github.workspace }}/node-report"
+        run: |
+          mkdir -p "${{ github.workspace }}/node-report"
+          pnpm test
+      - name: Upload Node diagnostic reports on failure
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: node-diagnostic-report-${{ runner.os }}-node${{ matrix.node }}-${{ github.job }}
+          path: node-report/
+          if-no-files-found: ignore
+          retention-days: 7
       - name: Run the new vitest tests
         working-directory: src
         run: pnpm run test:vitest
