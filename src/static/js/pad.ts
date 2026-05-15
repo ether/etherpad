@@ -709,9 +709,11 @@ const pad = {
         e.preventDefault();
         padeditor.ace.focus();
       });
-      setTimeout(() => {
-        padeditor.ace.focus();
-      }, 0);
+      // Auto-focusing the editor on load traps Tab inside the editor iframe
+      // (Tab inserts an indent there, not bubbling out), which makes the
+      // skip link above unreachable via Tab from the URL bar — i.e., the
+      // standard WCAG 2.4.1 entry path. Users now click or Tab into the
+      // editor; the skip link is the first tabbable element.
       pad.refreshPadSettingsControls();
       pad.applyOptionsChange();
       pad.refreshMyViewControls();

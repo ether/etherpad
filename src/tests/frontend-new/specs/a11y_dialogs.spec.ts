@@ -162,6 +162,17 @@ test('skip-to-content link bypasses toolbar (WCAG 2.4.1, #7255)', async ({page})
   expect(focusedId).not.toBe('skip-to-content');
 });
 
+test('skip link is the first Tab target from a fresh page (WCAG 2.4.1, #7255)', async ({page}) => {
+  // Pre-condition: pad.ts no longer auto-focuses the editor on load
+  // (that previously trapped Tab inside the editor iframe and left the
+  // skip link unreachable from the URL bar). Initial focus is on <body>.
+  const initialTag = await page.evaluate(() => document.activeElement?.tagName);
+  expect(initialTag).toBe('BODY');
+  await page.keyboard.press('Tab');
+  const afterTabId = await page.evaluate(() => document.activeElement?.id || '');
+  expect(afterTabId).toBe('skip-to-content');
+});
+
 test('line-number sidediv is hidden from screen readers (#7255)', async ({page}) => {
   // sidediv lives in the outer ace iframe (ace_outer) — query the frame.
   const outerFrame = page.frameLocator('iframe[name="ace_outer"]');
