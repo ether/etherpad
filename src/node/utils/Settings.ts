@@ -271,6 +271,7 @@ export type SettingsType = {
   ipLogging: 'full' | 'truncated' | 'anonymous',
   automaticReconnectionTimeout: number,
   loadTest: boolean,
+  scalingDiveMetrics: boolean,
   dumpOnUncleanExit: boolean,
   indentationOnNewLine: boolean,
   logconfig: any | null,
@@ -650,6 +651,13 @@ const settings: SettingsType = {
    * Disable Load Testing
    */
   loadTest: false,
+  /**
+   * Expose extra Prometheus metrics designed for the scaling-dive load-test harness
+   * (ether/etherpad#7756): etherpad_pad_users{padId}, etherpad_changeset_apply_duration_seconds,
+   * etherpad_socket_emits_total{type}. Default false — enable only when running the harness so
+   * production deployments aren't paying for instrumentation they don't use.
+   */
+  scalingDiveMetrics: false,
   /**
    * Disable dump of objects preventing a clean exit
    */
