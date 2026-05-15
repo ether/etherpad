@@ -56,6 +56,13 @@ export interface EmailSendLog {
   vulnerableNewReleaseTag: string | null;
   /** Tag of the most recent release for which we sent a Tier 3 `grace-start` email. */
   graceStartTag: string | null;
+  /**
+   * Dedupe key for `update-rolled-back` / `update-preflight-failed` emails.
+   * Stores the `<tag>:<outcome>` of the last failure we emailed about so a
+   * retry-loop (e.g. repeated `pnpm install` failures on the same release)
+   * doesn't fire one email per attempt. Cleared when the next outcome differs.
+   */
+  lastFailureKey: string | null;
 }
 
 /**
@@ -134,6 +141,7 @@ export const EMPTY_STATE: UpdateState = {
     vulnerableAt: null,
     vulnerableNewReleaseTag: null,
     graceStartTag: null,
+    lastFailureKey: null,
   },
   execution: {status: 'idle'},
   bootCount: 0,
