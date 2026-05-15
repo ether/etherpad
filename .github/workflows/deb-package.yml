@@ -172,10 +172,14 @@ jobs:
           sudo test -L /opt/etherpad/settings.json
           sudo test -L /opt/etherpad/var
           [ "$(sudo readlink /opt/etherpad/var)" = "/var/lib/etherpad/var" ]
-          sudo test -L /opt/etherpad/src/plugin_packages
-          [ "$(sudo readlink /opt/etherpad/src/plugin_packages)" = "/var/lib/etherpad/plugin_packages" ]
-          sudo test -d /var/lib/etherpad/plugin_packages
-          [ "$(sudo stat -c '%U' /var/lib/etherpad/plugin_packages)" = "etherpad" ]
+          # plugin_packages must stay in-tree -- Node.js resolves symlinks
+          # to realpath before walking node_modules, so symlinking it
+          # outside /opt broke require("ep_etherpad-lite/...") in
+          # admin-installed plugins (ether/ep_comments_page#416).
+          sudo test -d /opt/etherpad/src/plugin_packages
+          sudo test ! -L /opt/etherpad/src/plugin_packages
+          [ "$(sudo stat -c '%G' /opt/etherpad/src/plugin_packages)" = "etherpad" ]
+          [ "$(sudo stat -c '%a' /opt/etherpad/src/plugin_packages)" = "2775" ]
           [ "$(stat -c '%G' /opt/etherpad/src/node_modules)" = "etherpad" ]
           sudo test -f /var/lib/etherpad/var/installed_plugins.json
           sudo grep -q '"ep_etherpad-lite"' /var/lib/etherpad/var/installed_plugins.json
@@ -197,8 +201,71 @@ jobs:
             exit 1
           fi
           sudo systemctl stop etherpad
+          # Regression: simulate a pre-fix install (plugin_packages as a
+          # symlink to /var/lib/etherpad/plugin_packages, with a marker
+          # plugin inside) and re-run the postinst. The new postinst must
+          # migrate the contents back in-tree and drop the symlink so
+          # admin-installed plugins keep resolving ep_etherpad-lite
+          # (ether/ep_comments_page#416).
+          sudo rm -rf /opt/etherpad/src/plugin_packages
+          sudo mkdir -p /var/lib/etherpad/plugin_packages/.versions/ep_migration_marker
+          echo '{"name":"ep_migration_marker"}' | \
+            sudo tee /var/lib/etherpad/plugin_packages/.versions/ep_migration_marker/package.json >/dev/null
+          sudo chown -R etherpad:etherpad /var/lib/etherpad/plugin_packages
+          sudo ln -sfn /var/lib/etherpad/plugin_packages /opt/etherpad/src/plugin_packages
+          sudo dpkg-reconfigure etherpad
+          sudo test -d /opt/etherpad/src/plugin_packages
+          sudo test ! -L /opt/etherpad/src/plugin_packages
+          sudo test -f /opt/etherpad/src/plugin_packages/.versions/ep_migration_marker/package.json
+          [ "$(sudo stat -c '%a' /opt/etherpad/src/plugin_packages)" = "2775" ]
+
+          # Regression: stage the ep_layout_trip_wire test fixture into
+          # plugin_packages and confirm etherpad loads it. The fixture's
+          # index.js does the require('ep_etherpad-lite/...') calls that
+          # broke under the old symlinked layout (#416). If the layout
+          # ever regresses, the marker line never reaches the journal
+          # and this step fails.
+          PLUGIN_DIR=/opt/etherpad/src/plugin_packages
+          FIXTURE_DIR=$GITHUB_WORKSPACE/packaging/test-fixtures/ep_layout_trip_wire
+          sudo install -d -o etherpad -g etherpad -m 2775 "${PLUGIN_DIR}/.versions"
+          sudo cp -a "${FIXTURE_DIR}" "${PLUGIN_DIR}/.versions/ep_layout_trip_wire@1.0.0"
+          sudo ln -sfn .versions/ep_layout_trip_wire@1.0.0 "${PLUGIN_DIR}/ep_layout_trip_wire"
+          sudo ln -sfn ../plugin_packages/ep_layout_trip_wire \
+            /opt/etherpad/src/node_modules/ep_layout_trip_wire
+          sudo chown -R etherpad:etherpad "${PLUGIN_DIR}/.versions/ep_layout_trip_wire@1.0.0" \
+            "${PLUGIN_DIR}/ep_layout_trip_wire" \
+            /opt/etherpad/src/node_modules/ep_layout_trip_wire
+          echo '{"plugins":[{"name":"ep_etherpad-lite","version":"0.0.0"},{"name":"ep_layout_trip_wire","version":"1.0.0"}]}' \
+            | sudo tee /var/lib/etherpad/var/installed_plugins.json >/dev/null
+          sudo chown etherpad:etherpad /var/lib/etherpad/var/installed_plugins.json
+          sudo systemctl start etherpad
+          ok=
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:9001/health; then ok=1; break; fi
+            sleep 2
+          done
+          if [ -z "${ok}" ]; then
+            sudo journalctl -u etherpad --no-pager -n 300 || true
+            exit 1
+          fi
+          # Marker proves the require('ep_etherpad-lite/...') calls in
+          # the fixture's index.js all resolved.
+          sudo journalctl -u etherpad --no-pager -n 500 \
+            | grep -F 'ep_layout_trip_wire: plugin_packages layout OK'
+          # And no MODULE_NOT_FOUND involving ep_etherpad-lite, anywhere.
+          if sudo journalctl -u etherpad --no-pager -n 500 \
+              | grep -E "Cannot find module '?ep_etherpad-lite"; then
+            echo "::error::ep_etherpad-lite require failed inside an installed plugin"
+            exit 1
+          fi
+          sudo systemctl stop etherpad
+
           sudo dpkg --purge etherpad
           ! id etherpad 2>/dev/null
+          # Purge must clean up runtime-created plugin artifacts that
+          # dpkg didn't ship (ether/ep_comments_page#416, Qodo #3).
+          sudo test ! -e /opt/etherpad/src/plugin_packages
+          sudo test ! -e /var/lib/etherpad
 
       - name: Upload artifact
         uses: actions/upload-artifact@v7
