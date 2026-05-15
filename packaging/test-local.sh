@@ -295,5 +295,9 @@ else
 fi
 docker exec "${CONTAINER_NAME}" dpkg --purge etherpad
 docker exec "${CONTAINER_NAME}" bash -c '! id etherpad 2>/dev/null'
+# Purge must wipe runtime-created plugin artifacts that dpkg didn't ship
+# (ether/ep_comments_page#416, Qodo #3).
+docker exec "${CONTAINER_NAME}" bash -c '! [ -e /opt/etherpad/src/plugin_packages ]'
+docker exec "${CONTAINER_NAME}" bash -c '! [ -e /var/lib/etherpad ]'
 
 echo "==> All checks passed."

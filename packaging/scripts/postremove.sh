@@ -20,6 +20,22 @@ case "$1" in
     ;;
 
   purge)
+    # Runtime-created plugin artifacts that dpkg did not ship and so
+    # will not have cleaned up: the .versions/ stage that
+    # live-plugin-manager populates inside plugin_packages, and the
+    # corresponding ep_* symlinks in node_modules. After this PR
+    # plugin_packages lives in-tree under ${APP_DIR}/src/, so a stale
+    # purge would otherwise leave admin-installed plugins behind.
+    # See ether/ep_comments_page#416.
+    rm -rf "${APP_DIR}/src/plugin_packages"
+    if [ -d "${APP_DIR}/src/node_modules" ]; then
+      find "${APP_DIR}/src/node_modules" -maxdepth 1 -name 'ep_*' \
+        -exec rm -rf {} +
+    fi
+    # Belt-and-braces: anything else dpkg didn't manage inside the
+    # application tree gets cleaned up on purge too.
+    rm -rf "${APP_DIR}"
+
     rm -rf /etc/etherpad
     rm -rf /var/lib/etherpad
     rm -rf /var/log/etherpad

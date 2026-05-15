@@ -262,6 +262,10 @@ jobs:
 
           sudo dpkg --purge etherpad
           ! id etherpad 2>/dev/null
+          # Purge must clean up runtime-created plugin artifacts that
+          # dpkg didn't ship (ether/ep_comments_page#416, Qodo #3).
+          sudo test ! -e /opt/etherpad/src/plugin_packages
+          sudo test ! -e /var/lib/etherpad
 
       - name: Upload artifact
         uses: actions/upload-artifact@v7
