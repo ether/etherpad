@@ -84,16 +84,26 @@ describe('admin i18n source lint', () => {
       "SearchParams['sortBy'] still includes 'downloads'").toBe(false);
   });
 
-  it('orphan modules from pre-rework admin are gone', () => {
-    // SearchField.tsx and sorting.ts were imported by the pre-rework admin
-    // pages but the rework dropped both. Delete-then-grep here so a future
-    // unrelated import accidentally re-adding them fails review.
+  it('SearchField + sorting modules exist and are consumed by AuthorPage', () => {
+    // History: PR #7716 (admin design rework) dropped the last consumer of
+    // these helpers, then PR #7736 deleted both modules calling them
+    // "orphans". PR #7667 (GDPR author-erasure) merged afterwards from an
+    // older base and reintroduced imports of SearchField + determineSorting
+    // in admin/src/pages/AuthorPage.tsx, breaking the admin build on
+    // develop. The files have been restored; this test pins both the file
+    // presence and the AuthorPage consumption so a future "orphan" sweep
+    // cannot quietly remove them again without also updating AuthorPage.
     const fs = require('fs');
     const join = require('path').join;
     expect(fs.existsSync(join(repoRoot, 'admin/src/components/SearchField.tsx')),
-      'admin/src/components/SearchField.tsx is dead code from pre-rework admin').toBe(false);
+      'admin/src/components/SearchField.tsx is missing — AuthorPage imports it').toBe(true);
     expect(fs.existsSync(join(repoRoot, 'admin/src/utils/sorting.ts')),
-      'admin/src/utils/sorting.ts is dead code from pre-rework admin').toBe(false);
+      'admin/src/utils/sorting.ts is missing — AuthorPage imports determineSorting from it').toBe(true);
+    const authorPage = read('admin/src/pages/AuthorPage.tsx');
+    expect(authorPage.includes("from \"../components/SearchField.tsx\""),
+      'AuthorPage no longer imports SearchField — delete SearchField.tsx too').toBe(true);
+    expect(authorPage.includes("from \"../utils/sorting.ts\""),
+      'AuthorPage no longer imports determineSorting — delete sorting.ts too').toBe(true);
   });
 
   it('PadPage sort dropdown is paired with a direction toggle', () => {
