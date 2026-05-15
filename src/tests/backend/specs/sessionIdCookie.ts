@@ -93,4 +93,14 @@ describe(__filename, function () {
     await sendClientReady(socket, {});
     assert.equal(sessioninfos[socket.id].auth.sessionID, null);
   });
+
+  it('treats a malformed (undecodable) cookie as absent rather than aborting', async function () {
+    // %ZZ is not a valid percent-encoded sequence; decodeURIComponent() throws
+    // URIError. Without the guard this would tear down CLIENT_READY and let
+    // any client log-spam the server (Qodo bug on #7755). The handshake must
+    // still complete and fall through to the message-field fallback.
+    socket = await connectWithCookie('sessionID=%ZZ');
+    await sendClientReady(socket, {sessionID: 's.ffffffffffffffff'});
+    assert.equal(sessioninfos[socket.id].auth.sessionID, 's.ffffffffffffffff');
+  });
 });

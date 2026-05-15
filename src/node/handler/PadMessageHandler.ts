@@ -408,7 +408,19 @@ exports.handleMessage = async (socket:any, message: ClientVarMessage) => {
     const readCookie = (name: string): string | null => {
       const match = cookieHeader.split(/;\s*/).find(
           (c) => c.split('=')[0] === name);
-      return match ? decodeURIComponent(match.split('=').slice(1).join('=')) : null;
+      if (!match) return null;
+      const raw = match.split('=').slice(1).join('=');
+      // A malformed value (e.g. `name=%ZZ`) makes decodeURIComponent throw
+      // URIError. Without this guard a single bad cookie aborts CLIENT_READY,
+      // letting an unauthenticated peer spam server error logs and block
+      // itself from joining (flagged by Qodo on #7755). Treat undecodable
+      // values as absent.
+      try {
+        return decodeURIComponent(raw);
+      } catch (err) {
+        if (err instanceof URIError) return null;
+        throw err;
+      }
     };
     const cookieToken = readCookie(`${cookiePrefix}token`);
     const legacyToken = typeof message.token === 'string' ? message.token : null;
