@@ -21,8 +21,12 @@
 //   3. Tracks the last-seen test via a mocha root afterEach hook so the
 //      death point is identified.
 //   4. Logs exit-related events so we can discriminate:
-//        beforeExit + exit  -> clean event-loop drain
-//        only exit          -> process.exit() called somewhere
+//        beforeExit + exit  -> clean event-loop drain (Linux CI, local)
+//        only exit          -> process.exit() called — expected when mocha
+//                              is launched with --exit (the Windows CI
+//                              jobs do this to mitigate a hard-kill flake;
+//                              elsewhere "only exit" still means something
+//                              else called process.exit unexpectedly)
 //        neither            -> hard kill (SIGKILL/OOM/runner)
 //        signal lines       -> SIGTERM / SIGINT / SIGBREAK received
 //
