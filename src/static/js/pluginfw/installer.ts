@@ -17,6 +17,7 @@ import  settings, {
   reloadSettings
 } from '../../../node/utils/Settings';
 import {LinkInstaller} from "./LinkInstaller";
+import {assertPluginCatalogEnabled} from "./pluginCatalogGuard";
 
 import {findEtherpadRoot} from '../../../node/utils/AbsolutePaths';
 const logger = log4js.getLogger('plugins');
@@ -169,6 +170,7 @@ export let availablePlugins:MapArrayType<PackageInfo>|null = null;
 let cacheTimestamp = 0;
 
 export const getAvailablePlugins = async (maxCacheAge: number | false) => {
+  assertPluginCatalogEnabled();
   const nowTimestamp = Math.round(Date.now() / 1000);
 
   // check cache age before making any request
