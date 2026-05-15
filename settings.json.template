@@ -733,6 +733,14 @@
    */
   "loadTest": false,
 
+  /*
+   * Coalesce NEW_CHANGES fan-out within a debounce window of N milliseconds
+   * (#7756 lever 3). 0 (default) preserves legacy synchronous behaviour.
+   * Increase (typical: 25-100) to trade a little latency for a quadratic
+   * reduction in socket.io emit volume under high pad concurrency.
+   */
+  "fanoutDebounceMs": 0,
+
   /**
   * Disable dump of objects preventing a clean exit
   */

@@ -950,7 +950,13 @@ const handleUserChanges = async (socket:any, message: {
     socket.emit('message', {type: 'COLLABROOM', data: {type: 'ACCEPT_COMMIT', newRev}});
     thisSession.rev = newRev;
     if (newRev !== r) thisSession.time = await pad.getRevisionDate(newRev);
-    scheduleFanout(pad.id, runFanout);
+    if ((settings.fanoutDebounceMs ?? 0) > 0) {
+      // Debounce window enabled: defer + coalesce fan-out.
+      scheduleFanout(pad.id, runFanout);
+    } else {
+      // Default / legacy: synchronous, awaited, errors flow into this try/catch.
+      await exports.updatePadClients(pad);
+    }
   } catch (err:any) {
     socket.emit('message', {disconnect: 'badChangeset'});
     stats.meter('failedChangesets').mark();

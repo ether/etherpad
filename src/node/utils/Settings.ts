@@ -665,11 +665,12 @@ const settings: SettingsType = {
    * broadcast is deferred by this many ms; further commits arriving during
    * the window are batched into the same fan-out pass.
    *
-   * 0 (default) = legacy behaviour: fan-out fires synchronously after every
-   * accepted commit. Increase to trade a few ms of latency for a quadratic
-   * reduction in socket.io emit volume under high concurrency. Gated behind
-   * `loadTest` AND `scalingDiveMetrics` — production deployments are not
-   * affected by default.
+   * 0 (default) = legacy behaviour: fan-out fires synchronously, awaited,
+   * inside the existing handleUserChanges try/catch. The scheduler is
+   * bypassed entirely so disabling the feature is a strict no-op.
+   *
+   * Increase to trade a few ms of latency for a quadratic reduction in
+   * socket.io emit volume under high concurrency.
    */
   fanoutDebounceMs: 0,
   /**
