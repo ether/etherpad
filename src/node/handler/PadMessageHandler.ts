@@ -47,6 +47,7 @@ const accessLogger = log4js.getLogger('access');
 const hooks = require('../../static/js/pluginfw/hooks');
 const stats = require('../stats')
 const assert = require('assert').strict;
+import {recordChangesetApply, recordSocketEmit} from '../prom-instruments';
 import {RateLimiterMemory} from 'rate-limiter-flexible';
 import {ChangesetRequest, PadUserInfo, SocketClientRequest} from "../types/SocketClientRequest";
 import {APool, AText, PadAuthor, PadType} from "../types/PadType";
@@ -116,6 +117,20 @@ function getActivePadCountFromSessionInfos() {
   return padIds.size;
 }
 exports.getActivePadCountFromSessionInfos = getActivePadCountFromSessionInfos;
+
+// Per-pad user counts derived on demand from sessioninfos. Used by
+// prometheus.ts to populate `etherpad_pad_users{padId}` so the #7756
+// scaling-dive harness can confirm the pad it's pointing at actually
+// has the expected concurrency.
+function getPadUsersMap(): Map<string, number> {
+  const out = new Map<string, number>();
+  for (const {padId} of Object.values(sessioninfos)) {
+    if (!padId) continue;
+    out.set(padId, (out.get(padId) ?? 0) + 1);
+  }
+  return out;
+}
+exports.getPadUsersMap = getPadUsersMap;
 
 /**
  * Build a sanitized copy of the plugins registry suitable for sending to the
@@ -625,6 +640,7 @@ exports.handleCustomObjectMessage = (msg: CustomMessage, sessionID: string) => {
     } else {
       // broadcast to all clients on this pad
       socketio.sockets.in(msg.data.payload.padId).emit('message', msg);
+      recordSocketEmit(msg.data.type);
     }
   }
 };
@@ -645,6 +661,7 @@ exports.handleCustomMessage = (padID: string, msgString:string) => {
     },
   };
   socketio.sockets.in(padID).emit('message', msg);
+  recordSocketEmit(msg.data.type);
 };
 
 /**
@@ -685,6 +702,7 @@ exports.sendChatMessageToPadClients = async (mt: ChatMessage|number, puId: strin
     type: 'COLLABROOM',
     data: {type: 'CHAT_MESSAGE', message},
   });
+  recordSocketEmit('CHAT_MESSAGE');
   await promise;
 };
 
@@ -802,8 +820,14 @@ const handleUserChanges = async (socket:any, message: {
   // if the session was valid when the message arrived in the first place
   if (!thisSession) throw new Error('client disconnected');
 
-  // Measure time to process edit
+  // Measure time to process edit. stats.timer('edits') spans the full handler
+  // (apply + fan-out) for backwards-compat; the new Prometheus histogram below
+  // wraps only the apply path so the scaling-dive harness can distinguish
+  // "apply is slow" from "fan-out is slow". Failed applies do not call the
+  // stopper — leaving the timer un-observed keeps the success-path
+  // distribution clean.
   const stopWatch = stats.timer('edits').start();
+  const stopApplyHistogram = recordChangesetApply();
   try {
     const {data: {baseRev, apool, changeset}} = message;
     if (baseRev == null) throw new Error('missing baseRev');
@@ -905,6 +929,10 @@ const handleUserChanges = async (socket:any, message: {
     // The client assumes that ACCEPT_COMMIT and NEW_CHANGES messages arrive in order. Make sure we
     // have already sent any previous ACCEPT_COMMIT and NEW_CHANGES messages.
     assert.equal(thisSession.rev, r);
+    // End of the apply path. The Prometheus histogram observes here so that
+    // fan-out (socket emit + updatePadClients) does NOT inflate the apply
+    // duration. Failed applies are deliberately not recorded.
+    stopApplyHistogram();
     socket.emit('message', {type: 'COLLABROOM', data: {type: 'ACCEPT_COMMIT', newRev}});
     thisSession.rev = newRev;
     if (newRev !== r) thisSession.time = await pad.getRevisionDate(newRev);
@@ -968,6 +996,7 @@ exports.updatePadClients = async (pad: PadType) => {
       };
       try {
         socket.emit('message', msg);
+        recordSocketEmit('NEW_CHANGES');
       } catch (err:any) {
         messageLogger.error(`Failed to notify user of new revision: ${err.stack || err}`);
         return;
