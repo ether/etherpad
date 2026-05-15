@@ -42,9 +42,10 @@
     "ui": "link:ui"
   },
   "engines": {
-    "node": ">=22.13.0"
+    "node": ">=22.13.0",
+    "pnpm": ">=11.1.2"
   },
-  "packageManager": "pnpm@11.0.6",
+  "packageManager": "pnpm@11.1.2",
   "repository": {
     "type": "git",
     "url": "https://github.com/ether/etherpad.git"

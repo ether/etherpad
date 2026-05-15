@@ -1,5 +1,9 @@
 # Unreleased
 
+### Breaking changes
+
+- **Node 25 is now the default development and CI target.** `packageManager` is now `pnpm@11.1.2` and `engines.pnpm` requires `>=11.1.2`. Node 25 [stopped shipping Corepack](https://github.com/nodejs/node/pull/57617); install pnpm directly with `npm install -g pnpm` (or follow the existing `bin/installer.sh` one-liner, which does this for you).
+
 ### Notable enhancements
 
 - **Self-update subsystem — Tier 2 (manual click).**
@@ -60,7 +64,7 @@
 
 - The HTTP client in the backend has been migrated from `axios` to the built-in `fetch` API, dropping a dependency now that Node 22 ships a stable fetch.
 - `admin/` and `ui/` workspaces moved from `rolldown-vite` to upstream **Vite 8**.
-- Build and CI moved to **pnpm 11** (`packageManager: "pnpm@11.0.6"`); the `Dockerfile`, snap, and all GitHub workflows are aligned. pnpm overrides have been migrated from `package.json` to `pnpm-workspace.yaml` to match pnpm 11's expectations.
+- Build and CI moved to **pnpm 11** (`packageManager: "pnpm@11.1.2"`); the `Dockerfile`, snap, and all GitHub workflows are aligned. pnpm overrides have been migrated from `package.json` to `pnpm-workspace.yaml` to match pnpm 11's expectations.
 - All client modules have been converted to ESM.
 - The CI matrix tests Node 22, 24, and 25; on PRs the matrix is reduced to a single Node version to keep feedback fast.
 - Frontend Playwright tests now run against the `/ether` plugin set, with feature-tag based skips so plugin-incompatible specs are excluded automatically.
