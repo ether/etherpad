@@ -101,11 +101,8 @@ export const JsoncNode = ({ node, property, text, onEdit, suppressOwnHeader }: P
       if (node.type === 'object') {
         const valueNode = child.children?.[1];
         if (!valueNode) return null;
-        // Use the property key string as stable key; fall back to byte offset.
-        const propKey =
-          child.children?.[0]?.type === 'string'
-            ? String(child.children[0].value)
-            : String(child.offset);
+        const propPath = getNodePath(child);
+        const propKey = propPath.join('.');
         return (
           <JsoncNode
             key={propKey}
@@ -116,8 +113,9 @@ export const JsoncNode = ({ node, property, text, onEdit, suppressOwnHeader }: P
           />
         );
       }
-      // Array element: use unique byte offset as stable key.
-      return <JsoncNode key={child.offset} node={child} text={text} onEdit={onEdit} />;
+      // Array element: use stable JSON path as key.
+      const childPath = getNodePath(child);
+      return <JsoncNode key={childPath.join('.')} node={child} text={text} onEdit={onEdit} />;
     });
 
     if (suppressOwnHeader || !property) {

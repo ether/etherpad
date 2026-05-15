@@ -1,4 +1,4 @@
-import { parseTree, type JSONPath, type Node, type ParseError } from 'jsonc-parser';
+import { parseTree, getNodePath, type JSONPath, type Node, type ParseError } from 'jsonc-parser';
 import { useStore } from '../../store/store';
 import { useTranslation } from 'react-i18next';
 import { editJsonc } from './jsoncEdit';
@@ -103,10 +103,8 @@ export const FormView = ({ onSwitchToRaw }: Props) => {
       {generalProps.length > 0 && (
         <Section title={t('admin_settings.section.general')}>
           {generalProps.map((prop) => {
-            const propKey =
-              prop.children?.[0]?.type === 'string'
-                ? String(prop.children[0].value)
-                : String(prop.offset);
+            const propPath = getNodePath(prop);
+            const propKey = propPath.join('.');
             return (
               <JsoncNode
                 key={propKey}
@@ -122,10 +120,8 @@ export const FormView = ({ onSwitchToRaw }: Props) => {
       {sectionProps.map((prop) => {
         const key = propertyKey(prop);
         const { label, help } = labelAndHelp(propertyComment(prop, text, key), key);
-        const sectionKey =
-          prop.children?.[0]?.type === 'string'
-            ? String(prop.children[0].value)
-            : String(prop.offset);
+        const propPath = getNodePath(prop);
+        const sectionKey = propPath.join('.');
         return (
           <Section key={sectionKey} title={label} description={help}>
             <JsoncNode
