@@ -15,7 +15,9 @@
 - **Self-update subsystem — Tier 3 (auto with grace window).**
   - On a git install, set `updates.tier: "auto"` to have new releases applied automatically after `preApplyGraceMinutes`. During the grace window, `/admin/update` shows a live countdown plus Cancel and Apply now buttons. Schedules are persisted to `var/update-state.json`, so an Etherpad restart during the grace window rehydrates the timer instead of losing the schedule. A new release tag detected mid-grace re-arms the timer; if `adminEmail` is set, a one-shot `grace-start` notification fires per scheduled tag (issue #7607).
   - The terminal `rollback-failed` state continues to disable auto/autonomous attempts globally until acknowledged; manual click stays available because an admin click *is* the intervention the terminal state requires.
-  - Tier 4 (autonomous in a maintenance window) remains designed but unimplemented and will land in a subsequent release.
+- **Self-update subsystem — Tier 4 (autonomous in a maintenance window).**
+  - Set `updates.tier: "autonomous"` together with `updates.maintenanceWindow: {"start":"HH:MM","end":"HH:MM","tz":"local"|"utc"}` to constrain autonomous updates to a nightly window. The scheduler snaps `scheduledFor` forward to the next window opening when grace would otherwise land outside the window, and defers the fire when the window has closed by the timer callback. Cross-midnight windows (`end < start`) are supported; DST transitions are absorbed by the host's wall-clock arithmetic.
+  - A missing or malformed window degrades the policy to Tier 3 with an explicit `policy.reason` of `maintenance-window-missing` / `maintenance-window-invalid`; an admin banner surfaces the misconfiguration so autonomous behavior is not silently disabled. Closes #7607.
 
 # 2.7.3
 

@@ -5,7 +5,7 @@ Etherpad ships with a built-in update subsystem.
 - **Tier 1 (notify)** — default. A banner appears in the admin UI when a new release is available, and pad users see a discreet badge if the running version is severely outdated or flagged as vulnerable. No execution.
 - **Tier 2 (manual click)** — admins on a git install can click "Apply update" at `/admin/update`. Etherpad drains active sessions, runs `git fetch / checkout / pnpm install / pnpm run build:ui`, and exits with code 75 so a process supervisor restarts it on the new version. Auto-rolls back on failure.
 - **Tier 3 (auto with grace window)** — opt-in. On a git install, a newly detected release transitions execution state to `scheduled` and is applied after `preApplyGraceMinutes`. During the grace window, `/admin/update` shows a live countdown plus Cancel and Apply now buttons; an admin email (if `adminEmail` is set) fires once per scheduled tag.
-- **Tier 4 (autonomous in maintenance window)** — designed, not yet implemented.
+- **Tier 4 (autonomous in maintenance window)** — opt-in. Tier 3 + `updates.maintenanceWindow` is required; the scheduler only fires while the wall clock is inside the configured window. Updates detected outside the window queue for the next opening.
 
 ## Settings
 
@@ -192,3 +192,43 @@ The right way to give docker admins an in-product Apply button is to delegate to
 - **Deploy webhook.** New setting `updates.dockerWebhook`. When set, the Apply button on a docker install POSTs to the configured URL and trusts the orchestrator (Render / Railway / Fly / Portainer / Coolify / GitHub Actions — they all expose redeploy webhooks) to do the actual pull-and-recreate.
 
 Direct Docker-socket access (mount `/var/run/docker.sock` into the container) is **out of scope** — anyone who escapes the Etherpad process via that socket gets root on the host. Admins who want fully autonomous docker updates should run [Watchtower](https://containrrr.dev/watchtower/) alongside Etherpad rather than bake equivalent privilege into Etherpad itself.
+
+## Tier 4 — autonomous in a maintenance window
+
+Tier 4 layers a wall-clock window on top of Tier 3 so autonomous updates only run while it is safe to drain sessions (typically nightly).
+
+To enable, on a git install:
+
+```jsonc
+{
+  "updates": {
+    "tier": "autonomous",
+    "preApplyGraceMinutes": 15,
+    "maintenanceWindow": { "start": "03:00", "end": "05:00", "tz": "local" }
+  }
+}
+```
+
+`start` and `end` are 24-hour `HH:MM` wall-clock times in the configured `tz` (`"local"` or `"utc"`). `end` is exclusive; `end < start` denotes a cross-midnight window (`22:00–02:00` runs from 22:00 through 01:59).
+
+### How the window gate works
+
+1. `evaluatePolicy` returns `canAutonomous: true` only when the install is `git`, tier is `"autonomous"`, no terminal `rollback-failed` is set, and `updates.maintenanceWindow` is set and parse-valid. Missing/malformed windows return `canAutonomous: false` with `policy.reason` equal to `maintenance-window-missing` / `maintenance-window-invalid`, and the rest of the policy degrades to Tier 3 (`canAuto: true`). An admin banner surfaces the misconfiguration so the autonomous behavior is never silently disabled.
+2. When the scheduler picks up a new release while `canAutonomous: true`, it computes `scheduledFor = now + preApplyGraceMinutes`. If that timestamp falls **outside** the window, it is snapped forward to the **next opening** of the window.
+3. When the timer fires, the scheduler re-checks the clock. If the window has already closed (long grace, clock skew, host suspend), the fire is **deferred**: `var/update-state.json` is updated with a new `scheduledFor` pointing at the next opening, the timer is re-armed, and the actual apply runs at the next valid moment.
+
+### DST and timezone notes
+
+- `tz: "utc"` is recommended for hosts running across DST boundaries — the window is interpreted against the same wall clock every day of the year.
+- `tz: "local"` follows the host's local time. On DST spring-forward days, a window starting at a non-existent local time (e.g. `02:30` in `America/New_York` on the second Sunday of March) silently lands at the next valid wall-clock minute via the host JS `Date` constructor's normalization. On fall-back days, the first occurrence of the wall-clock start time is used.
+- Cross-midnight windows (`end < start`) span at most 24 hours; longer "windows" should be split into two settings, e.g. by running Tier 3 instead.
+
+### Admin UI
+
+`/admin/update` shows a "Maintenance window" section when `updates.tier == "autonomous"`:
+
+- Configured: summary `HH:MM–HH:MM (tz)` plus "Next window opens at …".
+- Not configured: a clear "Not configured" message and a top-of-page banner that links back to the page.
+- During a deferred-grace schedule, the scheduled panel shows both the countdown to `scheduledFor` and an explanatory "Outside maintenance window. Update will start when the window opens at …" line.
+
+Admins edit `updates.maintenanceWindow` via the parsed JSONC settings editor at `/admin/settings`. Saving an invalid shape is caught at boot — the warning is logged via the `updater` log4js category and the policy downgrades to Tier 3.
