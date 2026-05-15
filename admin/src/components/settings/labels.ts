@@ -5,7 +5,7 @@
 
 const SENTENCE_END = /[.!?](\s|$)/;
 
-const humanize = (key: string): string => {
+export const humanize = (key: string): string => {
   if (!key) return key;
   // Split camelCase / PascalCase / snake_case / kebab-case
   const words = key

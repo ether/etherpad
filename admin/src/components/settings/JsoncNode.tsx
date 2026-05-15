@@ -3,7 +3,7 @@ import { getNodePath } from 'jsonc-parser';
 import { extractAdjacentComments } from './comments';
 import { matchEnvPlaceholder } from './envPill';
 import { lookupTemplateComment } from './templateComments';
-import { labelAndHelp } from './labels';
+import { humanize, labelAndHelp } from './labels';
 import { StringInput } from './widgets/StringInput';
 import { NumberInput } from './widgets/NumberInput';
 import { BooleanToggle } from './widgets/BooleanToggle';
@@ -87,8 +87,28 @@ export const JsoncNode = ({ node, property, text, onEdit, suppressOwnHeader }: P
 
   const anchor = property ?? node;
   const fileComments = extractAdjacentComments(text, anchor.offset, node.offset, node.length);
-  const comment = fileComments.leading || (property ? lookupTemplateComment(path) : null) || '';
-  const { label, help } = labelAndHelp(comment, key);
+  const tmpl = property ? lookupTemplateComment(path) : null;
+  const leading = fileComments.leading || tmpl?.leading || '';
+  const trailing = fileComments.trailing || tmpl?.trailing || '';
+
+  // Leading block comments (e.g. /* Description … */ above a key) carry the
+  // descriptive label — use labelAndHelp's first-sentence split.
+  // Trailing same-line comments (e.g. "altF9": true, /* focus on … */) are
+  // brief per-key annotations: the key itself reads as the label, the comment
+  // belongs in the help slot below the control.  See #7740.
+  let label: string;
+  let help: string;
+  if (leading) {
+    const r = labelAndHelp(leading, key);
+    label = r.label;
+    help = [r.help, trailing].filter(Boolean).join(' ');
+  } else if (trailing) {
+    label = humanize(key);
+    help = trailing;
+  } else {
+    label = humanize(key);
+    help = '';
+  }
 
   const rowId = `settings-row-${path.join('.') || 'root'}`;
   const helpId = help ? `${rowId}-help` : undefined;

@@ -60,7 +60,12 @@ const propertyComment = (prop: Node, text: string, key: string): string | null =
   const valueNode = prop.children?.[1];
   if (!valueNode) return null;
   const live = extractAdjacentComments(text, prop.offset, valueNode.offset, valueNode.length);
-  return live.leading || lookupTemplateComment([key]);
+  if (live.leading) return live.leading;
+  // Section headings prefer the leading block comment; only fall back to the
+  // trailing comment if no leading documentation exists at all.
+  const tmpl = lookupTemplateComment([key]);
+  if (!tmpl) return null;
+  return tmpl.leading || tmpl.trailing || null;
 };
 
 export const FormView = ({ onSwitchToRaw }: Props) => {

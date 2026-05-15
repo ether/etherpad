@@ -51,11 +51,17 @@ const findLeading = (text: string, keyOffset: number): string => {
       continue;
     }
 
+    // A JSON line with a trailing `/* … */` comment (e.g.
+    //   "altF9": true, /* focus on the File Menu and/or editbar */
+    // ) ends with `*/` but is NOT a comment continuation. Only treat a
+    // previous line as part of the leading comment block if it structurally
+    // opens (`/*`), continues (`*` — JSDoc style, covers ` */` close), or
+    // is a single-line `//` comment. This matches the comment styles used
+    // in settings.json.template; #7740.
     const isComment =
       trimmed.startsWith('//') ||
       trimmed.startsWith('/*') ||
-      trimmed.startsWith('*') ||
-      trimmed.endsWith('*/');
+      trimmed.startsWith('*');
 
     if (!isComment) break;
 

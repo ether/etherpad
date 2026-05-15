@@ -318,6 +318,31 @@ test.describe('admin settings',()=> {
     await expect(page.locator('.ToastRootSuccess')).toBeVisible({timeout: 5000});
   });
 
+  // Regression for https://github.com/ether/etherpad/issues/7740.
+  // settings.json.template uses same-line `/* … */` annotations for the
+  // padShortcutEnabled keys, e.g.
+  //   "altF9": true, /* focus on the File Menu and/or editbar */
+  // A previous heuristic in findLeading treated any line ending in `*/` as
+  // a comment continuation, so each subsequent key's "leading comment"
+  // absorbed every preceding sibling line. After the fix, altC's row must
+  // render with a clean key-derived label and the trailing comment in the
+  // help slot — and must not contain altF9's source line.
+  test('#7740 trailing-comment key renders clean label, comment as help', async ({page}) => {
+    await page.goto('http://localhost:9001/admin/settings');
+    await page.waitForSelector('[data-testid="settings-form-view"]', {timeout: 30000});
+
+    const altCLabel = page.locator('label[for="field-padShortcutEnabled.altC"]');
+    await expect(altCLabel).toBeVisible({timeout: 10000});
+    const labelText = (await altCLabel.textContent() ?? '').trim();
+    expect(labelText).not.toMatch(/altF9/i);
+    expect(labelText).not.toMatch(/focus on the File Menu/i);
+
+    const altCRow = altCLabel.locator(
+      'xpath=ancestor::*[contains(@class,"settings-row")][1]',
+    );
+    await expect(altCRow).toContainText('focus on the Chat window');
+  });
+
   test('toggling form on broken raw JSON shows parse error banner', async ({page}) => {
     await page.goto('http://localhost:9001/admin/settings');
     // Wait for settings to load (form view renders once socket emits settings).
