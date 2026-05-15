@@ -27,8 +27,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # PRs: single Node version. Push: full matrix.
-        node: ${{ github.event_name == 'pull_request' && fromJSON('[25]') || fromJSON('[22, 24, 25]') }}
+        # Etherpad requires Node >= 25 (see package.json engines.node).
+        node: ${{ fromJSON('[25]') }}
     steps:
       -
         name: Check out latest release

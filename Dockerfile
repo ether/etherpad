@@ -9,12 +9,11 @@ ARG BUILD_ENV=git
 
 ARG PnpmVersion=11.0.6
 
-FROM node:22-alpine AS adminbuild
-# Use corepack to provision pnpm and drop the bundled npm — its older
-# transitives (picomatch, brace-expansion) carry CVEs we don't otherwise
-# need. Refresh corepack first: the version bundled with Node 22 ships a
-# stale signing-key list and rejects newer pnpm releases
-# (nodejs/corepack#612). Mirrors the workaround in snap/snapcraft.yaml.
+FROM node:25-alpine AS adminbuild
+# Node 25 distributions no longer ship corepack, so install it from npm
+# and use it to provision a pinned pnpm. Drop the bundled npm afterwards
+# — its older transitives (picomatch, brace-expansion) carry CVEs we
+# don't otherwise need. Mirrors the install in snap/snapcraft.yaml.
 RUN npm install -g corepack@latest && \
     corepack enable && corepack prepare pnpm@${PnpmVersion} --activate && \
     rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
@@ -24,7 +23,7 @@ RUN pnpm install
 RUN pnpm run build:ui
 
 
-FROM node:22-alpine AS build
+FROM node:25-alpine AS build
 LABEL maintainer="Etherpad team, https://github.com/ether/etherpad"
 
 # Set these arguments when building the image from behind a proxy

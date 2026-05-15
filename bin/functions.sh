@@ -1,5 +1,5 @@
 # minimum required node version
-REQUIRED_NODE_MAJOR=22
+REQUIRED_NODE_MAJOR=25
 REQUIRED_NODE_MINOR=0
 
 # minimum required npm version

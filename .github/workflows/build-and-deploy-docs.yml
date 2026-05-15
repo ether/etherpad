@@ -56,8 +56,7 @@ jobs:
         with:
           run_install: false
       # Pin Node so the build does not silently fall back to whatever the
-      # runner image ships with. vite 8 requires Node ^20.19.0 || >=22.12.0;
-      # the repo declares engines.node >=22.12.0 to match.
+      # runner image ships with. The repo declares engines.node >=25.0.0.
       - name: Use Node.js
         uses: actions/setup-node@v6
         with:
