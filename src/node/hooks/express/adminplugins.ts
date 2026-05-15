@@ -71,14 +71,14 @@ exports.socketio = (hookName:string, args:ArgsExpressType, cb:Function) => {
       }
       // Check plugins for updates
       try {
-        const updatable = checkPluginForUpdates();
+        const updatable = await checkPluginForUpdates();
 
         socket.emit('results:updatable', {updatable});
       } catch (err) {
         const errc = err as ErrorCaused
         console.warn(errc.stack || errc.toString());
 
-        socket.emit('results:updatable', {updatable: {}});
+        socket.emit('results:updatable', {updatable: []});
       }
     });
 
