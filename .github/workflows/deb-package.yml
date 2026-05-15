@@ -172,10 +172,14 @@ jobs:
           sudo test -L /opt/etherpad/settings.json
           sudo test -L /opt/etherpad/var
           [ "$(sudo readlink /opt/etherpad/var)" = "/var/lib/etherpad/var" ]
-          sudo test -L /opt/etherpad/src/plugin_packages
-          [ "$(sudo readlink /opt/etherpad/src/plugin_packages)" = "/var/lib/etherpad/plugin_packages" ]
-          sudo test -d /var/lib/etherpad/plugin_packages
-          [ "$(sudo stat -c '%U' /var/lib/etherpad/plugin_packages)" = "etherpad" ]
+          # plugin_packages must stay in-tree -- Node.js resolves symlinks
+          # to realpath before walking node_modules, so symlinking it
+          # outside /opt broke require("ep_etherpad-lite/...") in
+          # admin-installed plugins (ether/ep_comments_page#416).
+          sudo test -d /opt/etherpad/src/plugin_packages
+          sudo test ! -L /opt/etherpad/src/plugin_packages
+          [ "$(sudo stat -c '%G' /opt/etherpad/src/plugin_packages)" = "etherpad" ]
+          [ "$(sudo stat -c '%a' /opt/etherpad/src/plugin_packages)" = "2775" ]
           [ "$(stat -c '%G' /opt/etherpad/src/node_modules)" = "etherpad" ]
           sudo test -f /var/lib/etherpad/var/installed_plugins.json
           sudo grep -q '"ep_etherpad-lite"' /var/lib/etherpad/var/installed_plugins.json
@@ -197,6 +201,23 @@ jobs:
             exit 1
           fi
           sudo systemctl stop etherpad
+          # Regression: simulate a pre-fix install (plugin_packages as a
+          # symlink to /var/lib/etherpad/plugin_packages, with a marker
+          # plugin inside) and re-run the postinst. The new postinst must
+          # migrate the contents back in-tree and drop the symlink so
+          # admin-installed plugins keep resolving ep_etherpad-lite
+          # (ether/ep_comments_page#416).
+          sudo rm -rf /opt/etherpad/src/plugin_packages
+          sudo mkdir -p /var/lib/etherpad/plugin_packages/.versions/ep_migration_marker
+          echo '{"name":"ep_migration_marker"}' | \
+            sudo tee /var/lib/etherpad/plugin_packages/.versions/ep_migration_marker/package.json >/dev/null
+          sudo chown -R etherpad:etherpad /var/lib/etherpad/plugin_packages
+          sudo ln -sfn /var/lib/etherpad/plugin_packages /opt/etherpad/src/plugin_packages
+          sudo dpkg-reconfigure etherpad
+          sudo test -d /opt/etherpad/src/plugin_packages
+          sudo test ! -L /opt/etherpad/src/plugin_packages
+          sudo test -f /opt/etherpad/src/plugin_packages/.versions/ep_migration_marker/package.json
+          [ "$(sudo stat -c '%a' /opt/etherpad/src/plugin_packages)" = "2775" ]
           sudo dpkg --purge etherpad
           ! id etherpad 2>/dev/null
 

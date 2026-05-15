@@ -138,10 +138,14 @@ docker exec "${CONTAINER_NAME}" bash -lc '
   test -L /opt/etherpad/settings.json
   test -L /opt/etherpad/var
   [ "$(readlink /opt/etherpad/var)" = "/var/lib/etherpad/var" ]
-  test -L /opt/etherpad/src/plugin_packages
-  [ "$(readlink /opt/etherpad/src/plugin_packages)" = "/var/lib/etherpad/plugin_packages" ]
-  test -d /var/lib/etherpad/plugin_packages
-  [ "$(stat -c %U /var/lib/etherpad/plugin_packages)" = "etherpad" ]
+  # plugin_packages must stay in-tree -- Node.js resolves symlinks to
+  # realpath before walking node_modules, so symlinking it outside /opt
+  # broke require("ep_etherpad-lite/...") in admin-installed plugins.
+  # See ether/ep_comments_page#416.
+  test -d /opt/etherpad/src/plugin_packages
+  test ! -L /opt/etherpad/src/plugin_packages
+  [ "$(stat -c %G /opt/etherpad/src/plugin_packages)" = "etherpad" ]
+  [ "$(stat -c %a /opt/etherpad/src/plugin_packages)" = "2775" ]
   [ "$(stat -c %G /opt/etherpad/src/node_modules)" = "etherpad" ]
   test -f /var/lib/etherpad/var/installed_plugins.json
   grep -q "ep_etherpad-lite" /var/lib/etherpad/var/installed_plugins.json
@@ -180,6 +184,28 @@ fi
 echo "==> /health OK"
 docker exec "${CONTAINER_NAME}" curl -fsS http://127.0.0.1:9001/health
 echo
+
+echo "==> Asserting upgrade-from-symlink migration (ether/ep_comments_page#416)"
+# Stop etherpad, recreate the pre-fix symlink layout with a marker plugin,
+# re-run the postinst, and verify the migration restored the in-tree
+# directory and preserved the marker payload.
+if [ -z "${NO_SYSTEMD}" ]; then
+  docker exec "${CONTAINER_NAME}" systemctl stop etherpad
+fi
+docker exec "${CONTAINER_NAME}" bash -lc '
+  set -eux
+  rm -rf /opt/etherpad/src/plugin_packages
+  mkdir -p /var/lib/etherpad/plugin_packages/.versions/ep_migration_marker
+  echo "{\"name\":\"ep_migration_marker\"}" \
+    > /var/lib/etherpad/plugin_packages/.versions/ep_migration_marker/package.json
+  chown -R etherpad:etherpad /var/lib/etherpad/plugin_packages
+  ln -sfn /var/lib/etherpad/plugin_packages /opt/etherpad/src/plugin_packages
+  dpkg-reconfigure etherpad
+  test -d /opt/etherpad/src/plugin_packages
+  test ! -L /opt/etherpad/src/plugin_packages
+  test -f /opt/etherpad/src/plugin_packages/.versions/ep_migration_marker/package.json
+  [ "$(stat -c %a /opt/etherpad/src/plugin_packages)" = "2775" ]
+'
 
 if [ "${MODE}" = "shell" ]; then
   echo
