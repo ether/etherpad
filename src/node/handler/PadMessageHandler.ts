@@ -85,9 +85,12 @@ exports.socketio = () => {
  *       - auth: Object with the following properties copied from the client's CLIENT_READY message:
  *           - padID: Pad ID requested by the user. Unlike the padId property described below, this
  *             may be a read-only pad ID.
- *           - sessionID: Copied from the client's sessionID cookie, which should be the value
- *             returned from the createSession() HTTP API. This will be null/undefined if
- *             createSession() isn't used or the portal doesn't set the sessionID cookie.
+ *           - sessionID: The value returned from the createSession() HTTP API, normally set as
+ *             the `sessionID` cookie by the integrator. Read from the socket.io handshake's
+ *             Cookie header (so the cookie can be HttpOnly — issue #7045) and falls back to a
+ *             deprecated `sessionID` field on the CLIENT_READY message for legacy clients.
+ *             This will be null/undefined if createSession() isn't used or the integrator
+ *             doesn't set the sessionID cookie.
  *           - token: User-supplied token.
  *       - author: The user's author ID.
  *       - padId: The real (not read-only) ID of the pad.
@@ -395,12 +398,19 @@ exports.handleMessage = async (socket:any, message: ClientVarMessage) => {
     // once so the migration is visible in logs. The socket.io handshake does
     // not run cookie-parser, so pull the cookie directly from the Cookie
     // header.
+    //
+    // The same applies to the integrator-set `sessionID` cookie (issue #7045):
+    // historically the client read it from `document.cookie`, which forced the
+    // cookie to be non-HttpOnly and exposed it to XSS. Now we read it from the
+    // handshake Cookie header so integrators can set it `HttpOnly`.
     const cookiePrefix = settings.cookie?.prefix || '';
     const cookieHeader: string = socket.request?.headers?.cookie || '';
-    const cookieName = `${cookiePrefix}token`;
-    const cookieMatch = cookieHeader.split(/;\s*/).find(
-        (c) => c.split('=')[0] === cookieName);
-    const cookieToken = cookieMatch ? decodeURIComponent(cookieMatch.split('=').slice(1).join('=')) : null;
+    const readCookie = (name: string): string | null => {
+      const match = cookieHeader.split(/;\s*/).find(
+          (c) => c.split('=')[0] === name);
+      return match ? decodeURIComponent(match.split('=').slice(1).join('=')) : null;
+    };
+    const cookieToken = readCookie(`${cookiePrefix}token`);
     const legacyToken = typeof message.token === 'string' ? message.token : null;
     const resolvedToken = cookieToken || legacyToken;
     if (!cookieToken && legacyToken && !thisSession.legacyTokenWarned) {
@@ -410,11 +420,23 @@ exports.handleMessage = async (socket:any, message: ClientVarMessage) => {
           'See docs/superpowers/specs/2026-04-19-gdpr-pr3-anon-identity-design.md');
       thisSession.legacyTokenWarned = true;
     }
+    const cookieSessionID =
+        readCookie(`${cookiePrefix}sessionID`) || readCookie('sessionID');
+    const legacySessionID =
+        typeof message.sessionID === 'string' ? message.sessionID : null;
+    const resolvedSessionID = cookieSessionID || legacySessionID;
+    if (!cookieSessionID && legacySessionID && !thisSession.legacySessionIdWarned) {
+      messageLogger.warn(
+          'client sent sessionID via CLIENT_READY message; integrators should ' +
+          'set the sessionID cookie as HttpOnly (issue #7045). The in-message ' +
+          'field is deprecated and will be removed in a future release.');
+      thisSession.legacySessionIdWarned = true;
+    }
     // Remember this information since we won't have the cookie in further socket.io messages. This
     // information will be used to check if the sessionId of this connection is still valid since it
     // could have been deleted by the API.
     thisSession.auth = {
-      sessionID: message.sessionID,
+      sessionID: resolvedSessionID,
       padID: message.padId,
       token: resolvedToken,
     };

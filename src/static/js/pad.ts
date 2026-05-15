@@ -305,10 +305,10 @@ const sendClientReady = (isReconnect) => {
     document.title = `${padId.replace(/_+/g, ' ')} | ${title}`;
   }
 
-  const cp = (window as any).clientVars?.cookiePrefix || '';
   // The author token lives in an HttpOnly cookie set by the server (GDPR PR3 /
-  // ether/etherpad#6701). The browser never reads or writes it; the server
-  // reads the cookie from the socket.io handshake inside handleClientReady.
+  // ether/etherpad#6701). The integrator-set `sessionID` cookie can also be
+  // HttpOnly now (issue #7045). The browser never reads or writes either; the
+  // server reads them from the socket.io handshake inside handleClientReady.
 
   // If known, propagate the display name and color to the server in the CLIENT_READY message. This
   // allows the server to include the values in its reply CLIENT_VARS message (which avoids
@@ -320,11 +320,13 @@ const sendClientReady = (isReconnect) => {
     name: params.get('userName'),
   };
 
+  // The integrator-set `sessionID` cookie is read server-side from the
+  // socket.io handshake (issue #7045) so it can be HttpOnly. We no longer
+  // forward it via the CLIENT_READY payload.
   const msg: any = {
     component: 'pad',
     type: 'CLIENT_READY',
     padId,
-    sessionID: Cookies.get(`${cp}sessionID`) || Cookies.get('sessionID'),
     userInfo,
   };
   const overrides = getMyViewOverrides();
