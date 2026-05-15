@@ -61,7 +61,7 @@
     "measured-core": "^2.0.0",
     "mime-types": "^3.0.2",
     "mongodb": "^7.1.1",
-    "mssql": "^12.5.2",
+    "mssql": "^12.5.3",
     "mysql2": "^3.22.3",
     "nano": "^11.0.5",
     "oidc-provider": "9.8.3",
