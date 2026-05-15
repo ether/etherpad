@@ -9,6 +9,7 @@ import {IconButton} from "../components/IconButton.tsx";
 export const HomePage = () => {
   const pluginsSocket = useStore(state => state.pluginsSocket)
   const [plugins, setPlugins] = useState<PluginDef[]>([])
+  const [catalogDisabled, setCatalogDisabled] = useState(false)
   const installedPlugins = useStore(state => state.installedPlugins)
   const setInstalledPlugins = useStore(state => state.setInstalledPlugins)
   // Default sort: name ascending. PR #7716 set this to "downloads desc" but
@@ -79,11 +80,14 @@ export const HomePage = () => {
       pluginsSocket.emit('search', searchParams)
     }
 
+    const onCatalogDisabled = () => setCatalogDisabled(true)
+
     pluginsSocket.on('results:installed', onInstalled)
     pluginsSocket.on('results:updatable', onUpdatable)
     pluginsSocket.on('finished:install', onFinishedInstall)
     pluginsSocket.on('finished:uninstall', onFinishedUninstall)
     pluginsSocket.on('connect', onConnect)
+    pluginsSocket.on('results:catalogDisabled', onCatalogDisabled)
 
     pluginsSocket.emit('getInstalled')
 
@@ -95,6 +99,7 @@ export const HomePage = () => {
       pluginsSocket.off('finished:install', onFinishedInstall)
       pluginsSocket.off('finished:uninstall', onFinishedUninstall)
       pluginsSocket.off('connect', onConnect)
+      pluginsSocket.off('results:catalogDisabled', onCatalogDisabled)
     }
   }, [pluginsSocket])
 
@@ -134,6 +139,12 @@ export const HomePage = () => {
 
   return (
     <div className="pm-page">
+
+      {catalogDisabled && (
+        <div className="pm-banner pm-banner-info" role="status">
+          <Trans i18nKey="admin_plugins.catalog_disabled"/>
+        </div>
+      )}
 
       {/* ── Page header ────────────────────────────────────────────────── */}
       <div className="pm-header">
