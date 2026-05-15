@@ -48,6 +48,7 @@ const hooks = require('../../static/js/pluginfw/hooks');
 const stats = require('../stats')
 const assert = require('assert').strict;
 import {recordChangesetApply, recordSocketEmit} from '../prom-instruments';
+import {buildNewChangesEmits, type NewChangesItem} from './NewChangesPacker';
 import {RateLimiterMemory} from 'rate-limiter-flexible';
 import {ChangesetRequest, PadUserInfo, SocketClientRequest} from "../types/SocketClientRequest";
 import {APool, AText, PadAuthor, PadType} from "../types/PadType";
@@ -977,6 +978,19 @@ exports.updatePadClients = async (pad: PadType) => {
     // The user might have disconnected since _getRoomSockets() was called.
     if (sessioninfo == null) return;
 
+    // Snapshot the local state so a concurrent updatePadClients() can't make
+    // us double-emit. We hold the "I'm responsible for revs (startRev,
+    // headRev]" claim by reading sessioninfo.rev once and overwriting it
+    // before any await. A second invocation arriving mid-loop will see the
+    // bumped rev and skip those revisions; if our emit fails the catch
+    // below rolls sessioninfo.rev back so they aren't lost.
+    const startRev = sessioninfo.rev;
+    const headRev = pad.getHeadRevisionNumber();
+    if (startRev >= headRev) return;
+    const startTime = sessioninfo.time;
+    // Claim the range immediately so concurrent runs skip it.
+    sessioninfo.rev = headRev;
+
     // Collect all queued revisions for this socket.
     const pending: Array<{
       newRev: number;
@@ -987,50 +1001,39 @@ exports.updatePadClients = async (pad: PadType) => {
       timeDelta: number;
     }> = [];
 
-    while (sessioninfo.rev < pad.getHeadRevisionNumber()) {
-      const r = sessioninfo.rev + 1;
-      let revision = revCache[r];
-      if (!revision) {
-        revision = await pad.getRevision(r);
-        revCache[r] = revision;
-      }
-
-      const author = revision.meta.author;
-      const revChangeset = revision.changeset;
-      const currentTime = revision.meta.timestamp;
-      const forWire = prepareForWire(revChangeset, pad.pool);
-
-      pending.push({
-        newRev: r,
-        changeset: forWire.translated,
-        apool: forWire.pool,
-        author,
-        currentTime,
-        timeDelta: currentTime - sessioninfo.time,
-      });
-      sessioninfo.time = currentTime;
-      sessioninfo.rev = r;
-    }
-
-    if (pending.length === 0) return;
-
     try {
-      if (batchEnabled && pending.length > 1) {
-        socket.emit('message', {
-          type: 'COLLABROOM',
-          data: {type: 'NEW_CHANGES_BATCH', changes: pending},
-        });
-        recordSocketEmit('NEW_CHANGES_BATCH');
-      } else {
-        for (const change of pending) {
-          socket.emit('message', {
-            type: 'COLLABROOM',
-            data: {type: 'NEW_CHANGES', ...change},
-          });
-          recordSocketEmit('NEW_CHANGES');
+      let previousTime = startTime;
+      for (let r = startRev + 1; r <= headRev; r++) {
+        let revision = revCache[r];
+        if (!revision) {
+          revision = await pad.getRevision(r);
+          revCache[r] = revision;
         }
+        const author = revision.meta.author;
+        const revChangeset = revision.changeset;
+        const currentTime = revision.meta.timestamp;
+        const forWire = prepareForWire(revChangeset, pad.pool);
+        pending.push({
+          newRev: r,
+          changeset: forWire.translated,
+          apool: forWire.pool,
+          author,
+          currentTime,
+          timeDelta: currentTime - previousTime,
+        });
+        previousTime = currentTime;
       }
+
+      for (const emit of buildNewChangesEmits(pending, batchEnabled)) {
+        socket.emit('message', emit);
+        recordSocketEmit(emit.data.type);
+      }
+      // Only after the wire send succeeds do we commit the new time.
+      sessioninfo.time = previousTime;
     } catch (err: any) {
+      // Roll back the claim so the next updatePadClients retries these revs.
+      // Only set rev back if no one else has advanced past us in the meantime.
+      if (sessioninfo.rev === headRev) sessioninfo.rev = startRev;
       messageLogger.error(`Failed to notify user of new revision: ${err.stack || err}`);
     }
   }));
