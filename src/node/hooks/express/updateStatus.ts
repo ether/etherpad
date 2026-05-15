@@ -8,6 +8,7 @@ import {evaluatePolicy} from '../../updater/UpdatePolicy';
 import {compareSemver, isMajorBehind, isVulnerable} from '../../updater/versionCompare';
 import {loadState} from '../../updater/state';
 import {isHeld} from '../../updater/lock';
+import {nextWindowStart, parseWindow} from '../../updater/MaintenanceWindow';
 
 
 let badgeCache: {value: 'severe' | 'vulnerable' | null; at: number} = {value: null, at: 0};
@@ -103,9 +104,19 @@ export const expressCreateServer = (
           current,
           latest: state.latest.version,
           executionStatus: state.execution.status,
+          maintenanceWindow: settings.updates.maintenanceWindow,
         })
       : null;
     const lockHeld = await isHeld(path.join(settings.root, 'var', 'update.lock'));
+    // Tier 4: surface the configured window + the next opening so the admin UI
+    // can render the picker and the "deferred until..." subtitle on the
+    // scheduled panel. Non-admin requests get null for both fields (the parsed
+    // window is operational config, not a public datum).
+    const parsedWindow = parseWindow(settings.updates.maintenanceWindow);
+    const maintenanceWindow = isAdmin ? parsedWindow : null;
+    const nextWindowOpensAt = isAdmin && parsedWindow && settings.updates.tier === 'autonomous'
+      ? nextWindowStart(new Date(), parsedWindow).toISOString()
+      : null;
 
     // The Tier 2 fields (execution, lastResult) carry diagnostic strings
     // built from git/pnpm stderr — environment-specific paths, error
@@ -132,6 +143,9 @@ export const expressCreateServer = (
       execution,
       lastResult,
       lockHeld,
+      // PR 4 additions:
+      maintenanceWindow,
+      nextWindowOpensAt,
     });
   }));
 

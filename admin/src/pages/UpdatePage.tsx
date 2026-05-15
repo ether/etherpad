@@ -192,6 +192,49 @@ export const UpdatePage = () => {
               values={{tag: scheduled.targetTag, remaining: fmtRemaining(remainingMs)}}
             />
           </p>
+          {/* Tier 4: when the next fire is gated by a maintenance window, the
+              backend persists `scheduledFor` to the next opening. Surface that
+              so the admin understands why the countdown is long. */}
+          {us.tier === 'autonomous' && us.nextWindowOpensAt
+              && new Date(scheduled.scheduledFor).getTime()
+                 > Date.now() + 60 * 1000 && (
+            <p className="update-scheduled-deferred">
+              <Trans
+                i18nKey="update.page.scheduled.deferred_until"
+                values={{at: us.nextWindowOpensAt}}
+              />
+            </p>
+          )}
+        </section>
+      )}
+
+      {us.tier === 'autonomous' && (
+        <section className="update-maintenance-window">
+          <h2><Trans i18nKey="update.window.title"/></h2>
+          {us.maintenanceWindow ? (
+            <>
+              <p>
+                <Trans
+                  i18nKey="update.window.summary"
+                  values={{
+                    start: us.maintenanceWindow.start,
+                    end: us.maintenanceWindow.end,
+                    tz: us.maintenanceWindow.tz,
+                  }}
+                />
+              </p>
+              {us.nextWindowOpensAt && (
+                <p>
+                  <Trans
+                    i18nKey="update.window.next_opens_at"
+                    values={{at: us.nextWindowOpensAt}}
+                  />
+                </p>
+              )}
+            </>
+          ) : (
+            <p><Trans i18nKey="update.window.unset"/></p>
+          )}
         </section>
       )}
 
