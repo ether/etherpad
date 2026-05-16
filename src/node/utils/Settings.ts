@@ -1195,8 +1195,9 @@ export const reloadSettings = () => {
 
     if (settings.loadTest) {
       logger.warn(
-          'settings.loadTest is true: socket.io authentication and authorization checks ' +
-          'will be bypassed for every connection. Do NOT enable this in production.');
+        'settings.loadTest is true: SecurityManager.checkAccess() will bypass ' +
+        'authentication and authorization for both HTTP and socket.io requests. ' +
+        'Do NOT enable this in production.');
     }
 
     if (!settings.skinName) {

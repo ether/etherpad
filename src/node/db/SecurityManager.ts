@@ -76,11 +76,11 @@ exports.checkAccess = async (padID:string, sessionCookie:string, token:string, u
 
   // Authentication and authorization checks.
   // settings.loadTest just short-circuits authn/authz; the user-facing
-  // warning about this configuration choice fires once at startup, not
-  // per request (see Settings.ts). Re-logging it here was costing
-  // ~4% of process CPU in the 100-400 author dive sweep (#7756): the
-  // routed-console-warn went through log4js's clustering dispatch on
-  // every message.
+  // warning about this configuration choice is logged from Settings.ts
+  // during settings load/reload, not on every request. Re-logging it
+  // here was costing ~4% of process CPU in the 100-400 author dive
+  // sweep (#7756): the routed-console-warn went through log4js's
+  // clustering dispatch on every message.
   if (!settings.loadTest && settings.requireAuthentication) {
     if (userSettings == null) {
       authLogger.debug('access denied: authentication is required');
