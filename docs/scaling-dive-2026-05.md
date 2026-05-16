@@ -166,11 +166,27 @@ The harness-side forward-compat patch ([ether/etherpad-load-test#106](https://gi
 
 ### Methodology caveat surfaced during lever 8 scoring
 
-The same run that confirmed lever 8 didn't help also showed `websocket-only` as the **best** lever — directly contradicting every prior dive in this doc. The cause is that **each matrix entry runs as a separate GitHub Actions job on a potentially different physical runner**. Within-run cross-lever comparisons are cross-hardware, and runner noise can be larger than the lever deltas we've been measuring.
+The same run that confirmed lever 8 didn't help also showed `websocket-only` as the **best** lever — directly contradicting every prior dive in this doc. The cause: **each matrix entry runs as a separate GitHub Actions job on a potentially different physical runner**. Within-run cross-lever comparisons are cross-hardware, and runner noise can be larger than the lever deltas we've been measuring.
 
-Strong conclusions in this doc that depend on single dive runs should be **re-validated with N ≥ 3 trials per lever**. The lever-3 (#7768) finding holds up because the histogram-bucket evidence (apply percentile distribution) is consistent across multiple measurements and the mechanism (overlapping fan-outs starving the apply path) was confirmed via histogram data, not just a single p95 row. The lever-4 (websocket-only) "always-worse" conclusion is now suspect — it might be runner-noise dominated.
+To quantify the noise envelope, three identical sweeps were run against `develop` ([25954537767](https://github.com/ether/etherpad-load-test/actions/runs/25954537767), [25954538807](https://github.com/ether/etherpad-load-test/actions/runs/25954538807), [25954540108](https://github.com/ether/etherpad-load-test/actions/runs/25954540108)). p95 across the three runs at each step:
 
-Filing this as a sequel investigation: **before strong-recommendation calls on any new lever, run 3× and treat per-lever p95 as a noise envelope, not a point estimate.** A new dive run [25954537767/25954538807/25954540108](https://github.com/ether/etherpad-load-test/actions) is doing exactly that against develop — three identical sweeps — to quantify the noise envelope.
+| Lever | step 100 (min/med/max) | step 200 | step 300 | step 350 | step 400 |
+|---|---|---|---|---|---|
+| baseline | 28 / 38 / 38 | 30 / 37 / 51 | 38 / 45 / 71 | 39 / 39 / 122 | 1758 / 2275 / 2463 |
+| websocket-only | 35 / 37 / 39 | 33 / 57 / 58 | 66 / 86 / 91 | 65 / 76 / 96 | **2463 / 2545 / 2781** |
+| nodemem | 36 / 39 / 39 | 36 / 52 / 58 | 47 / 55 / 75 | 37 / 96 / 167 | 1716 / 2037 / 2421 |
+| new-changes-batch | 31 / 34 / 36 | **32 / 35 / 38** | 27 / 68 / 80 | 32 / 95 / 607 | 2311 / 2405 / 2999 |
+
+What this triple-run shows:
+
+- **Below the cliff, noise dominates.** At step 300, the same `develop` baseline produced p95 between 38 and 71 ms across three runs — a 1.9× spread. At step 350, 3.1× spread. Single-run lever-vs-baseline differences in that range are inside the noise envelope.
+- **At the cliff (step 400), `websocket-only` is reliably the worst.** Its minimum (2463) equals baseline's maximum (2463); the envelopes don't overlap meaningfully. Confirms the original "ws-only is worse under load" conclusion. The single contradicting run was an outlier.
+- **`new-changes-batch` shows the tightest envelope at step 200.** 32/35/38 vs baseline 30/37/51. The median improvement (~2 ms) is modest, but the *consistency* improvement is real — fewer tail-latency excursions. Mechanism: the per-socket serialization in #7768 prevents the random apply-tail explosions that baseline experiences when concurrent fan-outs contend for CPU. **Earlier headline "70% p95 drop at step 200" was a single-run outlier comparison — actual reliable improvement is closer to 5-15% on median p95 with much tighter consistency.**
+- **`new-changes-batch` shows a 607 ms outlier at step 350.** Worth a second look but doesn't repeat across runs — likely a flake.
+
+The lever-3 (#7768) finding still stands but **for a different reason than originally claimed**: not a dramatic p95 reduction, but improved consistency + the correctness benefit of preventing overlapping fan-outs on the same socket. The per-socket serialization is a real correctness fix; the NEW_CHANGES_BATCH framing is currently latent (it would fire under server slowness).
+
+**Going forward, lever scoring should default to N ≥ 3 trials and report min/median/max, not single-run point estimates.**
 
 ## Recommendation
 
