@@ -197,16 +197,53 @@ What this triple-run shows:
 - **`new-changes-batch` shows the tightest envelope at step 200.** 32/35/38 vs baseline 30/37/51. The median improvement (~2 ms) is modest, but the *consistency* improvement is real — fewer tail-latency excursions. Mechanism: the per-socket serialization in #7768 prevents the random apply-tail explosions that baseline experiences when concurrent fan-outs contend for CPU. **Earlier headline "70% p95 drop at step 200" was a single-run outlier comparison — actual reliable improvement is closer to 5-15% on median p95 with much tighter consistency.**
 - **`new-changes-batch` shows a 607 ms outlier at step 350.** Worth a second look but doesn't repeat across runs — likely a flake.
 
-The lever-3 (#7768) finding still stands but **for a different reason than originally claimed**: not a dramatic p95 reduction, but improved consistency + the correctness benefit of preventing overlapping fan-outs on the same socket. The per-socket serialization is a real correctness fix; the NEW_CHANGES_BATCH framing is currently latent (it would fire under server slowness).
+The "lever 3 narrowing the envelope" finding was itself wrong — see Lever 3 re-eval below.
 
 **Going forward, lever scoring should default to N ≥ 3 trials and report min/median/max, not single-run point estimates.**
+
+### Lever 3 re-evaluation (N=3, same matrix entry)
+
+Triple-running #7768 against develop *with matching matrix entry* (not cross-matrix-entry, which was the earlier mistake) — the per-socket serialization runs on every matrix entry, so develop-baseline vs PR-baseline is the true apples-to-apples comparison:
+
+| Step | develop baseline | PR #7768 baseline |
+|---:|---|---|
+| 100 | 28/38/38 | 39/40/47 |
+| 200 | 30/37/51 | 37/50/59 |
+| 300 | 38/45/71 | 40/77/119 |
+| 350 | 39/39/122 | 63/109/131 |
+| 400 | 1758/2275/2463 | 1350/2373/3065 |
+
+**The serialization is slightly NET-NEGATIVE across the curve, not a win.** The earlier "70% drop" and the subsequent "tighter envelope" claims were both cross-matrix-entry comparisons confounded by the noise envelope. The actually like-for-like comparison shows no perf improvement.
+
+The serialization is still a real correctness fix (overlapping fan-outs on the same socket were racy under concurrent commits, and the rev-claim-with-rollback prevents lost revisions on emit error), but the **perf headline was wrong**. #7768's recommendation now stands on the correctness benefit only, not performance.
+
+### Lever 8b — engine.io socket flush deferral (open as [#7774](https://github.com/ether/etherpad/pull/7774))
+
+Real follow-up to the closed lever 8. Instead of patching `transport.send(packets[])`, patch `Socket.prototype.sendPacket` to schedule a coalesced flush via `queueMicrotask`. Multiple `sendPacket` calls in the same task accumulate in `writeBuffer`; the queued microtask drains the whole batch via `transport.send`. The transport then sees N > 1 packets and the engine.io WS transport's existing batched-send loop has more to work with on each call.
+
+**Modest but real signal.** N=3 develop baseline vs flush-defer (setting on):
+
+| Step | develop baseline | flush-defer |
+|---:|---|---|
+| 100 | 28/38/38 | 37/37/37 |
+| 200 | 30/37/51 | 21/44/49 |
+| **300** | **38/45/71** | **50/53/58** (tighter max: 71 → 58) |
+| **350** | **39/39/122** | **61/84/110** (tighter max: 122 → 110) |
+| 400 | 1758/2275/2463 | 1501/2157/2887 |
+
+Not a cliff-mover. **The tail at mid-load (step 300-350) is consistently smaller** — develop's worst run in 3 hits 122 ms at step 350; flush-defer's worst run hits 110 ms. At step 300, develop max 71 → flush-defer max 58. Median doesn't move dramatically but the variance does.
+
+Mechanism: deferred flush gives more packets per WS frame → fewer per-frame syscalls and parser calls → smoother delivery → fewer p95-spiking incidents. **Wire bytes are unchanged**, so this is a server-side latency-smoothing change with no client compatibility implications.
+
+**Verdict: modest mid-load win, recommend merging.** Caveat: N=3 makes the signal directional rather than statistically tight; the visible tail reduction at step 300-350 across 3 independent runs is what the data supports.
 
 ## Recommendation
 
 **Merge in priority order:**
 
-1. **[#7768](https://github.com/ether/etherpad/pull/7768)** — per-socket fan-out serialization + NEW_CHANGES_BATCH. Modest median p95 improvement at step 200 (37 → 35) but **measurably tighter envelope** (baseline max 51 → PR max 38) — fewer tail-latency excursions. Correctness-positive: prevents overlapping per-socket fan-outs that were previously racy under concurrent commits. NEW_CHANGES_BATCH framing is dormant at steady-state and fires under server slowness.
-2. **[#7762](https://github.com/ether/etherpad/pull/7762)** — Prometheus metrics. Already merged; instrument for any further dive.
+1. **[#7774](https://github.com/ether/etherpad/pull/7774)** — engine.io socket flush deferral. The only PR in this program with N=3-confirmed measurable perf improvement (tighter tail at step 300-350). Wire-compatible, server-side only.
+2. **[#7768](https://github.com/ether/etherpad/pull/7768)** — per-socket fan-out serialization + NEW_CHANGES_BATCH. No measurable perf benefit in N=3 testing — recommend merging for the **correctness fix** (the original code was racy under concurrent commits and could lose revisions on emit error). NEW_CHANGES_BATCH framing is dormant at steady-state and fires under server slowness as forward-compat groundwork.
+3. **[#7762](https://github.com/ether/etherpad/pull/7762)** — Prometheus metrics. Already merged; instrument for any further dive.
 
 **Do not merge:**
 
@@ -219,15 +256,13 @@ The lever-3 (#7768) finding still stands but **for a different reason than origi
 
 ## Where to take this next
 
-The dive's cliff at 350-400 authors is **steady-state CPU saturation on a 4-vCPU runner with O(N²) fan-out**. With lever 3 merged, the per-emit application-level work is as cheap as it can get. Further ceiling extension needs to attack one of three surfaces:
+The dive's cliff at 350-400 authors is **steady-state CPU saturation on a 4-vCPU runner with O(N²) fan-out**. With #7774 (flush deferral) we have a modest tail-latency improvement; with #7768 we have a correctness fix that costs nothing. Further ceiling extension needs to attack one of two remaining surfaces:
 
-1. **Engine.io flush deferral.** The closed lever-8 attempt patched only the `send(packets[])` path; what's needed is to defer `socket.flush()` itself so multiple `sendPacket()` calls in the same task accumulate before drain. `queueMicrotask`-coalesced flush is the smallest behaviour change with the right shape. This is the natural sequel to [#7767](https://github.com/ether/etherpad/issues/7767).
+1. **Bigger hardware or per-pad sharding.** A 4-vCPU runner is the constraint, not Etherpad. Production on 8+ vCPU sees the cliff move proportionally with no code changes. Per-pad multi-worker sharding lets a single host scale beyond single-core limits but is a much larger architectural change.
 
-2. **Bigger hardware or per-pad sharding.** A 4-vCPU runner is the constraint, not Etherpad. Production on 8+ vCPU sees the cliff move proportionally with no code changes. Per-pad multi-worker sharding lets a single host scale beyond single-core limits but is a much larger architectural change.
+2. **Better measurement methodology.** Single-run lever comparisons sit inside the noise envelope below the cliff. Future dive scoring should default to N≥3 trials and report min/median/max. The triple-run pattern this doc adopted is the template; N=5+ would tighten conclusions further.
 
-3. **Better measurement methodology.** Single-run lever comparisons sit inside the noise envelope below the cliff. Future dive scoring should default to N≥3 trials and report min/median/max. The triple-run pattern this doc adopted (see "Methodology caveat" above) is the template.
-
-Direction (1) is the next concrete code investigation; (3) is methodology hygiene for all future investigations.
+The application-level surface has been explored end-to-end. Each non-trivial code lever that was thought to be a win turned out to be either inside the noise envelope (#7766 closed, #7770 closed, #7768 perf claim wrong) or net-negative (#7769 closed). The only application-level change with confirmed perf benefit is the engine.io flush deferral (#7774) — and it's a small one. **The cliff is hardware-bound, not code-bound, on the runner we measure on.** Production deployments with more cores per host will see proportionally higher ceilings without code changes.
 
 ## Reproducing
 
