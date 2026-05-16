@@ -23,6 +23,8 @@ const groupManager = require('./GroupManager');
 const CustomError = require('../utils/customError');
 import readOnlyManager from './ReadOnlyManager';
 import {HistoricalAuthorDataCache} from './HistoricalAuthorDataCache';
+import log4js from 'log4js';
+const padMessageLogger = log4js.getLogger('message');
 import randomString from '../utils/randomstring';
 const hooks = require('../../static/js/pluginfw/hooks');
 import pad_utils from "../../static/js/pad_utils";
@@ -343,6 +345,17 @@ class Pad {
       this.historicalAuthorDataCache = new HistoricalAuthorDataCache(
         () => this.getAllAuthors(),
         (id: string) => authorManager.getAuthor(id),
+        5_000,
+        Date.now,
+        (id: string) => {
+          // Preserves the explicit error log emitted by the previous inline
+          // Promise.all loop in handleClientReady before this cache landed.
+          // Don't drop missing-author logs silently — they point at
+          // https://github.com/ether/etherpad-lite/issues/2802.
+          padMessageLogger.error(
+            `There is no author for authorId: ${id}. ` +
+            'This is possibly related to https://github.com/ether/etherpad-lite/issues/2802');
+        },
       );
     }
     return this.historicalAuthorDataCache.get();

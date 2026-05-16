@@ -10,11 +10,19 @@
 import {describe, it, expect, vi, beforeEach} from 'vitest';
 import {HistoricalAuthorDataCache, type AuthorRecord} from '../../../node/db/HistoricalAuthorDataCache';
 
-const makeCache = (ids: string[], fetcher: (id: string) => Promise<AuthorRecord | null | undefined>, ttlMs = 5_000, now = () => Date.now()) =>
-  new HistoricalAuthorDataCache(() => ids, fetcher, ttlMs, now);
+type Fetcher = (id: string) => Promise<AuthorRecord | null | undefined>;
+type OnMissing = (id: string) => void;
+
+const makeCache = (
+  ids: string[],
+  fetcher: Fetcher,
+  ttlMs = 5_000,
+  now = () => Date.now(),
+  onMissing: OnMissing = () => {},
+) => new HistoricalAuthorDataCache(() => ids, fetcher, ttlMs, now, onMissing);
 
 describe('HistoricalAuthorDataCache', () => {
-  let getAuthorMock: ReturnType<typeof vi.fn<(id: string) => Promise<AuthorRecord | null>>>;
+  let getAuthorMock: ReturnType<typeof vi.fn<Fetcher>>;
 
   beforeEach(() => {
     getAuthorMock = vi.fn(async (id: string) => ({name: `n-${id}`, colorId: `c-${id}`}));
@@ -53,12 +61,53 @@ describe('HistoricalAuthorDataCache', () => {
     expect(getAuthorMock).toHaveBeenCalledTimes(2);
   });
 
-  it('omits authors the fetcher returns falsy for', async () => {
+  it('returns a fresh object on every get() — callers may safely mutate without bleeding into other joiners', async () => {
+    const cache = makeCache(['a.1'], getAuthorMock);
+    const first = await cache.get();
+    const second = await cache.get();
+    // Two distinct top-level objects and per-author records.
+    expect(first).not.toBe(second);
+    expect(first['a.1']).not.toBe(second['a.1']);
+    expect(first).toEqual(second);
+    // Mutating the returned object must not affect the next caller.
+    first['a.1']!.name = 'mutated';
+    const third = await cache.get();
+    expect(third).toEqual({'a.1': {name: 'n-a.1', colorId: 'c-a.1'}});
+  });
+
+  it('a slow compute that runs past TTL still resolves callers; no duplicate fetch starts in flight', async () => {
+    // Compute that hangs on a gate; TTL is 10ms. Without the in-flight
+    // guard, the second get() after 10ms would start a duplicate compute,
+    // and the older resolution could clobber the newer cached value.
+    let release: () => void;
+    const gate = new Promise<void>((r) => { release = r; });
+    let calls = 0;
+    let clock = 0;
+    const fetcher = vi.fn(async (id: string) => {
+      calls++;
+      await gate;
+      return {name: `n-${id}`, colorId: `c-${id}`};
+    });
+    const cache = makeCache(['a.1'], fetcher, 10, () => clock);
+    const first = cache.get();
+    clock = 50; // well past ttlMs
+    const second = cache.get();
+    expect(calls).toBe(1);
+    release!();
+    const [a, b] = await Promise.all([first, second]);
+    expect(a).toEqual(b);
+    expect(calls).toBe(1);
+  });
+
+  it('calls onMissingAuthor exactly once per id the fetcher returns falsy for', async () => {
     const fetcher = vi.fn(async (id: string) =>
       id === 'a.gone' ? null : {name: `n-${id}`, colorId: 'c'});
-    const cache = makeCache(['a.1', 'a.gone', 'a.2'], fetcher);
+    const onMissing = vi.fn();
+    const cache = makeCache(['a.1', 'a.gone', 'a.2'], fetcher, 5_000, Date.now, onMissing);
     const data = await cache.get();
     expect(Object.keys(data).sort()).toEqual(['a.1', 'a.2']);
+    expect(onMissing).toHaveBeenCalledTimes(1);
+    expect(onMissing).toHaveBeenCalledWith('a.gone');
   });
 
   it('invalidate() forces the next call to refetch', async () => {
