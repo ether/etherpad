@@ -13,6 +13,7 @@ type Infos = {
 const updateInterval = 60 * 60 * 1000; // 1 hour
 let infos: Infos;
 let lastLoadingTime: number | null = null;
+let loggedDisabled = false;
 
 const loadEtherpadInformations = () => {
   if (lastLoadingTime !== null && Date.now() - lastLoadingTime < updateInterval) {
@@ -38,6 +39,7 @@ const loadEtherpadInformations = () => {
 
 
 export const getLatestVersion = () => {
+  if (!settings.privacy.updateCheck) return undefined;
   needsUpdate().catch();
   return infos?.latestVersion;
 };
@@ -55,6 +57,13 @@ const needsUpdate = async (cb?: Function) => {
 };
 
 export const check = () => {
+  if (!settings.privacy.updateCheck) {
+    if (!loggedDisabled) {
+      console.info('Update check disabled by privacy.updateCheck=false (see PRIVACY.md)');
+      loggedDisabled = true;
+    }
+    return;
+  }
   needsUpdate((needsUpdate: boolean) => {
     if (needsUpdate) {
       console.warn(`Update available: Download the actual version ${infos.latestVersion}`);

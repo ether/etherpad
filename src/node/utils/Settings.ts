@@ -193,6 +193,10 @@ export type SettingsType = {
     learnMoreUrl: string | null,
     dismissal: 'dismissible' | 'sticky',
   },
+  privacy: {
+    updateCheck: boolean,
+    pluginCatalog: boolean,
+  },
   skinName: string | null,
   skinVariants: string,
   ip: string,
@@ -424,6 +428,14 @@ const settings: SettingsType = {
         'See the linked policy for retention and how to request erasure.',
     learnMoreUrl: null,
     dismissal: 'dismissible',
+  },
+  privacy: {
+    // Outbound calls. See PRIVACY.md.
+    // Set to false to disable hourly version check (UpdateCheck.ts).
+    updateCheck: true,
+    // Set to false to disable plugin-catalog fetch from updateServer
+    // (installer.ts). Manual install via CLI still works.
+    pluginCatalog: true,
   },
   /*
  * Skin name.

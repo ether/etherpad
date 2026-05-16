@@ -61,6 +61,7 @@
   "admin_plugins.available_search.placeholder": "Search for plugins to install",
   "admin_plugins.check_updates": "Check for updates",
   "admin_plugins.core_count": "{{count}} core",
+  "admin_plugins.catalog_disabled": "Plugin catalog is disabled by your operator (privacy.pluginCatalog=false). To install a plugin, run `pnpm run plugins i ep_<name>` from the server.",
   "admin_plugins.crumbs": "Plugins",
   "admin_plugins.description": "Description",
   "admin_plugins.disables.label": "Disables:",

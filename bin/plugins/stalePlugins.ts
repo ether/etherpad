@@ -3,10 +3,17 @@
 // Returns a list of stale plugins and their authors email
 
 import process from "node:process";
+import settings from "../../src/node/utils/Settings";
 const currentTime = new Date();
 
 (async () => {
-  const resp = await fetch('https://static.etherpad.org/plugins.full.json');
+  if (!settings.privacy.pluginCatalog) {
+    console.info(
+      'stalePlugins: plugin catalog disabled by privacy.pluginCatalog=false; exiting'
+    );
+    process.exit(0);
+  }
+  const resp = await fetch(`${settings.updateServer}/plugins.full.json`);
   if (!resp.ok) throw new Error(`HTTP ${resp.status} ${resp.statusText}`);
   const data: any = await resp.json();
   for (const plugin of Object.keys(data)) {

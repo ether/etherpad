@@ -6,6 +6,14 @@
 
 ### Notable enhancements
 
+- **Privacy — drop swagger-ui telemetry, document phone-homes, add opt-outs.**
+  - Dropped `swagger-ui-express` because upstream injects a Scarf analytics pixel that cannot be disabled at install or runtime (see [swagger-api/swagger-ui#10573](https://github.com/swagger-api/swagger-ui/issues/10573)). `/api-docs` now serves a vendored copy of [Scalar](https://github.com/scalar/scalar) (MIT) configured with `withDefaultFonts: false` and `telemetry: false` so no outbound calls are made.
+  - New `privacy.updateCheck` (default `true`) — set to `false` to disable the hourly `UpdateCheck.ts` request to `${updateServer}/info.json`.
+  - New `privacy.pluginCatalog` (default `true`) — set to `false` to disable the admin plugins page fetch of `${updateServer}/plugins.json`. CLI install-by-name still works.
+  - New [`PRIVACY.md`](PRIVACY.md) at repo root documenting both outbound calls, what they send, and how to turn each off.
+  - `bin/plugins/stalePlugins.ts` now reads `settings.updateServer` (was hardcoded to `static.etherpad.org`) and honours the new flag.
+  - Closes #7524.
+
 - **Self-update subsystem — Tier 2 (manual click).**
   - Admins on a git install can click "Apply update" at `/admin/update`. Etherpad runs a 60s session drain (with T-60 / T-30 / T-10 broadcasts to every pad), `git fetch / checkout / pnpm install --frozen-lockfile / pnpm run build:ui`, and exits with code 75 so a process supervisor restarts it on the new version. The next boot runs a 60s health check; if `/health` doesn't come up the previous SHA + lockfile are restored automatically.
   - Crash-loop guard: if the new version reboots more than twice without the health check completing, RollbackHandler forces a rollback regardless of the timer.
