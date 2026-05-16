@@ -113,12 +113,23 @@ class Button {
     }
 
     render() {
+        // role="presentation" on the <li> + <a> wrappers tells axe-core /
+        // Lighthouse they are layout scaffolding for the role="toolbar"
+        // parent, not list items. Without it the listitem rule fires
+        // because role="toolbar" overrides the implicit role="list" on
+        // the <ul>, leaving every <li> "orphaned" by axe's heuristic.
+        // The inner <button> keeps its semantics. See ether/etherpad#7255.
         const liAttributes = {
             'data-type': 'button',
             'data-key': this.attributes.command,
+            'role': 'presentation',
         };
         return tag('li', liAttributes,
-            tag('a', {'class': this.grouping, 'data-l10n-id': this.attributes.localizationId},
+            tag('a', {
+                    'class': this.grouping,
+                    'role': 'presentation',
+                    'data-l10n-id': this.attributes.localizationId,
+                },
                 tag('button', {
                     'class': ` ${this.attributes.class}`,
                     'data-l10n-id': this.attributes.localizationId,
@@ -167,6 +178,8 @@ class SelectButton extends Button {
             'id': this.attributes.id,
             'data-key': this.attributes.command,
             'data-type': 'select',
+            // See Button.render() above for the role="presentation" rationale.
+            'role': 'presentation',
         };
         return tag('li', attributes, this.select({id: this.attributes.selectId}));
     }
@@ -184,7 +197,14 @@ class Separator {
     }
 
     public render() {
-        return tag('li', {class: 'separator'});
+        // See Button.render() above for the role="presentation" rationale.
+        // The separator is purely visual; aria-hidden makes that explicit so
+        // AT does not announce an empty list item between toolbar buttons.
+        return tag('li', {
+            'class': 'separator',
+            'role': 'presentation',
+            'aria-hidden': 'true',
+        });
 
     }
 }

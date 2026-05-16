@@ -118,6 +118,27 @@
   "favicon": "${FAVICON:null}",
 
   /*
+   * Canonical public origin of this Etherpad instance, e.g.
+   * "https://pad.example.com" (no trailing slash, must include scheme).
+   * Used to build absolute URLs in OG/Twitter link-preview meta tags.
+   * When null, falls back to the incoming request's protocol+Host.
+   */
+  "publicURL": "${PUBLIC_URL:null}",
+
+  /*
+   * Open Graph / Twitter Card metadata for link previews.
+   *
+   * SOCIAL_META_DESCRIPTION: when set, this exact text is used as
+   * og:description regardless of negotiated language. Most preview crawlers
+   * (WhatsApp, Signal, Slack, ...) don't send Accept-Language, so without an
+   * override they always hit the English fallback in the i18n catalog.
+   * Leave unset (null) to use the catalog (key `pad.social.description`).
+   */
+  "socialMeta": {
+    "description": "${SOCIAL_META_DESCRIPTION:null}"
+  },
+
+  /*
    * Skin name.
    *
    * Its value has to be an existing directory under src/static/skins.
@@ -185,11 +206,49 @@
   "enableMetrics": "${ENABLE_METRICS:true}",
 
   /*
+   * Self-update subsystem.
+   * tier: "off" | "notify" | "manual" | "auto" | "autonomous"
+   * Default "notify" shows a banner when an update is available.
+   * Docker installs are read-only — tiers above "notify" are not applied even if requested.
+   */
+  "updates": {
+    "tier": "notify",
+    "source": "github",
+    "channel": "stable",
+    "installMethod": "docker",
+    "checkIntervalHours": 6,
+    "githubRepo": "ether/etherpad",
+    "requireAdminForStatus": false,
+    "preApplyGraceMinutes": 0,
+    "drainSeconds": 60,
+    "rollbackHealthCheckSeconds": 60,
+    "diskSpaceMinMB": 500,
+    "requireSignature": false,
+    "trustedKeysPath": null
+  },
+
+  /*
+   * Contact address for admin notifications (updates, security advisories, future features).
+   * Set to null to disable outbound mail from the updater.
+   */
+  "adminEmail": null,
+
+  /*
    * Settings for cleanup of pads
    */
   "cleanup": {
     "enabled": false,
     "keepRevisions": 5
+  },
+
+  /*
+   * GDPR Art. 17 author erasure REST endpoint (anonymizeAuthor).
+   *
+   * Disabled by default — enable only when an operator process exists to
+   * authorise erasure requests.
+   */
+  "gdprAuthorErasure": {
+    "enabled": "${GDPR_AUTHOR_ERASURE_ENABLED:false}"
   },
 
   /*
@@ -207,9 +266,23 @@
 
   /**
   * Enable creator-owned Pad-wide Settings and new-pad default seeding from My View.
-  * Disabled by default to preserve the legacy single-settings behavior.
+  * The pad creator (revision-0 author) gets the "Pad-wide Settings" section,
+  * which lets them set defaults and optionally enforce them for other users.
+  * Other users see only "User Settings" (their own view options).
+  * Set to false to revert to the legacy single-settings behavior.
   **/
-  "enablePadWideSettings": "${ENABLE_PAD_WIDE_SETTINGS:false}",
+  "enablePadWideSettings": "${ENABLE_PAD_WIDE_SETTINGS:true}",
+
+  /*
+   * Optional privacy banner. See settings.json.template for full field docs.
+   */
+  "privacyBanner": {
+    "enabled": "${PRIVACY_BANNER_ENABLED:false}",
+    "title": "${PRIVACY_BANNER_TITLE:Privacy notice}",
+    "body": "${PRIVACY_BANNER_BODY:This instance processes pad content on our servers. See the linked policy for retention and how to request erasure.}",
+    "learnMoreUrl": "${PRIVACY_BANNER_LEARN_MORE_URL:null}",
+    "dismissal": "${PRIVACY_BANNER_DISMISSAL:dismissible}"
+  },
 
   /*
    * Node native SSL support
@@ -288,7 +361,9 @@
     "rtl":              "${PAD_OPTIONS_RTL:false}",
     "alwaysShowChat":   "${PAD_OPTIONS_ALWAYS_SHOW_CHAT:false}",
     "chatAndUsers":     "${PAD_OPTIONS_CHAT_AND_USERS:false}",
-    "lang":             "${PAD_OPTIONS_LANG:null}"
+    "lang":             "${PAD_OPTIONS_LANG:null}",
+    "fadeInactiveAuthorColors": "${PAD_OPTIONS_FADE_INACTIVE_AUTHOR_COLORS:true}",
+    "enforceReadableAuthorColors": "${PAD_OPTIONS_ENFORCE_READABLE_AUTHOR_COLORS:true}"
   },
 
   /*
@@ -355,18 +430,21 @@
   "maxAge": "${MAX_AGE:21600}", // 60 * 60 * 6 = 6 hours
 
   /*
-   * This is the absolute path to the soffice executable.
+   * Absolute path to the soffice (LibreOffice) executable.
    *
-   * LibreOffice is used for advanced import/export of pads (docx, pdf, odt).
-   * Setting it to null disables LibreOffice and will only allow plain text
-   * and HTML import/exports.
+   * When configured, soffice handles all advanced office-format
+   * conversions (docx, pdf, odt, doc, rtf -- both directions). When
+   * null, Etherpad falls back to pure-JS in-process converters
+   * that handle docx export, pdf export, and docx import natively.
+   * odt/doc/rtf export and pdf import still require soffice.
    */
   "soffice": "${SOFFICE:null}",
 
   /*
-   * When true (the default), the "Microsoft Word" export button downloads a .docx file via
-   * LibreOffice (requires "soffice" to be set). Set to false to revert to legacy .doc output
-   * (which also requires "soffice").
+   * When true (the default), the "Microsoft Word" export button
+   * downloads a .docx file -- via soffice if it's configured, or via
+   * the in-process html-to-docx converter otherwise. Set to false to
+   * revert to legacy .doc output (.doc still requires soffice).
    */
   "docxExport": "${DOCX_EXPORT:true}",
 
@@ -480,9 +558,24 @@
   },
 
   /*
-   * Privacy: disable IP logging
+   * Controls what Etherpad writes to its logs about client IP addresses.
+   * Allowed values: "anonymous" (default), "truncated", "full".
+   * See settings.json.template for details.
+   */
+  "ipLogging": "${IP_LOGGING:anonymous}",
+
+  /*
+   * Deprecated — use `ipLogging` above. Still honoured for one release
+   * cycle: true → "anonymous", false → "full".
    */
   "disableIPlogging": "${DISABLE_IP_LOGGING:false}",
+
+  /*
+   * Allow any user who can edit a pad to delete it without the one-time pad
+   * deletion token. If false, only the original creator's author cookie or the
+   * deletion token can delete the pad.
+   */
+  "allowPadDeletionByAllUsers": "${ALLOW_PAD_DELETION_BY_ALL_USERS:false}",
 
   /*
    * Time (in seconds) to automatically reconnect pad when a "Force reconnect"

@@ -27,8 +27,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # PRs: test on latest Node only. Push to develop: full matrix.
-        node: ${{ github.event_name == 'pull_request' && fromJSON('[24]') || fromJSON('[20, 22, 24]') }}
+        # Etherpad requires Node >= 24 (see package.json engines.node).
+        node: ${{ fromJSON('[24]') }}
     steps:
       -
         name: Checkout repository
@@ -43,7 +43,6 @@ jobs:
       - uses: pnpm/action-setup@v6
         name: Install pnpm
         with:
-          version: 10.33.2
           run_install: false
       - name: Use Node.js
         uses: actions/setup-node@v6
@@ -67,7 +66,24 @@ jobs:
         run: pnpm build
       -
         name: Run the backend tests
-        run: pnpm test
+        env:
+          # --report-on-fatalerror and friends write a Node diagnostic report
+          # (V8 stack, libuv handles, OS info) on fatal errors that bypass JS
+          # handlers — the failure mode we've been chasing on Windows + Node
+          # 24 since PR #7663. Reports land in node-report/ and are uploaded
+          # as an artifact if the step fails.
+          NODE_OPTIONS: "--report-on-fatalerror --report-uncaught-exception --report-on-signal --report-compact --report-directory=${{ github.workspace }}/node-report"
+        run: |
+          mkdir -p "${{ github.workspace }}/node-report"
+          pnpm test
+      - name: Upload Node diagnostic reports on failure
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: node-diagnostic-report-${{ runner.os }}-node${{ matrix.node }}-${{ github.job }}
+          path: node-report/
+          if-no-files-found: ignore
+          retention-days: 7
 
   withpluginsLinux:
     env:
@@ -82,7 +98,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: ${{ github.event_name == 'pull_request' && fromJSON('[24]') || fromJSON('[20, 22, 24]') }}
+        node: ${{ fromJSON('[24]') }}
     steps:
       -
         name: Checkout repository
@@ -97,7 +113,6 @@ jobs:
       - uses: pnpm/action-setup@v6
         name: Install pnpm
         with:
-          version: 10.33.2
           run_install: false
       - name: Use Node.js
         uses: actions/setup-node@v6
@@ -123,7 +138,9 @@ jobs:
           ep_align
           ep_author_hover
           ep_cursortrace
+          ep_font_color
           ep_font_size
+          ep_hash_auth
           ep_headings2
           ep_markdown
           ep_readonly_guest
@@ -133,7 +150,19 @@ jobs:
           ep_table_of_contents
       -
         name: Run the backend tests
-        run: pnpm test
+        env:
+          NODE_OPTIONS: "--report-on-fatalerror --report-uncaught-exception --report-on-signal --report-compact --report-directory=${{ github.workspace }}/node-report"
+        run: |
+          mkdir -p "${{ github.workspace }}/node-report"
+          pnpm test
+      - name: Upload Node diagnostic reports on failure
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: node-diagnostic-report-${{ runner.os }}-node${{ matrix.node }}-${{ github.job }}
+          path: node-report/
+          if-no-files-found: ignore
+          retention-days: 7
 
   # Windows tests only run on push to develop/master, not on PRs
   withoutpluginsWindows:
@@ -144,7 +173,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: [20, 22, 24]
+        # Etherpad requires Node >= 24 (see package.json engines.node).
+        node: ${{ fromJSON('[24]') }}
     name: Windows without plugins
     runs-on: windows-latest
     steps:
@@ -161,7 +191,6 @@ jobs:
       - uses: pnpm/action-setup@v6
         name: Install pnpm
         with:
-          version: 10.33.2
           run_install: false
       - name: Use Node.js
         uses: actions/setup-node@v6
@@ -181,8 +210,21 @@ jobs:
           powershell -Command "(gc settings.json.holder) -replace '\"points\": 10', '\"points\": 1000' | Out-File -encoding ASCII settings.json"
       -
         name: Run the backend tests
+        shell: bash
         working-directory: src
-        run: pnpm test
+        env:
+          NODE_OPTIONS: "--report-on-fatalerror --report-uncaught-exception --report-on-signal --report-compact --report-directory=${{ github.workspace }}/node-report"
+        run: |
+          mkdir -p "${{ github.workspace }}/node-report"
+          pnpm test
+      - name: Upload Node diagnostic reports on failure
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: node-diagnostic-report-${{ runner.os }}-node${{ matrix.node }}-${{ github.job }}
+          path: node-report/
+          if-no-files-found: ignore
+          retention-days: 7
 
   withpluginsWindows:
     env:
@@ -192,7 +234,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: [20, 22, 24]
+        # Etherpad requires Node >= 24 (see package.json engines.node).
+        node: ${{ fromJSON('[24]') }}
     name: Windows with Plugins
     runs-on: windows-latest
 
@@ -210,7 +253,6 @@ jobs:
       - uses: pnpm/action-setup@v6
         name: Install pnpm
         with:
-          version: 10.33.2
           run_install: false
       - name: Use Node.js
         uses: actions/setup-node@v6
@@ -229,7 +271,9 @@ jobs:
           ep_align
           ep_author_hover
           ep_cursortrace
+          ep_font_color
           ep_font_size
+          ep_hash_auth
           ep_headings2
           ep_markdown
           ep_readonly_guest
@@ -256,5 +300,18 @@ jobs:
           powershell -Command "(gc settings.json.holder) -replace '\"points\": 10', '\"points\": 1000' | Out-File -encoding ASCII settings.json"
       -
         name: Run the backend tests
+        shell: bash
         working-directory: src
-        run: pnpm test
+        env:
+          NODE_OPTIONS: "--report-on-fatalerror --report-uncaught-exception --report-on-signal --report-compact --report-directory=${{ github.workspace }}/node-report"
+        run: |
+          mkdir -p "${{ github.workspace }}/node-report"
+          pnpm test
+      - name: Upload Node diagnostic reports on failure
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: node-diagnostic-report-${{ runner.os }}-node${{ matrix.node }}-${{ github.job }}
+          path: node-report/
+          if-no-files-found: ignore
+          retention-days: 7

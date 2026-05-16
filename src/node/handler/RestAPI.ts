@@ -5,8 +5,8 @@ import type {ErrorCaused} from "../types/ErrorCaused.js";
 import createHTTPError from "http-errors";
 
 import * as apiHandler from './APIHandler.js';
-import {serve, setup} from 'swagger-ui-express'
 import express from "express";
+import path from "path";
 
 import settings from '../utils/Settings.js';
 
@@ -1437,12 +1437,9 @@ export const expressCreateServer = async (hookName: string, {app}: ArgsExpressTy
   }
 
 
-  app.use('/api-docs', serve);
-  app.get('/api-docs', setup(undefined, {
-    swaggerOptions: {
-      url: '/api-docs.json',
-    },
-  }));
+  app.get('/api-docs', (_req, res) => {
+    res.sendFile(path.join(settings.root, 'src', 'static', 'api-docs.html'));
+  });
 
   app.use(express.json());
 

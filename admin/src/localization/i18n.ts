@@ -58,7 +58,7 @@ i18n
   .use(initReactI18next)
   .init(
     {
-      ns: ['translation','ep_admin_pads'],
+      ns: ['translation','ep_admin_pads','ep_admin_authors'],
       fallbackLng: 'en'
     }
   )

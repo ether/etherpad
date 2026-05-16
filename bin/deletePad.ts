@@ -11,13 +11,22 @@ import path from "node:path";
 
 import fs from "node:fs";
 import process from "node:process";
-import axios from "axios";
 
 process.on('unhandledRejection', (err) => { throw err; });
 
 const settings = require('ep_etherpad-lite/tests/container/loadSettings').loadSettings();
 
-axios.defaults.baseURL = `http://${settings.ip}:${settings.port}`;
+const baseURL = `http://${settings.ip}:${settings.port}`;
+const apiGet = async (p: string): Promise<any> => {
+  const r = await fetch(baseURL + p);
+  if (!r.ok) throw new Error(`HTTP ${r.status} ${r.statusText}`);
+  return r.json();
+};
+const apiPost = async (p: string): Promise<any> => {
+  const r = await fetch(baseURL + p, {method: 'POST'});
+  if (!r.ok) throw new Error(`HTTP ${r.status} ${r.statusText}`);
+  return r.json();
+};
 
 if (process.argv.length !== 3) throw new Error('Use: node deletePad.js $PADID');
 
@@ -29,14 +38,14 @@ const filePath = path.join(__dirname, '../APIKEY.txt');
 const apikey = fs.readFileSync(filePath, {encoding: 'utf-8'});
 
 (async () => {
-  let apiVersion = await axios.get('/api/');
-  apiVersion = apiVersion.data.currentVersion;
+  const apiInfo = await apiGet('/api/');
+  const apiVersion = apiInfo.currentVersion;
   if (!apiVersion) throw new Error('No version set in API');
 
   // Now we know the latest API version, let's delete pad
   const uri = `/api/${apiVersion}/deletePad?apikey=${apikey}&padID=${padId}`;
-  const deleteAttempt = await axios.post(uri);
-  if (deleteAttempt.data.code === 1) throw new Error(`Error deleting pad ${deleteAttempt.data}`);
-  console.log('Deleted pad', deleteAttempt.data);
+  const deleteAttempt = await apiPost(uri);
+  if (deleteAttempt.code === 1) throw new Error(`Error deleting pad ${deleteAttempt}`);
+  console.log('Deleted pad', deleteAttempt);
   process.exit(0)
 })();

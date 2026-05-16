@@ -7,17 +7,25 @@
 #   docker build --build-arg BUILD_ENV=copy .
 ARG BUILD_ENV=git
 
-ARG PnpmVersion=10.28.2
+ARG PnpmVersion=11.0.6
 
-FROM node:lts-alpine AS adminbuild
-RUN npm install -g pnpm@${PnpmVersion}
+FROM node:24-alpine AS adminbuild
+# Install pnpm directly via npm (rather than via corepack) so the same
+# image recipe keeps working on Node 25+, where corepack has been
+# dropped from the distribution. The node:24-alpine image also bundles
+# yarn; remove it first to avoid leaving an unused binary on PATH.
+# Drop bundled npm afterwards — its older transitives (picomatch,
+# brace-expansion) carry CVEs we don't otherwise need.
+RUN rm -f /usr/local/bin/yarn /usr/local/bin/yarnpkg && \
+    npm install -g pnpm@${PnpmVersion} && \
+    rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
 WORKDIR /opt/etherpad-lite
 COPY . .
 RUN pnpm install
 RUN pnpm run build:ui
 
 
-FROM node:lts-alpine AS build
+FROM node:24-alpine AS build
 LABEL maintainer="Etherpad team, https://github.com/ether/etherpad"
 
 # Set these arguments when building the image from behind a proxy
@@ -92,15 +100,21 @@ RUN groupadd --system ${EP_GID:+--gid "${EP_GID}" --non-unique} etherpad && \
 ARG EP_DIR=/opt/etherpad-lite
 RUN mkdir -p "${EP_DIR}" && chown etherpad:etherpad "${EP_DIR}"
 
+# Install pnpm directly via npm (rather than via corepack) so the same
+# recipe stays valid on Node 25+, which dropped corepack. Then drop
+# both npm and the pre-bundled yarn binary to keep the runtime image
+# free of unused tooling and known-CVE transitives.
+#
 # the mkdir is needed for configuration of openjdk-11-jre-headless, see
 # https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=863199
 RUN  \
     mkdir -p /usr/share/man/man1 && \
-    npm install pnpm@${PnpmVersion} -g  && \
+    rm -f /usr/local/bin/yarn /usr/local/bin/yarnpkg && \
+    npm install -g pnpm@${PnpmVersion} && \
+    rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx && \
     apk update && apk upgrade && \
     apk add --no-cache \
         ca-certificates \
-        curl \
         git \
         ${INSTALL_SOFFICE:+libreoffice openjdk8-jre libreoffice-common} && \
     rm -rf /var/cache/apk/*
@@ -165,7 +179,10 @@ ENV ETHERPAD_PRODUCTION=true
 # The full pnpm-workspace.yaml references admin, doc, ui which are not
 # needed at runtime. Overwrite it with a production-only version so
 # pnpm install doesn't warn about missing workspace directories.
-RUN printf 'packages:\n  - src\n  - bin\n' > pnpm-workspace.yaml
+# Preserve the build-script policy from the source workspace file so
+# pnpm 11 doesn't error out with ERR_PNPM_IGNORED_BUILDS for transitive
+# postinstalls (e.g. @scarf/scarf via swagger-ui-dist).
+RUN printf 'packages:\n  - src\n  - bin\nonlyBuiltDependencies:\n  - esbuild\nignoredBuiltDependencies:\n  - "@scarf/scarf"\nstrictDepBuilds: false\n' > pnpm-workspace.yaml
 
 COPY --chown=etherpad:etherpad ./src ./src
 COPY --chown=etherpad:etherpad --from=adminbuild /opt/etherpad-lite/src/templates/admin ./src/templates/admin
@@ -191,7 +208,18 @@ COPY --chown=etherpad:etherpad ${SETTINGS} "${EP_DIR}"/settings.json
 USER etherpad
 
 HEALTHCHECK --interval=5s --timeout=3s \
-  CMD curl --silent http://localhost:9001/health | grep -E "pass|ok|up" > /dev/null || exit 1
+  CMD wget -qO- http://127.0.0.1:9001/health | grep -E "pass|ok|up" > /dev/null || exit 1
 
 EXPOSE 9001
-CMD ["pnpm", "run", "prod"]
+# Run node directly instead of via `pnpm run prod`. pnpm 11's
+# `runDepsStatusCheck` fires before every `pnpm run …` and spuriously
+# decides node_modules is out of sync on first start under the named-
+# volume layout used by docker-compose (mounting src/plugin_packages).
+# It then tries to `pnpm install --production`, which either prompts to
+# wipe node_modules (tty: true) or aborts with
+# ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY (no tty). Bypassing pnpm
+# at runtime sidesteps the check; the image's node_modules was already
+# verified during build. See ether/etherpad#7718.
+# `exec` makes node PID 1 so it receives SIGTERM directly and shuts down
+# cleanly.
+CMD ["sh", "-c", "cd src && exec node --require tsx/cjs node/server.ts"]

@@ -7,6 +7,10 @@ test.beforeEach(async ({page}) => {
 
 // Regression test for https://github.com/ether/etherpad-lite/issues/5037
 test('bold text retains formatting after copy-paste', async ({page}) => {
+  // Passes in isolation; fails in the with-plugins suite due to
+  // suspected clipboard / pad state leakage between specs. Tracked
+  // by #7611 — needs deeper rework (real clipboard or REST-driven
+  // setup) to un-skip reliably.
   const padBody = await getPadBody(page);
   await clearPadContent(page);
 

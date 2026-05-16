@@ -13,14 +13,14 @@ test.describe('unordered_list.js', function () {
       const originalText = await padBody.locator('div').first().textContent();
 
       const $insertunorderedlistButton = page.locator('.buttonicon-insertunorderedlist');
-      await $insertunorderedlistButton.click();
+      await $insertunorderedlistButton.click({force: true});
 
       await expect(padBody.locator('div').first()).toHaveText(originalText!);
       await expect(padBody.locator('div ul li')).toHaveCount(1);
 
       // remove indentation by bullet and ensure text string remains the same
       const $outdentButton = page.locator('.buttonicon-outdent');
-      await $outdentButton.click();
+      await $outdentButton.click({force: true});
       await expect(padBody.locator('div').first()).toHaveText(originalText!);
     });
   });
@@ -35,13 +35,13 @@ test.describe('unordered_list.js', function () {
 
       await padBody.locator('div').first().selectText()
       const $insertunorderedlistButton = page.locator('.buttonicon-insertunorderedlist');
-      await $insertunorderedlistButton.click();
+      await $insertunorderedlistButton.click({force: true});
 
       await expect(padBody.locator('div').first()).toHaveText(originalText!);
       await expect(padBody.locator('div ul li')).toHaveCount(1);
 
       // remove indentation by bullet and ensure text string remains the same
-      await $insertunorderedlistButton.click();
+      await $insertunorderedlistButton.click({force: true});
       await expect(padBody.locator('div').locator('ul')).toHaveCount(0)
     });
   });
@@ -50,20 +50,27 @@ test.describe('unordered_list.js', function () {
   test.describe('keep unordered list on enter key', function () {
 
     test('Keeps the unordered list on enter for the new line', async function ({page}) {
+      // The toolbar-click + writeToPad-with-newlines combination
+      // races under WITH_PLUGINS load — the Enter between the two
+      // typed lines occasionally drops, leaving only one UL item
+      // and breaking the toHaveCount assertion. Tracked by #7611.
       const padBody = await getPadBody(page);
       await clearPadContent(page)
       await expect(padBody.locator('div')).toHaveCount(1)
 
+      // force:true bypasses #toolbar-overlay; same pattern as
+      // clearAuthorship.
       const $insertorderedlistButton = page.locator('.buttonicon-insertunorderedlist')
-      await $insertorderedlistButton.click();
+      await $insertorderedlistButton.click({force: true});
 
-      // type a bit, make a line break and type again
+      // type a bit, make a line break and type again. writeToPad with
+      // a multi-line string drives input through insertText (one event
+      // per line) plus Enter between segments — reliable in Firefox
+      // under WITH_PLUGINS load. Trailing \n produces the final Enter
+      // the original spec relied on.
       const $firstTextElement = padBody.locator('div').first();
       await $firstTextElement.click()
-      await page.keyboard.type('line 1');
-      await page.keyboard.press('Enter');
-      await page.keyboard.type('line 2');
-      await page.keyboard.press('Enter');
+      await writeToPad(page, 'line 1\nline 2\n');
 
       await expect(padBody.locator('div span')).toHaveCount(2);
 
@@ -85,7 +92,7 @@ test.describe('unordered_list.js', function () {
       await padBody.locator('div').first().click();
 
       const $insertunorderedlistButton = page.locator('.buttonicon-insertunorderedlist');
-      await $insertunorderedlistButton.click();
+      await $insertunorderedlistButton.click({force: true});
 
       await padBody.locator('div').first().click();
       await page.keyboard.press('Home');
@@ -111,13 +118,13 @@ test.describe('unordered_list.js', function () {
       await $firstTextElement.selectText();
 
       const $insertunorderedlistButton = page.locator('.buttonicon-insertunorderedlist');
-      await $insertunorderedlistButton.click();
+      await $insertunorderedlistButton.click({force: true});
 
-      await page.locator('.buttonicon-indent').click();
+      await page.locator('.buttonicon-indent').click({force: true});
 
       await expect(padBody.locator('div').first().locator('.list-bullet2')).toHaveCount(1);
       const outdentButton = page.locator('.buttonicon-outdent');
-      await outdentButton.click();
+      await outdentButton.click({force: true});
 
       await expect(padBody.locator('div').first().locator('.list-bullet1')).toHaveCount(1);
     });

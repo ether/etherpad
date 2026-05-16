@@ -1,5 +1,6 @@
 import {expect, test} from "@playwright/test";
-import {goToNewPad, getPadBody, clearPadContent, writeToPad} from "../helper/padHelper.js";
+import {goToNewPad, getPadBody, clearPadContent, selectAllText, writeToPad}
+  from "../helper/padHelper.js";
 
 /**
  * Regression test for https://github.com/ether/etherpad-lite/issues/5214
@@ -25,10 +26,12 @@ test.describe('Timeslider with identity changesets (bug #5214)', function () {
     await writeToPad(page, 'First revision text');
     await page.waitForTimeout(500);
 
-    // Select all and delete (creates a "delete everything" revision)
-    await page.keyboard.down('Control');
-    await page.keyboard.press('A');
-    await page.keyboard.up('Control');
+    // Select all and delete (creates a "delete everything" revision).
+    // Use selectAllText helper instead of raw keyboard chord: under
+    // Firefox + WITH_PLUGINS the keyboard.down/press/up('Control')
+    // sequence races with the focus delegation into the inner ace
+    // iframe and can drop either the Control or the A keystroke.
+    await selectAllText(page);
     await page.keyboard.press('Backspace');
     await page.waitForTimeout(500);
 
@@ -37,7 +40,7 @@ test.describe('Timeslider with identity changesets (bug #5214)', function () {
     await page.waitForTimeout(1000);
 
     // Navigate to timeslider at revision 0 so playback has revisions to advance through
-    await page.goto(`http://localhost:9001/p/${padId}/timeslider#0`);
+    await page.goto(`http://localhost:9001/p/${padId}/timeslider?embed=1#0`);
     await page.waitForSelector('#timeslider-slider', {timeout: 10000});
     await page.waitForTimeout(1000);
 
@@ -79,7 +82,7 @@ test.describe('Timeslider with identity changesets (bug #5214)', function () {
     await page.waitForTimeout(1000);
 
     // Go to timeslider
-    await page.goto(`http://localhost:9001/p/${padId}/timeslider`);
+    await page.goto(`http://localhost:9001/p/${padId}/timeslider?embed=1`);
     await page.waitForSelector('#timeslider-slider', {timeout: 10000});
 
     // Get the total number of revisions from the slider
@@ -89,7 +92,7 @@ test.describe('Timeslider with identity changesets (bug #5214)', function () {
 
     // Scrub through each revision from 0 to latest
     for (let rev = 0; rev <= sliderLength; rev++) {
-      await page.goto(`http://localhost:9001/p/${padId}/timeslider#${rev}`);
+      await page.goto(`http://localhost:9001/p/${padId}/timeslider?embed=1#${rev}`);
       await page.waitForTimeout(300);
 
       // Check no errors appeared

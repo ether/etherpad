@@ -22,6 +22,19 @@ const activePadsGauge = new client.Gauge({
 });
 register.registerMetric(activePadsGauge);
 
+// Added for the #7756 scaling dive: lets the load-test harness attribute
+// where time goes (apply path vs. fan-out) and confirm per-pad concurrency.
+// The metric handles live in prom-instruments.ts to avoid a circular import
+// with PadMessageHandler (which records into them on the hot path).
+// Gated behind settings.scalingDiveMetrics so production deployments don't
+// pay for the instrumentation by default.
+import {padUsersGauge, changesetApplyDuration, socketEmitsTotal, enabled as scalingDiveMetricsEnabled} from './prom-instruments';
+if (scalingDiveMetricsEnabled()) {
+  register.registerMetric(padUsersGauge);
+  register.registerMetric(changesetApplyDuration);
+  register.registerMetric(socketEmitsTotal);
+}
+
 client.collectDefaultMetrics({register});
 
 const monitor = async function () {
@@ -32,6 +45,13 @@ const monitor = async function () {
   }
   activePadsGauge.set(PadMessageHandler.getActivePadCountFromSessionInfos());
   totalUsersGauge.set(PadMessageHandler.getTotalActiveUsers());
+  if (scalingDiveMetricsEnabled()) {
+    // Per-pad concurrency: reset to avoid stale labels for pads that drained.
+    padUsersGauge.reset();
+    for (const [padId, count] of PadMessageHandler.getPadUsersMap()) {
+      padUsersGauge.set({padId}, count);
+    }
+  }
   return register;
 };
 

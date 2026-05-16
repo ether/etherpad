@@ -33,7 +33,6 @@ export type HistoricalAuthorData = MapArrayType<{
 
 export type ServerVar = {
   rev: number
-  clientIp: string
   padId: string
   historicalAuthorData?: HistoricalAuthorData,
   initialAttributedText: {
@@ -63,8 +62,14 @@ export type ClientVarPayload = {
   userColor: number,
   hideChat?: boolean,
   padOptions: PadOption,
+  privacyBanner?: {
+    enabled: boolean,
+    title: string,
+    body: string,
+    learnMoreUrl: string | null,
+    dismissal: 'dismissible' | 'sticky',
+  },
   padId: string,
-  clientIp: string,
   colorPalette: string[],
   accountPrivs: {
     maxRevisions: number,
@@ -89,6 +94,8 @@ export type ClientVarPayload = {
   initialTitle: string,
   opts: {}
   numConnectedUsers: number
+  canDeletePad?: boolean,
+  padDeletionToken?: string | null,
   sofficeAvailable: string
   plugins: {
     plugins:  MapArrayType<any>
@@ -183,8 +190,10 @@ export type ClientReadyMessage = {
   type: 'CLIENT_READY',
   component: string,
   padId: string,
-  sessionID: string,
-  token: string,
+  /** @deprecated since #7045 — read server-side from the HttpOnly cookie. */
+  sessionID?: string,
+  /** @deprecated since GDPR PR3 — read server-side from the HttpOnly cookie. */
+  token?: string,
   userInfo: UserInfo,
   padSettingsDefaults?: PadOption,
   reconnect?: boolean
@@ -200,6 +209,7 @@ export type PadDeleteMessage = {
   type: 'PAD_DELETE'
   data: {
     padId: string
+    deletionToken?: string
   }
 }
 
@@ -252,7 +262,12 @@ export type PadOption = {
   "alwaysShowChat"?:   boolean,
   "chatAndUsers"?:     boolean,
   "lang"?:             null|string,
-  view? : MapArrayType<boolean|string>
+  view? : MapArrayType<boolean|string>,
+  // Plugin-namespaced pad-wide options (gated by settings.enablePluginPadOptions).
+  // The runtime regex is /^ep_[a-z0-9_]+$/ — TypeScript template literals
+  // can't constrain that exactly, so this signature accepts any ep_-prefixed
+  // string and applyPadSettings/normalizePadSettings reject the rest.
+  [k: `ep_${string}`]: unknown,
 }
 
 
@@ -316,8 +331,10 @@ export type SocketClientReadyMessage = {
   type: string
   component: string
   padId: string
-  sessionID: string
-  token: string
+  /** @deprecated since #7045 — read server-side from the HttpOnly cookie. */
+  sessionID?: string
+  /** @deprecated since GDPR PR3 — read server-side from the HttpOnly cookie. */
+  token?: string
   userInfo: {
     colorId: string|null
     name: string|null

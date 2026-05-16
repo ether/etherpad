@@ -13,46 +13,54 @@ import path from "node:path";
 
 import querystring from "node:querystring";
 
-import axios from 'axios'
 import process from "node:process";
 
 
 process.on('unhandledRejection', (err) => { throw err; });
 import settings from 'ep_etherpad-lite/node/utils/Settings';
 (async () => {
-  axios.defaults.baseURL = `http://${settings.ip}:${settings.port}`;
-  const api = axios;
+  const baseURL = `http://${settings.ip}:${settings.port}`;
+  const apiGet = async (p: string): Promise<any> => {
+    const r = await fetch(baseURL + p);
+    if (!r.ok) throw new Error(`HTTP ${r.status} ${r.statusText}`);
+    return r.json();
+  };
+  const apiPost = async (p: string): Promise<any> => {
+    const r = await fetch(baseURL + p, {method: 'POST'});
+    if (!r.ok) throw new Error(`HTTP ${r.status} ${r.statusText}`);
+    return r.json();
+  };
 
   const filePath = path.join(__dirname, '../APIKEY.txt');
   const apikey = fs.readFileSync(filePath, {encoding: 'utf-8'});
 
   let res;
 
-  res = await api.get('/api/');
-  const apiVersion = res.data.currentVersion;
+  res = await apiGet('/api/');
+  const apiVersion = res.currentVersion;
   if (!apiVersion) throw new Error('No version set in API');
   console.log('apiVersion', apiVersion);
   const uri = (cmd: string, args: querystring.ParsedUrlQueryInput ) => `/api/${apiVersion}/${cmd}?${querystring.stringify(args)}`;
 
-  res = await api.post(uri('createGroup', {apikey}));
-  if (res.data.code === 1) throw new Error(`Error creating group: ${res.data}`);
-  const groupID = res.data.data.groupID;
+  res = await apiPost(uri('createGroup', {apikey}));
+  if (res.code === 1) throw new Error(`Error creating group: ${res}`);
+  const groupID = res.data.groupID;
   console.log('groupID', groupID);
 
-  res = await api.post(uri('createGroupPad', {apikey, groupID}));
-  if (res.data.code === 1) throw new Error(`Error creating group pad: ${res.data}`);
-  console.log('Test Pad ID ====> ', res.data.data.padID);
+  res = await apiPost(uri('createGroupPad', {apikey, groupID}));
+  if (res.code === 1) throw new Error(`Error creating group pad: ${res}`);
+  console.log('Test Pad ID ====> ', res.data.padID);
 
-  res = await api.post(uri('createAuthor', {apikey}));
-  if (res.data.code === 1) throw new Error(`Error creating author: ${res.data}`);
-  const authorID = res.data.data.authorID;
+  res = await apiPost(uri('createAuthor', {apikey}));
+  if (res.code === 1) throw new Error(`Error creating author: ${res}`);
+  const authorID = res.data.authorID;
   console.log('authorID', authorID);
 
   const validUntil = Math.floor(new Date().getTime()  / 1000) + 60000;
   console.log('validUntil', validUntil);
-  res = await api.post(uri('createSession', {apikey, groupID, authorID, validUntil}));
-  if (res.data.code === 1) throw new Error(`Error creating session: ${JSON.stringify(res.data)}`);
+  res = await apiPost(uri('createSession', {apikey, groupID, authorID, validUntil}));
+  if (res.code === 1) throw new Error(`Error creating session: ${JSON.stringify(res)}`);
   console.log('Session made: ====> create a cookie named sessionID and set the value to',
-      res.data.data.sessionID);
+      res.data.sessionID);
   process.exit(0)
 })();

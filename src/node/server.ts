@@ -28,7 +28,7 @@ import {ErrorCaused} from "./types/ErrorCaused.js";
 import log4js from 'log4js';
 import pkg from '../package.json' with { type: 'json' };
 import {checkForMigration} from "../static/js/pluginfw/installer.js";
-import axios from "axios";
+import {ProxyAgent, setGlobalDispatcher} from 'undici';
 
 import settings from './utils/Settings.js';
 
@@ -47,28 +47,10 @@ if (settings.dumpOnUncleanExit) {
   wtfnode = (await import('wtfnode')).default;
 }
 
-
-const addProxyToAxios = (url: URL) => {
-  axios.defaults.proxy = {
-    host: url.hostname,
-    auth: {
-      username: url.username,
-      password: url.password,
-    },
-    port: Number(url.port),
-    protocol: url.protocol,
-  }
-}
-
-if(process.env['http_proxy']) {
-  console.log("Using proxy: " + process.env['http_proxy'])
-  addProxyToAxios(new URL(process.env['http_proxy']));
-}
-
-
-if (process.env['https_proxy']) {
-  console.log("Using proxy: " + process.env['https_proxy'])
-  addProxyToAxios(new URL(process.env['https_proxy']));
+const proxyUrl = process.env['https_proxy'] || process.env['http_proxy'];
+if (proxyUrl) {
+  console.log("Using proxy: " + proxyUrl);
+  setGlobalDispatcher(new ProxyAgent(proxyUrl));
 }
 
 
@@ -202,6 +184,17 @@ export const start = async (): Promise<any> => {
   state = State.RUNNING;
   // @ts-ignore
   startDoneGate.resolve();
+
+  // Once the server is RUNNING, /health responds 200 — that is the implicit
+  // health signal the updater's pending-verification timer is waiting for.
+  // Wrapped in try/catch because it must never block startup on a bug here.
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const updater = require('./updater');
+    if (typeof updater.markBootHealthy === 'function') updater.markBootHealthy();
+  } catch (err) {
+    logger.debug(`markBootHealthy: ${(err as Error).message}`);
+  }
 
   // Return the HTTP server to make it easier to write tests.
   return express.server;

@@ -10,7 +10,7 @@
 
 Every keystroke is attributed to its author. Every revision is preserved. The timeslider lets you scrub through a document's entire history, character by character. Author colours make collaboration visible at a glance — not buried in a menu.
 
-Etherpad runs on your server, under your governance. No telemetry. No upsells. AI is a plugin you install, pointed at the model you choose, running on infrastructure you control — not a feature decided for you in a boardroom you weren't in.
+Etherpad runs on your server, under your governance. No telemetry. No upsells. AI is a plugin you install, pointed at the model you choose, running on infrastructure you control — not a feature decided for you in a boardroom you weren't in. See [PRIVACY.md](PRIVACY.md) for the two opt-out network calls Etherpad's own code makes and how to disable each.
 
 The code is Apache 2.0. The data format is open. It [scales to thousands of simultaneous editors per pad](http://scale.etherpad.org/). Translated into 105 languages. Extended through hundreds of plugins. Used by Wikimedia, governments, public-sector institutions, and self-hosters worldwide since 2009.
 
@@ -18,7 +18,7 @@ The code is Apache 2.0. The data format is open. It [scales to thousands of simu
 
 ## Try it out
 
-[Try out a public Etherpad instance](https://github.com/ether/etherpad/wiki/Sites-That-Run-Etherpad#sites-that-run-etherpad)
+[Try out a public Etherpad instance](https://scanner.etherpad.org)
 
 ## Project Status
 
@@ -36,16 +36,14 @@ Etherpad has been doing the same thing — well — since 2009. No pivots, no ac
 [![Simulated Load](https://github.com/ether/etherpad/actions/workflows/load-test.yml/badge.svg?color=%2344b492)](https://github.com/ether/etherpad/actions/workflows/load-test.yml)
 [![Rate Limit](https://github.com/ether/etherpad/actions/workflows/rate-limit.yml/badge.svg?color=%2344b492)](https://github.com/ether/etherpad/actions/workflows/rate-limit.yml)
 [![Docker file](https://github.com/ether/etherpad/actions/workflows/docker.yml/badge.svg?color=%2344b492)](https://github.com/ether/etherpad/actions/workflows/docker.yml)
-[![Frontend admin tests powered by Sauce Labs](https://github.com/ether/etherpad/actions/workflows/frontend-admin-tests.yml/badge.svg?color=%2344b492)](https://github.com/ether/etherpad/actions/workflows/frontend-admin-tests.yml)
-[![Frontend tests powered by Sauce Labs](https://github.com/ether/etherpad/actions/workflows/frontend-tests.yml/badge.svg?color=%2344b492)](https://github.com/ether/etherpad/actions/workflows/frontend-tests.yml)
-[![Sauce Test Status](https://saucelabs.com/buildstatus/etherpad.svg)](https://saucelabs.com/u/etherpad)
-[![Windows Build](https://github.com/ether/etherpad/actions/workflows/windows.yml/badge.svg?color=%2344b492)](https://github.com/ether/etherpad/actions/workflows/windows.yml)
+[![Frontend admin tests](https://github.com/ether/etherpad/actions/workflows/frontend-admin-tests.yml/badge.svg?color=%2344b492)](https://github.com/ether/etherpad/actions/workflows/frontend-admin-tests.yml)
+[![Frontend tests](https://github.com/ether/etherpad/actions/workflows/frontend-tests.yml/badge.svg?color=%2344b492)](https://github.com/ether/etherpad/actions/workflows/frontend-tests.yml)
 
 ### Engagement
 
 [![Docker Pulls](https://img.shields.io/docker/pulls/etherpad/etherpad?color=%2344b492)](https://hub.docker.com/r/etherpad/etherpad)
 [![Discord](https://img.shields.io/discord/741309013593030667?color=%2344b492)](https://discord.com/invite/daEjfhw)
-[![Etherpad plugins](https://img.shields.io/endpoint?url=https%3A%2F%2Fstatic.etherpad.org%2Fshields.json&color=%2344b492 "Etherpad plugins")](https://static.etherpad.org/index.html)
+[![Etherpad plugins](https://img.shields.io/endpoint?url=https%3A%2F%2Fstatic.etherpad.org%2Fshields.json&color=%2344b492 "Etherpad plugins")](https://etherpad.org/plugins)
 ![Languages](https://img.shields.io/static/v1?label=Languages&message=105&color=%2344b492)
 ![Translation Coverage](https://img.shields.io/static/v1?label=Languages&message=98%&color=%2344b492)
 
@@ -60,13 +58,13 @@ For more than a decade, Etherpad has quietly underpinned the documents that matt
 - **Newsrooms and investigative journalism teams** — where authorship and editing history matter for legal and editorial integrity.
 - **Tens of thousands of self-hosted instances** worldwide, run by IT teams who chose Etherpad because it is theirs.
 
-If your organisation runs Etherpad and would be willing to be listed publicly, please [add it to the wiki](https://github.com/ether/etherpad/wiki/Sites-That-Run-Etherpad).
+[Public Etherpad Instances for you to try out.  Third party instances not provided by the Etherpad foundation](https://scanner.etherpad.org/).
 
 ## Installation
 
 ### Quick install (one-liner)
 
-The fastest way to get Etherpad running. Requires `git` and Node.js >= 20.
+The fastest way to get Etherpad running. Requires `git` and Node.js >= 24.
 
 **macOS / Linux / WSL:**
 
@@ -160,7 +158,7 @@ volumes:
 
 ### Requirements
 
-[Node.js](https://nodejs.org/) >= 20.
+[Node.js](https://nodejs.org/) >= 24.
 
 ### Windows, macOS, Linux
 

@@ -15,14 +15,21 @@ import settings, {
 
 const logger = log4js.getLogger('plugins');
 
-// Log the version of npm at startup.
+// Log the version of pnpm at startup. pnpm is only used for dev workflows
+// and plugin migration; it isn't required at runtime (admin-UI plugin
+// installs go through live-plugin-manager directly), so a missing pnpm
+// is expected on hardened/packaged installs and shouldn't produce an
+// ERROR in the logs.
 (async () => {
   try {
     const version = await runCmd(['pnpm', '--version'], {stdio: [null, 'string']});
     logger.info(`pnpm --version: ${version}`);
   } catch (err) {
-    logger.error(`Failed to get pnpm version: ${err.stack || err}`);
-    // This isn't a fatal error so don't re-throw.
+    if ((err as any).code === 'ENOENT') {
+      logger.debug('pnpm not found on PATH (only needed for dev workflows)');
+    } else {
+      logger.warn(`Failed to get pnpm version: ${err.stack || err}`);
+    }
   }
 })();
 

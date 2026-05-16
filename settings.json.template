@@ -109,6 +109,41 @@
   "favicon": null,
 
   /*
+   * Canonical public origin of this Etherpad instance, e.g.
+   * "https://pad.example.com" (no trailing slash, must include scheme).
+   *
+   * When set, this is used to build absolute URLs in server-rendered output
+   * such as the Open Graph / Twitter Card link-preview meta tags (og:url,
+   * og:image, ...). When null, those URLs fall back to the request's
+   * protocol+Host, which can reflect client-controlled headers if your
+   * reverse proxy passes them through unsanitized.
+   *
+   * Set this in production deployments to lock down the canonical origin
+   * advertised in shared link previews.
+   */
+  "publicURL": null,
+
+  /*
+   * Open Graph / Twitter Card metadata, served on the homepage, pad pages and
+   * timeslider for nicer previews when a pad URL is shared in chat apps
+   * (WhatsApp, Signal, Slack, ...).
+   *
+   * - description: when set to a non-empty string, this exact text is used as
+   *   og:description / twitter:description regardless of the visitor's
+   *   negotiated language. Most link-preview crawlers don't send an
+   *   Accept-Language header, so without an override they always see the
+   *   English fallback. Set this if your instance serves a non-English
+   *   audience and you want a fixed blurb in shared previews.
+   *
+   * Leave description as null to use Etherpad's i18n catalog (key
+   * `pad.social.description`), which honours Accept-Language and can be
+   * overridden per-language via `customLocaleStrings` further down.
+   */
+  "socialMeta": {
+    "description": null
+  },
+
+  /*
    * Skin name.
    *
    * Its value has to be an existing directory under src/static/skins.
@@ -176,11 +211,80 @@
    "enableMetrics": "${ENABLE_METRICS:true}",
 
   /*
+   * Self-update subsystem.
+   * tier: "off" | "notify" | "manual" | "auto" | "autonomous"
+   * Default "notify" shows a banner when an update is available. "off" disables the version check.
+   */
+  "updates": {
+    "tier": "notify",
+    "source": "github",
+    "channel": "stable",
+    "installMethod": "auto",
+    "checkIntervalHours": 6,
+    "githubRepo": "ether/etherpad",
+    /*
+     * Lock /admin/update/status to authenticated admins. Default false keeps the
+     * endpoint open (the version is already public via /health). Set true to hide
+     * full update detail from non-admins without turning the updater off.
+     */
+    "requireAdminForStatus": false,
+    /*
+     * Tier 2+ knobs. Only meaningful at tier "manual" or higher.
+     * - preApplyGraceMinutes: tier 3 only — grace minutes between detecting a new
+     *     release and starting the drain. Clamped to [0, 7*24*60] (one week).
+     *     Default 0 applies immediately when allowed; raise it to give admins
+     *     time to cancel via /admin/update.
+     * - drainSeconds: how long to broadcast "restart imminent" before exiting.
+     * - rollbackHealthCheckSeconds: window after restart for /health to come up.
+     * - diskSpaceMinMB: pre-flight refuses to start an update without this much free.
+     * - requireSignature: refuse updates whose tag isn't signed by a trusted key.
+     * - trustedKeysPath: override the keyring location passed to git verify-tag (GNUPGHOME).
+     */
+    "preApplyGraceMinutes": 0,
+    "drainSeconds": 60,
+    "rollbackHealthCheckSeconds": 60,
+    "diskSpaceMinMB": 500,
+    "requireSignature": false,
+    "trustedKeysPath": null
+  },
+
+  /*
+   * Admin OpenAPI document at /admin/openapi.json.
+   *
+   * Disabled by default per Etherpad's "new features behind a flag, off by
+   * default" policy. The admin UI's typed client embeds the spec at build
+   * time, so the runtime route is only useful for third-party tooling
+   * (Postman, swagger-ui, downstream clients). Set `enabled: true` to mount
+   * the route; the SPA at /admin/ continues to serve normally either way.
+   */
+  "adminOpenAPI": {
+    "enabled": false
+  },
+
+  /*
+   * Contact address for admin notifications (updates, security advisories, future features).
+   * Set to null to disable outbound mail from the updater.
+   */
+  "adminEmail": null,
+
+  /*
    * Settings for cleanup of pads
    */
   "cleanup": {
     "enabled": false,
     "keepRevisions": 5
+  },
+
+  /*
+   * GDPR Art. 17 author erasure REST endpoint (anonymizeAuthor).
+   *
+   * Disabled by default — enable only when an operator process exists to
+   * authorise erasure requests. While disabled, calls to anonymizeAuthor
+   * return an apierror and the AuthorManager helper is not exposed via
+   * the public API.
+   */
+  "gdprAuthorErasure": {
+    "enabled": false
   },
 
   /*
@@ -261,7 +365,20 @@
     "rtl":              false,
     "alwaysShowChat":   false,
     "chatAndUsers":     false,
-    "lang":             null
+    "lang":             null,
+    /*
+     * When true (default), each author's caret/background color fades toward white
+     * as the author goes inactive. Set to false if users pick light colors and the
+     * faded variants become visually indistinguishable.
+     */
+    "fadeInactiveAuthorColors": true,
+    /*
+     * Clamp author background colors to a WCAG 2.1 AA contrast ratio (4.5:1)
+     * against the rendered text colour at render time. The author's stored
+     * colour is not modified — only the displayed shade is adjusted. Set to
+     * false to render exact author colours regardless of contrast.
+     */
+    "enforceReadableAuthorColors": true
   },
 
   /*
@@ -301,6 +418,17 @@
   "updateServer": "https://etherpad.org/ep_infos",
 
   /*
+   * Outbound network calls. See PRIVACY.md for what each one sends.
+   *  - updateCheck=false  : disables hourly version check (UpdateCheck.ts)
+   *  - pluginCatalog=false: disables admin plugin browser
+   *                        (manual install-by-name via CLI still works)
+   */
+  "privacy": {
+    "updateCheck": true,
+    "pluginCatalog": true
+  },
+
+  /*
    * Should we suppress errors from being visible in the default Pad Text?
    */
   "suppressErrorsInPadText": false,
@@ -336,18 +464,21 @@
   "maxAge": 21600, // 60 * 60 * 6 = 6 hours
 
   /*
-   * This is the absolute path to the soffice executable.
+   * Absolute path to the soffice (LibreOffice) executable.
    *
-   * LibreOffice is used for advanced import/export of pads (docx, pdf, odt).
-   * Setting it to null disables LibreOffice and will only allow plain text
-   * and HTML import/exports.
+   * When configured, soffice handles all advanced office-format
+   * conversions (docx, pdf, odt, doc, rtf — both directions). When
+   * null, Etherpad falls back to pure-JS in-process converters
+   * that handle docx export, pdf export, and docx import natively.
+   * odt/doc/rtf export and pdf import still require soffice.
    */
   "soffice": null,
 
   /*
-   * When true (the default), the "Microsoft Word" export button downloads a .docx file via
-   * LibreOffice (requires "soffice" to be set). Set to false to revert to legacy .doc output
-   * (which also requires "soffice").
+   * When true (the default), the "Microsoft Word" export button
+   * downloads a .docx file -- via soffice if it's configured, or via
+   * the in-process html-to-docx converter otherwise. Set to false to
+   * revert to legacy .doc output (.doc still requires soffice).
    */
   "docxExport": true,
 
@@ -471,9 +602,31 @@
   },
 
   /*
-   * Privacy: disable IP logging
+   * Controls what Etherpad writes to its logs about client IP addresses.
+   *
+   *   "anonymous" — replace every IP with the literal "ANONYMOUS" (default)
+   *   "truncated" — zero the last octet of IPv4 (1.2.3.0); truncate IPv6 to
+   *                 the first /48 (2001:db8:1::). Keeps aggregate visibility.
+   *   "full"      — log the full IP (document a legal basis + retention
+   *                 policy before choosing this).
+   *
+   * In-memory rate-limiting always keys on the raw IP and is never persisted.
+   */
+  "ipLogging": "anonymous",
+
+  /*
+   * Deprecated — use `ipLogging` above instead. Still honoured for one release
+   * cycle: `true` maps to `ipLogging: "anonymous"`, `false` maps to `"full"`.
+   * A deprecation warning is emitted when only this legacy setting is present.
    */
   "disableIPlogging": false,
+
+  /*
+   * Allow any user who can edit a pad to delete it without the one-time pad
+   * deletion token. If false, only the original creator's author cookie or the
+   * deletion token can delete the pad.
+   */
+  "allowPadDeletionByAllUsers": false,
 
   /*
    * Time (in seconds) to automatically reconnect pad when a "Force reconnect"
@@ -645,9 +798,41 @@
 
     /**
     * Enable creator-owned Pad-wide Settings and new-pad default seeding from My View.
-    * Disabled by default to preserve the legacy single-settings behavior.
+    * The pad creator (revision-0 author) gets the "Pad-wide Settings" section,
+    * which lets them set defaults and optionally enforce them for other users.
+    * Other users see only "User Settings" (their own view options).
+    * Set to false to revert to the legacy single-settings behavior.
     **/
-    "enablePadWideSettings": "${ENABLE_PAD_WIDE_SETTINGS:false}",
+    "enablePadWideSettings": "${ENABLE_PAD_WIDE_SETTINGS:true}",
+
+  /*
+    * Allow plugins to ride the existing padoptions COLLABROOM rail by
+    * accepting pad-wide values under plugin-namespaced keys matching
+    * /^ep_[a-z0-9_]+$/ (e.g. ep_table_of_contents). Values are validated
+    * (JSON-safe, 64 KB per key, 256 KB total) and broadcast to every
+    * connected client just like native pad-wide toggles. Disabled by
+    * default; flip to true once your plugins (e.g. ep_plugin_helpers'
+    * padToggle) require it. See doc/plugins.md.
+    **/
+    "enablePluginPadOptions": "${ENABLE_PLUGIN_PAD_OPTIONS:false}",
+
+  /*
+   * Optional privacy banner shown once the pad loads. Disabled by default.
+   *
+   *   enabled      — toggle the feature
+   *   title        — plain-text heading (HTML is escaped)
+   *   body         — plain-text body; newlines become paragraph breaks
+   *   learnMoreUrl — optional URL rendered as a "Learn more" link
+   *   dismissal    — "dismissible" (close button, stored in localStorage)
+   *                  or "sticky"  (always shown, no close button)
+   */
+  "privacyBanner": {
+    "enabled": false,
+    "title": "Privacy notice",
+    "body": "This instance processes pad content on our servers. See the linked policy for retention and how to request erasure.",
+    "learnMoreUrl": null,
+    "dismissal": "dismissible"
+  },
 
   /*
    * From Etherpad 1.8.5 onwards, when Etherpad is in production mode commits from individual users are rate limited
@@ -711,7 +896,19 @@
    */
    "logLayoutType": "colored",
 
-  /* Override any strings found in locale directories */
+  /*
+   * Override any strings found in locale directories.
+   *
+   * Format: { "<lang>": { "<key>": "<text>", ... }, ... }
+   * Example, per-language Open Graph description for link previews:
+   *   "customLocaleStrings": {
+   *     "en": { "pad.social.description": "Our team's collaborative pads." },
+   *     "de": { "pad.social.description": "Kollaborative Notizblöcke." }
+   *   }
+   * For a single description regardless of language, prefer
+   * `socialMeta.description` above — link-preview crawlers usually don't
+   * send Accept-Language and otherwise hit the English fallback.
+   */
   "customLocaleStrings": {},
 
   /* Disable Admin UI tests */

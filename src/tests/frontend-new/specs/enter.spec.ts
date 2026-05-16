@@ -31,21 +31,32 @@ test.describe('enter keystroke', function () {
   });
 
   test('enter is always visible after event', async function ({page}) {
+    // Even with the per-iteration toHaveCount value-wait, this 15-Enter
+    // loop occasionally misses a line under WITH_PLUGINS load when the
+    // editor's input pipeline backs up and a press is silently dropped.
+    // Tracked by #7611 — needs a different drive mechanism (REST API
+    // or single multi-line write) to un-skip reliably.
     const padBody = await getPadBody(page);
     const originalLength = await padBody.locator('div').count();
-    let lastLine = padBody.locator('div').last();
 
-    // simulate key presses to enter content
-    let i = 0;
+    // Press Enter `numberOfLines` times. Each iteration value-waits
+    // for the line count to advance before issuing the next press —
+    // a tight Enter-loop with no per-iteration verify dropped events
+    // under Firefox + WITH_PLUGINS load (the editor's input pipeline
+    // can't always keep up with back-to-back keypresses while plugin
+    // hooks are warming).
     const numberOfLines = 15;
-    while (i < numberOfLines) {
-      lastLine = padBody.locator('div').last();
-      await lastLine.focus();
+    for (let i = 0; i < numberOfLines; i++) {
+      const expectedCount = originalLength + i + 1;
+      const lastLine = padBody.locator('div').last();
+      // `.focus()` is a no-op on a <div> (not natively focusable), so click
+      // the line to put the caret in the editor. Previously the editor was
+      // auto-focused on page load and this still happened to work; removing
+      // that auto-focus (#7255) makes the click explicit.
+      await lastLine.click();
       await page.keyboard.press('End');
       await page.keyboard.press('Enter');
-
-      // check we can see the caret..
-      i++;
+      await expect(padBody.locator('div')).toHaveCount(expectedCount);
     }
 
     expect(await padBody.locator('div').count()).toBe(numberOfLines + originalLength);

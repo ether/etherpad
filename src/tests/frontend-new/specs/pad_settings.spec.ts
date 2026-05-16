@@ -28,7 +28,9 @@ test.describe('creator-owned pad settings', () => {
     await context2.close();
   });
 
-  test('pad settings act as defaults until enforcement is enabled', async ({page, browser}) => {
+  test('pad settings act as defaults until enforcement is enabled', {
+    tag: '@feature:line-numbers',
+  }, async ({page, browser}) => {
     const padId = await goToNewPad(page);
 
     const context2 = await browser.newContext();
@@ -122,7 +124,9 @@ test.describe('creator-owned pad settings', () => {
         await context2.close();
       });
 
-  test('uses My View defaults for newly created pads without changing an existing pad default',
+  test('uses My View defaults for newly created pads without changing an existing pad default', {
+    tag: '@feature:line-numbers',
+  },
       async ({page}) => {
         await goToNewPad(page);
         const creatorOuter = page.frameLocator('iframe[name="ace_outer"]').locator('#outerdocbody');
@@ -143,7 +147,9 @@ test.describe('creator-owned pad settings', () => {
         await expect(page.locator('#options-colorscheck')).not.toBeChecked();
       });
 
-  test('disabling chat suppresses chat gritter notifications', async ({page, browser}) => {
+  test('disabling chat suppresses chat gritter notifications', {
+    tag: '@feature:chat',
+  }, async ({page, browser}) => {
     const padId = await goToNewPad(page);
     const context2 = await browser.newContext();
     const page2 = await context2.newPage();
@@ -161,10 +167,65 @@ test.describe('creator-owned pad settings', () => {
     await context2.close();
   });
 
+  // #7696: on a short viewport the settings popup must scroll so items in
+  // Pad-wide Settings (notably "Delete pad") stay reachable instead of being
+  // cropped off-screen with no scrollbar.
+  test('settings popup stays scrollable when the viewport is short', async ({page}) => {
+    await page.setViewportSize({width: 900, height: 500});
+    await goToNewPad(page);
+    await showSettings(page);
+
+    const popupContent = page.locator('#settings > .popup-content');
+    await expect(popupContent).toBeVisible();
+    await expect(page.locator('#pad-settings-section')).toBeVisible();
+
+    // The popup must declare scrollable overflow (otherwise the previous bug
+    // recurs even if content happens to fit by coincidence).
+    await expect(popupContent).toHaveCSS('overflow-y', 'auto');
+
+    // Delete pad sits at the bottom of Pad-wide Settings; on a short viewport
+    // it starts off-screen and must become reachable by scrolling the popup.
+    const deletePad = page.locator('#delete-pad');
+    await expect(deletePad).not.toBeInViewport();
+    await deletePad.scrollIntoViewIfNeeded();
+    await expect(deletePad).toBeInViewport();
+  });
+
+  // #7696 follow-up: the Pad-wide font/language nice-select dropdowns sit
+  // near the bottom of the popup, so opening one triggers the .reverse path
+  // (open upward). Floating the list with position:fixed must not pick up
+  // the default `.reverse { bottom: calc(100% + 5px) }` rule, which would
+  // resolve against the viewport and place the list off-screen.
+  test('Pad-wide font dropdown opens visibly when popup is scrolled to bottom', async ({page}) => {
+    await page.setViewportSize({width: 900, height: 500});
+    await goToNewPad(page);
+    await showSettings(page);
+
+    // Force the font dropdown into the lower portion of the viewport so
+    // .reverse triggers and the list opens upward.
+    await page.locator('#settings > .popup-content').evaluate((el) => {
+      el.scrollTop = el.scrollHeight;
+    });
+
+    const fontDropdown = page.locator('#padsettings-viewfontmenu + .nice-select');
+    await expect(fontDropdown).toBeInViewport();
+
+    await fontDropdown.click();
+    const list = fontDropdown.locator('.list');
+    await expect(list).toBeVisible();
+    await expect(list).toBeInViewport();
+
+    // The first option must be reachable so users can actually pick a font.
+    await fontDropdown.locator('.option').first().click();
+    await expect(fontDropdown).not.toHaveClass(/open/);
+  });
+
   // #7592: ticking "Disable chat" must visibly disable the dependent
   // "Chat always on screen" / "Show Chat and Users" toggles, not just
   // make the underlying inputs non-interactive.
-  test('disabling chat disables and visually greys the dependent chat toggles', async ({page}) => {
+  test('disabling chat disables and visually greys the dependent chat toggles', {
+    tag: '@feature:chat',
+  }, async ({page}) => {
     await goToNewPad(page);
     await showSettings(page);
 

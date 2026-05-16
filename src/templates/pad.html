@@ -1,10 +1,17 @@
 <%
   var langs = require("ep_etherpad-lite/node/hooks/i18n").availableLangs
     , pluginUtils = require('ep_etherpad-lite/static/js/pluginfw/shared')
+    , skinColors = require('ep_etherpad-lite/node/utils/SkinColors')
     ;
   var renderLang = (req && typeof req.acceptsLanguages === 'function'
     && req.acceptsLanguages(Object.keys(langs))) || 'en';
   var renderDir = (langs[renderLang] && langs[renderLang].direction === 'rtl') ? 'rtl' : 'ltr';
+  // theme-color matches the configured toolbar so mobile address bars don't
+  // paint a mismatched system color above the toolbar on first paint. We do
+  // not emit a prefers-color-scheme: dark variant: the client-side dark-mode
+  // auto-switch is gated on enableDarkMode, matchMedia, and a localStorage
+  // white-mode override, none of which a media query can express.
+  var configuredColor = skinColors.configuredToolbarColor(settings.skinName, settings.skinVariants);
 %>
 <!doctype html>
 <html lang="<%=renderLang%>" dir="<%=renderDir%>" translate="no" class="pad <%=pluginUtils.clientPluginNames().join(' '); %> <%=settings.skinVariants%>">
@@ -12,6 +19,7 @@
   <% e.begin_block("htmlHead"); %>
   <% e.end_block(); %>
   <title><%=settings.title%></title>
+<%- typeof socialMetaHtml !== 'undefined' ? socialMetaHtml : '' %>
   <link rel="manifest" href="../../manifest.json" />
   <script>
     /*
@@ -41,6 +49,7 @@
   <meta name="robots" content="noindex, nofollow">
   <meta name="referrer" content="no-referrer">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
+  <% if (configuredColor) { %><meta name="theme-color" content="<%=configuredColor%>"><% } %>
   <link rel="shortcut icon" href="../favicon.ico">
 
   <% e.begin_block("styles"); %>
@@ -56,28 +65,118 @@
   <link rel="localizations" type="application/l10n+json" href="../locales.json" />
 </head>
 <body>
+  <!-- WCAG 2.4.1 — bypass the toolbar and jump straight to the editor.
+       Visible only when keyboard-focused; click handler in pad.ts routes
+       focus into the editor iframe rather than just scrolling.
+       MUST live outside the `body` eejs block: plugins like
+       ep_set_title_on_pad use eejsBlock_body to prepend a focusable
+       title bar, which would otherwise come before this link in DOM
+       order and steal the first Tab. -->
+  <a id="skip-to-content" class="skip-link" href="#editorcontainer"
+     data-l10n-id="pad.editor.skipToContent">Skip to editor</a>
+
   <% e.begin_block("body"); %>
 
   <!----------------------------->
   <!--------- TOOLBAR ----------->
   <!----------------------------->
+  <!-- Visually-hidden labels for the role=toolbar regions. Sitting outside the
+       <ul>s keeps the toolbar markup valid (HTML disallows non-<li>/<script>
+       children inside <ul>) while still giving each toolbar a translated
+       accessible name via aria-labelledby. See ether/etherpad#7255. -->
+  <span id="editbar-formatting-label" class="sr-only"
+        data-l10n-id="pad.editor.toolbar.formatting">Formatting toolbar</span>
+  <!-- Reuses pad.historyMode.controlsLabel rather than minting a new key:
+       pad_mode.ts already set this as aria-label on #history-controls via JS,
+       and the existing key has translations in nl/de/etc. A new English-only
+       key would cause non-English locales to regress to fallback English. -->
+  <span id="editbar-history-label" class="sr-only"
+        data-l10n-id="pad.historyMode.controlsLabel">Pad history controls</span>
+  <span id="editbar-actions-label" class="sr-only"
+        data-l10n-id="pad.editor.toolbar.actions">Pad actions toolbar</span>
+  <span id="editbar-showmore-label" class="sr-only"
+        data-l10n-id="pad.editor.toolbar.showMore">Show more toolbar buttons</span>
+
   <div id="editbar" class="toolbar">
       <div id="toolbar-overlay"></div>
 
-      <ul class="menu_left" role="toolbar">
+      <ul class="menu_left" role="toolbar" aria-labelledby="editbar-formatting-label">
           <% e.begin_block("editbarMenuLeft"); %>
           <%- toolbar.menu(settings.toolbar.left, isReadOnly, 'left', 'pad') %>
           <% e.end_block(); %>
       </ul>
-      <ul class="menu_right" role="toolbar">
+      <!-- HISTORY-MODE CONTROLS — slider + play/step buttons swap into the
+           toolbar's left zone while scrubbing pad history. The formatting
+           menu_left is hidden in history mode so this fills its space. The
+           outer slider is just a remote control for the embedded
+           timeslider iframe's BroadcastSlider; pad_mode.ts owns the
+           bridging.
+
+           Accessible names + tooltip titles are populated by pad_mode.ts
+           after html10n is ready, reusing the existing `timeslider.*`
+           translation keys. We deliberately do NOT put data-l10n-id on
+           the icon buttons — that would set their textContent, which on
+           a buttonicon glyph would draw the localized string on screen. -->
+      <div id="history-controls" class="history-controls" role="toolbar"
+           aria-labelledby="editbar-history-label" hidden>
+        <button type="button" id="history-playpause" class="buttonicon buttonicon-play"
+                aria-pressed="false"></button>
+        <button type="button" id="history-leftstep" class="buttonicon buttonicon-step-backward">
+        </button>
+        <button type="button" id="history-rightstep" class="buttonicon buttonicon-step-forward">
+        </button>
+        <input type="range" id="history-slider-input" class="history-slider-input"
+               min="0" max="0" value="0" step="1">
+        <span id="history-timer" class="history-timer hide-for-mobile" aria-live="polite"></span>
+        <!-- Follow toggle: an icon-only button. The eye is always rendered;
+             the diagonal slash overlay is shown only when aria-pressed is
+             false. Backed by a hidden checkbox so existing pad_mode.ts
+             bridge code (which reads .checked) keeps working. -->
+        <input type="checkbox" id="history-options-followContents" class="sr-only" checked>
+        <label for="history-options-followContents" class="history-follow-toggle hide-for-mobile"
+               aria-hidden="true">
+          <svg class="history-follow-eye" width="16" height="16" viewBox="0 0 16 16"
+               aria-hidden="true" focusable="false">
+            <path class="history-follow-eye-shape"
+                  d="M1.2 8C2.7 4.4 5.1 2.5 8 2.5s5.3 1.9 6.8 5.5c-1.5 3.6-3.9 5.5-6.8 5.5S2.7 11.6 1.2 8z"
+                  fill="none" stroke="currentColor" stroke-width="1.4"/>
+            <circle class="history-follow-eye-pupil" cx="8" cy="8" r="2.3" fill="currentColor"/>
+            <line class="history-follow-eye-slash" x1="2" y1="14" x2="14" y2="2"
+                  stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+          </svg>
+        </label>
+        <select id="history-playbackspeed" class="history-speed hide-for-mobile"
+                aria-label="Playback speed"
+                data-l10n-aria-label="true">
+          <option value="100" data-l10n-id="timeslider.settings.playbackSpeed.original">Original speed</option>
+          <option value="realtime" data-l10n-id="timeslider.settings.playbackSpeed.realtime">Realtime</option>
+          <option value="200" data-l10n-id="timeslider.settings.playbackSpeed.200ms">200 ms</option>
+          <option value="500" data-l10n-id="timeslider.settings.playbackSpeed.500ms">500 ms</option>
+          <option value="1000" data-l10n-id="timeslider.settings.playbackSpeed.1000ms">1000 ms</option>
+        </select>
+      </div>
+      <ul class="menu_right" role="toolbar" aria-labelledby="editbar-actions-label">
           <% e.begin_block("editbarMenuRight"); %>
           <%- toolbar.menu(settings.toolbar.right, isReadOnly, 'right', 'pad') %>
           <% e.end_block(); %>
       </ul>
-      <button type="button" class="show-more-icon-btn" aria-label="Show more toolbar buttons" aria-expanded="false"></button> <!-- use on small screen to display hidden toolbar buttons -->
+      <button type="button" class="show-more-icon-btn"
+              aria-labelledby="editbar-showmore-label"
+              aria-expanded="false"></button> <!-- use on small screen to display hidden toolbar buttons -->
   </div>
 
   <% e.begin_block("afterEditbar"); %><% e.end_block(); %>
+
+  <!--------------------------------------------------------------->
+  <!-- HISTORY-MODE BANNER (visible only when scrubbing history) -->
+  <!--------------------------------------------------------------->
+  <div id="history-banner" class="history-banner" role="status" aria-live="polite" hidden>
+    <span class="history-banner-label" data-l10n-id="pad.historyMode.banner">Viewing history</span>
+    <span class="history-banner-rev" id="history-banner-rev"></span>
+    <span class="history-banner-date" id="history-banner-date"></span>
+    <button type="button" id="history-banner-return" class="btn btn-primary"
+            data-l10n-id="pad.historyMode.return">Return to live</button>
+  </div>
 
   <div id="editorcontainerbox" class="flex-layout">
 
@@ -88,6 +187,11 @@
       <!----------------------------->
 
       <div id="editorcontainer" class="editorcontainer" aria-label="Document editor"></div>
+
+      <!--------------------------------------------------------------------->
+      <!-- HISTORY-MODE IFRAME (mounted only while scrubbing pad history) -->
+      <!--------------------------------------------------------------------->
+      <div id="history-frame-mount" class="history-frame-mount" hidden></div>
 
       <div id="editorloadingbox">
         <% e.begin_block("permissionDenied"); %>
@@ -118,11 +222,7 @@
       <!------------------------------------------------------------->
 
       <div id="settings" class="popup" role="dialog" aria-modal="true" aria-labelledby="settings-title"><div class="popup-content">
-          <% if (settings.enablePadWideSettings) { %>
           <h1 id="settings-title" data-l10n-id="pad.settings.title">Settings</h1>
-          <% } else { %>
-          <h1 id="settings-title" data-l10n-id="pad.settings.padSettings">Pad Settings</h1>
-          <% } %>
           <div class="settings-sections">
             <div id="user-settings-section" class="settings-section">
             <% e.begin_block("mySettings"); %>
@@ -146,6 +246,10 @@
             <p>
                 <input type="checkbox" id="options-colorscheck">
                 <label for="options-colorscheck" data-l10n-id="pad.settings.colorcheck"></label>
+            </p>
+            <p>
+                <input type="checkbox" id="options-fadeauthorcheck" checked>
+                <label for="options-fadeauthorcheck" data-l10n-id="pad.settings.fadeInactiveAuthorColors"></label>
             </p>
             <p>
                 <input type="checkbox" id="options-linenoscheck" checked>
@@ -209,6 +313,10 @@
                   <label for="padsettings-options-colorscheck" data-l10n-id="pad.settings.colorcheck"></label>
               </p>
               <p>
+                  <input type="checkbox" id="padsettings-options-fadeauthorcheck" checked>
+                  <label for="padsettings-options-fadeauthorcheck" data-l10n-id="pad.settings.fadeInactiveAuthorColors"></label>
+              </p>
+              <p>
                   <input type="checkbox" id="padsettings-options-linenoscheck" checked>
                   <label for="padsettings-options-linenoscheck" data-l10n-id="pad.settings.linenocheck"></label>
               </p>
@@ -245,11 +353,41 @@
               <button class="btn btn-danger" data-l10n-id="pad.settings.deletePad" id="delete-pad">Delete pad</button>
             </div><% } %>
           </div>
+          <% if (!settings.requireAuthentication) { %>
+          <details id="delete-pad-with-token">
+            <summary data-l10n-id="pad.deletionToken.deleteWithToken">Delete with token</summary>
+            <label for="delete-pad-token-input" data-l10n-id="pad.deletionToken.tokenFieldLabel">Pad deletion token</label>
+            <input type="password" id="delete-pad-token-input" autocomplete="off" spellcheck="false">
+            <button id="delete-pad-token-submit" type="button" class="btn btn-danger"
+                    data-l10n-id="pad.settings.deletePad">Delete pad</button>
+          </details>
+          <% } %>
         <h2 data-l10n-id="pad.settings.about">About</h2>
           <span data-l10n-id="pad.settings.poweredBy">Powered by</span>
           <a href="https://etherpad.org" target="_blank" referrerpolicy="no-referrer" rel="noopener">Etherpad</a>
         <% if (settings.exposeVersion) { %>(commit <%= settings.gitVersion %>)<% } %>      </div></div>
 
+      <!--------------------------------------------------->
+      <!-- PAD DELETION TOKEN MODAL (shown once on create) -->
+      <!--------------------------------------------------->
+
+      <div id="deletiontoken-modal" class="popup" role="dialog" aria-modal="true"
+           aria-labelledby="deletiontoken-modal-title" aria-describedby="deletiontoken-modal-body" hidden>
+          <div class="popup-content">
+          <h1 id="deletiontoken-modal-title" data-l10n-id="pad.deletionToken.modalTitle">Save your pad deletion token</h1>
+          <p id="deletiontoken-modal-body" data-l10n-id="pad.deletionToken.modalBody">
+            This token is the only way to delete this pad if you lose your browser session or switch device. Save it somewhere safe — it is shown here exactly once.
+          </p>
+          <div class="deletiontoken-row">
+            <label for="deletiontoken-value" class="sr-only"
+                   data-l10n-id="pad.deletionToken.tokenValueLabel">Your pad deletion token (read-only)</label>
+            <input type="text" id="deletiontoken-value" readonly>
+            <button id="deletiontoken-copy" type="button" aria-live="polite"
+                    data-l10n-id="pad.deletionToken.copy">Copy</button>
+          </div>
+          <button id="deletiontoken-ack" type="button" class="btn btn-primary"
+                  data-l10n-id="pad.deletionToken.acknowledge">I've saved it</button>
+      </div></div>
 
       <!------------------------->
       <!-- IMPORT EXPORT POPUP -->
@@ -280,23 +418,23 @@
           <div id="exportColumn">
               <h2 data-l10n-id="pad.importExport.export"></h2>
               <% e.begin_block("exportColumn"); %>
-              <a id="exportetherpada" target="_blank" class="exportlink">
-                <span class="exporttype buttonicon buttonicon-file-powerpoint" id="exportetherpad" data-l10n-id="pad.importExport.exportetherpad"></span>
+              <a id="exportetherpada" data-l10n-id="pad.importExport.exportetherpada.title" target="_blank" rel="noopener" class="exportlink">
+                <span class="exporttype buttonicon buttonicon-file-powerpoint" id="exportetherpad" data-l10n-id="pad.importExport.exportetherpad" aria-hidden="true"></span>
               </a>
-              <a id="exporthtmla" target="_blank" class="exportlink">
-                <span class="exporttype buttonicon buttonicon-file-code" id="exporthtml" data-l10n-id="pad.importExport.exporthtml"></span>
+              <a id="exporthtmla" data-l10n-id="pad.importExport.exporthtmla.title" target="_blank" rel="noopener" class="exportlink">
+                <span class="exporttype buttonicon buttonicon-file-code" id="exporthtml" data-l10n-id="pad.importExport.exporthtml" aria-hidden="true"></span>
               </a>
-              <a id="exportplaina" target="_blank" class="exportlink">
-                <span class="exporttype buttonicon buttonicon-file" id="exportplain" data-l10n-id="pad.importExport.exportplain"></span>
+              <a id="exportplaina" data-l10n-id="pad.importExport.exportplaina.title" target="_blank" rel="noopener" class="exportlink">
+                <span class="exporttype buttonicon buttonicon-file" id="exportplain" data-l10n-id="pad.importExport.exportplain" aria-hidden="true"></span>
               </a>
-              <a id="exportworda" target="_blank" class="exportlink">
-                <span class="exporttype buttonicon buttonicon-file-word" id="exportword" data-l10n-id="pad.importExport.exportword"></span>
+              <a id="exportworda" data-l10n-id="pad.importExport.exportworda.title" target="_blank" rel="noopener" class="exportlink">
+                <span class="exporttype buttonicon buttonicon-file-word" id="exportword" data-l10n-id="pad.importExport.exportword" aria-hidden="true"></span>
               </a>
-              <a id="exportpdfa" target="_blank" class="exportlink">
-                <span class="exporttype buttonicon buttonicon-file-pdf" id="exportpdf" data-l10n-id="pad.importExport.exportpdf"></span>
+              <a id="exportpdfa" data-l10n-id="pad.importExport.exportpdfa.title" target="_blank" rel="noopener" class="exportlink">
+                <span class="exporttype buttonicon buttonicon-file-pdf" id="exportpdf" data-l10n-id="pad.importExport.exportpdf" aria-hidden="true"></span>
               </a>
-              <a id="exportopena" target="_blank" class="exportlink">
-                <span class="exporttype buttonicon buttonicon-file-alt" id="exportopen" data-l10n-id="pad.importExport.exportopen"></span>
+              <a id="exportopena" data-l10n-id="pad.importExport.exportopena.title" target="_blank" rel="noopener" class="exportlink">
+                <span class="exporttype buttonicon buttonicon-file-alt" id="exportopen" data-l10n-id="pad.importExport.exportopen" aria-hidden="true"></span>
               </a>
               <% e.end_block(); %>
           </div>
@@ -507,6 +645,7 @@
 
       <% e.end_block(); %>
 
+    <div id="version-badge" role="status" aria-live="polite" style="display:none"></div>
   </div> <!-- End of #editorcontainerbox -->
 
   <% e.end_block(); %>

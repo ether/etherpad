@@ -21,8 +21,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # PRs: single Node version. Push: full matrix.
-        node: ${{ github.event_name == 'pull_request' && fromJSON('[24]') || fromJSON('[20, 22, 24]') }}
+        # Etherpad requires Node >= 24 (see package.json engines.node).
+        node: ${{ fromJSON('[24]') }}
 
     steps:
       -
@@ -38,7 +38,6 @@ jobs:
       - uses: pnpm/action-setup@v6
         name: Install pnpm
         with:
-          version: 10.33.2
           run_install: false
       - name: Use Node.js
         uses: actions/setup-node@v6

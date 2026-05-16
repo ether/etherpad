@@ -6,7 +6,7 @@ export default defineConfig({
   base: '/views/',
     build: {
         outDir: resolve(__dirname, '../src/static/oidc'),
-        rolldownOptions: {
+        rollupOptions: {
             input: {
                 main: resolve(__dirname, 'consent.html'),
                 nested: resolve(__dirname, 'login.html'),

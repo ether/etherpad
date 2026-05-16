@@ -19,6 +19,7 @@
 
 import padutils from './pad_utils.js'
 import hooks from './pluginfw/hooks.js';
+import {chat} from './chat.js';
 import html10n from './vendors/html10n.js';
 let myUserInfo = {};
 
@@ -353,7 +354,25 @@ const paduserlist = (() => {
       self.setMyUserInfo(myInitialUserInfo);
 
       if ($('#online_count').length === 0) {
-        $('#editbar [data-key=showusers] > a').append('<span id="online_count">1</span>');
+        // role="status" + aria-live="polite" announces the count when it
+        // changes; the localized aria-label (set by updateNumberOfOnlineUsers
+        // below) turns the bare badge digit into "N connected users" so AT
+        // users get context, not a stray "5". See ether/etherpad#7255.
+        $('#editbar [data-key=showusers] > a').append(
+            '<span id="online_count" role="status" aria-live="polite">1</span>');
+      }
+      // Set the initial aria-label. updateNumberOfOnlineUsers otherwise only
+      // fires on userJoin / userLeave / status change — on a solo-author pad
+      // those events never come, and the badge would ship to AT with no
+      // accessible name (the regression Playwright caught on PR #7777).
+      self.updateNumberOfOnlineUsers();
+      // Re-localize on runtime language changes. updateNumberOfOnlineUsers
+      // reads html10n.get, which returns undefined before the bundle loads
+      // and returns translated text afterwards; binding here keeps the
+      // accessible name in sync with applyLanguage(). Same pattern used
+      // by the keyboard hint in ace.ts and the history toolbar labels.
+      if (html10n && typeof (html10n as any).bind === 'function') {
+        (html10n as any).bind('localized', () => self.updateNumberOfOnlineUsers());
       }
 
       $('#otheruserstable tr').remove();
@@ -367,6 +386,51 @@ const paduserlist = (() => {
         window.setTimeout(() => {
           self.renderMyUserInfo();
         }, 0);
+      });
+
+      // Click any other user's row to open chat with @<their_name> prefilled.
+      // Helps newcomers discover the chat panel and the @-mention convention
+      // without having to be told. Plugins can transform the prefilled text
+      // — for example ep_ai_chat replaces "@AI Assistant" with the
+      // configured trigger ("@ai") — via the chatPrefillFromUser client
+      // hook (see doc/api/hooks_client-side.md).
+      $('#otheruserstable').on('click', 'tr[data-authorId]', async function (event) {
+        // Skip clicks on the color swatch — that has its own click handler
+        // (color-picker semantics) and shouldn't double up as a chat trigger.
+        if ($(event.target).closest('.usertdswatch').length) return;
+        // Skip clicks on form controls inside the row. The most important
+        // case is the rename <input> rendered for unnamed users — without
+        // this guard, clicking the input would steal focus into #chatinput
+        // and make it impossible to name an unnamed user from the list.
+        if ($(event.target).closest('input, textarea, select, button, a, [contenteditable=true]').length) return;
+        const tr = $(this);
+        const authorId = tr.attr('data-authorId');
+        if (!authorId) return;
+        const name = (tr.find('.usertdname').text() || '').trim();
+        let prefill = name ? `@${name.replace(/\s+/g, '_')} ` : '';
+        try {
+          const transforms = await hooks.aCallAll(
+              'chatPrefillFromUser', {authorId, name, prefill});
+          if (Array.isArray(transforms)) {
+            for (const tr2 of transforms) {
+              if (typeof tr2 === 'string' && tr2.length > 0) { prefill = tr2; break; }
+            }
+          }
+        } catch { /* never let a misbehaving plugin break the click */ }
+        try { chat.show(); } catch { /* */ }
+        setTimeout(() => {
+          const $input = $('#chatinput');
+          if (!$input.length) return;
+          const current = ($input.val() || '') as string;
+          if (!current.trim() || /^@\S+\s*$/.test(current.trim())) {
+            $input.val(prefill);
+          } else if (!current.includes(prefill.trim())) {
+            $input.val(`${current.trimEnd()} ${prefill}`);
+          }
+          $input.trigger('focus');
+          const elem = $input[0] as HTMLTextAreaElement;
+          try { elem.setSelectionRange(elem.value.length, elem.value.length); } catch (_e) { /* */ }
+        }, 50);
       });
 
       // color picker
@@ -501,7 +565,15 @@ const paduserlist = (() => {
         localStorage.setItem('recentPads', JSON.stringify(recentPadsList));
       }
 
-      $('#online_count').text(online);
+      // Set both visible text (the badge digit) and the accessible name in
+      // one place so they can't drift. html10n.get returns undefined if the
+      // locale bundle hasn't loaded yet — fall back to an English template
+      // so AT never reads back "undefined".
+      const $count = $('#online_count');
+      $count.text(online);
+      const label = html10n.get('pad.userlist.onlineCount', {count: online})
+          || `${online} connected user${online === 1 ? '' : 's'}`;
+      $count.attr('aria-label', label);
 
       return online;
     },

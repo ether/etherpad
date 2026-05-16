@@ -22,6 +22,7 @@
 import CustomError from '../utils/customError.js';
 import {randomString} from "../../static/js/pad_utils.js";
 import db from './DB.js';
+import * as padDeletionManager from './PadDeletionManager.js';
 import * as padManager from './PadManager.js';
 import * as sessionManager from './SessionManager.js';
 
@@ -136,7 +137,12 @@ export const createGroupIfNotExistsFor = async (groupMapper: string|object) => {
  * @param {String} authorId The id of the author
  * @return {Promise<{padID: string}>} a promise that resolves to the id of the new pad
  */
-export const createGroupPad = async (groupID: string, padName: string, text: string, authorId: string = ''): Promise<{ padID: string; }> => {
+export const createGroupPad = async (
+    groupID: string,
+    padName: string,
+    text: string,
+    authorId: string = '',
+): Promise<{ padID: string; deletionToken: string | null; }> => {
   // create the padID
   const padID = `${groupID}$${padName}`;
 
@@ -161,7 +167,10 @@ export const createGroupPad = async (groupID: string, padName: string, text: str
   // create an entry in the group for this pad
   await db.setSub(`group:${groupID}`, ['pads', padID], 1);
 
-  return {padID};
+  return {
+    padID,
+    deletionToken: await padDeletionManager.createDeletionTokenIfAbsent(padID),
+  };
 };
 
 /**

@@ -7,9 +7,12 @@ const fsp = fs.promises;
 import toolbar from '../../utils/toolbar.js';
 import hooks from '../../../static/js/pluginfw/hooks.js';
 import settings, {getEpVersion} from '../../utils/Settings.js';
+import {ensureAuthorTokenCookie} from '../../utils/ensureAuthorTokenCookie.js';
 import util from 'node:util';
 import * as webaccess from './webaccess.js';
 import plugins from '../../../static/js/pluginfw/plugin_defs.js';
+import * as i18n from '../i18n.js';
+import {renderSocialMeta} from '../../utils/socialMeta.js';
 
 import {build, buildSync} from 'esbuild'
 import {ArgsExpressType} from "../../types/ArgsExpressType.js";
@@ -173,7 +176,10 @@ const handleLiveReload = async (args: ArgsExpressType, padString: string, timeSl
       })
       setRouteHandler('/', (req: any, res: any) => {
         const proxyPath = sanitizeProxyPath(req);
-        res.send(eejs.require('ep_etherpad-lite/templates/index.html', {req, entrypoint: proxyPath + '/watch/index?hash=' + hash, settings}));
+        const socialMetaHtml = renderSocialMeta({
+          req, settings, availableLangs: i18n.availableLangs, locales: i18n.locales, kind: 'home',
+        });
+        res.send(eejs.require('ep_etherpad-lite/templates/index.html', {req, entrypoint: proxyPath + '/watch/index?hash=' + hash, settings, socialMetaHtml}));
       })
     })
 
@@ -188,6 +194,7 @@ const handleLiveReload = async (args: ArgsExpressType, padString: string, timeSl
 
 
       setRouteHandler("/p/:pad", (req: any, res: any, next: Function) => {
+        ensureAuthorTokenCookie(req, res, settings);
         // The below might break for pads being rewritten
         const isReadOnly = !webaccess.userCanModify(req.params.pad, req);
 
@@ -197,12 +204,16 @@ const handleLiveReload = async (args: ArgsExpressType, padString: string, timeSl
         });
 
         const proxyPath = sanitizeProxyPath(req);
+        const socialMetaHtml = renderSocialMeta({
+          req, settings, availableLangs: i18n.availableLangs, locales: i18n.locales, kind: 'pad', padName: req.params.pad,
+        });
         const content = eejs.require('ep_etherpad-lite/templates/pad.html', {
           req,
           toolbar,
           isReadOnly,
           entrypoint: proxyPath + '/watch/pad?hash=' + hash,
-          settings: settings.getPublicSettings()
+          settings: settings.getPublicSettings(),
+          socialMetaHtml,
         })
         res.send(content);
       })
@@ -218,7 +229,14 @@ const handleLiveReload = async (args: ArgsExpressType, padString: string, timeSl
       })
 
       setRouteHandler("/p/:pad/timeslider", (req: any, res: any, next: Function) => {
-        console.log("Reloading pad")
+        // Direct visits (legacy bookmarks) get redirected back to the pad,
+        // where the in-pad PadModeController handles entering history mode.
+        // The iframe used by history mode requests this URL with ?embed=1
+        // and gets the full timeslider HTML rendered for embedded use.
+        if (req.query.embed !== '1') {
+          return res.redirect(302, `../${encodeURIComponent(req.params.pad)}`);
+        }
+        ensureAuthorTokenCookie(req, res, settings);
         // The below might break for pads being rewritten
         const isReadOnly = !webaccess.userCanModify(req.params.pad, req);
 
@@ -228,12 +246,17 @@ const handleLiveReload = async (args: ArgsExpressType, padString: string, timeSl
         });
 
         const proxyPath = sanitizeProxyPath(req);
+        const socialMetaHtml = renderSocialMeta({
+          req, settings, availableLangs: i18n.availableLangs, locales: i18n.locales, kind: 'timeslider', padName: req.params.pad,
+        });
         const content = eejs.require('ep_etherpad-lite/templates/timeslider.html', {
           req,
           toolbar,
           isReadOnly,
+          embed: true,
           entrypoint: proxyPath + '/watch/timeslider?hash=' + hash,
-          settings: settings.getPublicSettings()
+          settings: settings.getPublicSettings(),
+          socialMetaHtml,
         })
         res.send(content);
       })
@@ -343,12 +366,16 @@ export const expressCreateServer = async (_hookName: string, args: ArgsExpressTy
 
     // serve index.html under /
     args.app.get('/', (req: any, res: any) => {
-      res.send(eejs.require('ep_etherpad-lite/templates/index.html', {req, settings, entrypoint: "./"+fileNameIndex}));
+      const socialMetaHtml = renderSocialMeta({
+        req, settings, availableLangs: i18n.availableLangs, locales: i18n.locales, kind: 'home',
+      });
+      res.send(eejs.require('ep_etherpad-lite/templates/index.html', {req, settings, entrypoint: "./"+fileNameIndex, socialMetaHtml}));
     });
 
 
     // serve pad.html under /p
     args.app.get('/p/:pad', (req: any, res: any, next: Function) => {
+      ensureAuthorTokenCookie(req, res, settings);
       // The below might break for pads being rewritten
       const isReadOnly = !webaccess.userCanModify(req.params.pad, req);
 
@@ -357,27 +384,49 @@ export const expressCreateServer = async (_hookName: string, args: ArgsExpressTy
         isReadOnly
       });
 
+      const socialMetaHtml = renderSocialMeta({
+        req, settings, availableLangs: i18n.availableLangs, locales: i18n.locales, kind: 'pad', padName: req.params.pad,
+      });
       const content = eejs.require('ep_etherpad-lite/templates/pad.html', {
         req,
         toolbar,
         isReadOnly,
         entrypoint: "../"+fileNamePad,
-        settings: settings.getPublicSettings()
+        settings: settings.getPublicSettings(),
+        socialMetaHtml,
       })
       res.send(content);
     });
 
     // serve timeslider.html under /p/$padname/timeslider
     args.app.get('/p/:pad/timeslider', (req: any, res: any, next: Function) => {
+      // Direct visits (legacy bookmarks) get redirected back to the pad,
+      // where the in-pad PadModeController handles entering history mode.
+      // The iframe used by history mode requests this URL with ?embed=1
+      // and gets the full timeslider HTML rendered for embedded use.
+      if (req.query.embed !== '1') {
+        // Absolute path (not relative `../`) so Firefox and Chrome resolve
+        // it identically — relative redirects from /p/:pad/timeslider are
+        // technically well-defined but Firefox dropped a trailing-slash
+        // case once that flaked the legacy-URL test (#7710).
+        const proxyPath = sanitizeProxyPath(req);
+        return res.redirect(302, `${proxyPath}/p/${encodeURIComponent(req.params.pad)}`);
+      }
+      ensureAuthorTokenCookie(req, res, settings);
       hooks.callAll('padInitToolbar', {
         toolbar,
       });
 
+      const socialMetaHtml = renderSocialMeta({
+        req, settings, availableLangs: i18n.availableLangs, locales: i18n.locales, kind: 'timeslider', padName: req.params.pad,
+      });
       res.send(eejs.require('ep_etherpad-lite/templates/timeslider.html', {
         req,
         toolbar,
+        embed: true,
         entrypoint: "../../"+fileNameTimeSlider,
-        settings: settings.getPublicSettings()
+        settings: settings.getPublicSettings(),
+        socialMetaHtml,
       }));
     });
   } else {

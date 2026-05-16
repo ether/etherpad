@@ -67,7 +67,7 @@ try cp settings.json.template settings.json
 #try mv node_modules_resolved node_modules
 
 log "download windows node..."
-try wget "https://nodejs.org/dist/latest-v20.x/win-x64/node.exe" -O node.exe
+try wget "https://nodejs.org/dist/latest-v22.x/win-x64/node.exe" -O node.exe
 
 log "create the zip..."
 try zip -9 -r "${OUTPUT}" ./*

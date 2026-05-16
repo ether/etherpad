@@ -103,6 +103,27 @@
       }
     },
     {
+      "name": "updater",
+      "hooks": {
+        "expressCreateServer": "ep_etherpad-lite/node/updater/index",
+        "shutdown": "ep_etherpad-lite/node/updater/index"
+      }
+    },
+    {
+      "name": "updateStatus",
+      "post": ["ep_etherpad-lite/admin"],
+      "hooks": {
+        "expressCreateServer": "ep_etherpad-lite/node/hooks/express/updateStatus"
+      }
+    },
+    {
+      "name": "updateActions",
+      "post": ["ep_etherpad-lite/admin"],
+      "hooks": {
+        "expressCreateServer": "ep_etherpad-lite/node/hooks/express/updateActions"
+      }
+    },
+    {
       "name": "admin",
       "hooks": {
         "expressCreateServer": "ep_etherpad-lite/node/hooks/express/admin"
@@ -124,6 +145,12 @@
       "name": "openapi",
       "hooks": {
         "expressPreSession": "ep_etherpad-lite/node/hooks/express/openapi"
+      }
+    },
+    {
+      "name": "openapi-admin",
+      "hooks": {
+        "expressPreSession": "ep_etherpad-lite/node/hooks/express/openapi-admin"
       }
     }
   ]

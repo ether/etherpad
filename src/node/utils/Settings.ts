@@ -38,6 +38,7 @@ import {argv} from './Cli.js'
 import jsonminify from 'jsonminify';
 import log4js from 'log4js';
 import randomString from './randomstring.js';
+import {createHash} from 'node:crypto';
 import { createRequire } from 'node:module';
 const suppressDisableMsg = ' -- To suppress these warning messages change ' +
     'suppressErrorsInPadText to true in your settings.json\n';
@@ -166,6 +167,16 @@ export type SettingsType = {
   title: string,
   showRecentPads: boolean,
   favicon: string | null,
+  publicURL: string | null,
+  socialMeta: {
+    // Runtime type is wider than what an operator writes by hand: when
+    // `socialMeta.description` is sourced from an env var (e.g.
+    // `"${SOCIAL_META_DESCRIPTION:null}"` in settings.json.docker), the
+    // settings loader's `coerceValue()` turns numeric-looking strings into
+    // numbers and "true"/"false" into booleans. Downstream code stringifies
+    // before use; the wider type stops callers (and tests) needing casts.
+    description: string | number | boolean | null,
+  },
   ttl: {
     AccessToken: number,
     AuthorizationCode: number,
@@ -176,6 +187,19 @@ export type SettingsType = {
   updateServer: string,
   enableDarkMode: boolean,
   enablePadWideSettings: boolean,
+  enablePluginPadOptions: boolean,
+  allowPadDeletionByAllUsers: boolean,
+  privacyBanner: {
+    enabled: boolean,
+    title: string,
+    body: string,
+    learnMoreUrl: string | null,
+    dismissal: 'dismissible' | 'sticky',
+  },
+  privacy: {
+    updateCheck: boolean,
+    pluginCatalog: boolean,
+  },
   skinName: string | null,
   skinVariants: string,
   ip: string,
@@ -206,6 +230,8 @@ export type SettingsType = {
     alwaysShowChat: boolean,
     chatAndUsers: boolean,
     lang: string | null,
+    fadeInactiveAuthorColors: boolean,
+    enforceReadableAuthorColors: boolean,
   },
   enableMetrics: boolean,
   padShortcutEnabled: {
@@ -227,6 +253,8 @@ export type SettingsType = {
     cmdShiftN: boolean,
     cmdShift1: boolean,
     cmdShiftC: boolean,
+    cmdShiftD: boolean,
+    cmdShiftK: boolean,
     cmdH: boolean,
     ctrlHome: boolean,
     pageUp: boolean,
@@ -246,9 +274,11 @@ export type SettingsType = {
   allowUnknownFileEnds: boolean,
   loglevel: string,
   logLayoutType: string,
-  disableIPlogging: boolean,
+  disableIPlogging: boolean,            // deprecated — see ipLogging
+  ipLogging: 'full' | 'truncated' | 'anonymous',
   automaticReconnectionTimeout: number,
   loadTest: boolean,
+  scalingDiveMetrics: boolean,
   dumpOnUncleanExit: boolean,
   indentationOnNewLine: boolean,
   logconfig: any | null,
@@ -274,6 +304,9 @@ export type SettingsType = {
     enabled: boolean,
     keepRevisions: number,
   },
+  gdprAuthorErasure: {
+    enabled: boolean,
+  },
   scrollWhenFocusLineIsOutOfViewport: {
     percentage: {
       editionAboveViewport: number,
@@ -298,7 +331,29 @@ export type SettingsType = {
   lowerCasePadIds: boolean,
   randomVersionString: string,
   gitVersion: string
-  getPublicSettings: () => Pick<SettingsType, "title" | "skinVariants"|"randomVersionString"|"skinName"|"toolbar"| "exposeVersion"| "gitVersion" | "enablePadWideSettings">,
+  updates: {
+    tier: 'off' | 'notify' | 'manual' | 'auto' | 'autonomous',
+    source: 'github',
+    channel: 'stable',
+    installMethod: 'auto' | 'git' | 'docker' | 'npm' | 'managed',
+    checkIntervalHours: number,
+    githubRepo: string,
+    requireAdminForStatus: boolean,
+    /** Tier 2+ knobs. Default 0 in PR 2; tier 3 makes preApplyGraceMinutes meaningful. */
+    preApplyGraceMinutes: number,
+    drainSeconds: number,
+    rollbackHealthCheckSeconds: number,
+    diskSpaceMinMB: number,
+    /** When true, refuse updates whose tag is not signed by a trusted key. */
+    requireSignature: boolean,
+    /** Override the OS keyring location (passed to git verify-tag via $GNUPGHOME). */
+    trustedKeysPath: string | null,
+  },
+  adminOpenAPI: {
+    enabled: boolean,
+  },
+  adminEmail: string | null,
+  getPublicSettings: () => Pick<SettingsType, "title" | "skinVariants"|"randomVersionString"|"skinName"|"toolbar"| "exposeVersion"| "gitVersion" | "enablePadWideSettings" | "enablePluginPadOptions" | "privacyBanner">,
 }
 
 const settings: SettingsType = {
@@ -323,6 +378,36 @@ const settings: SettingsType = {
    * Etherpad root directory.
    */
   favicon: null,
+
+  /**
+   * Canonical public origin of this Etherpad instance, e.g. "https://pad.example.com".
+   * When set, it is used to build absolute URLs in server-rendered output (currently
+   * the Open Graph / Twitter Card meta tags). When null, those URLs fall back to the
+   * incoming request's protocol+host, which is safe when Host/X-Forwarded-Host
+   * headers are trusted but should be configured explicitly in production to avoid
+   * client-controlled origin values appearing in og:url / og:image.
+   *
+   * No trailing slash. Must include scheme.
+   */
+  publicURL: null,
+
+  /**
+   * Open Graph / Twitter Card metadata, served on the homepage, pad pages and
+   * timeslider for nicer previews when a pad URL is shared in chat apps.
+   *
+   * description: when non-null, this exact string is used as og:description /
+   *   twitter:description regardless of the visitor's negotiated language. Most
+   *   crawlers (WhatsApp, Signal, Telegram, Slack, Facebook) don't send an
+   *   Accept-Language header, so without an override they always see the
+   *   English fallback — set this if your instance serves a non-English
+   *   audience and you want a fixed blurb. Leave null to use Etherpad's
+   *   built-in i18n catalog (key `pad.social.description`), which honours the
+   *   visitor's Accept-Language and can be overridden per-language via the
+   *   standard `customLocaleStrings` mechanism below.
+   */
+  socialMeta: {
+    description: null,
+  },
   ttl: {
     AccessToken: 1 * 60 * 60, // 1 hour in seconds
     AuthorizationCode: 10 * 60, // 10 minutes in seconds
@@ -332,7 +417,29 @@ const settings: SettingsType = {
   },
   updateServer: "https://static.etherpad.org",
   enableDarkMode: true,
-  enablePadWideSettings: false,
+  enablePadWideSettings: true,
+  // New plugin-padOption passthrough is opt-in per AGENTS.MD §52 ("New
+  // features should be placed behind feature flags and disabled by
+  // default"). Flip to true to let plugins (e.g. ep_plugin_helpers'
+  // padToggle) ride the existing padoptions broadcast/persist rail.
+  enablePluginPadOptions: false,
+  allowPadDeletionByAllUsers: false,
+  privacyBanner: {
+    enabled: false,
+    title: 'Privacy notice',
+    body: 'This instance processes pad content on our servers. ' +
+        'See the linked policy for retention and how to request erasure.',
+    learnMoreUrl: null,
+    dismissal: 'dismissible',
+  },
+  privacy: {
+    // Outbound calls. See PRIVACY.md.
+    // Set to false to disable hourly version check (UpdateCheck.ts).
+    updateCheck: true,
+    // Set to false to disable plugin-catalog fetch from updateServer
+    // (installer.ts). Manual install via CLI still works.
+    pluginCatalog: true,
+  },
   /*
  * Skin name.
  *
@@ -413,11 +520,54 @@ const settings: SettingsType = {
     alwaysShowChat: false,
     chatAndUsers: false,
     lang: null,
+    fadeInactiveAuthorColors: true,
+    enforceReadableAuthorColors: true,
   },
   /**
    * Wether to enable the /stats endpoint. The functionality in the admin menu is untouched for this.
    */
   enableMetrics: true,
+  /**
+   * Self-update subsystem (PR 1: tier 1 only).
+   * Tier "off" disables the version check entirely. Default "notify" shows a banner when behind.
+   */
+  updates: {
+    tier: 'notify',
+    source: 'github',
+    channel: 'stable',
+    installMethod: 'auto',
+    checkIntervalHours: 6,
+    githubRepo: 'ether/etherpad',
+    // The /admin/update/status endpoint returns full info including currentVersion.
+    // Default false matches existing behavior: the version is already exposed via /health.
+    // Set true to require an authenticated admin session for the endpoint without
+    // disabling the updater itself.
+    requireAdminForStatus: false,
+    // Tier 2+ knobs. Only meaningful at tier "manual" or higher.
+    preApplyGraceMinutes: 0,
+    drainSeconds: 60,
+    rollbackHealthCheckSeconds: 60,
+    diskSpaceMinMB: 500,
+    requireSignature: false,
+    trustedKeysPath: null,
+  },
+  /**
+   * Admin OpenAPI document endpoint at /admin/openapi.json.
+   *
+   * Disabled by default per Etherpad's "new features behind a flag, off by
+   * default" policy (see CONTRIBUTING.md). The codegen pipeline imports
+   * generateAdminDefinition() in-process and does not depend on the route;
+   * enable this only if you want third-party tooling (Postman, swagger-ui,
+   * downstream clients) to consume the spec at runtime.
+   */
+  adminOpenAPI: {
+    enabled: false,
+  },
+  /**
+   * Contact address for admin notifications (updates, future security advisories).
+   * Null disables outbound mail from the updater.
+   */
+  adminEmail: null,
   /**
    * Whether certain shortcut keys are enabled for a user in the pad
    */
@@ -440,6 +590,8 @@ const settings: SettingsType = {
     cmdShiftN: true,
     cmdShift1: true,
     cmdShiftC: true,
+    cmdShiftD: true, // duplicate current line(s) — issue #6433
+    cmdShiftK: true, // delete current line(s) — issue #6433
     cmdH: true,
     ctrlHome: true,
     pageUp: true,
@@ -505,6 +657,7 @@ const settings: SettingsType = {
    * Disable IP logging
    */
   disableIPlogging: false,
+  ipLogging: 'anonymous',
   /**
    * Number of seconds to automatically reconnect pad
    */
@@ -513,6 +666,13 @@ const settings: SettingsType = {
    * Disable Load Testing
    */
   loadTest: false,
+  /**
+   * Expose extra Prometheus metrics designed for the scaling-dive load-test harness
+   * (ether/etherpad#7756): etherpad_pad_users{padId}, etherpad_changeset_apply_duration_seconds,
+   * etherpad_socket_emits_total{type}. Default false — enable only when running the harness so
+   * production deployments aren't paying for instrumentation they don't use.
+   */
+  scalingDiveMetrics: false,
   /**
    * Disable dump of objects preventing a clean exit
    */
@@ -568,6 +728,13 @@ const settings: SettingsType = {
   cleanup: {
     enabled: false,
     keepRevisions: 100,
+  },
+  /*
+   * GDPR Art. 17 author erasure REST endpoint (anonymizeAuthor).
+   * Disabled by default; operators must opt in.
+   */
+  gdprAuthorErasure: {
+    enabled: false,
   },
   /*
  * By default, when caret is moved out of viewport, it scrolls the minimum
@@ -663,10 +830,25 @@ const settings: SettingsType = {
       skinName: settings.skinName,
       skinVariants: settings.skinVariants,
       enablePadWideSettings: settings.enablePadWideSettings,
+      enablePluginPadOptions: settings.enablePluginPadOptions,
+      privacyBanner: getPublicPrivacyBanner(),
     }
   },
   gitVersion: getGitCommit(),
 }
+
+// Build the wire-shape of `privacyBanner` for clientVars / getPublicSettings().
+// The settings file is operator-controlled and `_.defaults()` (used by
+// storeSettings) preserves unknown nested keys at runtime. Returning a literal
+// instead of `settings.privacyBanner` itself stops a typo or copy-paste from
+// shipping arbitrary extra keys to every browser.
+export const getPublicPrivacyBanner = () => ({
+  enabled: settings.privacyBanner.enabled,
+  title: settings.privacyBanner.title,
+  body: settings.privacyBanner.body,
+  learnMoreUrl: settings.privacyBanner.learnMoreUrl,
+  dismissal: settings.privacyBanner.dismissal,
+});
 
 export default settings;
 // Note: under ESM (`"type": "module"`), the CJS compatibility shim that used
@@ -953,6 +1135,66 @@ export const reloadSettings = () => {
         );
     }
 
+    // Deprecation shim: if the operator set the legacy boolean `disableIPlogging`
+    // without also setting the new tri-state `ipLogging`, map the boolean over
+    // once and emit a WARN. An explicitly-set `ipLogging` always wins.
+    if (settingsParsed != null && 'disableIPlogging' in (settingsParsed as any) &&
+        !('ipLogging' in (settingsParsed as any))) {
+      logger.warn(
+          '`disableIPlogging` is deprecated; use `ipLogging: "anonymous"` ' +
+          '(or "truncated" / "full") instead.');
+      settings.ipLogging = (settingsParsed as any).disableIPlogging ? 'anonymous' : 'full';
+    }
+
+    // Validate `ipLogging`. anonymizeIp() would otherwise silently treat an
+    // unknown value as "truncated" and ship partially-redacted IPs.
+    const validIpLogging = ['full', 'truncated', 'anonymous'];
+    if (!validIpLogging.includes(settings.ipLogging as any)) {
+      logger.warn(
+          `ipLogging="${settings.ipLogging}" is not one of ` +
+          `${validIpLogging.join(', ')}; falling back to "anonymous".`);
+      settings.ipLogging = 'anonymous';
+    }
+
+    // Validate `privacyBanner.dismissal`. The client treats every value other
+    // than the exact strings 'dismissible' and 'sticky' as "no special
+    // handling", which silently degrades a misconfigured 'sticky' to a
+    // dismissible-shaped notice (and vice versa). Coerce to the safer default
+    // and warn so the operator sees the typo.
+    const validDismissal = ['dismissible', 'sticky'];
+    if (settings.privacyBanner != null
+        && !validDismissal.includes(settings.privacyBanner.dismissal as any)) {
+      logger.warn(
+          `privacyBanner.dismissal="${settings.privacyBanner.dismissal}" is ` +
+          `not one of ${validDismissal.join(', ')}; falling back to ` +
+          `"dismissible".`);
+      settings.privacyBanner.dismissal = 'dismissible';
+    }
+
+    // Settings.json files generated before December 2021 used `false` as the
+    // default for these string options. The client treats the boolean `false`
+    // as a sentinel meaning "no enforced value", but the dispatch in
+    // pad.ts:getParams() coerces the boolean to the string "false" before
+    // applying it, which then propagates as the user's name and color and
+    // triggers `malformed color: false` on the server (#7686). Normalize
+    // legacy booleans to null at the boundary so downstream code sees the
+    // expected sentinel. Guard against a malformed padOptions (null, array,
+    // primitive) — storeSettings() will overwrite it raw if settings.json
+    // declares it as anything other than a plain object.
+    if (settings.padOptions != null
+        && typeof settings.padOptions === 'object'
+        && !Array.isArray(settings.padOptions)) {
+      for (const key of ['userName', 'userColor'] as const) {
+        if ((settings.padOptions as any)[key] === false) {
+          logger.warn(
+              `padOptions.${key}=false is a legacy default (pre-2021) and is ` +
+              `now treated as null. Update settings.json to use null instead ` +
+              `to silence this warning.`);
+          (settings.padOptions as any)[key] = null;
+        }
+      }
+    }
+
     // Init logging config
     settings.logconfig = defaultLogConfig(
       settings.loglevel ? settings.loglevel : defaultLogLevel,
@@ -1076,18 +1318,38 @@ export const reloadSettings = () => {
     }
 
     /*
-     * At each start, Etherpad generates a random string and appends it as query
-     * parameter to the URLs of the static assets, in order to force their reload.
-     * Subsequent requests will be cached, as long as the server is not reloaded.
+     * Etherpad appends this token as a ?v= query parameter on static assets
+     * and as the content seed for the padbootstrap-<hash>.min.js bundles, so
+     * clients invalidate their cache when a release goes out.
      *
-     * For the rationale behind this choice, see
-     * https://github.com/ether/etherpad-lite/pull/3958
+     * Historically this was `randomString(4)`, regenerated on every boot. That
+     * broke horizontally-scaled deployments (multi-pod behind an ingress):
+     * every pod hashed the bootstrap bundle with its own seed, so an HTML
+     * response from pod A referenced `padbootstrap-ABCD.min.js` while pod B
+     * only served `padbootstrap-WXYZ.min.js`, producing 404s on any cross-pod
+     * request (issue #7213).
      *
-     * ACHTUNG: this may prevent caching HTTP proxies to work
-     * TODO: remove the "?v=randomstring" parameter, and replace with hashed filenames instead
+     * Derive the token deterministically from the Etherpad version and
+     * whatever git SHA is available. Pods that ship the same artifact now
+     * produce the same hash, and the token still rotates per release so
+     * caches invalidate correctly.
+     *
+     * Precedence: ETHERPAD_VERSION_STRING env var (explicit integrator
+     * override) > sha256(version + "|" + gitVersion) > package.json version.
+     *
+     * For the original cache-busting rationale, see PR #3958.
      */
-    settings.randomVersionString = randomString(4);
-    logger.info(`Random string used for versioning assets: ${settings.randomVersionString}`);
+    const explicit = process.env.ETHERPAD_VERSION_STRING;
+    if (explicit) {
+        settings.randomVersionString = explicit;
+    } else {
+        const pkgVersion = require('../../package.json').version as string;
+        settings.randomVersionString = createHash('sha256')
+            .update(`${pkgVersion}|${settings.gitVersion || ''}`)
+            .digest('hex')
+            .slice(0, 8);
+    }
+    logger.info(`String used for versioning assets: ${settings.randomVersionString}`);
 };
 
 export const exportedForTestingOnly = {

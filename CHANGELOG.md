@@ -1,9 +1,153 @@
-# 2.8.0
+# 3.0.0
+
+3.0 is a feature-heavy release that closes out the self-update programme (Tiers 2 and 3 land alongside Tier 1 from 2.7.3), removes the last identified upstream telemetry vector, and ships a parsed JSONC settings editor, native DOCX export, in-place pad history scrubbing, and an admin UI for GDPR author erasure. It also completes the backend ESM migration and replaces mocha with vitest as the backend test runner, and marks the start of the broader Etherpad app ecosystem (see *Companion apps* below).
+
+### Breaking changes
+
+- **Minimum required Node.js version is now 24.** Node.js 22 is no longer supported. Node 25 was briefly the floor mid-cycle but was rolled back to **24 LTS (Krypton, supported through ~May 2028)** because Node 25 reached end-of-life on 2026-04-10 (see #7779 / #7781). The CI matrix targets Node 24 and 26. Node 24 still ships Corepack, so existing `bin/installer.sh` / `bin/installer.ps1` flows continue to work unchanged; the global `pnpm` install fallback added for the Node 25 detour is kept for forward-compatibility.
+- **`pnpm` floor raised to `pnpm@11.1.2`.** `packageManager` is now pinned to `pnpm@11.1.2` and `engines.pnpm` requires `>=11.1.2`. The Dockerfile, snap, .deb and all GitHub workflows are aligned.
+- **`swagger-ui-express` removed.** `/api-docs` now serves a vendored, telemetry-free copy of [Scalar](https://github.com/scalar/scalar) (see the privacy item below). The route, the OpenAPI document, and the rendered output are unchanged for downstream consumers, but anything that introspected `swagger-ui-express` internals will need updating.
+- **Debian package depends on `nodejs (>= 24)`.** The signed apt repository at `etherpad.org/apt` is rebuilt against this floor; older Node packages are no longer acceptable as a dependency (#7754).
 
 ### Breaking changes for plugin authors
 
 - Migrated the Etherpad backend (everything under `src/node/` and the server-side parts of `src/static/js/pluginfw/`) from CommonJS to ECMAScript modules. **Existing CommonJS plugins continue to load unchanged** — the plugin loader now uses Node's `createRequire` to keep `require()` working synchronously against CJS plugin entry files. ESM plugins are also supported (use `"type": "module"` or `.mjs`, export hooks with `export const`). One contract change: the accessor-property shim that exposed `Settings` top-level fields directly on the `require()` result has been removed (it was dead code under ESM). Plugins reading core settings via `require('ep_etherpad-lite/node/utils/Settings').toolbar` must now use `import settings from '...'` (ESM) or `require('...').default.toolbar` (CJS via the bridge). See `doc/plugins.md` for the full updated contract.
 - Replaced mocha with vitest as the backend test runner. `pnpm test` now runs vitest. Plugin authors with backend test suites that ran under the core mocha runner via `../node_modules/ep_*/static/tests/backend/specs/**` should expect to migrate their tests to vitest.
+
+### Companion apps
+
+This release coincides with the launch of two ecosystem projects, both maintained under the [`ether` org](https://github.com/ether) and able to talk to any 3.x Etherpad server over its existing HTTP / WebSocket API:
+
+- **[`ether/etherpad-desktop`](https://github.com/ether/etherpad-desktop)** — a native desktop wrapper around Etherpad for macOS, Windows and Linux. Single-window editor experience, system-tray indicator, and an optional embedded server for fully offline pads.
+- **[`ether/pad`](https://github.com/ether/pad)** — a portable cross-target client: an Android and iOS app for editing pads on the go, and a `nano`-style terminal client for headless / SSH workflows. Shares the same realtime client transport as the browser editor so changes propagate live across desktop, mobile, terminal and the web UI.
+
+Both clients hit the **stable 3.x API surface**, so server operators don't need to enable anything extra to support them — the OpenAPI clean-up landed in this release (see *Notable enhancements*) is what makes the shared client code generators viable.
+
+### Notable enhancements
+
+- **Self-update subsystem — Tier 2 (manual click).**
+  - Admins on a git install can click "Apply update" at `/admin/update`. Etherpad runs a 60s session drain (with T-60 / T-30 / T-10 broadcasts to every pad), `git fetch / checkout / pnpm install --frozen-lockfile / pnpm run build:ui`, and exits with code 75 so a process supervisor restarts it on the new version. The next boot runs a 60s health check; if `/health` doesn't come up the previous SHA + lockfile are restored automatically.
+  - Crash-loop guard: if the new version reboots more than twice without the health check completing, RollbackHandler forces a rollback regardless of the timer.
+  - Terminal `rollback-failed` state surfaces a strong banner; the admin clicks Acknowledge once they've manually recovered to clear the lock and re-allow Tier 2 attempts.
+  - New settings under `updates.*`: `preApplyGraceMinutes`, `drainSeconds`, `rollbackHealthCheckSeconds`, `diskSpaceMinMB`, `requireSignature`, `trustedKeysPath`. Tag signature verification is opt-in (default `false`) — see `doc/admin/updates.md` for the keyring setup.
+  - **A process supervisor (systemd / pm2 / docker `--restart=unless-stopped`) is required to apply updates.** Without one, exit 75 leaves the instance down.
+- **Self-update subsystem — Tier 3 (auto with grace window).**
+  - On a git install, set `updates.tier: "auto"` to have new releases applied automatically after `preApplyGraceMinutes`. During the grace window, `/admin/update` shows a live countdown plus Cancel and Apply now buttons. Schedules are persisted to `var/update-state.json`, so an Etherpad restart during the grace window rehydrates the timer instead of losing the schedule. A new release tag detected mid-grace re-arms the timer; if `adminEmail` is set, a one-shot `grace-start` notification fires per scheduled tag (issue #7607).
+  - The terminal `rollback-failed` state continues to disable auto/autonomous attempts globally until acknowledged; manual click stays available because an admin click *is* the intervention the terminal state requires.
+  - Tier 4 (autonomous in a maintenance window) remains designed but unimplemented and will land in a subsequent release.
+- **Privacy — drop swagger-ui telemetry, document phone-homes, add opt-outs.**
+  - Dropped `swagger-ui-express` because upstream injects a Scarf analytics pixel that cannot be disabled at install or runtime (see [swagger-api/swagger-ui#10573](https://github.com/swagger-api/swagger-ui/issues/10573)). `/api-docs` now serves a vendored copy of [Scalar](https://github.com/scalar/scalar) (MIT) configured with `withDefaultFonts: false` and `telemetry: false` so no outbound calls are made.
+  - New `privacy.updateCheck` (default `true`) — set to `false` to disable the hourly `UpdateCheck.ts` request to `${updateServer}/info.json`.
+  - New `privacy.pluginCatalog` (default `true`) — set to `false` to disable the admin plugins page fetch of `${updateServer}/plugins.json`. CLI install-by-name still works.
+  - New [`PRIVACY.md`](PRIVACY.md) at repo root documenting both outbound calls, what they send, and how to turn each off.
+  - `bin/plugins/stalePlugins.ts` now reads `settings.updateServer` (was hardcoded to `static.etherpad.org`) and honours the new flag.
+  - Closes #7524.
+- **Parsed JSONC settings editor in `/admin`.** The settings page now parses `settings.json` as JSONC (with comments and trailing commas preserved), validates edits in-browser, and writes the file back without clobbering comment blocks (#7709, closes #7603, takes over #7666).
+- **GDPR — admin UI for author erasure.** Builds on the 2.7.3 author-erasure API: admins can now find an author by id or name in `/admin` and run a confirmed erasure flow from the UI (#7667, follow-up to #7550).
+- **Pad-wide settings on by default.** `padOptions`-style settings can now be edited from the in-pad cog without flipping a flag, and the modal title no longer misleads about scope (#7679). Plugin-namespaced `ep_*` keys also flow through `applyPadSettings` so plugins can register their own pad-wide options (#7698).
+- **Scrub history in-place on the pad URL.** A long-edited pad can now have its history rewritten in place (e.g. for compliance or to drop accidentally-pasted secrets), without changing the pad URL or breaking deep-links (#7710, closes #7659).
+- **`bin/compactStalePads` — staleness-gated bulk compaction.** Companion to the 2.7.3 `compactAllPads` CLI: targets only pads not edited in the last `--older-than N` days, so hot pads in active timeslider use are left alone. Same `--keep` / `--dry-run` shape as `compactAllPads` (#7708, issue #7642).
+- **Native DOCX export (opt-in).** A `html-to-docx`-based exporter lands as an alternative to the LibreOffice path, so installs that don't want `soffice` on the host can still produce `.docx`. `soffice` is now documented as optional for `.docx` and `.pdf` (#7568 / #7707, issue #7538).
+- **Editor / UI.**
+  - Settings popup is now scrollable on short viewports so the lower controls stay reachable on small laptops (#7703, issue #7696).
+  - Admin design pass cleans up the rework introduced in 2.7.3 (#7716).
+  - `theme-color` meta now follows the client-side dark-mode switch instead of locking to the boot-time value (#7690, issue #7606).
+  - `menu_right` stays visible on readonly pads by default; operators that prefer the slimmer chrome can still opt in via `showMenuRight` (#7783).
+  - Social meta: new `settings.socialMeta.description` override (#7691) plus a fix for numeric / boolean override values that were silently being dropped during coercion (#7692).
+- **Admin / API surface.**
+  - The published OpenAPI spec is cleaned up for downstream codegens — duplicate operationIds removed, response schemas filled in, `nullable` ⟶ `oneOf null` migrated for OpenAPI 3.1 (#7714). The companion apps above consume this directly.
+  - Admin endpoints (`/admin/*` JSON APIs) are now documented in the OpenAPI spec (#7693 / #7705) and called from a typesafe TanStack Query client in the admin SPA (#7638 / #7695).
+  - "Requires newer Etherpad" message in the plugin browser when an `ep.json` declares an `engines.etherpad` higher than the running version, instead of failing with a generic install error (#7763 / #7771).
+- **Security hardening.**
+  - Reject `USER_CHANGES` inserts that arrive without an author attribute, closing a server-side trust gap where unattributed changes could be applied to a pad (#7773).
+  - Integrator-issued `sessionID` cookies can now be marked `HttpOnly` via the new option, matching the 2.7.3 author-token hardening (#7045 / #7755).
+- **Observability — Prometheus counters.** Three new counters surface scaling-relevant events (`pad_load_total`, `socket_connect_total`, `changeset_apply_total`) so operators can drive horizontal-scaling decisions off the existing `/metrics` endpoint without a custom exporter (#7756 / #7762).
+- **Accessibility (continuation of the 2.7.2 / 2.7.3 pass).**
+  - Skip-to-content link plus hiding line-number gutters from screen readers (#7255 / #7758).
+  - Named `role="toolbar"` regions and `linemetricsdiv` hidden from assistive tech (#7255 / #7777).
+  - Localized `aria-label` on form controls (`<select>`, `<input>`, `<textarea>`) and on export-as links (#7697 / #7713).
+  - Removed `role="textbox"` / `aria-multiline` from `innerdocbody` where they no longer matched the editor's real semantics (#7778 / #7782).
+
+### Notable fixes
+
+- **Docker — pnpm at runtime.** Bypass `pnpm` at container start so the entrypoint no longer triggers a spurious `deps-status` reinstall on every restart (#7718 / #7727). The Corepack cache is now shared so the unprivileged `etherpad` user can resolve `pnpm` (#7689).
+- **Debian — `plugin_packages` stays in-tree.** The `.deb` now keeps `plugin_packages/` under the install root so plugins installed at runtime can still resolve `ep_etherpad-lite` (#7750).
+- **Admin — restore search and sort.** `SearchField` and the column-sort helpers used by the authors page were lost during the admin rework; they're restored (#7746).
+- **Admin — German strings hardcoded in error paths.** A handful of leftover German strings from the rework are replaced with i18n keys (#7735 / #7736).
+- **Settings — `username: false` / `malformed color: false` regression.** Legacy `settings.json` files that used `false` to disable a feature no longer surface as `'false'` username or `'malformed color: false'` errors (#7688, issue #7686).
+
+### Internal / contributor-facing
+
+- **Database driver — `ueberdb2` 5 → 6.** Major-version bump to `ueberdb2@^6.0.3` (#7734). Drivers are pinned through the lockfile; the schema-level changes are documented in the `ueberdb2` 6.0 release notes.
+- **CI / tests.**
+  - Windows + Node 24 backend-test flake fixed; native crashes are now captured for diagnosis (#7748).
+  - `updater-integration` rmdir-retry to clear the long-standing Windows `EBUSY` flake (#7728).
+  - `lowerCasePadIds` spec closes its socket.io clients on teardown (#7722).
+  - Admin tests realigned to the typesafe API client + plugin row count fixes (#7712).
+  - Rate-limit test waits for Etherpad readiness before running, instead of racing the boot sequence (#7726).
+- README link fixes and tidy-up (#7723 / #7724 / #7725).
+- Several dependency-group bumps across the dev and runtime trees: `undici` 7.25 → 8.3, `semver` 7.7.4 → 7.8, `tsx` 4.21 → 4.22, `mssql` 12.5.2 → 12.5.3, `js-cookie` 3.0.5 → 3.0.6, `@tanstack/react-query` 5.100.9 → 5.100.10, `actions/dependency-review-action` 4 → 5, plus the usual Dependabot dev-group rollups.
+
+### Localisation
+
+- Multiple updates from translatewiki.net.
+
+# 2.7.3
+
+### Breaking changes
+
+- **Minimum required Node.js version is now 22.13.** Node.js 20 is reaching end-of-life (see https://nodejs.org/en/about/previous-releases) and pnpm 11 hard-rejects Node releases older than 22.13. The CI matrix targets Node 22, 24, and 25. Upgrading should be straightforward — install a current Node.js release before updating Etherpad.
+- **The official Docker image no longer ships `curl`, `npm`, or `npx`.** These were dropped to remove transitive CVEs (curl/libcurl SMB advisories, npm's bundled picomatch 4.0.3 and brace-expansion 2.0.2). The container's healthcheck now uses `wget` (busybox built-in, always present), and Etherpad provisions `pnpm` via `corepack` for all runtime package operations. If you exec into the container and rely on `curl` or `npm` for ad-hoc tasks, install them on demand with `apk add curl` or use the busybox `wget` / `pnpm` already present.
+
+### Notable enhancements
+
+- **GDPR / privacy controls.** A multi-PR series adds the building blocks operators need to satisfy data-subject requests:
+  - Pad deletion controls (admin-driven and self-service).
+  - IP / privacy audit pass across the codebase.
+  - Author-token cookies are now `HttpOnly`, removing them from JavaScript reach.
+  - Configurable privacy banner shown on first visit.
+  - Author erasure: an authenticated path for purging an individual author's identity and contributions.
+- **Self-update subsystem (Tier 1: notify).**
+  - Periodic check against the GitHub Releases API for the configured repo (default `ether/etherpad`). Configurable via the new `updates.*` settings block, default tier `"notify"`. Set `updates.tier` to `"off"` to disable entirely.
+  - The admin UI shows a banner and a dedicated "Etherpad updates" page with the current version, latest version, install method, and changelog.
+  - Pad users see a discreet footer badge **only** when the running version is severely outdated (one or more major versions behind) or flagged as vulnerable in a recent release manifest. The public endpoint that drives this never leaks the version string itself.
+  - New top-level `adminEmail` setting. When set, the updater emails the admin on first detection of severe / vulnerable status, with escalating cadence (weekly while vulnerable, monthly while severely outdated). PR 1 ships the dedupe + cadence logic; real SMTP wiring lands in a follow-up PR.
+  - Tier 1 ships in this release. Tiers 2 (manual click), 3 (auto with grace window) and 4 (autonomous in maintenance window) are designed and will land in subsequent releases.
+  - See `doc/admin/updates.md` for full configuration.
+- **Pad compaction.** New `compactPad` HTTP API plus `bin/compactPad` and `bin/compactAllPads` CLIs to reclaim database space on long-lived pads with heavy edit history (issue #6194). `--keep N` retains the last N revisions; `--dry-run` previews per-pad rev counts before writing. Per-pad failures don't stop the bulk run.
+  - `bin/compactStalePads` (issue #7642) targets only pads not edited in the last `--older-than N` days, so hot pads in active timeslider use are left alone. Same `--keep` / `--dry-run` shape as `bin/compactAllPads`. Targeting is deliberately a CLI concern — the `compactPad` API surface stays unchanged.
+- **New packaging targets.**
+  - Etherpad is now published as a **Snap** package.
+  - **Debian (.deb)** packages are built via nfpm with a systemd unit, and a signed apt repository is published to `etherpad.org/apt`.
+- **Editor enhancements.**
+  - IDE-style line operations: keyboard shortcuts to duplicate or delete the current line.
+  - New `showMenuRight` URL parameter to hide the right-side toolbar — useful for embeds that need slimmer chrome.
+  - Click a user in the userlist to open chat with `@<name>` prefilled, making mentions discoverable.
+  - New `padOptions.fadeInactiveAuthorColors` setting plus a toolbar UI to fade the background colors of authors who have left the pad.
+- **Color contrast.** Author colors now pick the WCAG-higher-contrast text color for readability.
+- **Social / mobile metadata.** Pad, timeslider, and home views now emit Open Graph and Twitter Card tags (closes #7599) and a `theme-color` meta that matches the toolbar on mobile.
+- **Plugin admin UX.** The `/admin` plugin browser surfaces each plugin's `ep.json` `disables` declarations, so operators can see what a plugin will turn off before installing.
+
+### Notable fixes
+
+- **Socket.io: don't kick authenticated duplicate-author sessions.** A regression where two tabs from the same authenticated author could evict each other has been fixed (#7656 / #7678).
+- **Anchor scrolling.** Anchor-link navigation now waits for layout to settle, so jumping to a deep link no longer overshoots.
+- **Plugin updater.** `bin/updatePlugins.sh` actually updates installed plugins again (closes #6670).
+- **Settings: stable per-release version string.** `randomVersionString` is now derived from the release identity rather than regenerated on each boot, so caches behave correctly across restarts of the same version.
+
+### Internal / contributor-facing
+
+- The HTTP client in the backend has been migrated from `axios` to the built-in `fetch` API, dropping a dependency now that Node 22 ships a stable fetch.
+- `admin/` and `ui/` workspaces moved from `rolldown-vite` to upstream **Vite 8**.
+- Build and CI moved to **pnpm 11** (`packageManager: "pnpm@11.1.2"`); the `Dockerfile`, snap, and all GitHub workflows are aligned. pnpm overrides have been migrated from `package.json` to `pnpm-workspace.yaml` to match pnpm 11's expectations.
+- All client modules have been converted to ESM.
+- The CI matrix tests Node 22, 24, and 25; on PRs the matrix is reduced to a single Node version to keep feedback fast.
+- Frontend Playwright tests now run against the `/ether` plugin set, with feature-tag based skips so plugin-incompatible specs are excluded automatically.
+- Build hardening: signed apt repo publishing, frozen lockfile installs across CI, Node setup pinned in every workflow, and a Docker-image CVE sweep that bumps `npm`, `pnpm`, and `uuid`.
+
+### Localisation
+
+- Multiple updates from translatewiki.net.
 
 # 2.7.2
 

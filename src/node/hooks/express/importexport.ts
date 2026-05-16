@@ -4,6 +4,7 @@ import type {ArgsExpressType} from "../../types/ArgsExpressType.js";
 
 import hasPadAccess from '../../padaccess.js';
 import settings, {exportAvailable} from '../../utils/Settings.js';
+import {anonymizeIp} from '../../utils/anonymizeIp.js';
 import * as exportHandler from '../../handler/ExportHandler.js';
 import * as importHandler from '../../handler/ImportHandler.js';
 import * as padManager from '../../db/PadManager.js';
@@ -19,7 +20,8 @@ export const expressCreateServer = (hookName:string, args:ArgsExpressType, cb:Fu
       if (request.rateLimit.current === request.rateLimit.limit + 1) {
         // when the rate limiter triggers, write a warning in the logs
         console.warn('Import/Export rate limiter triggered on ' +
-            `"${request.originalUrl}" for IP address ${request.ip}`);
+            `"${request.originalUrl}" for IP address ` +
+            `${anonymizeIp(request.ip, settings.ipLogging)}`);
       }
     },
   });
@@ -34,9 +36,11 @@ export const expressCreateServer = (hookName:string, args:ArgsExpressType, cb:Fu
         return next();
       }
 
-      // if soffice is disabled, and this is a format we only support with soffice, output a message
+      // When soffice is disabled, only block formats with no native path.
+      // pdf and docx fall through to ExportHandler, which dispatches to
+      // the in-process converters (issue #7538).
       if (exportAvailable() === 'no' &&
-          ['odt', 'pdf', 'doc', 'docx'].indexOf(req.params.type) !== -1) {
+          ['odt', 'doc'].indexOf(req.params.type) !== -1) {
         console.error(`Impossible to export pad "${req.params.pad}" in ${req.params.type} format.` +
                       ' There is no converter configured');
 

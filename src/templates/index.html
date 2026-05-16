@@ -8,6 +8,7 @@
 <html lang="<%=renderLang%>" dir="<%=renderDir%>">
 
         <title><%=settings.title%></title>
+<%- typeof socialMetaHtml !== 'undefined' ? socialMetaHtml : '' %>
         <meta charset="utf-8">
         <link rel="manifest" href="/manifest.json" />
         <meta name="referrer" content="no-referrer">

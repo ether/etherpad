@@ -11,18 +11,22 @@ test.describe('ordered_list.js', function () {
     test('issue #4748 keeps numbers increment on OL', async function ({page}) {
       const padBody = await getPadBody(page);
       await clearPadContent(page)
-      await writeToPad(page, 'Line 1')
-      await page.keyboard.press('Enter')
-      await writeToPad(page, 'Line 2')
+      await writeToPad(page, 'Line 1\nLine 2')
 
-      const $insertorderedlistButton = page.locator('.buttonicon-insertorderedlist')
+      // force:true bypasses #toolbar-overlay (intercepts pointer
+      // events after a text selection); same pattern as
+      // clearAuthorship. Use data-l10n-id rather than the buttonicon
+      // class so the selector stays unique even if a plugin adds
+      // another element carrying .buttonicon-insertorderedlist.
+      const $insertorderedlistButton =
+          page.locator("button[data-l10n-id='pad.toolbar.ol.title']")
       await padBody.locator('div').first().selectText()
-      await $insertorderedlistButton.first().click();
+      await $insertorderedlistButton.click({force: true});
 
       const secondLine = padBody.locator('div').nth(1)
 
       await secondLine.selectText()
-      await $insertorderedlistButton.click();
+      await $insertorderedlistButton.click({force: true});
 
       expect(await secondLine.locator('ol').getAttribute('start')).toEqual('2');
     });
@@ -33,15 +37,12 @@ test.describe('ordered_list.js', function () {
       await clearPadContent(page)
       await expect(padBody.locator('div')).toHaveCount(1)
       const $insertorderedlistButton = page.locator('.buttonicon-insertorderedlist')
-      await $insertorderedlistButton.click();
+      await $insertorderedlistButton.click({force: true});
 
       // type a bit, make a line break and type again
       const firstTextElement = padBody.locator('div').first()
       await firstTextElement.click()
-      await writeToPad(page, 'line 1')
-      await page.keyboard.press('Enter')
-      await writeToPad(page, 'line 2')
-      await page.keyboard.press('Enter')
+      await writeToPad(page, 'line 1\nline 2\n')
 
       await expect(padBody.locator('div span').nth(1)).toHaveText('line 2');
 

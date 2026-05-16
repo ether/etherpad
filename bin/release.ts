@@ -204,7 +204,14 @@ try {
   run('git pull --ff-only', {cwd: '../ether.github.com/'});
   console.log('Committing documentation...');
   run(`cp -R out/doc/ ../ether.github.com/public/doc/v'${newVersion}'`);
-  run(`pnpm version ${newVersion}`, {cwd: '../ether.github.com'});
+  // pnpm 11 refuses `pnpm version` on a dirty tree (the doc copy above
+  // dirties it) even with --no-git-tag-version, so write the bump with jq —
+  // same pattern used for the etherpad package.json files at the top of
+  // this script. The git add+commit below picks up both the bump and the
+  // freshly-copied docs in a single commit.
+  run(
+      `echo "$(jq '. += {"version": "'${newVersion}'"}' package.json)" > package.json`,
+      {cwd: '../ether.github.com'});
   run('git add .', {cwd: '../ether.github.com/'});
   run(`git commit -m '${newVersion} docs'`, {cwd: '../ether.github.com/'});
 } catch (err:any) {

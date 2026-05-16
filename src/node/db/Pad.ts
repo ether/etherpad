@@ -16,6 +16,7 @@ import { strict as assert } from 'assert';
 import db from './DB.js';
 import settings from '../utils/Settings.js';
 import * as authorManager from './AuthorManager.js';
+import * as padDeletionManager from './PadDeletionManager.js';
 import * as padManager from './PadManager.js';
 import padMessageHandler from '../handler/PadMessageHandler.js';
 import * as groupManager from './GroupManager.js';
@@ -32,6 +33,7 @@ type PadViewSettings = {
   showLineNumbers: boolean;
   rtlIsTrue: boolean;
   padFontFamily: string;
+  fadeInactiveAuthorColors: boolean;
 };
 
 type PadSettings = {
@@ -41,6 +43,43 @@ type PadSettings = {
   chatAndUsers: boolean;
   lang: string | null;
   view: PadViewSettings;
+  // Plugin-namespaced pad-wide options ride alongside the core keys.
+  // Anything matching /^ep_[a-z0-9_]+$/ is preserved verbatim by
+  // normalizePadSettings so plugins can use the existing padoptions
+  // broadcast/persist rail without forking their own transport.
+  [pluginKey: string]: any;
+};
+
+const PLUGIN_KEY_RE = /^ep_[a-z0-9_]+$/;
+// Per-key serialized JSON size cap: ~64 KB. Pad-wide settings are persisted
+// with the pad and broadcast to every connected client on every change, so
+// plugins must keep their values small. A misbehaving plugin shouldn't bloat
+// the pad payload or the broadcast.
+const PLUGIN_KEY_MAX_BYTES = 64 * 1024;
+// Combined ep_* size cap: ~256 KB. Same rationale, aggregated.
+const PLUGIN_TOTAL_MAX_BYTES = 256 * 1024;
+
+// Returns true iff `v` round-trips through JSON.stringify cleanly (no
+// functions, symbols, BigInt, or circular references) and serializes to at
+// most `maxBytes` UTF-8 bytes. Returns the serialized length on success so
+// callers can enforce a cumulative cap without serializing twice.
+const validatePluginValue = (
+    key: string, value: unknown, maxBytes: number): {ok: true, bytes: number} | {ok: false, reason: string} => {
+  let serialized: string;
+  try {
+    serialized = JSON.stringify(value);
+  } catch (e: any) {
+    return {ok: false, reason: `JSON.stringify failed: ${e && e.message || e}`};
+  }
+  if (serialized === undefined) {
+    // JSON.stringify returns undefined for top-level functions/undefined.
+    return {ok: false, reason: 'value is not JSON-serializable (function/undefined)'};
+  }
+  const bytes = Buffer.byteLength(serialized, 'utf8');
+  if (bytes > maxBytes) {
+    return {ok: false, reason: `serialized size ${bytes}B exceeds per-key cap ${maxBytes}B`};
+  }
+  return {ok: true, bytes};
 };
 
 /**
@@ -54,6 +93,17 @@ export const cleanText = (txt:string): string => txt.replace(/\r\n/g, '\n')
     .replace(/\t/g, '        ');
 
 class Pad {
+  /**
+   * Stable author id used to attribute inserts coming from internal callers
+   * (HTTP API setText/appendText with no authorId, plugins like ep_post_data,
+   * server-side import flows). Without ANY author attribute, pad.atext.text
+   * and pad.atext.attribs drift out of sync — clients then fail
+   * setDocAText reconciliation in ace2_inner.ts when loading the pad. Using
+   * a fixed system author keeps the AText well-formed without requiring
+   * every plugin to allocate its own author up-front.
+   */
+  static readonly SYSTEM_AUTHOR_ID = 'a.etherpad-system';
+
   public db: Database;
   public atext: AText;
   public pool: AttributePool;
@@ -85,7 +135,7 @@ class Pad {
 
   static normalizePadSettings(rawPadSettings: any = {}): PadSettings {
     const rawView = rawPadSettings.view ?? {};
-    return {
+    const result: PadSettings = {
       enforceSettings: !!rawPadSettings.enforceSettings,
       showChat: rawPadSettings.showChat == null ? settings.padOptions.showChat !== false :
         !!rawPadSettings.showChat,
@@ -102,8 +152,33 @@ class Pad {
           settings.padOptions.showLineNumbers !== false : !!rawView.showLineNumbers,
         rtlIsTrue: !!rawView.rtlIsTrue,
         padFontFamily: typeof rawView.padFontFamily === 'string' ? rawView.padFontFamily : '',
+        fadeInactiveAuthorColors: rawView.fadeInactiveAuthorColors == null ?
+          settings.padOptions.fadeInactiveAuthorColors !== false :
+          !!rawView.fadeInactiveAuthorColors,
       },
     };
+    if (settings.enablePluginPadOptions) {
+      let totalBytes = 0;
+      for (const [k, v] of Object.entries(rawPadSettings)) {
+        if (!PLUGIN_KEY_RE.test(k)) continue;
+        const check = validatePluginValue(k, v, PLUGIN_KEY_MAX_BYTES);
+        if (!check.ok) {
+          // Drop and log. Persistence/broadcast still rejects the value, but
+          // the rest of the settings round-trip cleanly.
+          console.warn(`[normalizePadSettings] dropping ${k}: ${check.reason}`);
+          continue;
+        }
+        if (totalBytes + check.bytes > PLUGIN_TOTAL_MAX_BYTES) {
+          console.warn(
+              `[normalizePadSettings] dropping ${k}: combined ep_* size ` +
+              `would exceed cap ${PLUGIN_TOTAL_MAX_BYTES}B`);
+          continue;
+        }
+        totalBytes += check.bytes;
+        result[k] = v;
+      }
+    }
+    return result;
   }
 
   apool() {
@@ -272,8 +347,8 @@ class Pad {
           Stream.range(keyRev + 1, targetRev + 1).map(this.getRevisionChangeset.bind(this))),
     ]);
     const apool = this.apool();
-    let atext = keyAText;
-    for (const cs of changesets) atext = applyToAText(cs, atext, apool);
+    let atext = keyAText as AText;
+    for (const cs of changesets) atext = applyToAText(cs as string, atext, apool);
     return atext;
   }
 
@@ -351,9 +426,19 @@ class Pad {
         (!ins && start > 0 && orig[start - 1] === '\n');
     if (!willEndWithNewline) ins += '\n';
     if (ndel === 0 && ins.length === 0) return;
-    const attribs = authorId ? [['author', authorId] as [string, string]] : undefined;
+    // An unattributed insert (empty authorId + non-empty ins) would produce
+    // an AText where `text` and `attribs` disagree on length — clients fail
+    // setDocAText reconciliation on load. Backward-compat fix: if the caller
+    // didn't provide an authorId, attribute the insert to a stable system
+    // author. ep_post_data and other plugins that want named attribution
+    // should still pass an explicit authorId.
+    const effectiveAuthorId =
+        (ins.length > 0 && !authorId) ? Pad.SYSTEM_AUTHOR_ID : authorId;
+    const attribs = effectiveAuthorId
+        ? [['author', effectiveAuthorId] as [string, string]]
+        : undefined;
     const changeset = makeSplice(orig, start, ndel, ins, attribs, this.pool);
-    await this.appendRevision(changeset, authorId);
+    await this.appendRevision(changeset, effectiveAuthorId);
   }
 
   /**
@@ -409,7 +494,7 @@ class Pad {
   async getChatMessage(entryNum: number) {
     const entry = await this.db.get(`pad:${this.id}:chat:${entryNum}`);
     if (entry == null) return null;
-    const message = ChatMessage.fromObject(entry);
+    const message = ChatMessage.fromObject(entry as ChatMessage);
     message.displayName = await authorManager.getAuthorName(message.authorId);
     return message;
   }
@@ -439,7 +524,7 @@ class Pad {
 
   async init(text?: string|null, authorId = '') {
     // try to load the pad
-    const value = await this.db.get(`pad:${this.id}`);
+    const value = await this.db.get(`pad:${this.id}`) as Record<string, any> | null;
 
     // if this pad exists, load it
     if (value != null) {
@@ -648,13 +733,13 @@ class Pad {
     // delete all chat messages
     // @ts-ignore
     p.push(timesLimit(this.chatHead + 1, 500, async (i: string) => {
-      await this.db.remove(`pad:${this.id}:chat:${i}`, null);
+      await this.db.remove(`pad:${this.id}:chat:${i}`);
     }));
 
     // delete all revisions
     // @ts-ignore
     p.push(timesLimit(this.head + 1, 500, async (i: string) => {
-      await this.db.remove(`pad:${this.id}:revs:${i}`, null);
+      await this.db.remove(`pad:${this.id}:revs:${i}`);
     }));
 
     // remove pad from all authors who contributed
@@ -664,6 +749,7 @@ class Pad {
 
     // delete the pad entry and delete pad from padManager
     p.push(padManager.removePad(padID));
+    p.push(padDeletionManager.removeDeletionToken(padID));
     p.push(hooks.aCallAll('padRemove', {
       get padID() {
         pad_utils.warnDeprecated('padRemove padID context property is deprecated; use pad.id instead');

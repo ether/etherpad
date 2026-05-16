@@ -12,16 +12,19 @@ export const loginToAdmin = async (page: Page, username: string, password: strin
 
 
 export const saveSettings = async (page: Page) => {
-  // Click save
-  await page.locator('.settings-button-bar').locator('button').first().click()
-  await page.waitForSelector('.ToastRootSuccess')
+  // If a success toast is already open (from a previous save), wait for it to
+  // close first so we don't mistake the stale open state for the new ack.
+  // Radix Toast toggles data-state rather than removing the element.
+  const existing = page.locator('.ToastRootSuccess[data-state="open"]');
+  if (await existing.count() > 0) {
+    await existing.waitFor({state: 'hidden'}).catch(() => {});
+  }
+  await page.getByTestId('save-settings-button').click();
+  await page.waitForSelector('.ToastRootSuccess[data-state="open"]');
 }
 
 export const restartEtherpad = async (page: Page) => {
-  // Click restart
-  const restartButton = page.locator('.settings-button-bar').locator('.settingsButton').nth(1)
-  const settings =  page.locator('.settings');
-  await expect(settings).not.toHaveValue('', {timeout: 30000});
+  const restartButton = page.getByTestId('restart-etherpad-button');
   await expect(restartButton).toBeVisible({timeout: 10000})
   await restartButton.click()
   // Wait for the server to come back up by polling.

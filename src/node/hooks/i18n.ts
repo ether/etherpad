@@ -132,12 +132,16 @@ const generateLocaleIndex = (locales:MapArrayType<string>) => {
 
 
 export let availableLangs: any;
+// Exported so server-rendered HTML (e.g. Open Graph meta tags) can look
+// up translated strings without re-reading the locale files.
+export let locales: MapArrayType<string>;
 
 export const expressPreSession = async (hookName:string, {app}:any) => {
   // regenerate locales on server restart
-  const locales = getAllLocales();
-  const localeIndex = generateLocaleIndex(locales);
-  availableLangs = getAvailableLangs(locales);
+  const allLocales = getAllLocales();
+  const localeIndex = generateLocaleIndex(allLocales);
+  availableLangs = getAvailableLangs(allLocales);
+  locales = allLocales;
 
   app.get('/locales/:locale', (req:any, res:any) => {
     // works with /locale/en and /locale/en.json requests

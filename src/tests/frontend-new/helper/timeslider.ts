@@ -15,6 +15,10 @@ import {Page} from "@playwright/test";
  */
 export const gotoTimeslider = async (page: Page, revision: number): Promise<any> => {
     let revisionString = Number.isInteger(revision) ? `#${revision}` : '';
-    await page.goto(`${page.url()}/timeslider${revisionString}`);
+    // Issue #7659: /p/:pad/timeslider now 302-redirects to the pad page so the
+    // in-pad PadModeController owns history mode. Tests that target the
+    // timeslider DOM directly bypass the redirect by passing ?embed=1, the
+    // same query the in-pad iframe uses.
+    await page.goto(`${page.url()}/timeslider?embed=1${revisionString}`);
     await page.waitForSelector('#timer')
 };
