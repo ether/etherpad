@@ -385,6 +385,40 @@ The dive's cliff at 350-400 authors is **single-event-loop saturation on one cor
 
 The application-level surface has been explored end-to-end. Most non-trivial code levers that were thought to be wins turned out to be either inside the noise envelope (#7766 closed, #7770 closed, #7768 perf claim wrong) or net-negative (#7769 closed). The CPU-profile-identified levers are the exception: #7775 + #7776 stacked deliver -12% to -20% CPU% with the cliff effectively shifting from ~400 to ~500 authors — the biggest single-direction perf improvement in this program, and the first set of changes that move the cliff position itself rather than just thinning the tail. #7774 layers a modest additional tail-latency improvement on top. **Past this point the cliff is no longer hardware-bound; it's single-event-loop-bound** — verified by the local taskset experiment showing the cliff doesn't move when you give Etherpad more cores. Per-call worker-thread offload of `applyToText` was prototyped and falsified (postMessage overhead exceeds the work; see "Where to take this next" below). The remaining architectural lever for *one pad with N authors* is per-pad worker isolation; for *N pads across many cores* it's a sticky-session cluster — both substantially larger changes.
 
+## Roadmap for future effort
+
+Concrete options for whoever picks this up next, ordered roughly by impact-per-time-spent. **For "more authors per pad"** the answer is Tier 1 then Tier 2 option 4; **for "more pads per box"** the answer is Tier 2 option 5 or Tier 3 option 6.
+
+### Tier 1 — small, mostly mechanical
+
+1. **Merge the 3 ready perf PRs** (#7775 + #7776 + #7774). *Cost: review + merge time only, no dev.* Locks in the −12-20% already measured by this dive. The blocker is a maintainer call, not engineering work.
+
+2. **Implement [#7780](https://github.com/ether/etherpad/issues/7780)** (room-broadcast fan-out in `updatePadClients`). Shape A from the issue: split steady-state from catch-up. *Cost: ~1 day code + N=3 dive verification.* Predicted **+5-7% CPU headroom**; cliff likely from ~500 → ~550 authors.
+
+3. **One more pass through the post-fix profile** looking for the same shape of bug as #7776 (per-message work that shouldn't be per-message). *Cost: ~half a day.* Diminishing returns — maybe 1-2 small wins at 1-3% each. Cheap to look, easy to abandon.
+
+### Tier 2 — medium projects, real cliff moves
+
+4. **Selective fan-out / viewport-based broadcast.** Don't send every edit to every author; full edits to ~20 authors near each cursor, digests every 1-2s to the rest. Requires viewport tracking per socket and a "digest" message type. *Cost: ~2 weeks for a feature-flagged version + dive verification.* Plausible: cliff moves from ~500 → 1000-1500 authors. **Biggest single user-visible win that doesn't change the architecture.**
+
+5. **Per-pad worker isolation PoC.** Each pad's lifecycle runs in one worker thread; the main thread is a router. Serialization paid once at pad handoff, not per changeset. *Cost: ~1-2 weeks PoC, 1-2 months production-ready.* Does **not** move the per-pad cliff (still one event loop per pad) — wins on program-wide scaling (many pads × cores). Necessary precursor for Tier 3 option 6.
+
+### Tier 3 — large bets, mostly to know we have them
+
+6. **Sticky-session cluster mode.** Multi-process, pads partitioned across workers. *Cost: ~2-4 weeks PoC.* Same scaling shape as option 5 but coarser-grained and works without restructuring the in-process code. Doesn't help "one pad with N authors" either.
+
+7. **CRDT migration (Yjs / Automerge).** Native peer-to-peer scaling without a central coordinator. *Cost: months.* **Breaks every plugin** in the ecosystem and re-litigates the editor protocol. *Anti-recommended* unless options 1-6 fail to deliver and there's a hard product requirement for thousands of authors per pad.
+
+### Tier 4 — operational, not a code lever but valuable
+
+8. **Production telemetry instrumentation.** Wire the `scalingDiveMetrics` Prometheus surface (added by #7762) into a real dashboard against a live deployment. *Cost: ~3-5 days.* Tells us whether dive numbers (Github runner, dirty.db backing) match production reality (real boxes, Postgres). Important before committing to Tier 2.
+
+9. **Nightly dive in CI.** N=3 sweep against `develop` once a day, flagging regressions vs the previous week's median. *Cost: ~1 day.* Catches future regressions early. Out of scope for this dive (see below) but cheap to add now that the harness is stable.
+
+### Recommended next move
+
+**Option 2 (implement #7780).** It's the only Tier 1 item that needs code; it's bounded; it has a clear measurement plan from the issue; and it moves the cliff a measurable extra ~10%. After that lands, **Tier 2 option 4 (selective fan-out)** is the biggest user-visible win for 1000+ authors per pad and is the natural next program of work.
+
 ## Reproducing
 
 ```
