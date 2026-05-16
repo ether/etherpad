@@ -42,7 +42,7 @@
     "ui": "link:ui"
   },
   "engines": {
-    "node": ">=25.0.0",
+    "node": ">=24.0.0",
     "pnpm": ">=11.1.2"
   },
   "packageManager": "pnpm@11.1.2",
