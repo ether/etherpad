@@ -1,5 +1,5 @@
-import {compareSemver} from './versionCompare';
-import {InstallMethod, PolicyResult, Tier} from './types';
+import {compareSemver} from './versionCompare.js';
+import {InstallMethod, PolicyResult, Tier} from './types.js';
 
 // For PR 1 (notify only) the writable list contains only 'git'.
 // PR 2+ may add 'npm' here as the executor learns to handle that path.

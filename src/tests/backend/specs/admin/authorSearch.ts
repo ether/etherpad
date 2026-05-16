@@ -6,8 +6,8 @@ const common = require('../../common');
 const authorManager = require('../../../../node/db/AuthorManager');
 const DB = require('../../../../node/db/DB');
 
-describe(__filename, function () {
-  before(async function () {
+describe(__filename, function (this: any) {
+  before(async function (this: any) {
     this.timeout(60000);
     await common.init();
   });
@@ -18,7 +18,7 @@ describe(__filename, function () {
   const seed = async (name: string, mapper: string) =>
       (await authorManager.createAuthorIfNotExistsFor(mapper, name)).authorID;
 
-  it('returns an empty page when the pattern matches nothing', async function () {
+  it('returns an empty page when the pattern matches nothing', async function (this: any) {
     const res = await authorManager.searchAuthors({
       pattern: `nonexistent-${Date.now()}-${Math.random()}`,
       offset: 0, limit: 12, sortBy: 'name', ascending: true,
@@ -28,7 +28,7 @@ describe(__filename, function () {
     assert.deepEqual(res.results, []);
   });
 
-  it('matches by name substring', async function () {
+  it('matches by name substring', async function (this: any) {
     const tag = `findme-${Date.now()}`;
     await seed(`Alice ${tag}`, `m-${tag}-1`);
     await seed(`Bob ${tag}`,   `m-${tag}-2`);
@@ -41,7 +41,7 @@ describe(__filename, function () {
     assert.equal(res.results[1].name, `Bob ${tag}`);
   });
 
-  it('matches by mapper substring (joins mapper2author)', async function () {
+  it('matches by mapper substring (joins mapper2author)', async function (this: any) {
     const tag = `mapper-tag-${Date.now()}`;
     await seed('Carol', `${tag}-x`);
     const res = await authorManager.searchAuthors({
@@ -54,7 +54,7 @@ describe(__filename, function () {
   });
 
   it('hides erased authors by default and includes them when asked',
-      async function () {
+      async function (this: any) {
         const tag = `era-${Date.now()}`;
         const id = await seed(`Erasable ${tag}`, `m-${tag}`);
         // Use the authorID's random suffix as the search pattern. After
@@ -81,7 +81,7 @@ describe(__filename, function () {
         assert.equal(found.erased, true);
       });
 
-  it('sorts by lastSeen', async function () {
+  it('sorts by lastSeen', async function (this: any) {
     const tag = `sort-${Date.now()}`;
     const a = await seed(`SortA ${tag}`, `m-${tag}-a`);
     await new Promise((r) => setTimeout(r, 10));
@@ -99,7 +99,7 @@ describe(__filename, function () {
     assert.equal(desc.results[0].authorID, b);
   });
 
-  it('caps results at 1000 and reports cappedAt', async function () {
+  it('caps results at 1000 and reports cappedAt', async function (this: any) {
     this.timeout(120000);
     const tag = `cap-${Date.now()}`;
     // Seed 1100 authors directly via DB to keep this fast (~1s vs minutes

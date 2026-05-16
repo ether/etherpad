@@ -4,11 +4,11 @@ import path from 'node:path';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import {strict as assert} from 'assert';
-import {EMPTY_STATE} from '../../../node/updater/types';
-import {loadState, saveState} from '../../../node/updater/state';
-import {createSchedulerRunner, decideSchedule} from '../../../node/updater/Scheduler';
+import {EMPTY_STATE} from '../../../node/updater/types.js';
+import {loadState, saveState} from '../../../node/updater/state.js';
+import {createSchedulerRunner, decideSchedule} from '../../../node/updater/Scheduler.js';
 
-describe('Tier 3 scheduler — boot rehydrate + grace fire', function () {
+describe('Tier 3 scheduler — boot rehydrate + grace fire', function (this: any) {
   this.timeout(15000);
 
   let root: string;

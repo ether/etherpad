@@ -1,7 +1,7 @@
 'use strict';
 
-import {ArgsExpressType} from '../../types/ArgsExpressType';
-import settings, {getEpVersion} from '../../utils/Settings';
+import {ArgsExpressType} from '../../types/ArgsExpressType.js';
+import settings, {getEpVersion} from '../../utils/Settings.js';
 
 const OPENAPI_VERSION = '3.0.2';
 

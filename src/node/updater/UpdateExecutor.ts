@@ -1,9 +1,9 @@
 import path from 'node:path';
 import log4js from 'log4js';
 import {SpawnOptions} from 'node:child_process';
-import {UpdateState} from './types';
-import {appendLine} from './updateLog';
-import {assertValidTag, refsTagsForm} from './refSafety';
+import {UpdateState} from './types.js';
+import {appendLine} from './updateLog.js';
+import {assertValidTag, refsTagsForm} from './refSafety.js';
 
 const logger = log4js.getLogger('updater');
 

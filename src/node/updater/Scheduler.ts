@@ -1,5 +1,5 @@
-import {EmailSendLog, ExecutionStatus, PolicyResult, ReleaseInfo, UpdateState} from './types';
-import {PlannedEmail} from './Notifier';
+import {EmailSendLog, ExecutionStatus, PolicyResult, ReleaseInfo, UpdateState} from './types.js';
+import {PlannedEmail} from './Notifier.js';
 
 export interface DecideScheduleInput {
   state: UpdateState;

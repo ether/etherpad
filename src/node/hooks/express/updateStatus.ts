@@ -1,13 +1,13 @@
 'use strict';
 
 import path from 'node:path';
-import {ArgsExpressType} from '../../types/ArgsExpressType';
-import settings, {getEpVersion} from '../../utils/Settings';
-import {getDetectedInstallMethod, stateFilePath} from '../../updater';
-import {evaluatePolicy} from '../../updater/UpdatePolicy';
-import {compareSemver, isMajorBehind, isVulnerable} from '../../updater/versionCompare';
-import {loadState} from '../../updater/state';
-import {isHeld} from '../../updater/lock';
+import {ArgsExpressType} from '../../types/ArgsExpressType.js';
+import settings, {getEpVersion} from '../../utils/Settings.js';
+import {getDetectedInstallMethod, stateFilePath} from '../../updater/index.js';
+import {evaluatePolicy} from '../../updater/UpdatePolicy.js';
+import {compareSemver, isMajorBehind, isVulnerable} from '../../updater/versionCompare.js';
+import {loadState} from '../../updater/state.js';
+import {isHeld} from '../../updater/lock.js';
 
 
 let badgeCache: {value: 'severe' | 'vulnerable' | null; at: number} = {value: null, at: 0};

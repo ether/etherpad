@@ -2,7 +2,7 @@ import {describe, it, expect, beforeEach} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
-import {detectInstallMethod} from '../../../../node/updater/InstallMethodDetector';
+import {detectInstallMethod} from '../../../../node/updater/InstallMethodDetector.js';
 
 let dir: string;
 

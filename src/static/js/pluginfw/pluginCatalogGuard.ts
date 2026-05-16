@@ -1,6 +1,6 @@
 'use strict';
 
-import settings from '../../../node/utils/Settings';
+import settings from '../../../node/utils/Settings.js';
 
 export const assertPluginCatalogEnabled = () => {
   if (!settings.privacy.pluginCatalog) {

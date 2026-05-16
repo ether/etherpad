@@ -133,8 +133,9 @@ const generateLocaleIndex = (locales:MapArrayType<string>) => {
 
 export let availableLangs: any;
 // Exported so server-rendered HTML (e.g. Open Graph meta tags) can look
-// up translated strings without re-reading the locale files.
-export let locales: MapArrayType<string>;
+// up translated strings without re-reading the locale files. Each lang
+// maps to an object of i18n key → translated string for that language.
+export let locales: {[lang: string]: {[key: string]: string}};
 
 export const expressPreSession = async (hookName:string, {app}:any) => {
   // regenerate locales on server restart

@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import {constants as fsConstants} from 'node:fs';
 import path from 'node:path';
-import {InstallMethod} from './types';
+import {InstallMethod} from './types.js';
 
 export interface DetectOptions {
   /** Setting from settings.json. "auto" means detect; anything else is forced. */

@@ -1,6 +1,6 @@
 import {describe, it, expect, vi} from 'vitest';
-import {applyUpdate, ApplyPipelineDeps} from '../../../../node/updater/applyPipeline';
-import {EMPTY_STATE, ReleaseInfo, UpdateState} from '../../../../node/updater/types';
+import {applyUpdate, ApplyPipelineDeps} from '../../../../node/updater/applyPipeline.js';
+import {EMPTY_STATE, ReleaseInfo, UpdateState} from '../../../../node/updater/types.js';
 
 const TEST_RELEASE: ReleaseInfo = {
   tag: 'v2.0.1',

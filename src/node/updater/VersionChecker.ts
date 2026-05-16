@@ -1,6 +1,6 @@
-import {ReleaseInfo, VulnerableBelowDirective} from './types';
-import {parseVulnerableBelow} from './versionCompare';
-import {isValidTag} from './refSafety';
+import {ReleaseInfo, VulnerableBelowDirective} from './types.js';
+import {parseVulnerableBelow} from './versionCompare.js';
+import {isValidTag} from './refSafety.js';
 
 export interface FetchResult {
   status: number;

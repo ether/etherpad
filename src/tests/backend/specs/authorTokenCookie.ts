@@ -5,17 +5,17 @@ import {strict as assert} from 'assert';
 const common = require('../common');
 const setCookieParser = require('set-cookie-parser');
 
-describe(__filename, function () {
+describe(__filename, function (this: any) {
   let agent: any;
 
-  before(async function () {
+  before(async function (this: any) {
     this.timeout(60000);
     agent = await common.init();
   });
 
   const padPath = () => `/p/PR3_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
-  it('sets an HttpOnly token cookie on first visit', async function () {
+  it('sets an HttpOnly token cookie on first visit', async function (this: any) {
     const res = await agent.get(padPath()).expect(200);
     const cookies = setCookieParser.parse(res, {map: true});
     const tokenEntry = Object.entries(cookies).find(([k]) => k.endsWith('token'));
@@ -28,7 +28,7 @@ describe(__filename, function () {
     assert.equal(tokenCookie.path, '/');
   });
 
-  it('reuses the cookie value on subsequent visits', async function () {
+  it('reuses the cookie value on subsequent visits', async function (this: any) {
     const path = padPath();
     const first = await agent.get(path).expect(200);
     const firstCookies = setCookieParser.parse(first, {map: true});

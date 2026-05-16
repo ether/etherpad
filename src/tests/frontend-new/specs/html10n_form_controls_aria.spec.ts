@@ -10,7 +10,7 @@
 // ether/ep_align#182 review).
 
 import {expect, test} from '@playwright/test';
-import {goToNewPad} from '../helper/padHelper';
+import {goToNewPad} from '../helper/padHelper.js';
 
 test.use({locale: 'en-US'});
 

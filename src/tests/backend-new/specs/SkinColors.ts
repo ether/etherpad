@@ -1,4 +1,4 @@
-import {configuredToolbarColor} from "../../../node/utils/SkinColors";
+import {configuredToolbarColor} from "../../../node/utils/SkinColors.js";
 import {expect, describe, it} from "vitest";
 
 describe('SkinColors.configuredToolbarColor', function () {

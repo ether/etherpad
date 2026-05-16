@@ -28,7 +28,7 @@ register.registerMetric(activePadsGauge);
 // with PadMessageHandler (which records into them on the hot path).
 // Gated behind settings.scalingDiveMetrics so production deployments don't
 // pay for the instrumentation by default.
-import {padUsersGauge, changesetApplyDuration, socketEmitsTotal, enabled as scalingDiveMetricsEnabled} from './prom-instruments';
+import {padUsersGauge, changesetApplyDuration, socketEmitsTotal, enabled as scalingDiveMetricsEnabled} from './prom-instruments.js';
 if (scalingDiveMetricsEnabled()) {
   register.registerMetric(padUsersGauge);
   register.registerMetric(changesetApplyDuration);

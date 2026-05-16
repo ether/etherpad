@@ -5,7 +5,7 @@ import {
   isMajorBehind,
   parseVulnerableBelow,
   isVulnerable,
-} from '../../../../node/updater/versionCompare';
+} from '../../../../node/updater/versionCompare.js';
 
 describe('parseSemver', () => {
   it('parses a plain version', () => {

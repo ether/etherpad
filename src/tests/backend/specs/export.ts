@@ -19,21 +19,21 @@ const __dirname = dirname(__filename);
 // require.resolve() probing.
 const require = createRequire(import.meta.url);
 
-describe(__filename, function () {
+describe(__filename, function (this: any) {
   let agent:any;
   const settingsBackup:MapArrayType<any> = {};
 
-  before(async function () {
+  before(async function (this: any) {
     agent = await common.init();
     settingsBackup.soffice = settings.soffice;
     await padManager.getPad('testExportPad', 'test content');
   });
 
-  after(async function () {
+  after(async function (this: any) {
     Object.assign(settings, settingsBackup);
   });
 
-  it('returns 500 on export error', async function () {
+  it('returns 500 on export error', async function (this: any) {
     // Mock the exportConvert hook to throw, exercising the route's error
     // path without depending on an actual soffice install on the host.
     // .doc has no native fallback (it stays soffice/hook-only), so this
@@ -56,8 +56,8 @@ describe(__filename, function () {
   // Issue #7538: in-process DOCX export via html-to-docx bypasses the
   // soffice requirement entirely. A deployment with `soffice: null`
   // should still produce a working .docx via the native path.
-  describe('native DOCX export (#7538)', function () {
-    before(function () {
+  describe('native DOCX export (#7538)', function (this: any) {
+    before(function (this: any) {
       // The upgrade-from-latest-release CI job installs deps from the
       // PREVIOUS release's package.json (before this PR adds html-to-docx)
       // and then git-checkouts this branch's code without re-running
@@ -73,7 +73,7 @@ describe(__filename, function () {
       settings.soffice = null;
     });
 
-    it('returns a valid DOCX archive (PK zip signature)', async function () {
+    it('returns a valid DOCX archive (PK zip signature)', async function (this: any) {
       const res = await agent.get('/p/testExportPad/export/docx')
           .buffer(true)
           .parse((resp: any, callback: any) => {
@@ -92,7 +92,7 @@ describe(__filename, function () {
       assert.strictEqual(body[3], 0x04, 'byte 3');
     });
 
-    it('sends the Word-processing-ml content-type', async function () {
+    it('sends the Word-processing-ml content-type', async function (this: any) {
       const res = await agent.get('/p/testExportPad/export/docx').expect(200);
       assert.match(res.headers['content-type'],
           /application\/vnd\.openxmlformats-officedocument\.wordprocessingml\.document/,
@@ -100,8 +100,8 @@ describe(__filename, function () {
     });
   });
 
-  describe('native PDF export (#7538)', function () {
-    before(function () {
+  describe('native PDF export (#7538)', function (this: any) {
+    before(function (this: any) {
       try {
         require.resolve('pdfkit');
         require.resolve('htmlparser2');
@@ -112,7 +112,7 @@ describe(__filename, function () {
       settings.soffice = null;
     });
 
-    it('returns a valid %PDF- document', async function () {
+    it('returns a valid %PDF- document', async function (this: any) {
       const res = await agent.get('/p/testExportPad/export/pdf')
           .buffer(true)
           .parse((resp: any, callback: any) => {
@@ -126,35 +126,35 @@ describe(__filename, function () {
       assert.strictEqual(body.slice(0, 5).toString('ascii'), '%PDF-');
     });
 
-    it('sends application/pdf content-type', async function () {
+    it('sends application/pdf content-type', async function (this: any) {
       const res = await agent.get('/p/testExportPad/export/pdf').expect(200);
       assert.match(res.headers['content-type'], /application\/pdf/);
     });
   });
 
-  describe('odt without soffice (#7538)', function () {
-    before(function () { settings.soffice = null; });
-    it('returns the "not enabled" message for odt', async function () {
+  describe('odt without soffice (#7538)', function (this: any) {
+    before(function (this: any) { settings.soffice = null; });
+    it('returns the "not enabled" message for odt', async function (this: any) {
       const res = await agent.get('/p/testExportPad/export/odt').expect(200);
       assert.match(res.text, /This export is not enabled/);
     });
   });
 
-  describe('stripRemoteImages', function () {
+  describe('stripRemoteImages', function (this: any) {
     const {stripRemoteImages} = require('../../../node/utils/ExportSanitizeHtml');
 
-    it('keeps data: URIs', function () {
+    it('keeps data: URIs', function (this: any) {
       const out = stripRemoteImages(
           '<p>x</p><img src="data:image/png;base64,iVBORw0KGgo=">');
       assert.match(out, /<img[^>]+src="data:image\/png/);
     });
 
-    it('keeps relative URLs', function () {
+    it('keeps relative URLs', function (this: any) {
       const out = stripRemoteImages('<img src="/foo/bar.png">');
       assert.match(out, /<img[^>]+src="\/foo\/bar\.png"/);
     });
 
-    it('drops absolute http(s) URLs and falls back to alt', function () {
+    it('drops absolute http(s) URLs and falls back to alt', function (this: any) {
       const out = stripRemoteImages(
           '<p>before<img src="https://evil.example/x.png" alt="cat">after</p>');
       assert.doesNotMatch(out, /evil\.example/);
@@ -163,33 +163,33 @@ describe(__filename, function () {
       assert.match(out, /after/);
     });
 
-    it('drops protocol-relative URLs', function () {
+    it('drops protocol-relative URLs', function (this: any) {
       const out = stripRemoteImages('<img src="//evil.example/x.png">');
       assert.doesNotMatch(out, /evil\.example/);
     });
 
-    it('passes non-image markup through unchanged', function () {
+    it('passes non-image markup through unchanged', function (this: any) {
       const html = '<h1>hi</h1><p>body <a href="/x">link</a></p>';
       assert.strictEqual(stripRemoteImages(html), html);
     });
   });
 
-  describe('extractBody', function () {
+  describe('extractBody', function (this: any) {
     const {extractBody} = require('../../../node/utils/ExportSanitizeHtml');
 
-    it('returns trimmed body content from a full document', function () {
+    it('returns trimmed body content from a full document', function (this: any) {
       const html = `<!doctype html><html><head><style>.x{color:red}</style></head><body>
 hello<br>world
 </body></html>`;
       assert.strictEqual(extractBody(html), 'hello<br>world');
     });
 
-    it('passes a body-less fragment through unchanged', function () {
+    it('passes a body-less fragment through unchanged', function (this: any) {
       const html = '<p>just a fragment</p>';
       assert.strictEqual(extractBody(html), html);
     });
 
-    it('drops <head><style> contents', function () {
+    it('drops <head><style> contents', function (this: any) {
       const html = '<html><head><style>.x{}</style></head><body><p>kept</p></body></html>';
       const out = extractBody(html);
       assert.doesNotMatch(out, /style/);
@@ -198,18 +198,18 @@ hello<br>world
     });
   });
 
-  describe('wrapLooseLines', function () {
+  describe('wrapLooseLines', function (this: any) {
     const {wrapLooseLines} = require('../../../node/utils/ExportSanitizeHtml');
 
-    it('wraps loose text in <p>', function () {
+    it('wraps loose text in <p>', function (this: any) {
       assert.strictEqual(wrapLooseLines('Hello'), '<p>Hello</p>');
     });
 
-    it('keeps single <br> as soft break inside one paragraph', function () {
+    it('keeps single <br> as soft break inside one paragraph', function (this: any) {
       assert.strictEqual(wrapLooseLines('A<br>B'), '<p>A<br>B</p>');
     });
 
-    it('splits paragraphs on consecutive <br>', function () {
+    it('splits paragraphs on consecutive <br>', function (this: any) {
       // Two <br>s between content: one paragraph break + one empty
       // <p></p> marker so the blank pad line survives a DOCX round-trip
       // through html-to-docx and mammoth.
@@ -217,22 +217,22 @@ hello<br>world
           '<p>A</p><p></p><p>B</p>');
     });
 
-    it('emits more empty <p> markers for longer <br> runs', function () {
+    it('emits more empty <p> markers for longer <br> runs', function (this: any) {
       // Three <br>s = 2 blank pad lines between content.
       assert.strictEqual(wrapLooseLines('A<br><br><br>B'),
           '<p>A</p><p></p><p></p><p>B</p>');
     });
 
-    it('drops trailing <br>', function () {
+    it('drops trailing <br>', function (this: any) {
       assert.strictEqual(wrapLooseLines('Foo<br>'), '<p>Foo</p>');
     });
 
-    it('leaves block elements alone', function () {
+    it('leaves block elements alone', function (this: any) {
       const html = '<ul><li>x</li></ul>';
       assert.strictEqual(wrapLooseLines(html), html);
     });
 
-    it('handles realistic etherpad pad HTML', function () {
+    it('handles realistic etherpad pad HTML', function (this: any) {
       const out = wrapLooseLines(
           'Welcome!<br><br>Body text.<br>More text.<br>');
       // <br><br> -> blank-line marker between Welcome and Body text;
@@ -243,22 +243,22 @@ hello<br>world
     });
   });
 
-  describe('dropEmptyBlocks', function () {
+  describe('dropEmptyBlocks', function (this: any) {
     const {dropEmptyBlocks} = require('../../../node/utils/ExportSanitizeHtml');
 
-    it('drops empty heading blocks', function () {
+    it('drops empty heading blocks', function (this: any) {
       const out = dropEmptyBlocks(
           "<h1 style='text-align:right'>Hi</h1><br><h1 style='text-align:right'></h1><br>x");
       assert.strictEqual(out, "<h1 style='text-align:right'>Hi</h1><br><br>x");
     });
 
-    it('drops empty code blocks', function () {
+    it('drops empty code blocks', function (this: any) {
       assert.strictEqual(dropEmptyBlocks('<code></code>x'), 'x');
       assert.strictEqual(
           dropEmptyBlocks('<code style="x">  \n\t  </code>x'), 'x');
     });
 
-    it('iterates so nested empties are dropped too', function () {
+    it('iterates so nested empties are dropped too', function (this: any) {
       // <code></code> inside a <div> -> div becomes empty -> div drops too.
       // (<p></p> is preserved on purpose; wrapLooseLines uses it as a
       // blank-line marker for DOCX round-trip fidelity.)
@@ -266,28 +266,28 @@ hello<br>world
       assert.strictEqual(out, 'after');
     });
 
-    it('does not drop empty <p></p> (blank-line marker)', function () {
+    it('does not drop empty <p></p> (blank-line marker)', function (this: any) {
       const out = dropEmptyBlocks('<p>x</p><p></p><p>y</p>');
       assert.strictEqual(out, '<p>x</p><p></p><p>y</p>');
     });
 
-    it('keeps non-empty blocks unchanged', function () {
+    it('keeps non-empty blocks unchanged', function (this: any) {
       const html = '<h1>Hi</h1><p>body</p><code>x = 1</code>';
       assert.strictEqual(dropEmptyBlocks(html), html);
     });
   });
 
-  describe('collapseRedundantBrAfterBlocks', function () {
+  describe('collapseRedundantBrAfterBlocks', function (this: any) {
     const {collapseRedundantBrAfterBlocks} =
         require('../../../node/utils/ExportSanitizeHtml');
 
-    it('drops <br> immediately after a closing <p>', function () {
+    it('drops <br> immediately after a closing <p>', function (this: any) {
       assert.strictEqual(
           collapseRedundantBrAfterBlocks('<p>x</p><br><p>y</p>'),
           '<p>x</p><p>y</p>');
     });
 
-    it('drops <br> after closing heading and code tags', function () {
+    it('drops <br> after closing heading and code tags', function (this: any) {
       for (const tag of ['h1', 'h2', 'h3', 'code', 'pre', 'div', 'blockquote']) {
         assert.strictEqual(
             collapseRedundantBrAfterBlocks(`<${tag}>x</${tag}><br>`),
@@ -296,18 +296,18 @@ hello<br>world
       }
     });
 
-    it('keeps a standalone <br> between text', function () {
+    it('keeps a standalone <br> between text', function (this: any) {
       const html = 'Hello<br>World';
       assert.strictEqual(collapseRedundantBrAfterBlocks(html), html);
     });
 
-    it('handles whitespace between </tag> and <br>', function () {
+    it('handles whitespace between </tag> and <br>', function (this: any) {
       assert.strictEqual(
           collapseRedundantBrAfterBlocks('<p>x</p>  \n<br>after'),
           '<p>x</p>after');
     });
 
-    it('drops only one <br>, leaving any subsequent ones', function () {
+    it('drops only one <br>, leaving any subsequent ones', function (this: any) {
       // <br><br> after a closing block represents (one redundant + one
       // intentional blank-line break). After collapsing the first, the
       // second remains.
@@ -317,34 +317,34 @@ hello<br>world
     });
   });
 
-  describe('separateAdjacentHeadingBlocks', function () {
+  describe('separateAdjacentHeadingBlocks', function (this: any) {
     const {separateAdjacentHeadingBlocks} =
         require('../../../node/utils/ExportSanitizeHtml');
 
-    it('inserts <br> between adjacent <h1> and <h2>', function () {
+    it('inserts <br> between adjacent <h1> and <h2>', function (this: any) {
       assert.strictEqual(
           separateAdjacentHeadingBlocks('<h1>A</h1><h2>B</h2>'),
           '<h1>A</h1><br><h2>B</h2>');
     });
 
-    it('inserts <br> between adjacent <code> blocks', function () {
+    it('inserts <br> between adjacent <code> blocks', function (this: any) {
       assert.strictEqual(
           separateAdjacentHeadingBlocks('<code>A</code><code>B</code>'),
           '<code>A</code><br><code>B</code>');
     });
 
-    it('inserts <br> after a heading before a <p>', function () {
+    it('inserts <br> after a heading before a <p>', function (this: any) {
       assert.strictEqual(
           separateAdjacentHeadingBlocks('<h1>A</h1><p>B</p>'),
           '<h1>A</h1><br><p>B</p>');
     });
 
-    it('does not change adjacent <p> elements', function () {
+    it('does not change adjacent <p> elements', function (this: any) {
       const html = '<p>A</p><p>B</p>';
       assert.strictEqual(separateAdjacentHeadingBlocks(html), html);
     });
 
-    it('handles three-block round-trip case', function () {
+    it('handles three-block round-trip case', function (this: any) {
       // Mirrors what mammoth produces for a pad with H1 + H2 + Code.
       assert.strictEqual(
           separateAdjacentHeadingBlocks(
@@ -353,11 +353,11 @@ hello<br>world
     });
   });
 
-  describe('applyMonospaceToCode', function () {
+  describe('applyMonospaceToCode', function (this: any) {
     const {applyMonospaceToCode} =
         require('../../../node/utils/ExportSanitizeHtml');
 
-    it('emits a Courier span for inline <code>', function () {
+    it('emits a Courier span for inline <code>', function (this: any) {
       // The <code> tag itself is dropped (html-to-docx ignores it and
       // also breaks <a> children when they're nested inside it). The
       // text becomes a Courier-styled inline span.
@@ -366,7 +366,7 @@ hello<br>world
           `<span style="font-family:'Courier New', monospace">x = 1</span>`);
     });
 
-    it('forwards block-level style to a wrapping <p>', function () {
+    it('forwards block-level style to a wrapping <p>', function (this: any) {
       // ep_headings2 + ep_align emit `<code style='text-align:right'>`
       // for each "Code"-styled pad line. The alignment must reach
       // html-to-docx as a paragraph property, so we move the style
@@ -376,7 +376,7 @@ hello<br>world
       assert.match(out, /font-family:'Courier New'/);
     });
 
-    it('emits <p> wrap for <pre> regardless of style', function () {
+    it('emits <p> wrap for <pre> regardless of style', function (this: any) {
       // <pre> is always block-level.
       const out = applyMonospaceToCode('<pre>preformatted</pre>');
       assert.match(out, /^<p>/);
@@ -384,7 +384,7 @@ hello<br>world
       assert.match(out, /font-family:'Courier New'/);
     });
 
-    it('handles inline <tt>, <kbd>, <samp> as bare spans', function () {
+    it('handles inline <tt>, <kbd>, <samp> as bare spans', function (this: any) {
       for (const tag of ['tt', 'kbd', 'samp']) {
         const out = applyMonospaceToCode(`<${tag}>x</${tag}>`);
         assert.strictEqual(out,
@@ -393,12 +393,12 @@ hello<br>world
       }
     });
 
-    it('does not touch unrelated tags', function () {
+    it('does not touch unrelated tags', function (this: any) {
       const html = '<p>plain</p><strong>bold</strong>';
       assert.strictEqual(applyMonospaceToCode(html), html);
     });
 
-    it('does not wrap <a> elements in the Courier span', function () {
+    it('does not wrap <a> elements in the Courier span', function (this: any) {
       // Regression: html-to-docx drops <a href> content when nested
       // inside a styled span OR inside <code>. We split on anchors
       // and leave them unstyled.
@@ -415,7 +415,7 @@ hello<br>world
       assert.doesNotMatch(out, /<\/code>/);
     });
 
-    it('preserves <a> through html-to-docx round-trip', async function () {
+    it('preserves <a> through html-to-docx round-trip', async function (this: any) {
       try { require.resolve('html-to-docx'); }
       catch { this.skip(); return; }
       const htmlToDocx = require('html-to-docx');
@@ -434,10 +434,10 @@ hello<br>world
     });
   });
 
-  describe('htmlToPdfBuffer', function () {
+  describe('htmlToPdfBuffer', function (this: any) {
     let htmlToPdfBuffer: (html: string) => Promise<Buffer>;
 
-    before(function () {
+    before(function (this: any) {
       try {
         require.resolve('pdfkit');
         require.resolve('htmlparser2');
@@ -448,7 +448,7 @@ hello<br>world
       htmlToPdfBuffer = require('../../../node/utils/ExportPdfNative').htmlToPdfBuffer;
     });
 
-    it('produces a buffer starting with %PDF-', async function () {
+    it('produces a buffer starting with %PDF-', async function (this: any) {
       const buf = await htmlToPdfBuffer('<p>hello world</p>');
       assert.ok(Buffer.isBuffer(buf), 'must return Buffer');
       assert.ok(buf.length > 100, `buffer suspiciously small: ${buf.length} bytes`);
@@ -477,7 +477,7 @@ hello<br>world
       return buf.toString('latin1');
     };
 
-    it('renders headings, paragraphs, and lists', async function () {
+    it('renders headings, paragraphs, and lists', async function (this: any) {
       const raw = await renderText(`
         <h1>Title</h1>
         <p>Body paragraph here.</p>
@@ -494,7 +494,7 @@ hello<br>world
       assert.ok(visible.includes('beta'), `expected "beta" in: ${visible}`);
     });
 
-    it('emits link annotations for <a href>', async function () {
+    it('emits link annotations for <a href>', async function (this: any) {
       const raw = await renderText('<p><a href="https://etherpad.org">site</a></p>');
       const visible = decodeVisibleText(raw);
       assert.ok(visible.includes('site'), `expected "site" in: ${visible}`);
@@ -505,20 +505,20 @@ hello<br>world
           'expected link target URL in PDF /URI dict');
     });
 
-    it('embeds data: URI images without throwing', async function () {
+    it('embeds data: URI images without throwing', async function (this: any) {
       const tinyPng =
         'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
       const buf = await htmlToPdfBuffer(`<img src="data:image/png;base64,${tinyPng}">`);
       assert.ok(buf.length > 200);
     });
 
-    it('ignores unknown tags rather than crashing', async function () {
+    it('ignores unknown tags rather than crashing', async function (this: any) {
       const buf = await htmlToPdfBuffer(
           '<custom-tag><p>still works</p></custom-tag>');
       assert.strictEqual(buf.slice(0, 5).toString('ascii'), '%PDF-');
     });
 
-    it('does not render head/style/script content', async function () {
+    it('does not render head/style/script content', async function (this: any) {
       const raw = await renderText(`
         <html><head>
           <title>SECRET_TITLE</title>
@@ -535,7 +535,7 @@ hello<br>world
       assert.match(visible, /visible body/);
     });
 
-    it('honors text-align style on block elements', async function () {
+    it('honors text-align style on block elements', async function (this: any) {
       // pdfkit emits text-positioning matrices for aligned text. We assert
       // the alignment option produced different output than left-aligned
       // by checking the x coordinate of the BT block.
@@ -549,7 +549,7 @@ hello<br>world
           `right-aligned text should sit at a different x than left-aligned (left=${leftX} right=${rightX})`);
     });
 
-    it('uses Courier font inside <code>', async function () {
+    it('uses Courier font inside <code>', async function (this: any) {
       const raw = await renderText('<p>before <code>x = 1</code> after</p>');
       // pdfkit references the font in the resource dictionary; Courier
       // isn't in the default resources so its first use creates a new
@@ -557,12 +557,12 @@ hello<br>world
       assert.match(raw, /Courier/);
     });
 
-    it('uses Courier font inside <pre>', async function () {
+    it('uses Courier font inside <pre>', async function (this: any) {
       const raw = await renderText('<pre>preformatted text</pre>');
       assert.match(raw, /Courier/);
     });
 
-    it('honors text-align on <code> (ep_headings2 code lines)', async function () {
+    it('honors text-align on <code> (ep_headings2 code lines)', async function (this: any) {
       const leftRaw = await renderText('<code>x = 1</code>');
       const rightRaw = await renderText("<code style='text-align:right'>x = 1</code>");
       const leftX = (leftRaw.match(/1 0 0 1 (\d+(?:\.\d+)?)/) || [])[1];
@@ -573,7 +573,7 @@ hello<br>world
           `right-aligned <code> should sit at a different x than left-aligned (left=${leftX} right=${rightX})`);
     });
 
-    it('honors text-align on <pre>', async function () {
+    it('honors text-align on <pre>', async function (this: any) {
       const leftRaw = await renderText('<pre>x = 1</pre>');
       const rightRaw = await renderText("<pre style='text-align:right'>x = 1</pre>");
       const leftX = (leftRaw.match(/1 0 0 1 (\d+(?:\.\d+)?)/) || [])[1];

@@ -1,5 +1,5 @@
 import {expect, test, Page} from '@playwright/test';
-import {goToNewPad, getPadBody} from '../helper/padHelper';
+import {goToNewPad, getPadBody} from '../helper/padHelper.js';
 
 // End-to-end coverage for the WCAG author-colour clamp (issue #7377). Sets
 // the user's colour to one of the historically-failing values and asserts

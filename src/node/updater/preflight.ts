@@ -1,5 +1,5 @@
-import {InstallMethod} from './types';
-import type {VerifyResult} from './trustedKeys';
+import {InstallMethod} from './types.js';
+import type {VerifyResult} from './trustedKeys.js';
 
 export type PreflightReason =
   | 'install-method-not-writable'

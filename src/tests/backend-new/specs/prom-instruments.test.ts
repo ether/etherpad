@@ -4,13 +4,13 @@
 // gates everything off when disabled.
 
 import {describe, it, expect, beforeEach, afterEach} from 'vitest';
-import settings from '../../../node/utils/Settings';
+import settings from '../../../node/utils/Settings.js';
 import {
   recordChangesetApply,
   recordSocketEmit,
   changesetApplyDuration,
   socketEmitsTotal,
-} from '../../../node/prom-instruments';
+} from '../../../node/prom-instruments.js';
 
 const originalFlag = settings.scalingDiveMetrics;
 

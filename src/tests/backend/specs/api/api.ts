@@ -33,10 +33,10 @@ const testPadId = makeid();
 
 const endPoint = (point:string) => `/api/${apiVersion}/${point}`;
 
-describe(__filename, function () {
-  before(async function () { agent = await common.init(); });
+describe(__filename, function (this: any) {
+  before(async function (this: any) { agent = await common.init(); });
 
-  it('can obtain API version', async function () {
+  it('can obtain API version', async function (this: any) {
     await agent.get('/api/')
         .expect(200)
         .expect((res:any) => {
@@ -46,7 +46,7 @@ describe(__filename, function () {
         });
   });
 
-  it('can obtain valid openapi definition document', async function () {
+  it('can obtain valid openapi definition document', async function (this: any) {
     await agent.get('/api/openapi.json')
         .expect(200)
         .expect((res:any) => {
@@ -59,19 +59,19 @@ describe(__filename, function () {
         });
   });
 
-  describe('security schemes with authenticationMethod=apikey', function () {
+  describe('security schemes with authenticationMethod=apikey', function (this: any) {
     let originalAuthMethod: string;
 
-    before(function () {
+    before(function (this: any) {
       originalAuthMethod = settings.authenticationMethod;
       settings.authenticationMethod = 'apikey';
     });
 
-    after(function () {
+    after(function (this: any) {
       settings.authenticationMethod = originalAuthMethod;
     });
 
-    it('/api-docs.json documents apikey query param (primary name)', async function () {
+    it('/api-docs.json documents apikey query param (primary name)', async function (this: any) {
       const res = await agent.get('/api-docs.json').expect(200);
       const schemes = res.body.components.securitySchemes;
       const apiKeyQuery = Object.values(schemes).find(
@@ -82,7 +82,7 @@ describe(__filename, function () {
       }
     });
 
-    it('/api-docs.json documents api_key query param alias', async function () {
+    it('/api-docs.json documents api_key query param alias', async function (this: any) {
       const res = await agent.get('/api-docs.json').expect(200);
       const schemes = res.body.components.securitySchemes;
       const apiKeyQueryAlias = Object.values(schemes).find(
@@ -93,7 +93,7 @@ describe(__filename, function () {
       }
     });
 
-    it('/api-docs.json documents apikey header', async function () {
+    it('/api-docs.json documents apikey header', async function (this: any) {
       const res = await agent.get('/api-docs.json').expect(200);
       const schemes = res.body.components.securitySchemes;
       const apiKeyHeader = Object.values(schemes).find(
@@ -104,7 +104,7 @@ describe(__filename, function () {
       }
     });
 
-    it('/api/openapi.json exposes apiKey security in apikey mode', async function () {
+    it('/api/openapi.json exposes apiKey security in apikey mode', async function (this: any) {
       const res = await agent.get('/api/openapi.json').expect(200);
       const schemes = res.body.components.securitySchemes;
       const hasApiKey = Object.values(schemes).some((s: any) => s.type === 'apiKey');
@@ -115,15 +115,15 @@ describe(__filename, function () {
     });
   });
 
-  describe('public OpenAPI spec shape (for downstream codegens)', function () {
+  describe('public OpenAPI spec shape (for downstream codegens)', function (this: any) {
     let spec: any;
 
-    before(async function () {
+    before(async function (this: any) {
       this.timeout(15000);
       spec = (await agent.get('/api/openapi.json').expect(200)).body;
     });
 
-    it('declares a top-level tags array with all expected resource groups', function () {
+    it('declares a top-level tags array with all expected resource groups', function (this: any) {
       if (!Array.isArray(spec.tags)) {
         throw new Error(`Expected top-level tags to be an array, got ${typeof spec.tags}`);
       }
@@ -135,7 +135,7 @@ describe(__filename, function () {
       }
     });
 
-    it('tags every operation with at least one non-empty tag', function () {
+    it('tags every operation with at least one non-empty tag', function (this: any) {
       const untagged: string[] = [];
       for (const [path, methods] of Object.entries(spec.paths)) {
         for (const [method, op] of Object.entries(methods as any)) {
@@ -150,7 +150,7 @@ describe(__filename, function () {
       }
     });
 
-    it('summarizes every operation', function () {
+    it('summarizes every operation', function (this: any) {
       const unsummarized: string[] = [];
       for (const [path, methods] of Object.entries(spec.paths)) {
         for (const [method, op] of Object.entries(methods as any)) {
@@ -168,7 +168,7 @@ describe(__filename, function () {
       }
     });
 
-    it('advertises only POST per path (downstream tooling cleanliness)', function () {
+    it('advertises only POST per path (downstream tooling cleanliness)', function (this: any) {
       const offenders: string[] = [];
       for (const [path, methods] of Object.entries(spec.paths)) {
         const verbs = Object.keys(methods as any);
@@ -184,7 +184,7 @@ describe(__filename, function () {
     });
   });
 
-  describe('runtime backward compatibility (GET + POST still routed)', function () {
+  describe('runtime backward compatibility (GET + POST still routed)', function (this: any) {
     // The runtime spec used by openapi-backend keeps both verbs even though the
     // public /api/openapi.json advertises POST only. The point of these tests
     // is to prove openapi-backend still resolves both verbs to the handler
@@ -201,12 +201,12 @@ describe(__filename, function () {
       }
     };
 
-    it('GET requests still reach the API handler', async function () {
+    it('GET requests still reach the API handler', async function (this: any) {
       const r = await agent.get(endPoint('checkToken'));
       assertResolved('GET checkToken', r.body);
     });
 
-    it('POST requests still reach the API handler', async function () {
+    it('POST requests still reach the API handler', async function (this: any) {
       const r = await agent.post(endPoint('checkToken'));
       assertResolved('POST checkToken', r.body);
     });
@@ -214,7 +214,7 @@ describe(__filename, function () {
     // Regression for the REST-style routes — checkToken's _restPath is
     // derived from its position in the resources map (pad/checkToken).
     // Tagging it as 'server' must not move it to /rest/X/server/checkToken.
-    it('REST-style /rest/<ver>/pad/checkToken still resolves', async function () {
+    it('REST-style /rest/<ver>/pad/checkToken still resolves', async function (this: any) {
       const r = await agent.get(`/rest/${apiVersion}/pad/checkToken`);
       assertResolved('GET /rest pad/checkToken', r.body);
     });

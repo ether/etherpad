@@ -45,6 +45,7 @@ const dbModule: any = {
           return typeof metricValue === 'number' ? metricValue : 0;
         });
       }
+    }
     for (const fn of ['get', 'set', 'findKeys', 'getSub', 'setSub', 'remove']) {
       dbModule[fn] = async (...args: string[]) => {
         // During shutdown, background timers (for example session cleanup) can still
