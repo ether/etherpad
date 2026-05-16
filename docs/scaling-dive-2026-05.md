@@ -32,7 +32,7 @@ The next concrete direction with leverage is **engine.io transport-level packing
   - **Counter** `etherpad_socket_emits_total{type}` — bumped at every fan-out emit site. `type` is bounded to a known allowlist; unknown values fold into `"other"`.
   - **Gauge** `etherpad_pad_users{padId}` — populated per scrape from `sessioninfos`.
 - **SUT:** etherpad core at the ref under test. Default `develop` HEAD; PRs scored by setting `core_ref=<branch>`.
-- **Runner shape:** github-hosted `ubuntu-latest` (4 vCPU, ~16 GB RAM). Same shape across all matrix entries in a single run, so noise is constant for that run. Different runs use different physical runners, so cross-run absolute numbers are not comparable; **within a single run, lever-vs-baseline differences are reliable.**
+- **Runner shape:** github-hosted `ubuntu-latest` (advertised 4 vCPU, ~16 GB RAM). **Caveat (discovered while scoring lever 8 — see [#7767](https://github.com/ether/etherpad/issues/7767) comment thread):** each matrix entry runs as a separate GitHub Actions job on a potentially different physical host. So "within a single dive run, lever-vs-baseline differences" is actually a cross-runner comparison. Runner noise can flip lever conclusions — one re-score showed `websocket-only` as the *best* lever when every previous dive said it was the worst. Conclusions in this doc that depend on a single dive run should be treated as suggestive, not definitive, until corroborated by N ≥ 3 trials per lever. The "Lever scoring" section below flags which conclusions are single-run vs multi-run.
 - **Workflow:** [`.github/workflows/scaling-dive.yml`](https://github.com/ether/etherpad-load-test/blob/main/.github/workflows/scaling-dive.yml), manual `workflow_dispatch`. Inputs: `core_ref`, `sweep`. The workflow patches `loadTest: true`, `commitRateLimiting.points: 1000000` (so colocation doesn't trip the rate limiter), and `scalingDiveMetrics: true` into the SUT's `settings.json` before launch.
 - **Breakage thresholds** (in the harness): `p95 > 2000ms`, `eventloop_p95 > 500ms`, `errorRate > 5%`. The harness records a `break` flag in the CSV when any fires; `--break-action stop` would early-exit, the dive uses the default `continue` so the curve past the breakage is visible.
 
@@ -153,6 +153,24 @@ Hypothesis was that the per-rev `await pad.getRevision(r)` in the rebase loop yi
 **Did not help.** Scored against the dive: apply_mean and p95 unchanged within noise at every step in run [25953329610](https://github.com/ether/etherpad-load-test/actions/runs/25953329610). Mechanism: cached `pad.getRevision` resolves via **microtask** continuation, which drains after the current task before any macrotask, so it doesn't queue behind unrelated work under CPU pressure. The model was wrong.
 
 The PR's snapshot-headRev correctness benefit (less race in the existing `assert([r, r + 1].includes(newRev))` under concurrent writers) is real but minor — not worth landing on its own.
+
+### Lever 8 — engine.io WS transport-level packing (closed [#7772](https://github.com/ether/etherpad/pull/7772))
+
+Hypothesis from the [#7767](https://github.com/ether/etherpad/issues/7767) investigation: socket.io's WebSocket transport sends one WS frame per engine.io packet; the polling transport coalesces via `encodePayload`. Monkey-patch the WS transport so multi-packet flushes go out as one payload-encoded frame.
+
+**Did not help.** Scored against [run 25954316731](https://github.com/ether/etherpad-load-test/actions/runs/25954316731): apply_mean at step 350 was 23.86 ms vs baseline 16.15 ms — neutral-to-slightly-worse. Cause: engine.io's `socket.flush()` calls `transport.send(writeBuffer)` as soon as `transport.writable === true`. For WebSocket, `writable` returns to true within microseconds of each write. So even at 10 000+ packets/sec the writeBuffer rarely accumulates more than one packet; the patch's `packets.length > 1` branch almost never triggers.
+
+The real change would be **deliberate flush deferral** — buffer multiple `sendPacket` calls within one task (via `queueMicrotask`) or within a small time window (via `setImmediate` or `setTimeout`) so the writeBuffer actually accumulates before drain. That's a bigger change to engine.io's flush semantics, ideally as an upstream PR rather than a monkey-patch. Tracked in [#7767](https://github.com/ether/etherpad/issues/7767).
+
+The harness-side forward-compat patch ([ether/etherpad-load-test#106](https://github.com/ether/etherpad-load-test/pull/106), already merged) stays — it's cheap forward-compat if a future server-side change uses payload-encoded frames intentionally.
+
+### Methodology caveat surfaced during lever 8 scoring
+
+The same run that confirmed lever 8 didn't help also showed `websocket-only` as the **best** lever — directly contradicting every prior dive in this doc. The cause is that **each matrix entry runs as a separate GitHub Actions job on a potentially different physical runner**. Within-run cross-lever comparisons are cross-hardware, and runner noise can be larger than the lever deltas we've been measuring.
+
+Strong conclusions in this doc that depend on single dive runs should be **re-validated with N ≥ 3 trials per lever**. The lever-3 (#7768) finding holds up because the histogram-bucket evidence (apply percentile distribution) is consistent across multiple measurements and the mechanism (overlapping fan-outs starving the apply path) was confirmed via histogram data, not just a single p95 row. The lever-4 (websocket-only) "always-worse" conclusion is now suspect — it might be runner-noise dominated.
+
+Filing this as a sequel investigation: **before strong-recommendation calls on any new lever, run 3× and treat per-lever p95 as a noise envelope, not a point estimate.** A new dive run [25954537767/25954538807/25954540108](https://github.com/ether/etherpad-load-test/actions) is doing exactly that against develop — three identical sweeps — to quantify the noise envelope.
 
 ## Recommendation
 
