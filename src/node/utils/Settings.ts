@@ -1193,6 +1193,12 @@ export const reloadSettings = () => {
     logger.warn("logLayoutType: " + settings.logLayoutType);
     initLogging(settings.logconfig);
 
+    if (settings.loadTest) {
+      logger.warn(
+          'settings.loadTest is true: socket.io authentication and authorization checks ' +
+          'will be bypassed for every connection. Do NOT enable this in production.');
+    }
+
     if (!settings.skinName) {
         logger.warn('No "skinName" parameter found. Please check out settings.json.template and ' +
             'update your settings.json. Falling back to the default "colibris".');
