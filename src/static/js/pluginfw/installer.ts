@@ -21,6 +21,7 @@ import {
   checkEngineCompatibility,
   EngineIncompatibleError,
 } from './pluginEngineCheck';
+import {InstallerTaskQueue} from './installerTasks';
 
 import {findEtherpadRoot} from '../../../node/utils/AbsolutePaths';
 const logger = log4js.getLogger('plugins');
@@ -43,19 +44,10 @@ const headers = {
   'User-Agent': `Etherpad/${getEpVersion()}`,
 };
 
-let tasks = 0;
-
 export const linkInstaller = new LinkInstaller();
 
-const wrapTaskCb = (cb:Function|null) => {
-  tasks++;
-
-  return (...args: any) => {
-    cb && cb(...args);
-    tasks--;
-    if (tasks === 0) onAllTasksFinished();
-  };
-};
+const taskQueue = new InstallerTaskQueue(onAllTasksFinished);
+const wrapTaskCb = (cb: Function | null) => taskQueue.wrap(cb);
 
 const migratePluginsFromNodeModules = async () => {
   logger.info('start migration of plugins in node_modules');
