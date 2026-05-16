@@ -68,7 +68,17 @@ export const HomePage = () => {
       )
       setInstalledPlugins(updated)
     }
-    const onFinishedInstall = () => {
+    const onFinishedInstall = (data: {plugin: string; code?: string | null; error?: string | null}) => {
+      if (data?.error) {
+        const key = data.code === 'PLUGIN_REQUIRES_NEWER_ETHERPAD'
+          ? 'admin_plugins.install_error_requires_newer_etherpad'
+          : 'admin_plugins.install_error'
+        useStore.getState().setToastState({
+          open: true,
+          title: t(key, {plugin: data.plugin, error: data.error}),
+          success: false,
+        })
+      }
       pluginsSocket.emit('getInstalled')
     }
     const onFinishedUninstall = () => {
