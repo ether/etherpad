@@ -27,8 +27,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Etherpad requires Node >= 25 (see package.json engines.node).
-        node: ${{ fromJSON('[25]') }}
+        # Etherpad requires Node >= 24 (see package.json engines.node).
+        node: ${{ fromJSON('[24]') }}
     steps:
       -
         name: Checkout repository
@@ -101,7 +101,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: ${{ fromJSON('[25]') }}
+        node: ${{ fromJSON('[24]') }}
     steps:
       -
         name: Checkout repository
@@ -179,8 +179,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Etherpad requires Node >= 25 (see package.json engines.node).
-        node: ${{ fromJSON('[25]') }}
+        # Etherpad requires Node >= 24 (see package.json engines.node).
+        node: ${{ fromJSON('[24]') }}
     name: Windows without plugins
     runs-on: windows-latest
     steps:
@@ -247,8 +247,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Etherpad requires Node >= 25 (see package.json engines.node).
-        node: ${{ fromJSON('[25]') }}
+        # Etherpad requires Node >= 24 (see package.json engines.node).
+        node: ${{ fromJSON('[24]') }}
     name: Windows with Plugins
     runs-on: windows-latest
 

@@ -91,10 +91,12 @@ const getParameters = [
   },
   {
     // showMenuRight accepts 'true' or 'false'. Explicit 'false' hides the
-    // right-side toolbar (import/export/timeslider/settings/share/users);
-    // explicit 'true' forces it visible, overriding the readonly
-    // auto-hide applied further down (issue #5182). Any other value is
-    // a no-op — the menu stays in its default state.
+    // right-side toolbar (import/export/timeslider/settings/embed/home/
+    // users) — useful for iframe-embedded readonly pads where the menu
+    // is just chrome (issue #5182). Explicit 'true' forces the menu
+    // visible (a no-op against the default, kept for symmetry and for
+    // overriding any future caller-applied hide). Any other value is a
+    // no-op — the menu stays in its default state.
     name: 'showMenuRight',
     checkVal: null,
     callback: (val) => {
@@ -305,10 +307,10 @@ const sendClientReady = (isReconnect) => {
     document.title = `${padId.replace(/_+/g, ' ')} | ${title}`;
   }
 
-  const cp = (window as any).clientVars?.cookiePrefix || '';
   // The author token lives in an HttpOnly cookie set by the server (GDPR PR3 /
-  // ether/etherpad#6701). The browser never reads or writes it; the server
-  // reads the cookie from the socket.io handshake inside handleClientReady.
+  // ether/etherpad#6701). The integrator-set `sessionID` cookie can also be
+  // HttpOnly now (issue #7045). The browser never reads or writes either; the
+  // server reads them from the socket.io handshake inside handleClientReady.
 
   // If known, propagate the display name and color to the server in the CLIENT_READY message. This
   // allows the server to include the values in its reply CLIENT_VARS message (which avoids
@@ -320,11 +322,13 @@ const sendClientReady = (isReconnect) => {
     name: params.get('userName'),
   };
 
+  // The integrator-set `sessionID` cookie is read server-side from the
+  // socket.io handshake (issue #7045) so it can be HttpOnly. We no longer
+  // forward it via the CLIENT_READY payload.
   const msg: any = {
     component: 'pad',
     type: 'CLIENT_READY',
     padId,
-    sessionID: Cookies.get(`${cp}sessionID`) || Cookies.get('sessionID'),
     userInfo,
   };
   const overrides = getMyViewOverrides();
@@ -702,9 +706,18 @@ const pad = {
 
     const postAceInit = () => {
       padeditbar.init();
-      setTimeout(() => {
+      // Skip link (a11y, ether/etherpad#7255): href="#editorcontainer" gives
+      // a working no-JS fallback, but the real focus target is the inner
+      // contenteditable inside two nested iframes — route through ace_focus.
+      $('#skip-to-content').on('click', (e) => {
+        e.preventDefault();
         padeditor.ace.focus();
-      }, 0);
+      });
+      // Auto-focusing the editor on load traps Tab inside the editor iframe
+      // (Tab inserts an indent there, not bubbling out), which makes the
+      // skip link above unreachable via Tab from the URL bar — i.e., the
+      // standard WCAG 2.4.1 entry path. Users now click or Tab into the
+      // editor; the skip link is the first tabbable element.
       pad.refreshPadSettingsControls();
       pad.applyOptionsChange();
       pad.refreshMyViewControls();
@@ -776,14 +789,18 @@ const pad = {
       $('#chaticon').hide();
       $('#options-chatandusers').parent().hide();
       $('#options-stickychat').parent().hide();
-      // Hide the right-side toolbar on readonly pads — import/export,
-      // timeslider, settings, share, users are all noise for viewers
-      // who can't interact with the pad. Callers who need those
-      // controls visible on a readonly pad can force them back via
-      // `?showMenuRight=true`, which runs in getParameters() above.
-      if (getUrlVars().get('showMenuRight') !== 'true') {
-        $('#editbar .menu_right').hide();
-      }
+      // The right-side toolbar stays visible on readonly pads. The
+      // server-side `toolbar.menu(buttons, isReadOnly)` (see
+      // src/node/utils/toolbar.ts) already strips `savedrevision`, and
+      // `.readonly .acl-write { display: none }` hides the Import column
+      // inside the import/export popup, so the remaining controls
+      // (export, timeslider, settings, embed, home, showusers) are all
+      // safe for readonly viewers — and the userlist is the surface that
+      // plugins like ep_guest hang their "Log In" button off, so hiding
+      // it traps guests in readonly with no way out. Iframe-embed use
+      // cases that want a clean look (issue #5182) opt in to the hide
+      // via `?showMenuRight=false`, or hide the whole editbar via
+      // `?showControls=false`.
     } else if (!settings.hideChat) { $('#chaticon').show(); }
 
     $('body').addClass(window.clientVars.readonly ? 'readonly' : 'readwrite');

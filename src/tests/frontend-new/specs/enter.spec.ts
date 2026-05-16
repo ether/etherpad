@@ -49,7 +49,11 @@ test.describe('enter keystroke', function () {
     for (let i = 0; i < numberOfLines; i++) {
       const expectedCount = originalLength + i + 1;
       const lastLine = padBody.locator('div').last();
-      await lastLine.focus();
+      // `.focus()` is a no-op on a <div> (not natively focusable), so click
+      // the line to put the caret in the editor. Previously the editor was
+      // auto-focused on page load and this still happened to work; removing
+      // that auto-focus (#7255) makes the click explicit.
+      await lastLine.click();
       await page.keyboard.press('End');
       await page.keyboard.press('Enter');
       await expect(padBody.locator('div')).toHaveCount(expectedCount);

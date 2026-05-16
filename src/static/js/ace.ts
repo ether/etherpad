@@ -29,6 +29,7 @@ const hooks = require('./pluginfw/hooks');
 const makeCSSManager = require('./cssmanager').makeCSSManager;
 const pluginUtils = require('./pluginfw/shared');
 const ace2_inner = require('ep_etherpad-lite/static/js/ace2_inner')
+import html10n from './vendors/html10n';
 const debugLog = (...args) => {};
 const cl_plugins = require('ep_etherpad-lite/static/js/pluginfw/client_plugins')
 const rJQuery = require('ep_etherpad-lite/static/js/rjquery')
@@ -232,6 +233,9 @@ const Ace2Editor = function () {
     const sideDiv = outerDocument.createElement('div');
     sideDiv.id = 'sidediv';
     sideDiv.classList.add('sidediv');
+    // Line numbers are visual scaffolding, not content. Without aria-hidden,
+    // screen readers iterate every number — see ether/etherpad#7255.
+    sideDiv.setAttribute('aria-hidden', 'true');
     outerDocument.body.appendChild(sideDiv);
     const sideDivInner = outerDocument.createElement('div');
     sideDivInner.id = 'sidedivinner';
@@ -239,6 +243,11 @@ const Ace2Editor = function () {
     sideDiv.appendChild(sideDivInner);
     const lineMetricsDiv = outerDocument.createElement('div');
     lineMetricsDiv.id = 'linemetricsdiv';
+    // Measurement-only node: holds a single "x" so the renderer can read
+    // its computed line height. Without aria-hidden, AT exposes the stray
+    // glyph as a "text leaf" sandwiched between the editor iframe and the
+    // chat button — see ether/etherpad#7255 (comment "Ether X" announcement).
+    lineMetricsDiv.setAttribute('aria-hidden', 'true');
     lineMetricsDiv.appendChild(outerDocument.createTextNode('x'));
     outerDocument.body.appendChild(lineMetricsDiv);
 
@@ -292,17 +301,15 @@ const Ace2Editor = function () {
     // <body> tag
     innerDocument.body.id = 'innerdocbody';
     innerDocument.body.classList.add('innerdocbody');
-    innerDocument.body.setAttribute('role', 'textbox');
-    innerDocument.body.setAttribute('aria-multiline', 'true');
+    // Deliberately no role="textbox" / aria-multiline: those put NVDA/JAWS
+    // into focus mode (the whole pad becomes one flat edit field), which
+    // hides links and headings from the rotor and suppresses arrow-key
+    // line navigation. contenteditable=true already tells AT this is
+    // editable; without textbox semantics AT can browse the content as a
+    // document. See #7778 / #7255.
     innerDocument.body.setAttribute('aria-label', 'Pad content');
     innerDocument.body.setAttribute('aria-describedby', 'editor-keyboard-hint');
     innerDocument.body.setAttribute('spellcheck', 'false');
-    // Screen-reader-only keyboard hint inside the iframe so it's announced on focus.
-    const hint = innerDocument.createElement('div');
-    hint.id = 'editor-keyboard-hint';
-    hint.style.cssText = 'position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)';
-    hint.textContent = 'Press Escape to exit the editor. Press Alt+F9 to access the toolbar.';
-    innerDocument.body.appendChild(hint);
     innerDocument.body.appendChild(innerDocument.createTextNode('\u00A0')); // &nbsp;
 /*
     debugLog('Ace2Editor.init() waiting for require kernel load');
@@ -329,6 +336,41 @@ const Ace2Editor = function () {
       parent: makeCSSManager(document.querySelector('style[title="dynamicsyntax"]').sheet),
     });
     debugLog('Ace2Editor.init() Ace2Inner.init() returned');
+
+    // Screen-reader-only keyboard hint, target of the inner body's
+    // aria-describedby. Three things matter for AT to actually announce it:
+    //
+    //   1. Position: appended to the inner document's <head>. Anything in
+    //      <body> gets wiped by Ace2Inner's line-model rebuild during the
+    //      queued setBaseText/importText calls below. The ARIA spec lets
+    //      aria-describedby resolve to any ID in the same document, so
+    //      head placement is valid — screen readers look up by ID and
+    //      read text content, rendering position doesn't matter.
+    //   2. Exposure: NOT `hidden`. The HTML `hidden` attribute removes the
+    //      node from the accessibility tree, so aria-describedby would
+    //      resolve to a node with no exposed name. We leave the element
+    //      visible in markup but unrendered (head children don't paint).
+    //   3. Localization: html10n.get() returns undefined when translations
+    //      are still loading (and Ace2Editor.init() races with that load),
+    //      so seed with a hardcoded English fallback and re-pull the
+    //      translated string on every html10n `localized` event — that
+    //      keeps the text right both on first paint and on runtime
+    //      language changes.
+    const HINT_FALLBACK_EN =
+        'Press Escape to exit the editor. Press Alt+F9 to access the toolbar.';
+    const hint = innerDocument.createElement('div');
+    hint.id = 'editor-keyboard-hint';
+    const refreshHint = () => {
+      const localized = html10n.get('pad.editor.keyboardHint');
+      hint.textContent =
+          (typeof localized === 'string' && localized) ? localized : HINT_FALLBACK_EN;
+    };
+    refreshHint();
+    innerDocument.head.appendChild(hint);
+    if (html10n && typeof html10n.bind === 'function') {
+      html10n.bind('localized', refreshHint);
+    }
+
     loaded = true;
     doActionsPendingInit();
     debugLog('Ace2Editor.init() done');

@@ -30,6 +30,11 @@ test.describe('Messages in the COLLABROOM', function () {
 
     const div = body.locator('div').nth(lineNumber)
 
+    // Click into the editor before keypresses. Each test opens its own
+    // browser contexts via goToPad, which does not click — previously the
+    // page-load auto-focus put the editor in focus regardless, but that
+    // was removed in #7255 so the skip link could be Tab-reachable.
+    await body.click();
     // simulate key presses to delete content
     await div.locator('span').selectText() // select all
     await page.keyboard.press('Backspace') // clear the first line

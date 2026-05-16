@@ -44,9 +44,24 @@ test.describe('showMenuRight URL parameter', function () {
     return url;
   };
 
-  test('readonly pad hides .menu_right by default', async function ({page}) {
+  test('readonly pad shows .menu_right by default', async function ({page}) {
+    // The server-side toolbar.menu(..., isReadOnly) strips `savedrevision`
+    // and `.readonly .acl-write { display: none }` hides the Import
+    // column of the import/export popup, so the remaining controls
+    // (export, timeslider, settings, embed, home, showusers) are safe
+    // for readonly viewers — and ep_guest / other auth plugins depend
+    // on the userlist being reachable to surface their Log In button.
     const readonlyUrl = await getReadonlyUrl(page);
     await page.goto(readonlyUrl);
+    await page.waitForSelector('#editorcontainer.initialized');
+    await expect(page.locator('#editbar .menu_right')).toBeVisible();
+  });
+
+  test('readonly pad with showMenuRight=false hides the menu', async function ({page}) {
+    // Iframe-embed use case (issue #5182): the embedder opts in to the
+    // hide via the URL parameter when they want a clean look.
+    const readonlyUrl = await getReadonlyUrl(page);
+    await page.goto(`${readonlyUrl}?showMenuRight=false`);
     await page.waitForSelector('#editorcontainer.initialized');
     await expect(page.locator('#editbar .menu_right')).toBeHidden();
   });

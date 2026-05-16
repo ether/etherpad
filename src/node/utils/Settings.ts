@@ -193,6 +193,10 @@ export type SettingsType = {
     learnMoreUrl: string | null,
     dismissal: 'dismissible' | 'sticky',
   },
+  privacy: {
+    updateCheck: boolean,
+    pluginCatalog: boolean,
+  },
   skinName: string | null,
   skinVariants: string,
   ip: string,
@@ -271,6 +275,7 @@ export type SettingsType = {
   ipLogging: 'full' | 'truncated' | 'anonymous',
   automaticReconnectionTimeout: number,
   loadTest: boolean,
+  scalingDiveMetrics: boolean,
   dumpOnUncleanExit: boolean,
   indentationOnNewLine: boolean,
   logconfig: any | null,
@@ -442,6 +447,14 @@ const settings: SettingsType = {
         'See the linked policy for retention and how to request erasure.',
     learnMoreUrl: null,
     dismissal: 'dismissible',
+  },
+  privacy: {
+    // Outbound calls. See PRIVACY.md.
+    // Set to false to disable hourly version check (UpdateCheck.ts).
+    updateCheck: true,
+    // Set to false to disable plugin-catalog fetch from updateServer
+    // (installer.ts). Manual install via CLI still works.
+    pluginCatalog: true,
   },
   /*
  * Skin name.
@@ -685,6 +698,13 @@ const settings: SettingsType = {
    * Disable Load Testing
    */
   loadTest: false,
+  /**
+   * Expose extra Prometheus metrics designed for the scaling-dive load-test harness
+   * (ether/etherpad#7756): etherpad_pad_users{padId}, etherpad_changeset_apply_duration_seconds,
+   * etherpad_socket_emits_total{type}. Default false — enable only when running the harness so
+   * production deployments aren't paying for instrumentation they don't use.
+   */
+  scalingDiveMetrics: false,
   /**
    * Disable dump of objects preventing a clean exit
    */

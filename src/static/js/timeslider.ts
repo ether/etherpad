@@ -157,13 +157,15 @@ const init = () => {
 };
 
 // sends a message over the socket
+// The integrator-set `sessionID` cookie is consumed server-side from the
+// socket.io handshake (issue #7045). It does not need to ride on every
+// message; the server only reads it during CLIENT_READY.
 const sendSocketMsg = (type, data) => {
   socket.emit("message", {
     component: 'pad', // FIXME: Remove this stupidity!
     type,
     data,
     padId,
-    sessionID: Cookies.get(`${cp}sessionID`) || Cookies.get('sessionID'),
   });
 };
 

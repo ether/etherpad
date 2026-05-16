@@ -61,14 +61,35 @@ describe(__filename, function () {
       pad = await padManager.getPad(padId, '');
       // spliceText is an existing runtime Pad method; cast avoids
       // adding a type-only declaration to PadType in this PR.
-      await (pad as any).spliceText(0, 0, '100\u00a0km');
+      await (pad as any).spliceText(0, 0, '100\u00a0km', 'a.test');
       assert.equal(pad!.text(), '100\u00a0km\n');
     });
 
     it('setText round-trips U+00A0', async function () {
       pad = await padManager.getPad(padId, '');
-      await pad!.setText('a\u00a0b\n');
+      await pad!.setText('a\u00a0b\n', 'a.test');
       assert.equal(pad!.text(), 'a\u00a0b\n');
+    });
+
+    it('spliceText with empty authorId attributes to the system author', async function () {
+      pad = await padManager.getPad(padId, '');
+      // An unattributed insert (empty authorId, non-empty ins) used to
+      // produce an AText where text and attribs disagreed on length \u2014
+      // clients then failed setDocAText reconciliation on load. The
+      // server now substitutes a stable system author so the AText stays
+      // well-formed without forcing every caller to allocate one up-front.
+      await (pad as any).spliceText(0, 0, 'plugin-text', '');
+      assert.equal(pad!.text(), 'plugin-text\n');
+      const pool: any = (pad as any).pool;
+      let sawSystemAuthor = false;
+      for (const k of Object.keys(pool.numToAttrib || {})) {
+        const a = pool.numToAttrib[k];
+        if (a[0] === 'author' && a[1] === 'a.etherpad-system') {
+          sawSystemAuthor = true;
+          break;
+        }
+      }
+      assert(sawSystemAuthor, 'expected system-author binding in pad pool');
     });
   });
 
