@@ -24,6 +24,7 @@ describe(__filename, function () {
   });
 
   let authorId: string;
+  let roAuthorId: string;
   beforeEach(async function () {
     backups.hooks = {handleMessageSecurity: plugins.hooks.handleMessageSecurity};
     plugins.hooks.handleMessageSecurity = [];
@@ -42,7 +43,13 @@ describe(__filename, function () {
     roPadId = await readOnlyManager.getReadOnlyId(padId);
     res = await agent.get(`/p/${roPadId}`).expect(200);
     roSocket = await common.connect(res);
-    await common.handshake(roSocket, roPadId);
+    const roHandshake = await common.handshake(roSocket, roPadId);
+    // Capture roSocket's own author so tests that send USER_CHANGES via
+    // roSocket can build apools that match thisSession.author server-side;
+    // otherwise the wire's *0 reference points at the writer-socket's
+    // author and the server rejects with badChangeset on the
+    // "author mismatch" check added in this PR.
+    roAuthorId = (roHandshake as any).data.userId;
     await new Promise(resolve => setTimeout(resolve, 1000));
   });
 
@@ -214,6 +221,34 @@ describe(__filename, function () {
       ]);
     });
 
+    it('changeset that would strand the trailing \\n is rejected', async function () {
+      // Defensive validation: every USER_CHANGES must leave the pad ending
+      // with '\n'. The pre-existing handler used to auto-append a
+      // correction revision when the trailing '\n' got stranded, but the
+      // first NEW_CHANGES broadcast (the malformed user revision) reached
+      // browsers BEFORE the correction did, and the browser's line
+      // assembler asserts "line assembler not finished" on a non-'\n'-
+      // terminated doc — kicking the watching session offline. Refuse such
+      // changesets up front instead.
+      //
+      // Seed the pad as 'hello\n' (6 chars, 1 line), then send a changeset
+      // that explicitly keeps all 6 chars (consuming the trailing '\n')
+      // and inserts 'X' AFTER. Projected text = 'hello\nX' — doesn't end
+      // with '\n', must be rejected. The keep spans 1 newline so the wire
+      // must carry the `|1` marker to be in canonical form.
+      await Promise.all([
+        assertAccepted(socket, rev + 1),
+        sendUserChanges(socket, 'Z:1>5*0+5$hello'),
+      ]);
+      assert.equal(pad!.text(), 'hello\n');
+      await Promise.all([
+        assertRejected(socket),
+        sendUserChanges(socket, 'Z:6>1|1=6*0+1$X'),
+      ]);
+      // Pad must be unchanged after the rejection.
+      assert.equal(pad!.text(), 'hello\n');
+    });
+
     it('retransmission is accepted, has no effect', async function () {
       const cs = 'Z:1>5*0+5$hello';
       await Promise.all([
@@ -254,9 +289,15 @@ describe(__filename, function () {
 
     it('handleMessageSecurity can grant one-time write access', async function () {
       const cs = 'Z:1>5*0+5$hello';
+      // Use roSocket's own author in the apool so the *0 reference matches
+      // thisSession.author server-side. Without this, the new author-attrib
+      // validation rejects the changeset before handleMessageSecurity gets
+      // a chance to permit it.
+      const roPool = () =>
+          ({numToAttrib: {0: ['author', roAuthorId]}, nextNum: 1});
       const errRegEx = /write attempt on read-only pad/;
       // First try to send a change and verify that it was dropped.
-      await assert.rejects(sendUserChanges(roSocket, cs), errRegEx);
+      await assert.rejects(sendUserChanges(roSocket, cs, roPool()), errRegEx);
       // sendUserChanges() waits for message ack, so if the message was accepted then head should
       // have already incremented by the time we get here.
       assert.equal(pad!.head, rev); // Not incremented.
@@ -265,13 +306,14 @@ describe(__filename, function () {
       plugins.hooks.handleMessageSecurity.push({hook_fn: () => 'permitOnce'});
       await Promise.all([
         assertAccepted(roSocket, rev + 1),
-        sendUserChanges(roSocket, cs),
+        sendUserChanges(roSocket, cs, roPool()),
       ]);
       assert.equal(pad!.text(), 'hello\n');
 
       // The next change should be dropped.
       plugins.hooks.handleMessageSecurity = [];
-      await assert.rejects(sendUserChanges(roSocket, 'Z:6>6=5*0+6$ world'), errRegEx);
+      await assert.rejects(
+          sendUserChanges(roSocket, 'Z:6>6=5*0+6$ world', roPool()), errRegEx);
       assert.equal(pad!.head, rev); // Not incremented.
       assert.equal(pad!.text(), 'hello\n');
     });

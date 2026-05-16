@@ -24,7 +24,7 @@ import {MapArrayType} from "../types/MapType";
 import AttributeMap from '../../static/js/AttributeMap';
 const padManager = require('../db/PadManager');
 const padDeletionManager = require('../db/PadDeletionManager');
-import {checkRep, cloneAText, compose, deserializeOps, follow, identity, inverse, makeAText, makeSplice, moveOpsToNewPool, mutateAttributionLines, mutateTextLines, oldLen, prepareForWire, splitAttributionLines, splitTextLines, unpack} from '../../static/js/Changeset';
+import {applyToText, checkRep, cloneAText, compose, deserializeOps, follow, identity, inverse, makeAText, moveOpsToNewPool, mutateAttributionLines, mutateTextLines, oldLen, prepareForWire, splitAttributionLines, splitTextLines, unpack} from '../../static/js/Changeset';
 import ChatMessage from '../../static/js/ChatMessage';
 import AttributePool from '../../static/js/AttributePool';
 const AttributeManager = require('../../static/js/AttributeManager');
@@ -893,6 +893,12 @@ const handleUserChanges = async (socket:any, message: {
 
     // Afaik, it copies the new attributes from the changeset, to the global Attribute Pool
     let rebasedChangeset = moveOpsToNewPool(changeset, wireApool, pad.pool);
+    // Snapshot the post-pool-mapping form so the retransmission check below
+    // can recognise our changeset against the stored revision form. Comparing
+    // the raw client `changeset` against `c` would miss legitimate
+    // retransmissions whenever moveOpsToNewPool renumbered an attribute
+    // (e.g. `*0` -> `*1` because the pad pool already had something at slot 0).
+    const canonicalCs = rebasedChangeset;
 
     // ex. applyUserChanges
     let r = baseRev;
@@ -903,9 +909,9 @@ const handleUserChanges = async (socket:any, message: {
     while (r < pad.getHeadRevisionNumber()) {
       r++;
       const {changeset: c, meta: {author: authorId}} = await pad.getRevision(r);
-      if (changeset === c && thisSession.author === authorId) {
+      if (canonicalCs === c && thisSession.author === authorId) {
         // Assume this is a retransmission of an already applied changeset.
-        rebasedChangeset = identity(unpack(changeset).oldLen);
+        rebasedChangeset = identity(unpack(canonicalCs).oldLen);
       }
       // At this point, both "c" (from the pad) and "changeset" (from the
       // client) are relative to revision r - 1. The follow function
@@ -921,6 +927,22 @@ const handleUserChanges = async (socket:any, message: {
           `Can't apply changeset ${rebasedChangeset} with oldLen ` +
           `${oldLen(rebasedChangeset)} to document of length ${prevText.length}`);
     }
+    // Defensive: reject any rebased changeset whose application would leave
+    // the pad text not ending with '\n'. Previously the server silently
+    // appended a separate `nlChangeset` correction revision; that worked
+    // for the stored pad but the FIRST broadcast (the malformed user
+    // revision) reached browsers BEFORE the correction did, and the
+    // browser's line assembler asserts "line assembler not finished" on
+    // a doc that doesn't end with '\n', taking the session out. Refuse to
+    // accept such changesets — clients must always preserve the
+    // trailing-newline invariant.
+    const projectedText = applyToText(rebasedChangeset, prevText);
+    if (!projectedText.endsWith('\n')) {
+      throw new Error(
+          `Rejected USER_CHANGES whose application would leave the pad ` +
+          `without a trailing '\\n' (length ${projectedText.length}). ` +
+          `Every USER_CHANGES must preserve the "doc ends with \\n" invariant.`);
+    }
 
     const newRev = await pad.appendRevision(rebasedChangeset, thisSession.author);
     // The head revision will either stay the same or increase by 1 depending on whether the
@@ -930,12 +952,6 @@ const handleUserChanges = async (socket:any, message: {
     const correctionChangeset = _correctMarkersInPad(pad.atext, pad.pool);
     if (correctionChangeset) {
       await pad.appendRevision(correctionChangeset, thisSession.author);
-    }
-
-    // Make sure the pad always ends with an empty line.
-    if (pad.text().lastIndexOf('\n') !== pad.text().length - 1) {
-      const nlChangeset = makeSplice(pad.text(), pad.text().length - 1, 0, '\n');
-      await pad.appendRevision(nlChangeset, thisSession.author);
     }
 
     // The client assumes that ACCEPT_COMMIT and NEW_CHANGES messages arrive in order. Make sure we
