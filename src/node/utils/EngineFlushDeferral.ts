@@ -47,7 +47,6 @@ const SCHEDULED = Symbol('engineFlushScheduled');
 
 export const installEngineFlushDeferral = (): void => {
   if (installed) return;
-  installed = true;
 
   let SocketProto: {sendPacket: (...a: unknown[]) => unknown};
   try {
@@ -55,12 +54,17 @@ export const installEngineFlushDeferral = (): void => {
     SocketProto = require('engine.io/build/socket').Socket.prototype;
   } catch (err: any) {
     logger.warn(`Unable to install engine.io flush deferral (module not found): ${err && err.message || err}`);
-    return;
+    return;  // Leave `installed` false so a later boot path can retry.
   }
   if (typeof SocketProto.sendPacket !== 'function') {
     logger.warn('engine.io Socket shape unexpected; skipping flush deferral patch');
-    return;
+    return;  // Leave `installed` false so a later boot path can retry.
   }
+  // Only after both require and shape check succeed do we record that the
+  // patch is installed. Setting the flag before validation (the original
+  // code) would have permanently disabled retries after a transient
+  // require failure in test/CI environments where socket.io may load late.
+  installed = true;
 
   // Re-implementing sendPacket inline rather than wrapping the original
   // so the single closing `this.flush()` becomes a microtask-coalesced
