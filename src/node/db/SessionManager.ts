@@ -62,18 +62,8 @@ exports.findAuthorID = async (groupID:string, sessionCookie: string) => {
    * Also, see #3820.
    */
   const sessionIDs = sessionCookie.replace(/^"|"$/g, '').split(',');
-  const sessionInfoPromises = sessionIDs.map(async (id) => {
-    try {
-      return await exports.getSessionInfo(id);
-    } catch (err:any) {
-      if (err.message === 'sessionID does not exist') {
-        console.debug(`SessionManager getAuthorID: no session exists with ID ${id}`);
-      } else {
-        throw err;
-      }
-    }
-    return undefined;
-  });
+  const sessionInfoPromises = sessionIDs.map(async (id) =>
+      (await getSessionInfoOrNull(id)) || undefined);
   const now = Math.floor(Date.now() / 1000);
   const isMatch = (si: {
     groupID: string;
@@ -163,9 +153,20 @@ exports.createSession = async (groupID: string, authorID: string, validUntil: nu
  * @param {String} sessionID The id of the session
  * @return {Promise<Object>} the sessioninfos
  */
+// Non-throwing variant for hot-path callers. Hot path uses
+// `findAuthorID` on every CLIENT_READY and `listSessionsWithDBKey` on
+// session listing; both wrap getSessionInfo in try/catch and discard
+// "sessionID does not exist" CustomError. Profiling against develop at
+// 100-400 author sweep (ether/etherpad#7756) attributed ~6% of total
+// CPU to that throw+catch pair: ~1.8% to CustomError construction and
+// ~4% to the cascading `console.debug` call routed through log4js. A
+// null return collapses the cost to a single nullable check.
+const getSessionInfoOrNull = async (sessionID: string) =>
+  await db.get(`session:${sessionID}`);
+
 exports.getSessionInfo = async (sessionID:string) => {
   // check if the database entry of this session exists
-  const session = await db.get(`session:${sessionID}`);
+  const session = await getSessionInfoOrNull(sessionID);
 
   if (session == null) {
     // session does not exist
@@ -250,15 +251,12 @@ const listSessionsWithDBKey = async (dbkey: string) => {
 
   // iterate through the sessions and get the sessioninfos
   for (const sessionID of Object.keys(sessions || {})) {
-    try {
-      sessions[sessionID] = await exports.getSessionInfo(sessionID);
-    } catch (err:any) {
-      if (err.name === 'apierror') {
-        console.warn(`Found bad session ${sessionID} in ${dbkey}`);
-        sessions[sessionID] = null;
-      } else {
-        throw err;
-      }
+    const info = await getSessionInfoOrNull(sessionID);
+    if (info == null) {
+      console.warn(`Found bad session ${sessionID} in ${dbkey}`);
+      sessions[sessionID] = null;
+    } else {
+      sessions[sessionID] = info;
     }
   }
 
