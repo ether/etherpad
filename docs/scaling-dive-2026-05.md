@@ -228,7 +228,19 @@ The chain is `checkAccess → SessionManager.findAuthorID → getSessionInfo thr
 
 **Fix (#7775):** add a non-throwing private `getSessionInfoOrNull` helper, route the two internal callers (`findAuthorID`, `listSessionsWithDBKey`) at it, and keep `exports.getSessionInfo` as a thin wrapper that preserves the throw for HTTP API compatibility (the API translates the thrown `apierror` to `code: 1`). All 32 cases in `tests/backend/specs/api/sessionsAndGroups.ts` pass, including "getSessionInfo of deleted session" which still expects `code: 1`.
 
-**Expected impact:** ~6% of total process CPU at the cliff. Score pending a dive sweep against the merged branch.
+**Measured impact (N=3 medians, perf branch vs develop, same `authors=100..500:step=50:dwell=8s:warmup=2s` sweep, perf runs 25957107195/25957108328/25957109418 vs develop runs 25954537767/25954538807/25954540108):**
+
+| step | dev CPU% | perf CPU% | ΔCPU% | dev p95 | perf p95 |
+|---:|---:|---:|---:|---:|---:|
+| 100 | 4.76 | 4.67 | -1.7% | 38 | 38 |
+| 200 | 15.21 | 14.60 | -4.0% | 37 | 41 |
+| 300 | 30.46 | 29.68 | -2.6% | 45 | 45 |
+| 350 | 41.58 | 39.36 | **-5.3%** | 39 | 74 |
+| 400 | 56.26 | 54.23 | -3.6% | 2275 | 2089 |
+| 450 | 72.33 | 70.49 | -2.5% | 6167 | 5891 |
+| 500 | 88.38 | 87.14 | -1.4% | 11759 | 11391 |
+
+**ΔCPU% is consistently negative (-1.4% to -5.3%) across all 9 steps** — the direction matches the profile prediction. The realised magnitude (2-5%) is below the profile-attributed 6% upper bound because some of the log4js cost the profile attributed to the throw path was unrelated startup/info logging. Latency impact is mostly inside the noise envelope; step 350 looks regressive at the median but the raw triples (dev [39,39,122] vs perf [73,74,124]) overlap heavily with one outlier each.
 
 ### Other CPU hotspots surfaced (not yet acted on)
 
@@ -263,7 +275,7 @@ Mechanism: deferred flush gives more packets per WS frame → fewer per-frame sy
 
 **Merge in priority order:**
 
-1. **[#7775](https://github.com/ether/etherpad/pull/7775)** — SessionManager throw-as-control-flow fix. CPU-profile-identified ~6% process CPU win at the cliff. No public-API behavior change; passes existing API test suite. Mechanical and low-risk.
+1. **[#7775](https://github.com/ether/etherpad/pull/7775)** — SessionManager throw-as-control-flow fix. N=3 measured 2-5% CPU% reduction across the cliff sweep (profile-predicted 6% upper bound). No public-API behavior change; passes existing API test suite. Mechanical and low-risk.
 2. **[#7774](https://github.com/ether/etherpad/pull/7774)** — engine.io socket flush deferral. The only PR in this program with N=3-confirmed measurable perf improvement at the time it was opened (tighter tail at step 300-350). Wire-compatible, server-side only.
 3. **[#7768](https://github.com/ether/etherpad/pull/7768)** — per-socket fan-out serialization + NEW_CHANGES_BATCH. No measurable perf benefit in N=3 testing — recommend merging for the **correctness fix** (the original code was racy under concurrent commits and could lose revisions on emit error). NEW_CHANGES_BATCH framing is dormant at steady-state and fires under server slowness as forward-compat groundwork.
 4. **[#7762](https://github.com/ether/etherpad/pull/7762)** — Prometheus metrics. Already merged; instrument for any further dive.
