@@ -154,19 +154,24 @@ export const uninstall = async (pluginName: string, cb:Function|null = null) => 
 };
 
 // Best-effort lookup of the published plugin's engines.node range. Returns
-// undefined on any failure (network, 404, parse error) so the caller falls
-// through to the existing install path rather than blocking on a flaky
-// registry call.
+// undefined on any failure (network, 404, parse error, timeout) so the
+// caller falls through to the existing install path rather than blocking on
+// a flaky registry call. A 5s AbortSignal.timeout guards against a stalled
+// registry hanging the install promise forever — without it the
+// finished:install socket event would never fire and the admin UI would
+// stay spinning indefinitely.
+const ENGINES_PREFLIGHT_TIMEOUT_MS = 5000;
 const fetchPluginEnginesNode = async (pluginName: string): Promise<string | undefined> => {
   try {
     const res = await fetch(
       `${npmRegistry}/${encodeURIComponent(pluginName)}/latest`,
-      {headers},
+      {headers, signal: AbortSignal.timeout(ENGINES_PREFLIGHT_TIMEOUT_MS)},
     );
     if (!res.ok) return undefined;
     const data = await res.json() as {engines?: {node?: string}};
     return data.engines?.node;
-  } catch {
+  } catch (err) {
+    logger.debug(`engines preflight for ${pluginName} fell through: ${err}`);
     return undefined;
   }
 };
