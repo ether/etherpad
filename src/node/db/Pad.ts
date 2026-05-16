@@ -22,6 +22,7 @@ const padMessageHandler = require('../handler/PadMessageHandler');
 const groupManager = require('./GroupManager');
 const CustomError = require('../utils/customError');
 import readOnlyManager from './ReadOnlyManager';
+import {HistoricalAuthorDataCache} from './HistoricalAuthorDataCache';
 import randomString from '../utils/randomstring';
 const hooks = require('../../static/js/pluginfw/hooks');
 import pad_utils from "../../static/js/pad_utils";
@@ -102,6 +103,10 @@ class Pad {
     private id: string;
     private savedRevisions: any[];
     private padSettings: PadSettings;
+    // Per-pad cache for handleClientReady's historicalAuthorData map. Lazily
+    // initialised on first call so we don't touch authorManager during pad
+    // construction. See HistoricalAuthorDataCache for the rationale (#7756).
+    private historicalAuthorDataCache: HistoricalAuthorDataCache | null = null;
   /**
    * @param id
    * @param [database] - Database object to access this pad's records (and only this pad's records;
@@ -324,6 +329,23 @@ class Pad {
     }
 
     return authorIds;
+  }
+
+  /**
+   * Returns the `{authorId -> {name, colorId}}` map used by handleClientReady
+   * to populate clientVars.collab_client_vars.historicalAuthorData. Cached
+   * per pad with a short TTL so a burst of simultaneous joins share one
+   * computation. Writes from `authorManager.setAuthorName` /
+   * `setAuthorColorId` become visible within at most the cache TTL (5s).
+   */
+  async getHistoricalAuthorData(): Promise<{[authorId: string]: {name: string; colorId: string}}> {
+    if (this.historicalAuthorDataCache == null) {
+      this.historicalAuthorDataCache = new HistoricalAuthorDataCache(
+        () => this.getAllAuthors(),
+        (id: string) => authorManager.getAuthor(id),
+      );
+    }
+    return this.historicalAuthorDataCache.get();
   }
 
   async getInternalRevisionAText(targetRev: number) {

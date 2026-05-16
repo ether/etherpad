@@ -1084,27 +1084,19 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
     await pad.saveToDatabase();
   }
 
-  // these db requests all need the pad object (timestamp of latest revision, author data)
-  const authors = pad.getAllAuthors();
-
   // get timestamp of latest revision needed for timeslider
   const currentTime = await pad.getRevisionDate(pad.getHeadRevisionNumber());
 
-  // get all author data out of the database (in parallel)
-  const historicalAuthorData:MapArrayType<{
+  // Per-pad cached author lookup (#7756 connect-handshake cliff). At 200+
+  // authors a fresh burst of 50 simultaneous joiners would otherwise do
+  // 50 * 200 = 10000 ueberdb cache lookups inside the join hot path,
+  // competing for the same event loop as the existing authors' USER_CHANGES
+  // traffic. The Pad-level cache collapses that to a single computation
+  // shared across the simultaneous joins (5-second TTL).
+  const historicalAuthorData: MapArrayType<{
     name: string;
     colorId: string;
-  }> = {};
-  await Promise.all(authors.map(async (authorId: string) => {
-    const author = await authorManager.getAuthor(authorId);
-    if (!author) {
-      messageLogger.error(`There is no author for authorId: ${authorId}. ` +
-          'This is possibly related to https://github.com/ether/etherpad-lite/issues/2802');
-    } else {
-      // Filter author attribs (e.g. don't send author's pads to all clients)
-      historicalAuthorData[authorId] = {name: author.name, colorId: author.colorId};
-    }
-  }));
+  }> = await pad.getHistoricalAuthorData();
 
   // glue the clientVars together, send them and tell the other clients that a new one is there
 
