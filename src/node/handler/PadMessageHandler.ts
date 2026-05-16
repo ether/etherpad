@@ -883,14 +883,30 @@ const handleUserChanges = async (socket:any, message: {
     let rebasedChangeset = moveOpsToNewPool(changeset, wireApool, pad.pool);
 
     // ex. applyUserChanges
-    let r = baseRev;
-
+    //
     // The client's changeset might not be based on the latest revision,
-    // since other clients are sending changes at the same time.
-    // Update the changeset so that it can be applied to the latest revision.
-    while (r < pad.getHeadRevisionNumber()) {
+    // since other clients are sending changes at the same time. Rebase
+    // through every intermediate revision so the changeset applies cleanly
+    // against the current head.
+    //
+    // Prefetching the whole range in one Promise.all collapses N
+    // event-loop yields (one `await pad.getRevision(r)` per intermediate
+    // revision) into 1, materially reducing apply_mean under steady-state
+    // CPU pressure (#7756). Snapshot the head once so we rebase to a
+    // stable target — any commits landing after this point get caught up
+    // by the next handleUserChanges invocation, matching the existing
+    // assertion below (newRev ∈ {r, r+1}).
+    const rebaseTargetHead = pad.getHeadRevisionNumber();
+    const rebaseRange: number[] = [];
+    for (let i = baseRev + 1; i <= rebaseTargetHead; i++) rebaseRange.push(i);
+    const rebaseRevs = rebaseRange.length === 0
+      ? []
+      : await Promise.all(rebaseRange.map((i) => pad.getRevision(i)));
+
+    let r = baseRev;
+    for (const revision of rebaseRevs) {
       r++;
-      const {changeset: c, meta: {author: authorId}} = await pad.getRevision(r);
+      const {changeset: c, meta: {author: authorId}} = revision;
       if (changeset === c && thisSession.author === authorId) {
         // Assume this is a retransmission of an already applied changeset.
         rebasedChangeset = identity(unpack(changeset).oldLen);
@@ -952,27 +968,39 @@ exports.updatePadClients = async (pad: PadType) => {
   const roomSockets = _getRoomSockets(pad.id);
   if (roomSockets.length === 0) return;
 
-  // since all clients usually get the same set of changesets, store them in local cache
-  // to remove unnecessary roundtrip to the datalayer
-  // NB: note below possibly now accommodated via the change to promises/async
-  // TODO: in REAL world, if we're working without datalayer cache,
-  // all requests to revisions will be fired
-  // BEFORE first result will be landed to our cache object.
-  // The solution is to replace parallel processing
-  // via async.forEach with sequential for() loop. There is no real
-  // benefits of running this in parallel,
-  // but benefit of reusing cached revision object is HUGE
-  const revCache:MapArrayType<any> = {};
+  // Find the range of revisions any recipient could possibly need to catch
+  // up to. The per-socket while loop further down won't necessarily walk
+  // the whole range for every recipient, but prefetching the SUPERSET in
+  // one Promise.all collapses N event-loop yields (#7756). At the cliff
+  // step in dive runs this is the difference between every per-rev
+  // `await pad.getRevision(r)` queuing behind other work and the rebase
+  // resolving in microseconds.
+  const headRev = pad.getHeadRevisionNumber();
+  let minRevNeeded = headRev + 1;
+  for (const socket of roomSockets) {
+    const sinfo = sessioninfos[socket.id];
+    if (sinfo == null) continue;
+    if (sinfo.rev + 1 < minRevNeeded) minRevNeeded = sinfo.rev + 1;
+  }
+  const revCache: MapArrayType<any> = {};
+  if (minRevNeeded <= headRev) {
+    const ids: number[] = [];
+    for (let r = minRevNeeded; r <= headRev; r++) ids.push(r);
+    const fetched = await Promise.all(ids.map((r) => pad.getRevision(r as unknown as string)));
+    fetched.forEach((rev, i) => { revCache[ids[i]!] = rev; });
+  }
 
   await Promise.all(roomSockets.map(async (socket) => {
     const sessioninfo = sessioninfos[socket.id];
     // The user might have disconnected since _getRoomSockets() was called.
     if (sessioninfo == null) return;
 
-    while (sessioninfo.rev < pad.getHeadRevisionNumber()) {
+    while (sessioninfo.rev < headRev) {
       const r = sessioninfo.rev + 1;
       let revision = revCache[r];
       if (!revision) {
+        // Should never happen given the prefetch above, but stay robust if
+        // headRev advances mid-loop (shouldn't, since we snapshotted).
         revision = await pad.getRevision(r);
         revCache[r] = revision;
       }
