@@ -139,12 +139,46 @@ test('otherusers region has aria-live and aria-label (no aria-role typo)', async
   expect(ariaRole).toBeNull();
 });
 
-test('show-more toolbar button has aria-label and aria-expanded', async ({page}) => {
+test('show-more toolbar button has an accessible name and aria-expanded', async ({page}) => {
   const btn = page.locator('.show-more-icon-btn');
   const tag = await btn.evaluate((el) => el.tagName.toLowerCase());
   expect(tag).toBe('button');
-  await expect(btn).toHaveAttribute('aria-label', 'Show more toolbar buttons');
+  // The accessible name is supplied by aria-labelledby pointing at a hidden
+  // localized span (so html10n can translate it). Verify the relationship
+  // resolves and produces the expected English string with locale=en-US.
+  await expect(btn).toHaveAttribute('aria-labelledby', 'editbar-showmore-label');
+  await expect(page.locator('#editbar-showmore-label')).toHaveText('Show more toolbar buttons');
   await expect(btn).toHaveAttribute('aria-expanded', 'false');
+});
+
+test('editbar toolbars have role=toolbar with accessible names (#7255)', async ({page}) => {
+  // Lighthouse + AT tooling (firefox a11y inspector) flagged both <ul> toolbars
+  // as unnamed in the 2026-05-16 follow-up on #7255. Each toolbar role now
+  // points to a hidden localized span via aria-labelledby; if either span is
+  // ever removed, getAttribute returns an id with no matching element and the
+  // toolbar becomes unnamed again — so assert the resolved string, not just
+  // the attribute wiring.
+  const cases: Array<[string, string, string]> = [
+    ['.menu_left', 'editbar-formatting-label', 'Formatting toolbar'],
+    ['.menu_right', 'editbar-actions-label', 'Pad actions toolbar'],
+    ['#history-controls', 'editbar-history-label', 'History playback toolbar'],
+  ];
+  for (const [sel, labelId, expected] of cases) {
+    const toolbar = page.locator(sel);
+    await expect(toolbar).toHaveAttribute('role', 'toolbar');
+    await expect(toolbar).toHaveAttribute('aria-labelledby', labelId);
+    await expect(page.locator(`#${labelId}`)).toHaveText(expected);
+  }
+});
+
+test('linemetricsdiv is hidden from screen readers (#7255)', async ({page}) => {
+  // The "Ether X" announcement in the issue's a11y-inspector screenshot was
+  // the outer iframe (titled "Ether") plus a single "x" text leaf from
+  // ace.ts's linemetricsdiv. linemetricsdiv is a measurement-only node — it
+  // holds a single "x" so the renderer can read its computed line height —
+  // and must stay out of the AT tree.
+  const outerFrame = page.frameLocator('iframe[name="ace_outer"]');
+  await expect(outerFrame.locator('#linemetricsdiv')).toHaveAttribute('aria-hidden', 'true');
 });
 
 test('skip-to-content link bypasses toolbar (WCAG 2.4.1, #7255)', async ({page}) => {
