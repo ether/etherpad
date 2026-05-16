@@ -301,8 +301,12 @@ const Ace2Editor = function () {
     // <body> tag
     innerDocument.body.id = 'innerdocbody';
     innerDocument.body.classList.add('innerdocbody');
-    innerDocument.body.setAttribute('role', 'textbox');
-    innerDocument.body.setAttribute('aria-multiline', 'true');
+    // Deliberately no role="textbox" / aria-multiline: those put NVDA/JAWS
+    // into focus mode (the whole pad becomes one flat edit field), which
+    // hides links and headings from the rotor and suppresses arrow-key
+    // line navigation. contenteditable=true already tells AT this is
+    // editable; without textbox semantics AT can browse the content as a
+    // document. See #7778 / #7255.
     innerDocument.body.setAttribute('aria-label', 'Pad content');
     innerDocument.body.setAttribute('aria-describedby', 'editor-keyboard-hint');
     innerDocument.body.setAttribute('spellcheck', 'false');

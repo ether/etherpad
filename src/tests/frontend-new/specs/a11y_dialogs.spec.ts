@@ -280,6 +280,22 @@ test('editor-keyboard-hint exists in the editor iframe with localized text (#725
   expect(text).toContain('Escape');
 });
 
+test('innerdocbody does not advertise role=textbox / aria-multiline (#7778)', async ({page}) => {
+  // role=textbox + aria-multiline force NVDA/JAWS into focus mode for the
+  // whole pad, which hides links/headings from the rotor and stops
+  // arrow-key line navigation. Keep these attributes absent so AT browses
+  // the editor as document content. The aria-label / aria-describedby
+  // (#editor-keyboard-hint) stay — they don't change AT mode.
+  const innerFrame = page.frameLocator('iframe[name="ace_outer"]')
+      .frameLocator('iframe[name="ace_inner"]');
+  const body = innerFrame.locator('body#innerdocbody');
+  await expect(body).toHaveCount(1);
+  expect(await body.getAttribute('role')).toBeNull();
+  expect(await body.getAttribute('aria-multiline')).toBeNull();
+  await expect(body).toHaveAttribute('aria-label', 'Pad content');
+  await expect(body).toHaveAttribute('aria-describedby', 'editor-keyboard-hint');
+});
+
 test('line-number sidediv is hidden from screen readers (#7255)', async ({page}) => {
   // sidediv lives in the outer ace iframe (ace_outer) — query the frame.
   const outerFrame = page.frameLocator('iframe[name="ace_outer"]');
