@@ -80,10 +80,27 @@
   <!----------------------------->
   <!--------- TOOLBAR ----------->
   <!----------------------------->
+  <!-- Visually-hidden labels for the role=toolbar regions. Sitting outside the
+       <ul>s keeps the toolbar markup valid (HTML disallows non-<li>/<script>
+       children inside <ul>) while still giving each toolbar a translated
+       accessible name via aria-labelledby. See ether/etherpad#7255. -->
+  <span id="editbar-formatting-label" class="sr-only"
+        data-l10n-id="pad.editor.toolbar.formatting">Formatting toolbar</span>
+  <!-- Reuses pad.historyMode.controlsLabel rather than minting a new key:
+       pad_mode.ts already set this as aria-label on #history-controls via JS,
+       and the existing key has translations in nl/de/etc. A new English-only
+       key would cause non-English locales to regress to fallback English. -->
+  <span id="editbar-history-label" class="sr-only"
+        data-l10n-id="pad.historyMode.controlsLabel">Pad history controls</span>
+  <span id="editbar-actions-label" class="sr-only"
+        data-l10n-id="pad.editor.toolbar.actions">Pad actions toolbar</span>
+  <span id="editbar-showmore-label" class="sr-only"
+        data-l10n-id="pad.editor.toolbar.showMore">Show more toolbar buttons</span>
+
   <div id="editbar" class="toolbar">
       <div id="toolbar-overlay"></div>
 
-      <ul class="menu_left" role="toolbar">
+      <ul class="menu_left" role="toolbar" aria-labelledby="editbar-formatting-label">
           <% e.begin_block("editbarMenuLeft"); %>
           <%- toolbar.menu(settings.toolbar.left, isReadOnly, 'left', 'pad') %>
           <% e.end_block(); %>
@@ -100,7 +117,8 @@
            translation keys. We deliberately do NOT put data-l10n-id on
            the icon buttons — that would set their textContent, which on
            a buttonicon glyph would draw the localized string on screen. -->
-      <div id="history-controls" class="history-controls" role="toolbar" hidden>
+      <div id="history-controls" class="history-controls" role="toolbar"
+           aria-labelledby="editbar-history-label" hidden>
         <button type="button" id="history-playpause" class="buttonicon buttonicon-play"
                 aria-pressed="false"></button>
         <button type="button" id="history-leftstep" class="buttonicon buttonicon-step-backward">
@@ -137,12 +155,14 @@
           <option value="1000" data-l10n-id="timeslider.settings.playbackSpeed.1000ms">1000 ms</option>
         </select>
       </div>
-      <ul class="menu_right" role="toolbar">
+      <ul class="menu_right" role="toolbar" aria-labelledby="editbar-actions-label">
           <% e.begin_block("editbarMenuRight"); %>
           <%- toolbar.menu(settings.toolbar.right, isReadOnly, 'right', 'pad') %>
           <% e.end_block(); %>
       </ul>
-      <button type="button" class="show-more-icon-btn" aria-label="Show more toolbar buttons" aria-expanded="false"></button> <!-- use on small screen to display hidden toolbar buttons -->
+      <button type="button" class="show-more-icon-btn"
+              aria-labelledby="editbar-showmore-label"
+              aria-expanded="false"></button> <!-- use on small screen to display hidden toolbar buttons -->
   </div>
 
   <% e.begin_block("afterEditbar"); %><% e.end_block(); %>

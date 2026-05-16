@@ -139,12 +139,95 @@ test('otherusers region has aria-live and aria-label (no aria-role typo)', async
   expect(ariaRole).toBeNull();
 });
 
-test('show-more toolbar button has aria-label and aria-expanded', async ({page}) => {
+test('show-more toolbar button has an accessible name and aria-expanded', async ({page}) => {
   const btn = page.locator('.show-more-icon-btn');
   const tag = await btn.evaluate((el) => el.tagName.toLowerCase());
   expect(tag).toBe('button');
-  await expect(btn).toHaveAttribute('aria-label', 'Show more toolbar buttons');
+  // The accessible name is supplied by aria-labelledby pointing at a hidden
+  // localized span (so html10n can translate it). Verify the relationship
+  // resolves and produces the expected English string with locale=en-US.
+  await expect(btn).toHaveAttribute('aria-labelledby', 'editbar-showmore-label');
+  await expect(page.locator('#editbar-showmore-label')).toHaveText('Show more toolbar buttons');
   await expect(btn).toHaveAttribute('aria-expanded', 'false');
+});
+
+test('editbar toolbars have role=toolbar with accessible names (#7255)', async ({page}) => {
+  // Lighthouse + AT tooling (firefox a11y inspector) flagged both <ul> toolbars
+  // as unnamed in the 2026-05-16 follow-up on #7255. Each toolbar role now
+  // points to a hidden localized span via aria-labelledby; if either span is
+  // ever removed, getAttribute returns an id with no matching element and the
+  // toolbar becomes unnamed again — so assert the resolved string, not just
+  // the attribute wiring.
+  const cases: Array<[string, string, string]> = [
+    ['.menu_left', 'editbar-formatting-label', 'Formatting toolbar'],
+    ['.menu_right', 'editbar-actions-label', 'Pad actions toolbar'],
+    // History toolbar reuses pad.historyMode.controlsLabel (already
+    // translated in multiple locales) instead of a new English-only key.
+    ['#history-controls', 'editbar-history-label', 'Pad history controls'],
+  ];
+  for (const [sel, labelId, expected] of cases) {
+    const toolbar = page.locator(sel);
+    await expect(toolbar).toHaveAttribute('role', 'toolbar');
+    await expect(toolbar).toHaveAttribute('aria-labelledby', labelId);
+    await expect(page.locator(`#${labelId}`)).toHaveText(expected);
+  }
+});
+
+test('toolbar <li>/<a> wrappers are presentational (Lighthouse listitem rule, #7255)', async ({page}) => {
+  // Lighthouse / axe-core's `listitem` rule flags <li> children of any
+  // element whose role isn't `list` — and role="toolbar" on the <ul>
+  // overrides the implicit list role. Murphy's #7255 follow-up included
+  // the Lighthouse screenshot of this exact failure. role="presentation"
+  // tells axe-core the <li>+<a> wrappers are layout scaffolding, while
+  // the inner <button> retains button semantics for AT.
+  const listItems = page.locator('.menu_left > li, .menu_right > li');
+  const count = await listItems.count();
+  expect(count).toBeGreaterThan(0);
+  for (let i = 0; i < count; i++) {
+    await expect(listItems.nth(i)).toHaveAttribute('role', 'presentation');
+  }
+  // Core's toolbar.ts emits items as <li><a><button>...</button></a></li>;
+  // for those, the wrapping <a> is presentational so AT focus lands on the
+  // <button>, not the empty link. Plugins may emit anchors with their own
+  // role (e.g. ep_subscript_and_superscript renders <a role="button">), so
+  // scope this assertion to core's button-wrappers only — `:has(> button)`
+  // matches the <a> that contain a <button> child, which is what core emits.
+  const anchors = page.locator(
+      '.menu_left > li:not(.separator) > a:has(> button), ' +
+      '.menu_right > li:not(.separator) > a:has(> button)');
+  const aCount = await anchors.count();
+  expect(aCount).toBeGreaterThan(0);
+  for (let i = 0; i < aCount; i++) {
+    await expect(anchors.nth(i)).toHaveAttribute('role', 'presentation');
+  }
+});
+
+test('online_count badge has a localized accessible label (#7255)', async ({page}) => {
+  // The user-count badge in the showusers toolbar button used to expose a
+  // bare digit ("5") to AT, with no clue it was a user count. Now the badge
+  // carries an aria-label generated from pad.userlist.onlineCount that
+  // updates whenever the count changes. role=status + aria-live=polite
+  // means AT announces the change without the user having to refocus.
+  const badge = page.locator('#online_count');
+  await expect(badge).toHaveAttribute('role', 'status');
+  await expect(badge).toHaveAttribute('aria-live', 'polite');
+  // toHaveText / toHaveAttribute poll so the assertions survive the
+  // initial userlist init() pass (which appends the span and then sets
+  // its aria-label asynchronously after html10n + setMyUserInfo land).
+  await expect(badge).toHaveText(/^\d+$/);
+  // English plural form contains "connected user" — covers both singular
+  // and plural without baking the exact count into the test.
+  await expect(badge).toHaveAttribute('aria-label', /connected user/);
+});
+
+test('linemetricsdiv is hidden from screen readers (#7255)', async ({page}) => {
+  // The "Ether X" announcement in the issue's a11y-inspector screenshot was
+  // the outer iframe (titled "Ether") plus a single "x" text leaf from
+  // ace.ts's linemetricsdiv. linemetricsdiv is a measurement-only node — it
+  // holds a single "x" so the renderer can read its computed line height —
+  // and must stay out of the AT tree.
+  const outerFrame = page.frameLocator('iframe[name="ace_outer"]');
+  await expect(outerFrame.locator('#linemetricsdiv')).toHaveAttribute('aria-hidden', 'true');
 });
 
 test('skip-to-content link bypasses toolbar (WCAG 2.4.1, #7255)', async ({page}) => {
