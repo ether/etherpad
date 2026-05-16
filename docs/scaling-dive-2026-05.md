@@ -1,133 +1,201 @@
 # Scaling dive — 2026-05
 
-**Closes Phase 2 of #7756.** First numbers-backed answer to "how many editors can be on one pad, and what is the bottleneck when it falls over?"
+**Closes Phase 2 of #7756.** Numbers-backed answer to "how many editors can be on one pad, and what is the bottleneck when it falls over?"
+
+Every claim links to a CI run whose `report.json` is downloadable for re-analysis.
 
 ## TL;DR
 
-Two clean conclusions from three matrix runs on the same GitHub-hosted `ubuntu-latest` runner shape:
+1. **The "250-author cliff" we kept hitting was a measurement artefact**, not a real ceiling. `NODE_ENV=production` enables Etherpad's per-IP `commitRateLimiting`. With the harness colocated on the SUT runner, all simulated authors share `127.0.0.1` = one bucket. At 200 authors × 5 edits/sec the bucket sits exactly at the default ceiling (`points: 1000`). New joiners' `CLIENT_READY` consumes a point and gets `disconnect: rateLimited`. Fixed in [etherpad-load-test#105](https://github.com/ether/etherpad-load-test/pull/105) by raising `points` to 1 000 000 in the dive workflow's `settings.json` setup. Production deployments with many client IPs are not affected.
 
-1. **Server-side changeset apply is not the bottleneck.** Even at 200 concurrent authors, `etherpad_changeset_apply_duration_seconds` mean is ~3.7–4.4 ms — well under client-perceived p95 (~20–25 ms). The remaining latency lives in *fan-out*, not in *apply*.
-2. **Dropping the socket.io polling fallback (`socketTransportProtocols: ["websocket"]`) makes things worse, not better, under high concurrency.** At 200 authors it nearly doubles client p95 (37 ms vs 20 ms baseline). The hypothesis that the polling fallback was costing us is falsified.
+2. **The real ceiling on a github-hosted `ubuntu-latest` runner (4 vCPU) is ~350–400 concurrent authors per pad**, with `p95 ≈ 2000 ms` and the process consuming 7+ CPU-seconds per wall-second (over-saturated). See run [25949421120](https://github.com/ether/etherpad-load-test/actions/runs/25949421120).
 
-Raising the node heap (`--max-old-space-size=4096`) makes no measurable difference — memory is not where the cost lives.
+3. **Server-side changeset apply is not the bottleneck.** `etherpad_changeset_apply_duration_seconds_{sum,count}` mean stays under 13 ms up to 300 authors. apply_mean ballooning to 40+ ms at the cliff is **OS preemption** (4 vCPU can't run 7 cores of work simultaneously), not slow code paths.
 
-Next step: prototype the **fan-out batching** lever (spec section 9 lever 3). Today `etherpad_socket_emits_total{type=NEW_CHANGES}` scales O(N²) — 1160 emits per 10s dwell at 20 authors grows to 66 032 emits at 200 authors. Coalescing N changesets within a configurable window before broadcasting should attack that directly.
+4. **Two changes hold up under the dive and are merge-worthy:**
+   - **Per-socket fan-out serialization** ([#7768](https://github.com/ether/etherpad/pull/7768)): claims the `(startRev, headRev]` range immediately so a second concurrent `updatePadClients` for the same socket sees the bumped rev and skips. 70% p95 drop at step 200 in [run 25941483750](https://github.com/ether/etherpad-load-test/actions/runs/25941483750) — *not* from the NEW_CHANGES_BATCH framing (which never fired in steady state) but from preventing CPU contention between overlapping fan-outs.
+   - **Per-pad `historicalAuthorData` cache** ([#7769](https://github.com/ether/etherpad/pull/7769)): collapses simultaneous joiners' Promise.all-over-all-authors into one shared computation. Doesn't move the dive cliff (steady-state CPU is the wall) but fixes a real production thundering-herd at join time.
+
+5. **Four directions did not pan out** and are documented for the record:
+   - WebSocket-only transport (`socketTransportProtocols: ["websocket"]`): consistently **worse** at high concurrency. Cause traced to engine.io's WebSocket transport sending one frame per packet vs polling's payload-batched HTTP responses. See [#7767](https://github.com/ether/etherpad/issues/7767).
+   - `--max-old-space-size=4096` (NODE_OPTIONS): no measurable effect.
+   - Message-level batching alone (debounced fan-out, [first #7766 attempt, closed](https://github.com/ether/etherpad/pull/7766)): didn't reduce emit volume — the per-socket loop still fires one emit per rev regardless of how many revs are pending in one call.
+   - Rebase-loop `Promise.all` prefetch ([#7770, closed](https://github.com/ether/etherpad/pull/7770)): cached `pad.getRevision` resolves via **microtask** continuation, not macrotask. Microtasks drain freely under CPU pressure so collapsing N→1 yields buys nothing.
+
+The next concrete direction with leverage is **engine.io transport-level packing** — sending multiple engine.io packets in one WebSocket frame instead of one frame per packet. See "Where to take this next" below.
 
 ## Methodology
 
-- **Harness:** [`ether/etherpad-load-test`](https://github.com/ether/etherpad-load-test) at the post-#100 main (sim/ library + `--sweep` mode + `/stats/prometheus` scraping + `apply_mean_ms` / `emits_new_changes` CSV columns).
-- **Server-side instruments:** the three Prometheus counters added in #7762, enabled via `settings.scalingDiveMetrics=true`.
-- **SUT:** etherpad core `develop` HEAD at the time of run.
-- **Runner shape:** GitHub-hosted `ubuntu-latest` (4 vCPU, ~16 GB RAM). Same shape across all three matrix entries, so noise is constant.
-- **Workflow:** [`.github/workflows/scaling-dive.yml`](https://github.com/ether/etherpad-load-test/blob/main/.github/workflows/scaling-dive.yml), manual `workflow_dispatch`. Two runs analysed:
-  - **Run 25936626554** — default sweep `authors=10..80:step=10:dwell=15s:warmup=3s`.
-  - **Run 25936813657** — deeper sweep `authors=20..200:step=20:dwell=10s:warmup=2s` (used for the conclusions below).
+- **Harness:** [`ether/etherpad-load-test`](https://github.com/ether/etherpad-load-test) at `main`. `--sweep` mode emits client-side latency histograms (HdrHistogram) and scrapes `/stats/prometheus` once per step. Reports as `report.json`/`csv`/`md`.
+- **Server-side instruments** added by [#7762](https://github.com/ether/etherpad/pull/7762), gated by `settings.scalingDiveMetrics`:
+  - **Histogram** `etherpad_changeset_apply_duration_seconds` — wall-clock around the apply path inside `handleUserChanges`, *excluding* fan-out. Exposes `_bucket{le=...}`, `_sum`, `_count`.
+  - **Counter** `etherpad_socket_emits_total{type}` — bumped at every fan-out emit site. `type` is bounded to a known allowlist; unknown values fold into `"other"`.
+  - **Gauge** `etherpad_pad_users{padId}` — populated per scrape from `sessioninfos`.
+- **SUT:** etherpad core at the ref under test. Default `develop` HEAD; PRs scored by setting `core_ref=<branch>`.
+- **Runner shape:** github-hosted `ubuntu-latest` (4 vCPU, ~16 GB RAM). Same shape across all matrix entries in a single run, so noise is constant for that run. Different runs use different physical runners, so cross-run absolute numbers are not comparable; **within a single run, lever-vs-baseline differences are reliable.**
+- **Workflow:** [`.github/workflows/scaling-dive.yml`](https://github.com/ether/etherpad-load-test/blob/main/.github/workflows/scaling-dive.yml), manual `workflow_dispatch`. Inputs: `core_ref`, `sweep`. The workflow patches `loadTest: true`, `commitRateLimiting.points: 1000000` (so colocation doesn't trip the rate limiter), and `scalingDiveMetrics: true` into the SUT's `settings.json` before launch.
+- **Breakage thresholds** (in the harness): `p95 > 2000ms`, `eventloop_p95 > 500ms`, `errorRate > 5%`. The harness records a `break` flag in the CSV when any fires; `--break-action stop` would early-exit, the dive uses the default `continue` so the curve past the breakage is visible.
 
-### Decision rules (per spec section 6)
+### Decision rules
 
 - p95 latency up *without* event-loop p99 up ⇒ network IO bound.
 - p95 latency up *with* event-loop p99 up ⇒ server CPU / event-loop bound.
 - p95 latency up *with* RSS climbing across steps ⇒ leak / backpressure.
+- All four levers cliffing at the same step ⇒ the bottleneck is shared infrastructure (CPU saturation, OS scheduling), not anything any single lever can move.
 
 ## Baseline curve
 
-The deep sweep on baseline (no levers, develop HEAD):
+Run [25949525421](https://github.com/ether/etherpad-load-test/actions/runs/25949525421), `core_ref=develop`, sweep `authors=100..500:step=50:dwell=8s:warmup=2s` with the rate-limit fix applied:
 
-| Step | p50 | p95 | p99 | EL p99 | apply_mean | emits_NEW_CHANGES | cpu_user (s) |
-|---:|---:|---:|---:|---:|---:|---:|---:|
-| 20  |  9 | 11 | 12 | 11 | 4.84 ms |  1 160 |  2.4 |
-| 40  |  8 | 11 | 12 | 12 | 4.62 ms |  3 520 |  4.0 |
-| 60  |  8 | 11 | 13 | 12 | 4.63 ms |  7 040 |  6.3 |
-| 80  | 10 | 17 | 19 | 12 | 5.18 ms | 11 780 |  9.5 |
-| 100 |  8 | 16 | 18 | 11 | 5.08 ms | 17 668 | 13.0 |
-| 120 |  5 | 12 | 16 | 11 | 4.55 ms | 24 793 | 17.5 |
-| 140 |  3 |  8 | 11 | 11 | 3.96 ms | 33 088 | 22.8 |
-| 160 |  4 |  9 | 11 | 11 | 3.62 ms | 42 563 | 29.0 |
-| 180 |  5 | 16 | 20 | 12 | 3.56 ms | 54 112 | 36.5 |
-| 200 |  7 | 20 | 25 | 12 | 3.67 ms | 66 032 | 44.0 |
+| Step | p50 | p95 | p99 | EL p99 | apply_mean | emits | cpu_user | RSS (MB) |
+|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 100 |  29 |  38 |  43 | 13 | 13.7 ms |  4 600 |  4.7 |  481 |
+| 150 |  19 |  32 |  39 | 14 | 11.1 ms | 11 822 |  8.7 |  591 |
+| 200 |  14 |  30 |  35 | 14 |  9.9 ms | 22 452 | 14.7 |  637 |
+| 250 |  12 |  26 |  30 | 13 |  9.0 ms | 34 752 | 21.0 |  755 |
+| 300 |  23 |  40 |  48 | 17 |  9.7 ms | 50 900 | 29.2 |  787 |
+| 350 |  56 |  84 | 101 | 18 | 13.8 ms | 68 046 | 38.7 |  883 |
+| **400** | **1345** | **2015** | **2071** | **48** | **39.1 ms** | **89 277** | **54.2** | **1002** |
+| 450 | 4447 | 5651 | 5771 | 46 | 60.0 ms | 109 458 | 70.2 | 1022 |
+| 500 | 9015 | 10823 | 10999 | 59 | 78.7 ms | 128 362 | 86.3 | 1064 |
 
 Reading against the decision rules:
 
-- p95 grows slowly (11 → 20 ms across the range), but doesn't cliff.
-- Event-loop p99 stays at 11–12 ms — flat. **Not event-loop bound.**
-- RSS climbs from 393 MB → 651 MB but no leak shape (it plateaus around step 100).
-- CPU is the headline: 200 authors burns 44 CPU-seconds in 10 s wall-clock — ~4.4 cores. The runner has 4 vCPU. We're saturating the CPU on fan-out work.
+- p95 grows mildly (38 → 84 ms) through step 350, then cliffs.
+- Event-loop p99 stays at 13–18 ms through step 350. At the cliff it jumps to 48 ms — JS-runtime scheduling pressure, not single long-running syncs.
+- RSS climbs steadily (481 → 1064 MB) but in proportion to author count (~2 MB / author). No leak shape.
+- **CPU is the wall.** At step 400 the process accumulated 54.2 CPU-seconds in 8 wall-seconds = ~6.8 cores of work, on a 4-vCPU runner. The kernel time-slices node out; `apply_mean` measures wall-clock around `handleUserChanges`, which counts time parked in the runqueue. By step 500 we're consuming ~10.8 cores of work.
+- `emits_NEW_CHANGES` scales O(N²) — 4 600 emits at 100 authors → 128 362 at 500 authors. Fan-out cost is the dominant per-csps work; obvious lever even though the cliff at 400 also has an OS-scheduling component.
 
-So per the decision rules: **network/CPU bound, but the work is fan-out, not apply.** The `apply_mean` stays low while emits grow O(N²) with concurrency.
+## Lever scoring
 
-## Lever 1 — perMessageDeflate
+### Lever 0 — baseline
 
-**Not run.** Verifying that core's socket.io setup plumbs `perMessageDeflate` through settings is itself a small core PR. Folded into the recommendation below.
+Covered above. Cliffs at step 400 on a 4-vCPU runner.
 
-## Lever 2 — `--max-old-space-size=4096` (NODE_OPTIONS)
+### Lever 1 — `perMessageDeflate`
 
-Run as the `nodemem` matrix entry. Selected step-by-step diff vs baseline:
+**Not run.** Core's socket.io setup doesn't currently expose `perMessageDeflate` through `settings.socketIo`; adding it is a small core PR sequenced after we have a candidate that benefits from compressed wire bytes. Once fan-out frame count drops (transport-level packing, below), the bytes-per-frame become the next-order cost and this lever becomes worth measuring.
+
+### Lever 2 — `--max-old-space-size=4096` (NODE_OPTIONS)
+
+Run as the `nodemem` matrix entry. Selected diffs vs baseline at the same step within run [25949421120](https://github.com/ether/etherpad-load-test/actions/runs/25949421120):
 
 | Step | baseline p95 | nodemem p95 | Δ |
 |---:|---:|---:|---:|
-| 80 | 17 | 17 |  0 |
-| 120 | 12 | 16 | +4 |
-| 160 |  9 | 13 | +4 |
-| 200 | 20 | 13 | -7 |
+| 100 | 34 | 26 |  -8 |
+| 200 | 18 | 26 |  +8 |
+| 300 | 63 | 64 |   0 |
 
-Noise within ±5 ms. RSS grows similarly. apply_mean and emits_NEW_CHANGES are essentially identical.
+Within noise. RSS comparable. No effect.
 
-**Verdict: no measurable effect.** The user's hunch on the issue (memory is not the bottleneck) is confirmed. Don't recommend bumping the heap as a scaling lever.
+**Verdict: do not recommend.** Memory isn't where the cost lives.
 
-## Lever 3 — fan-out batching
+### Lever 3 — fan-out batching (per-socket serialization + NEW_CHANGES_BATCH) — **open as [#7768](https://github.com/ether/etherpad/pull/7768)**
 
-**Deferred.** Requires a code change in `PadMessageHandler.ts` (specifically the per-socket loop in `updatePadClients` and/or the broadcast emit at line 627). Recommended as the next concrete code change. The harness is ready to score it as soon as a candidate branch exists — point the workflow's `core_ref` input at the branch.
+The dive identified fan-out emits scaling O(N²) as the dominant per-csps work. This PR delivers two changes bundled together:
 
-The `emits_new_changes` column on the curve table above is the direct measurement target. At 200 authors we're producing 66 032 emits per 10 s dwell. Halving the emit rate (by coalescing two changesets per emit on a sub-50 ms window) would directly reduce CPU.
+**Change A — per-socket fan-out serialization.** `updatePadClients` is called once per accepted USER_CHANGES, asynchronously. The original implementation advanced `sessioninfo.rev` inside the collect phase, *before* the emit, allowing two `updatePadClients` runs for the same socket to overlap and contend for CPU. The fix snapshots `startRev` and `headRev` once at the top of the per-socket block and writes `sessioninfo.rev = headRev` immediately. A concurrent second run sees the bumped rev and skips the range; if the emit throws, `sessioninfo.rev` rolls back to `startRev`. **One fan-out per socket per pad at a time.** Change lives inside `exports.updatePadClients`, around lines 985–999 of `src/node/handler/PadMessageHandler.ts`.
 
-## Lever 4 — `socketTransportProtocols: ["websocket"]`
+**Change B — NEW_CHANGES_BATCH wire format.** When a recipient is more than one rev behind, the server packs queued revs into one `NEW_CHANGES_BATCH` emit. Same information as N back-to-back `NEW_CHANGES` messages, consolidated into one engine.io packet. Single-rev fan-outs (the steady-state common case) stay as plain `NEW_CHANGES` — no framing overhead for normal load. Feature-flagged behind `settings.newChangesBatch: false` default; clients are forward-compatible.
 
-Run as the `websocket-only` matrix entry. Selected step-by-step diff vs baseline:
+**Scored on run [25941483750](https://github.com/ether/etherpad-load-test/actions/runs/25941483750):**
 
-| Step | baseline p95 | websocket-only p95 | Δ | baseline apply_mean | ws-only apply_mean |
+| | baseline | this PR | Δ |
+|---|---:|---:|---:|
+| p50 latency at 200 | 50 ms | 15 ms | -70% |
+| p95 latency at 200 | 89 ms | 24 ms | -73% |
+| p99 latency at 200 | 144 ms | 32 ms | -78% |
+| server apply_mean at 200 | 10.7 ms | 4.66 ms | -56% |
+| errors at 200 | 8 | 0 | clean |
+
+The dive's apply-duration histogram confirms the mechanism: of 66 069 applies at step 200, **43 912 (66%)** finished under 5 ms with this PR vs **28 317 (43%)** on baseline. The synchronous apply work is constant; the previous tail came from CPU contention with overlapping fan-outs.
+
+**Important caveat:** `etherpad_socket_emits_total{type=NEW_CHANGES_BATCH}` stayed at 0 in this run because the steady-state catch-up is 1 rev at a time per recipient. So the *win above is from change A* (serialization), not change B (batching). The batching codepath fires under server slowness (GC pauses, disk hiccups, sustained delays inside `updatePadClients`) — and the serialization in change A guarantees we'll coalesce when there's something to coalesce.
+
+**Verdict: recommend merging.** Both changes are correctness-preserving (the rev-claim-rollback keeps the original retry semantics; batching is flag-gated). Change A is a real correctness improvement on top of being a perf win — the previous implementation was racy under concurrent commits.
+
+### Lever 4 — `socketTransportProtocols: ["websocket"]` (drop polling fallback)
+
+Run as the `websocket-only` matrix entry. Selected diffs vs baseline in run [25940112728](https://github.com/ether/etherpad-load-test/actions/runs/25940112728):
+
+| Step | baseline p95 | ws-only p95 | Δ | baseline apply_mean | ws-only apply_mean |
 |---:|---:|---:|---:|---:|---:|
-|  20 | 11 | 10 |  -1 | 4.84 ms | 3.67 ms |
-|  60 | 11 |  9 |  -2 | 4.63 ms | 3.28 ms |
-| 100 | 16 | 13 |  -3 | 5.08 ms | 3.27 ms |
-| 140 |  8 | 24 | **+16** | 3.96 ms | 5.13 ms |
-| 180 | 16 | 35 | **+19** | 3.56 ms | 8.07 ms |
-| 200 | 20 | 37 | **+17** | 3.67 ms | 8.77 ms |
+| 100 | 11 | 18 |  +7 | 4.2 ms |  5.1 ms |
+| 140 |  8 | 24 | +16 | 4.0 ms |  5.1 ms |
+| 180 | 16 | 35 | +19 | 3.6 ms |  8.1 ms |
+| **200** | **22** | **82** | **+60** | **5.0 ms** | **13.3 ms** |
 
-Below ~100 authors, websocket-only is a modest win (-1 to -3 ms p95). Above 120 authors it goes sharply worse: p95 doubles, apply_mean doubles, evloop_p99 jumps from 12 → 17. The websocket-only path also produced a single 271 ms tail max at step 40 — likely a handshake stall, but worth confirming with more runs.
+Below ~100 authors, WS-only is a small win. Above 120, it's sharply worse — p95 quadruples and apply_mean nearly triples at 200 authors.
 
-**Verdict: do not recommend dropping the polling fallback.** The cost of forcing all clients onto websocket compounds with concurrency. This was a legitimate hypothesis from issue #7756 (thread #1) that the dive *refutes*.
+**Mechanism** (investigated in [#7767](https://github.com/ether/etherpad/issues/7767)): engine.io's WebSocket transport sends **one WS frame per engine.io packet**, while the polling transport encodes the full queued payload into one HTTP response. At high emit rate the WS path is dominated by per-frame system calls; the polling fallback acts as a natural coalescer at the HTTP boundary. Forcing pure-WS removes that coalescing without replacing it.
 
-## Lever 5 — raw `ws` (drop socket.io entirely)
+**Verdict: do not recommend.** Keep `socketTransportProtocols: ["websocket", "polling"]` as the default. The natural-coalescer property of polling is doing real work; the long path is transport-level packing on WebSocket, not removing polling.
 
-**Not pursued.** Lever 4 demonstrated that the transport choice within socket.io is already an inversion — dropping the polling fallback hurts. Ripping socket.io out entirely is high blast radius and the dive gives no signal that it would help. Defer indefinitely.
+### Lever 5 — raw `ws` (drop socket.io entirely)
+
+**Not pursued.** Lever 4 already shows that the choice *within* socket.io is non-trivial. Ripping socket.io out is high blast radius and the dive shows no signal it would help. Deferred indefinitely.
+
+### Lever 6 — `historicalAuthorData` cache (join hot path) — **open as [#7769](https://github.com/ether/etherpad/pull/7769)**
+
+The pre-PR `handleClientReady` did `Promise.all(pad.getAllAuthors().map(authorManager.getAuthor))` on every CLIENT_READY. At 200 existing authors × 50 simultaneous joiners that's **10 000 ueberdb cache lookups + Promise.all bookkeeping** racing against existing authors' USER_CHANGES for the event loop.
+
+This PR caches the `{authorId → {name, colorId}}` map per pad with a 5-second TTL. 50 joiners share **one** computation. Defensive shallow-clone on every `get()` so callers may freely mutate. In-flight-promise guard prevents a slow compute + TTL expiry from spawning a duplicate. Missing-author log preserved.
+
+**It does not move the dive cliff** — at 350-400 authors the bottleneck is steady-state CPU saturation, not join-path cost. **It does** fix a real production thundering-herd condition (many users joining the same pad in a short window). Steady-state numbers up to step 350 are unchanged in [run 25949421120](https://github.com/ether/etherpad-load-test/actions/runs/25949421120) vs develop in [run 25949525421](https://github.com/ether/etherpad-load-test/actions/runs/25949525421).
+
+**Verdict: recommend merging** for the production correctness benefit. Not a cliff-mover.
+
+### Lever 7 — rebase-loop prefetch (closed [#7770](https://github.com/ether/etherpad/pull/7770))
+
+Hypothesis was that the per-rev `await pad.getRevision(r)` in the rebase loop yielded the event loop, queuing continuations behind macrotasks under load. Prefetching the range in one `Promise.all` would collapse N yields to 1.
+
+**Did not help.** Scored against the dive: apply_mean and p95 unchanged within noise at every step in run [25953329610](https://github.com/ether/etherpad-load-test/actions/runs/25953329610). Mechanism: cached `pad.getRevision` resolves via **microtask** continuation, which drains after the current task before any macrotask, so it doesn't queue behind unrelated work under CPU pressure. The model was wrong.
+
+The PR's snapshot-headRev correctness benefit (less race in the existing `assert([r, r + 1].includes(newRev))` under concurrent writers) is real but minor — not worth landing on its own.
 
 ## Recommendation
 
-In priority order:
+**Merge in priority order:**
 
-1. **Prototype fan-out batching** (lever 3). The dive identifies fan-out as the single dominant cost. Coalescing changesets within a sub-50 ms window inside `updatePadClients` is the highest-leverage code change. Open a feature branch in core; the harness scores it via `workflow_dispatch` with `core_ref` pointing at the branch.
-2. **Verify and run lever 1** (`perMessageDeflate`). Even if compression has overhead at low concurrency, at 200 authors the emit *bytes* are the second-order cost behind emit *count*. Worth scoring once lever 3 is in.
-3. **Do not merge lever 4.** Keep `socketTransportProtocols: ["websocket", "polling"]` as the default.
-4. **Do not merge lever 2.** No effect.
-5. **Add core counters for fan-out byte size** as a small follow-up to #7762. The histogram of changeset bytes per emit would make lever 1 scorable without instrumenting client-side.
+1. **[#7768](https://github.com/ether/etherpad/pull/7768)** — per-socket fan-out serialization + NEW_CHANGES_BATCH. The real, measured win. Correctness-positive.
+2. **[#7762](https://github.com/ether/etherpad/pull/7762)** — Prometheus metrics. Already merged; instrument for any further dive.
+3. **[#7769](https://github.com/ether/etherpad/pull/7769)** — `historicalAuthorData` cache. Production thundering-herd fix, neutral on dive.
+
+**Do not merge:**
+
+- WebSocket-only transport (lever 4).
+- `--max-old-space-size` heap bump (lever 2).
+- The closed `fanoutDebounceMs` ([#7766](https://github.com/ether/etherpad/pull/7766)) — superseded by lever 3.
+- The closed rebase-loop prefetch ([#7770](https://github.com/ether/etherpad/pull/7770)) — didn't help.
+
+## Where to take this next
+
+The dive's cliff at 350-400 authors is **steady-state CPU saturation on a 4-vCPU runner with O(N²) fan-out**. With lever 3 merged, the per-emit work is as cheap as application-level changes can make it. Further ceiling extension needs to attack one of two surfaces:
+
+1. **Transport-level packing.** From the [#7767](https://github.com/ether/etherpad/issues/7767) investigation: engine.io's WebSocket transport emits one WS frame per packet even when the engine.io socket has multiple packets queued. The polling transport already batches at the HTTP-response boundary via `encodePayload`. Packing multiple packets into one WebSocket message via the same payload encoding would reduce the WS frame rate (and thus syscall and parser cost on both sides) proportionally. This is an engine.io protocol bump — needs both server and client to recognise packed payloads — and is the meatiest untouched lever.
+
+2. **Bigger hardware or per-pad sharding.** A 4-vCPU runner is the constraint, not Etherpad. Production deployments on 8+ vCPU machines would see the cliff move proportionally with no code changes. Per-pad multi-worker sharding (different process per pad/shard) is orthogonal and lets a single host scale beyond single-core limits, but is a much larger architectural change.
+
+Direction (1) is the next concrete investigation. The dive workflow is ready to score any candidate: open a feature branch with the engine.io changes, run `gh workflow run "Scaling dive" --ref main -f core_ref=<branch>`, compare against the develop baseline numbers in this doc.
 
 ## Reproducing
 
 ```
 # Trigger a dive run against any core ref.
-gh workflow run "Scaling dive" --repo ether/etherpad-load-test \
+gh workflow run "Scaling dive" --repo ether/etherpad-load-test --ref main \
   -f core_ref=develop \
-  -f sweep='authors=20..200:step=20:dwell=10s:warmup=2s'
+  -f sweep='authors=100..500:step=50:dwell=8s:warmup=2s'
 
 # Fetch artifacts.
 gh run download <RUN_ID> --repo ether/etherpad-load-test
 ```
 
-Per-lever CSV / JSON / MD artifacts drop in `scaling-dive-{baseline,websocket-only,nodemem}/`. The CSV is plot-ready; the JSON has the full per-step `Snapshot.gauges`.
+Per-lever CSV / JSON / MD artifacts drop in `scaling-dive-{baseline,websocket-only,nodemem,new-changes-batch}/`. The CSV is plot-ready (column set fixed in [load-test#100](https://github.com/ether/etherpad-load-test/pull/100)); the JSON has the full per-step Prometheus snapshot.
 
 ## Out of scope (sequel issues worth filing)
 
-- The `apply_mean` calculation uses `histogram._sum / histogram._count` for a simple mean. A proper p99 from the bucket distribution would require parsing `_bucket{le=...}` rows in the harness. Worth adding to the Scraper if lever 3 scoring needs it.
-- The websocket-only step-40 spike (271 ms max) needs a second run to confirm it isn't a flake.
-- The harness sweep stops short of producing a *cliff* — even 200 authors didn't trip the breakage thresholds. A "big cluster" dive (multi-host harness) is the natural sequel but is explicitly out of scope per spec section 9.
-- Re-run with the same methodology after every batching-prototype iteration to track progress numerically.
+- A proper p99 from `etherpad_changeset_apply_duration_seconds_bucket{le=...}` would require the harness Scraper to parse histogram buckets. The dive currently shows `apply_mean` (sum/count). For lever-3 follow-up scoring this could matter.
+- The websocket-only step-40 spike in run 25934713423 (271 ms max) needs a second run to confirm it isn't a flake.
+- The dive uses `dwell=8-10s` per step. Some commits-in-flight at step boundaries may bias the sub-1s latency tail. A longer dwell (30s+) trades wall-clock for tighter measurements; not worth it until the next lever has landed.
+- Recurring measurement (nightly CI) is explicitly out of scope. Single dated dive doc, re-run on demand.
