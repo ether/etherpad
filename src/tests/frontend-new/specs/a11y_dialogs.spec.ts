@@ -173,6 +173,29 @@ test('editbar toolbars have role=toolbar with accessible names (#7255)', async (
   }
 });
 
+test('toolbar <li>/<a> wrappers are presentational (Lighthouse listitem rule, #7255)', async ({page}) => {
+  // Lighthouse / axe-core's `listitem` rule flags <li> children of any
+  // element whose role isn't `list` — and role="toolbar" on the <ul>
+  // overrides the implicit list role. Murphy's #7255 follow-up included
+  // the Lighthouse screenshot of this exact failure. role="presentation"
+  // tells axe-core the <li>+<a> wrappers are layout scaffolding, while
+  // the inner <button> retains button semantics for AT.
+  const listItems = page.locator('.menu_left > li, .menu_right > li');
+  const count = await listItems.count();
+  expect(count).toBeGreaterThan(0);
+  for (let i = 0; i < count; i++) {
+    await expect(listItems.nth(i)).toHaveAttribute('role', 'presentation');
+  }
+  // Non-separator items wrap their <button> in an <a> — that <a> is also
+  // presentational so AT focus lands on the <button>, not the empty link.
+  const anchors = page.locator('.menu_left > li:not(.separator) > a, .menu_right > li:not(.separator) > a');
+  const aCount = await anchors.count();
+  expect(aCount).toBeGreaterThan(0);
+  for (let i = 0; i < aCount; i++) {
+    await expect(anchors.nth(i)).toHaveAttribute('role', 'presentation');
+  }
+});
+
 test('linemetricsdiv is hidden from screen readers (#7255)', async ({page}) => {
   // The "Ether X" announcement in the issue's a11y-inspector screenshot was
   // the outer iframe (titled "Ether") plus a single "x" text leaf from
