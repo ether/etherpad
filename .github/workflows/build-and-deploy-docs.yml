@@ -56,11 +56,11 @@ jobs:
         with:
           run_install: false
       # Pin Node so the build does not silently fall back to whatever the
-      # runner image ships with. The repo declares engines.node >=25.0.0.
+      # runner image ships with. The repo declares engines.node >=24.0.0.
       - name: Use Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: 25
+          node-version: 24
           cache: pnpm
       - name: Setup Pages
         if: github.event_name == 'push'
