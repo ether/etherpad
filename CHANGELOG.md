@@ -7,7 +7,7 @@
 ### Notable enhancements
 
 - **Privacy — drop swagger-ui telemetry, document phone-homes, add opt-outs.**
-  - Dropped `swagger-ui-express` because upstream injects a Scarf analytics pixel that cannot be disabled at install or runtime (see [swagger-api/swagger-ui#10573](https://github.com/swagger-api/swagger-ui/issues/10573)). `/api-docs` now serves a vendored copy of [RapiDoc](https://rapidocweb.com/) (MIT) with `load-fonts="false"` and explicit system-font stacks so no Google Fonts request is made either.
+  - Dropped `swagger-ui-express` because upstream injects a Scarf analytics pixel that cannot be disabled at install or runtime (see [swagger-api/swagger-ui#10573](https://github.com/swagger-api/swagger-ui/issues/10573)). `/api-docs` now serves a vendored copy of [Scalar](https://github.com/scalar/scalar) (MIT) configured with `withDefaultFonts: false` and `telemetry: false` so no outbound calls are made.
   - New `privacy.updateCheck` (default `true`) — set to `false` to disable the hourly `UpdateCheck.ts` request to `${updateServer}/info.json`.
   - New `privacy.pluginCatalog` (default `true`) — set to `false` to disable the admin plugins page fetch of `${updateServer}/plugins.json`. CLI install-by-name still works.
   - New [`PRIVACY.md`](PRIVACY.md) at repo root documenting both outbound calls, what they send, and how to turn each off.

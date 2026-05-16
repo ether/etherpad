@@ -41,10 +41,10 @@ No analytics, no usage pings, no third-party SDKs at runtime.
 `swagger-ui-express` was dropped because the upstream npm package
 injects a Scarf analytics pixel that cannot be disabled at install or
 runtime (see [swagger-api/swagger-ui#10573](https://github.com/swagger-api/swagger-ui/issues/10573)).
-`/api-docs` is now served by a vendored copy of [RapiDoc](https://rapidocweb.com/)
-(MIT) with no outbound calls. The shell explicitly opts out of RapiDoc's
-default Google-Fonts fetch by setting `load-fonts="false"` and explicit
-system-font stacks.
+`/api-docs` is now served by a vendored copy of [Scalar](https://github.com/scalar/scalar)
+(MIT) with no outbound calls. The shell explicitly opts out of Scalar's
+default font fetch (`withDefaultFonts: false`) and analytics
+(`telemetry: false`), and pins a system-font stack via CSS.
 
 `@scarf/scarf` is listed under `ignoredBuiltDependencies` in
 `pnpm-workspace.yaml`, so its postinstall pixel is suppressed even if a

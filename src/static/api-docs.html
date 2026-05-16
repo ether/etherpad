@@ -5,27 +5,29 @@
     <title>Etherpad API</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="referrer" content="no-referrer" />
-    <script type="module" src="/static/vendor/rapidoc/rapidoc-min.js"></script>
     <style>
       html, body { margin: 0; padding: 0; height: 100%; }
-      rapi-doc { height: 100vh; }
-      /* RapiDoc ships @font-face rules pointing at fonts.gstatic.com.
-         Override every font-family rule that mentions Open Sans so the
-         browser never fetches the woff2 from Google. */
-      rapi-doc::part(label-input), rapi-doc { font-family: system-ui, -apple-system, sans-serif !important; }
+      /* Scalar ships @font-face rules pointing at fonts.scalar.com.
+         withDefaultFonts:false disables that import; the rule below
+         forces a system-font stack so nothing fetches over the wire. */
+      :root, .scalar-app, body { font-family: system-ui, -apple-system, sans-serif !important; }
     </style>
   </head>
   <body>
-    <rapi-doc
-      spec-url="/api-docs.json"
-      theme="light"
-      render-style="read"
-      show-header="false"
-      allow-server-selection="false"
-      allow-authentication="true"
-      regular-font="system-ui, -apple-system, sans-serif"
-      mono-font="ui-monospace, SFMono-Regular, monospace"
-      load-fonts="false"
-    ></rapi-doc>
+    <div id="app"></div>
+    <script src="/static/vendor/scalar/standalone.js"></script>
+    <script>
+      Scalar.createApiReference('#app', {
+        url: '/api-docs.json',
+        theme: 'default',
+        layout: 'modern',
+        hideClientButton: true,
+        showDeveloperTools: 'never',
+        withDefaultFonts: false,
+        telemetry: false,
+        agent: { disabled: true },
+        mcp: { disabled: true }
+      });
+    </script>
   </body>
 </html>
