@@ -196,6 +196,25 @@ test('toolbar <li>/<a> wrappers are presentational (Lighthouse listitem rule, #7
   }
 });
 
+test('online_count badge has a localized accessible label (#7255)', async ({page}) => {
+  // The user-count badge in the showusers toolbar button used to expose a
+  // bare digit ("5") to AT, with no clue it was a user count. Now the badge
+  // carries an aria-label generated from pad.userlist.onlineCount that
+  // updates whenever the count changes. role=status + aria-live=polite
+  // means AT announces the change without the user having to refocus.
+  const badge = page.locator('#online_count');
+  await expect(badge).toHaveAttribute('role', 'status');
+  await expect(badge).toHaveAttribute('aria-live', 'polite');
+  // toHaveText polls so the assertion survives the initial userlist update
+  // that pad_userlist.ts schedules after the connection completes.
+  await expect(badge).toHaveText(/^\d+$/);
+  const label = await badge.getAttribute('aria-label');
+  expect(label).toBeTruthy();
+  // English plural form contains "connected user" — covers both singular
+  // and plural without baking the exact count into the test.
+  expect(label).toMatch(/connected user/);
+});
+
 test('linemetricsdiv is hidden from screen readers (#7255)', async ({page}) => {
   // The "Ether X" announcement in the issue's a11y-inspector screenshot was
   // the outer iframe (titled "Ether") plus a single "x" text leaf from
