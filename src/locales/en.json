@@ -66,6 +66,8 @@
   "admin_plugins.disables.label": "Disables:",
   "admin_plugins.disables.warning_title": "This plugin intentionally removes the listed Etherpad features.",
   "admin_plugins.error_retrieving": "Error retrieving plugins",
+  "admin_plugins.install_error": "Failed to install {{plugin}}: {{error}}",
+  "admin_plugins.install_error_requires_newer_etherpad": "Cannot install {{plugin}}: it requires a newer version of Etherpad. Please upgrade Etherpad and try again.",
   "admin_plugins.installed": "Installed plugins",
   "admin_plugins.installed_fetching": "Fetching installed plugins…",
   "admin_plugins.installed_nothing": "You haven't installed any plugins yet.",

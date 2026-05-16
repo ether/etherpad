@@ -17,9 +17,14 @@ import  settings, {
   reloadSettings
 } from '../../../node/utils/Settings';
 import {LinkInstaller} from "./LinkInstaller";
+import {
+  checkEngineCompatibility,
+  EngineIncompatibleError,
+} from './pluginEngineCheck';
 
 import {findEtherpadRoot} from '../../../node/utils/AbsolutePaths';
 const logger = log4js.getLogger('plugins');
+const npmRegistry = 'https://registry.npmjs.org';
 
 export const pluginInstallPath = path.join(settings.root, 'src','plugin_packages');
 export const node_modules = path.join(findEtherpadRoot(),'src', 'node_modules');
@@ -156,13 +161,41 @@ export const uninstall = async (pluginName: string, cb:Function|null = null) => 
   cb(null);
 };
 
+// Best-effort lookup of the published plugin's engines.node range. Returns
+// undefined on any failure (network, 404, parse error) so the caller falls
+// through to the existing install path rather than blocking on a flaky
+// registry call.
+const fetchPluginEnginesNode = async (pluginName: string): Promise<string | undefined> => {
+  try {
+    const res = await fetch(
+      `${npmRegistry}/${encodeURIComponent(pluginName)}/latest`,
+      {headers},
+    );
+    if (!res.ok) return undefined;
+    const data = await res.json() as {engines?: {node?: string}};
+    return data.engines?.node;
+  } catch {
+    return undefined;
+  }
+};
+
 export const install = async (pluginName: string, cb:Function|null = null) => {
   cb = wrapTaskCb(cb);
   logger.info(`Installing plugin ${pluginName}...`);
-  await linkInstaller.installPlugin(pluginName);
-  logger.info(`Successfully installed plugin ${pluginName}`);
-  await hooks.aCallAll('pluginInstall', {pluginName});
-  cb(null);
+  try {
+    const enginesNode = await fetchPluginEnginesNode(pluginName);
+    const compat = checkEngineCompatibility(enginesNode, process.version);
+    if (!compat.compatible) {
+      throw new EngineIncompatibleError(pluginName, compat.required, compat.current);
+    }
+    await linkInstaller.installPlugin(pluginName);
+    logger.info(`Successfully installed plugin ${pluginName}`);
+    await hooks.aCallAll('pluginInstall', {pluginName});
+    cb(null);
+  } catch (err) {
+    logger.warn(`Failed to install plugin ${pluginName}: ${err}`);
+    cb(err);
+  }
 };
 
 export let availablePlugins:MapArrayType<PackageInfo>|null = null;
