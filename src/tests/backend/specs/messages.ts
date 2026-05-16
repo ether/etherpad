@@ -221,6 +221,23 @@ describe(__filename, function () {
       ]);
     });
 
+    it('insert claiming the reserved system author is rejected', async function () {
+      // The author equality check above already rejects wire-borne `*N`
+      // that names another real user, but `a.etherpad-system` is
+      // server-internal — only the spliceText / setText paths use it,
+      // never a live socket.io session. A client that tries to write as
+      // the system author is either confused or trying to launder edits
+      // through a reserved attribution slot. Refuse.
+      const systemPool = {
+        numToAttrib: {0: ['author', 'a.etherpad-system']},
+        nextNum: 1,
+      };
+      await Promise.all([
+        assertRejected(socket),
+        sendUserChanges(socket, 'Z:1>5*0+5$hello', systemPool),
+      ]);
+    });
+
     it('changeset that would strand the trailing \\n is rejected', async function () {
       // Defensive validation: every USER_CHANGES must leave the pad ending
       // with '\n'. The pre-existing handler used to auto-append a

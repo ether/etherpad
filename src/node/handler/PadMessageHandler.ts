@@ -887,6 +887,25 @@ const handleUserChanges = async (socket:any, message: {
         throw new Error(`Author ${thisSession.author} submitted an insert without an ` +
                         `author attribute in changeset ${changeset}`);
       }
+      // Defense-in-depth: reject any wire-borne `*N` that resolves to the
+      // system author. The session-author equality check above already
+      // catches the case where `*N` claims a different real user as
+      // author, but `Pad.SYSTEM_AUTHOR_ID` is server-internal — it's
+      // only used when `spliceText` / `setText` are called with an empty
+      // authorId from HTTP API or plugin paths. No legitimate
+      // socket.io session ever writes as the system author, so a wire
+      // op that names it is either a confused client or an attempt to
+      // launder writes through a reserved attribution slot. Either way,
+      // refuse.
+      // Hardcoded mirror of `Pad.SYSTEM_AUTHOR_ID` from src/node/db/Pad.ts.
+      // A `const {Pad} = require('../db/Pad')` at module scope returned
+      // a partially-initialized class here (circular load via padManager),
+      // so the static-field access ended up undefined and short-circuited
+      // the check at runtime. Inline literal is the simplest fix.
+      if (opAuthorId === 'a.etherpad-system') {
+        throw new Error(`Author ${thisSession.author} attempted to submit changes as the ` +
+                        `reserved system author ${opAuthorId} in changeset ${changeset}`);
+      }
     }
 
     // ex. adoptChangesetAttribs
