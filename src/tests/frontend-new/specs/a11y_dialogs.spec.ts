@@ -186,9 +186,15 @@ test('toolbar <li>/<a> wrappers are presentational (Lighthouse listitem rule, #7
   for (let i = 0; i < count; i++) {
     await expect(listItems.nth(i)).toHaveAttribute('role', 'presentation');
   }
-  // Non-separator items wrap their <button> in an <a> — that <a> is also
-  // presentational so AT focus lands on the <button>, not the empty link.
-  const anchors = page.locator('.menu_left > li:not(.separator) > a, .menu_right > li:not(.separator) > a');
+  // Core's toolbar.ts emits items as <li><a><button>...</button></a></li>;
+  // for those, the wrapping <a> is presentational so AT focus lands on the
+  // <button>, not the empty link. Plugins may emit anchors with their own
+  // role (e.g. ep_subscript_and_superscript renders <a role="button">), so
+  // scope this assertion to core's button-wrappers only — `:has(> button)`
+  // matches the <a> that contain a <button> child, which is what core emits.
+  const anchors = page.locator(
+      '.menu_left > li:not(.separator) > a:has(> button), ' +
+      '.menu_right > li:not(.separator) > a:has(> button)');
   const aCount = await anchors.count();
   expect(aCount).toBeGreaterThan(0);
   for (let i = 0; i < aCount; i++) {
@@ -205,14 +211,13 @@ test('online_count badge has a localized accessible label (#7255)', async ({page
   const badge = page.locator('#online_count');
   await expect(badge).toHaveAttribute('role', 'status');
   await expect(badge).toHaveAttribute('aria-live', 'polite');
-  // toHaveText polls so the assertion survives the initial userlist update
-  // that pad_userlist.ts schedules after the connection completes.
+  // toHaveText / toHaveAttribute poll so the assertions survive the
+  // initial userlist init() pass (which appends the span and then sets
+  // its aria-label asynchronously after html10n + setMyUserInfo land).
   await expect(badge).toHaveText(/^\d+$/);
-  const label = await badge.getAttribute('aria-label');
-  expect(label).toBeTruthy();
   // English plural form contains "connected user" — covers both singular
   // and plural without baking the exact count into the test.
-  expect(label).toMatch(/connected user/);
+  await expect(badge).toHaveAttribute('aria-label', /connected user/);
 });
 
 test('linemetricsdiv is hidden from screen readers (#7255)', async ({page}) => {

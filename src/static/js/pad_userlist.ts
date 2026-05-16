@@ -355,11 +355,24 @@ const paduserlist = (() => {
 
       if ($('#online_count').length === 0) {
         // role="status" + aria-live="polite" announces the count when it
-        // changes; the localized aria-label (set in updateNumberOfOnlineUsers)
-        // turns the bare badge digit into "N connected users" so AT users
-        // get context, not a stray "5". See ether/etherpad#7255.
+        // changes; the localized aria-label (set by updateNumberOfOnlineUsers
+        // below) turns the bare badge digit into "N connected users" so AT
+        // users get context, not a stray "5". See ether/etherpad#7255.
         $('#editbar [data-key=showusers] > a').append(
             '<span id="online_count" role="status" aria-live="polite">1</span>');
+      }
+      // Set the initial aria-label. updateNumberOfOnlineUsers otherwise only
+      // fires on userJoin / userLeave / status change — on a solo-author pad
+      // those events never come, and the badge would ship to AT with no
+      // accessible name (the regression Playwright caught on PR #7777).
+      self.updateNumberOfOnlineUsers();
+      // Re-localize on runtime language changes. updateNumberOfOnlineUsers
+      // reads html10n.get, which returns undefined before the bundle loads
+      // and returns translated text afterwards; binding here keeps the
+      // accessible name in sync with applyLanguage(). Same pattern used
+      // by the keyboard hint in ace.ts and the history toolbar labels.
+      if (html10n && typeof (html10n as any).bind === 'function') {
+        (html10n as any).bind('localized', () => self.updateNumberOfOnlineUsers());
       }
 
       $('#otheruserstable tr').remove();
