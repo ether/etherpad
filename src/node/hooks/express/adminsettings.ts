@@ -11,6 +11,7 @@ import settings, {getEpVersion, getGitCommit, reloadSettings} from '../../utils/
 import {getLatestVersion} from '../../utils/UpdateCheck.js';
 import * as padManager from '../../db/PadManager.js';
 import * as api from '../../db/API.js';
+import * as authorManager from '../../db/AuthorManager.js';
 import {deleteRevisions} from '../../utils/Cleanup.js';
 
 
@@ -307,8 +308,6 @@ export const socketio = (hookName: string, {io}: any) => {
       }
      }
     })
-
-    const authorManager = require('../../db/AuthorManager');
 
     // The admin author-erasure UI (PR #7667) is gated as a single
     // feature: when gdprAuthorErasure.enabled is false, all three

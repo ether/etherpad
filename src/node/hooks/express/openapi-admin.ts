@@ -153,8 +153,6 @@ export const generateAdminDefinition = (): any => ({
   },
 });
 
-exports.generateAdminDefinition = generateAdminDefinition;
-
 export const expressPreSession = async (
   _hookName: string,
   {app}: ArgsExpressType,
@@ -179,4 +177,3 @@ export const expressPreSession = async (
   });
 };
 
-exports.expressPreSession = expressPreSession;

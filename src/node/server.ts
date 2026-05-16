@@ -189,8 +189,7 @@ export const start = async (): Promise<any> => {
   // health signal the updater's pending-verification timer is waiting for.
   // Wrapped in try/catch because it must never block startup on a bug here.
   try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const updater = require('./updater');
+    const updater = await import('./updater/index.js');
     if (typeof updater.markBootHealthy === 'function') updater.markBootHealthy();
   } catch (err) {
     logger.debug(`markBootHealthy: ${(err as Error).message}`);

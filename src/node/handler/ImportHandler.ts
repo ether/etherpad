@@ -30,6 +30,8 @@ import { Formidable } from 'formidable';
 import os from 'os';
 import * as importHtml from '../utils/ImportHtml.js';
 import * as importEtherpad from '../utils/ImportEtherpad.js';
+import * as ImportDocxNative from '../utils/ImportDocxNative.js';
+import * as ExportSanitizeHtml from '../utils/ExportSanitizeHtml.js';
 import log4js from 'log4js';
 import hooks from '../../static/js/pluginfw/hooks.js';
 import * as converterModule from '../utils/LibreOffice.js';
@@ -157,8 +159,8 @@ const performImport = async (req:any, res:any, padId:string, authorId:string) =>
   // through the existing setPadHTML pipeline.
   if (settings.soffice == null && fileEnding === '.docx') {
     const buf = await fs.readFile(srcFile);
-    const {docxBufferToHtml} = require('../utils/ImportDocxNative');
-    const {separateAdjacentHeadingBlocks} = require('../utils/ExportSanitizeHtml');
+    const {docxBufferToHtml} = ImportDocxNative;
+    const {separateAdjacentHeadingBlocks} = ExportSanitizeHtml;
     let nativeHtml: string;
     try {
       nativeHtml = await docxBufferToHtml(buf);
@@ -281,8 +283,7 @@ const performImport = async (req:any, res:any, padId:string, authorId:string) =>
         // Only applied to HTML imports (and converted-via-soffice
         // outputs, which look the same shape) -- the docx native path
         // above doesn't go through here.
-        const {collapseRedundantBrAfterBlocks} =
-            require('../utils/ExportSanitizeHtml');
+        const {collapseRedundantBrAfterBlocks} = ExportSanitizeHtml;
         const cleaned = (fileIsHTML || useConverter)
             ? collapseRedundantBrAfterBlocks(text) : text;
         await importHtml.setPadHTML(pad, cleaned, authorId);

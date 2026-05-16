@@ -517,11 +517,12 @@ const padeditbar = new class {
       padsavedrevs.saveNow();
     });
 
-    this.registerCommand('showTimeSlider', () => {
+    this.registerCommand('showTimeSlider', async () => {
       // Issue #7659: enter history in-place rather than navigating away. The
       // PadModeController owns the iframe lifecycle, banner, and URL hash.
       try {
-        require('./pad_mode').padMode.enterHistory();
+        const {padMode} = await import('./pad_mode.js');
+        padMode.enterHistory();
       } catch (_e) {
         // Fallback for the unlikely case the controller failed to load.
         document.location = `${document.location.pathname}/timeslider`;

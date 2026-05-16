@@ -20,16 +20,24 @@
  * limitations under the License.
  */
 
+import {createRequire} from 'node:module';
 import * as exporthtml from '../utils/ExportHtml.js';
 import * as exporttxt from '../utils/ExportTxt.js';
 import * as exportEtherpad from '../utils/ExportEtherpad.js';
 import fs from 'fs';
-import settings from '../utils/Settings.js';
+import settings, {sofficeAvailable} from '../utils/Settings.js';
+import * as ExportSanitizeHtml from '../utils/ExportSanitizeHtml.js';
 import os from 'os';
 import hooks from '../../static/js/pluginfw/hooks.js';
 import util from 'util';
 import { checkValidRev } from '../utils/checkValidRev.js';
 import * as converterModule from '../utils/LibreOffice.js';
+
+// Lazy CJS bridge for optional native-export modules (html-to-docx,
+// ExportPdfNative). Loaded at call sites that are gated by sofficeAvailable
+// and require.resolve() probes — keeps the legacy convert path the default
+// and only pulls in the in-process renderers when soffice is unconfigured.
+const require = createRequire(import.meta.url);
 
 const fsp_writeFile = util.promisify(fs.writeFile);
 const fsp_unlink = util.promisify(fs.unlink);
@@ -96,7 +104,6 @@ export const doExport = async (req: any, res: any, padId: string, readOnlyId: st
     // hand DOCX to html-to-docx and PDF to our pdfkit walker — both
     // pure-JS, in-process. No fallback chain: native errors surface as
     // 5xx so admins see real failures instead of silent shadowing.
-    const {sofficeAvailable} = require('../utils/Settings');
     const sofState = sofficeAvailable();
     const goNative = sofState === 'no'
         || (sofState === 'withoutPDF' && type === 'pdf');
@@ -105,7 +112,7 @@ export const doExport = async (req: any, res: any, padId: string, readOnlyId: st
       const {
         stripRemoteImages, extractBody, wrapLooseLines, dropEmptyBlocks,
         applyMonospaceToCode,
-      } = require('../utils/ExportSanitizeHtml');
+      } = ExportSanitizeHtml;
       // The HTML pipeline returns a full document (head, style, body); the
       // legacy soffice path renders that fine, but the in-process
       // converters need just the body content to avoid leaking CSS into

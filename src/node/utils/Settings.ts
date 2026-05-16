@@ -1343,9 +1343,8 @@ export const reloadSettings = () => {
     if (explicit) {
         settings.randomVersionString = explicit;
     } else {
-        const pkgVersion = require('../../package.json').version as string;
         settings.randomVersionString = createHash('sha256')
-            .update(`${pkgVersion}|${settings.gitVersion || ''}`)
+            .update(`${getEpVersion()}|${settings.gitVersion || ''}`)
             .digest('hex')
             .slice(0, 8);
     }

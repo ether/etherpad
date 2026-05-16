@@ -1,5 +1,10 @@
 'use strict';
 
+import {createRequire} from 'node:module';
+
+// CJS bridge for mammoth + jszip — both publish CommonJS entries and
+// interact poorly with `import` default-export interop under tsx/ESM.
+const require = createRequire(import.meta.url);
 const mammoth = require('mammoth');
 const JSZip = require('jszip');
 
