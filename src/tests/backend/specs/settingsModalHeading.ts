@@ -11,18 +11,17 @@ const common = require('../common');
 // `data-l10n-id="pad.settings.padSettings"` ("Pad-wide Settings") for every
 // user, even though no pad-wide controls were rendered in that mode. The fix
 // removes the conditional and always uses `pad.settings.title` ("Settings").
-describe(__filename, function (this: any) {
-  this.timeout(30000);
+describe(__filename, () => {
   let agent: any;
   const backup: MapArrayType<any> = {};
 
-  before(async function (this: any) { agent = await common.init(); });
+  before(async () => { agent = await common.init(); });
 
-  beforeEach(async function (this: any) {
+  beforeEach(async () => {
     backup.enablePadWideSettings = settings.enablePadWideSettings;
   });
 
-  afterEach(async function (this: any) {
+  afterEach(async () => {
     settings.enablePadWideSettings = backup.enablePadWideSettings;
   });
 
@@ -31,13 +30,13 @@ describe(__filename, function (this: any) {
     return m ? m[1] : null;
   };
 
-  it('uses pad.settings.title with the feature enabled', async function (this: any) {
+  it('uses pad.settings.title with the feature enabled', async () => {
     settings.enablePadWideSettings = true;
     const res = await agent.get('/p/headingTest').expect(200);
     assert.equal(titleH1(res.text), 'pad.settings.title');
   });
 
-  it('uses pad.settings.title with the feature disabled (no misleading "Pad-wide" label)', async function (this: any) {
+  it('uses pad.settings.title with the feature disabled (no misleading "Pad-wide" label)', async function () {
     settings.enablePadWideSettings = false;
     const res = await agent.get('/p/headingTest').expect(200);
     assert.equal(titleH1(res.text), 'pad.settings.title');

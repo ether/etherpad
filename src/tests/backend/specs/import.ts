@@ -1,38 +1,53 @@
 'use strict';
 
+import {fileURLToPath} from 'node:url';
+import {dirname} from 'node:path';
+import {createRequire} from 'node:module';
+import {strict as assert} from 'node:assert';
 import {MapArrayType} from '../../../node/types/MapType.js';
 import path from 'path';
 import os from 'os';
 import {promises as fs} from 'fs';
 
-const assert = require('assert').strict;
-const common = require('../common');
-const padManager = require('../../../node/db/PadManager');
+import * as common from '../common.js';
+import * as padManager from '../../../node/db/PadManager.js';
 import settings from '../../../node/utils/Settings.js';
 
-describe(__filename, function (this: any) {
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+// Inline CJS bridge for the optional native-import modules (mammoth,
+// html-to-docx) — the test body uses `require.resolve()` to skip
+// gracefully on installs that don't ship them.
+const require = createRequire(import.meta.url);
+
+const canResolve = (mod: string): boolean => {
+  try { require.resolve(mod); return true; } catch { return false; }
+};
+const hasMammoth = canResolve('mammoth');
+const hasHtmlToDocx = canResolve('html-to-docx');
+const hasDocxRoundTrip = hasMammoth && hasHtmlToDocx;
+
+describe(__filename, () => {
   const settingsBackup: MapArrayType<any> = {};
   let agent: any;
 
-  before(async function (this: any) {
+  before(async () => {
     agent = await common.init();
     settingsBackup.soffice = settings.soffice;
   });
 
-  after(function (this: any) {
+  after(() => {
     Object.assign(settings, settingsBackup);
   });
 
-  describe('docxBufferToHtml (#7538)', function (this: any) {
+  describe.skipIf(!hasMammoth)('docxBufferToHtml (#7538)', () => {
     let docxBufferToHtml: (b: Buffer) => Promise<string>;
 
-    before(function (this: any) {
-      try { require.resolve('mammoth'); }
-      catch { this.skip(); return; }
+    before(() => {
       docxBufferToHtml = require('../../../node/utils/ImportDocxNative').docxBufferToHtml;
     });
 
-    it('converts the sample.docx fixture to HTML', async function (this: any) {
+    it('converts the sample.docx fixture to HTML', async () => {
       const buf = await fs.readFile(
           path.join(__dirname, 'fixtures', 'sample.docx'));
       const html = await docxBufferToHtml(buf);
@@ -42,7 +57,7 @@ describe(__filename, function (this: any) {
       assert.match(html, /two/);
     });
 
-    it('emits no remote image URLs', async function (this: any) {
+    it('emits no remote image URLs', async () => {
       const buf = await fs.readFile(
           path.join(__dirname, 'fixtures', 'sample.docx'));
       const html = await docxBufferToHtml(buf);
@@ -50,11 +65,9 @@ describe(__filename, function (this: any) {
       assert.doesNotMatch(html, /<img[^>]+src="\/\//);
     });
 
-    it('preserves paragraph alignment from <w:jc>', async function (this: any) {
+    it.skipIf(!hasHtmlToDocx)('preserves paragraph alignment from <w:jc>', async () => {
       // Round through html-to-docx so the input docx has <w:jc> entries
       // we can verify mammoth + our workaround surface as text-align.
-      try { require.resolve('html-to-docx'); }
-      catch { this.skip(); return; }
       const htmlToDocx = require('html-to-docx');
       const docx: Buffer = await htmlToDocx(
           '<h1 style="text-align:right">Right heading</h1>' +
@@ -74,14 +87,12 @@ describe(__filename, function (this: any) {
     });
   });
 
-  describe('end-to-end DOCX import (#7538)', function (this: any) {
-    before(function (this: any) {
-      try { require.resolve('mammoth'); }
-      catch { this.skip(); return; }
+  describe.skipIf(!hasMammoth)('end-to-end DOCX import (#7538)', () => {
+    before(() => {
       settings.soffice = null;
     });
 
-    it('imports a docx into a pad without soffice', async function (this: any) {
+    it('imports a docx into a pad without soffice', async () => {
       const padId = 'test7538DocxImport';
       try { await padManager.removePad(padId); } catch { /* noop */ }
       const fixture = path.join(__dirname, 'fixtures', 'sample.docx');
@@ -99,7 +110,7 @@ describe(__filename, function (this: any) {
       assert.match(text, /two/);
     });
 
-    it('rejects odt extension when soffice is null', async function (this: any) {
+    it('rejects odt extension when soffice is null', async () => {
       const padId = 'test7538OdtReject';
       try { await padManager.removePad(padId); } catch { /* noop */ }
       const fixture = path.join(__dirname, 'fixtures', 'sample.docx');
@@ -118,15 +129,8 @@ describe(__filename, function (this: any) {
     });
   });
 
-  describe('DOCX export -> import round-trip (#7538)', function (this: any) {
-    before(function (this: any) {
-      try {
-        require.resolve('html-to-docx');
-        require.resolve('mammoth');
-      } catch {
-        this.skip();
-        return;
-      }
+  describe.skipIf(!hasDocxRoundTrip)('DOCX export -> import round-trip (#7538)', () => {
+    before(() => {
       settings.soffice = null;
     });
 
@@ -141,7 +145,7 @@ describe(__filename, function (this: any) {
           resp.on('end', () => cb(null, Buffer.concat(chunks)));
         });
 
-    it('preserves text content through native DOCX round-trip', async function (this: any) {
+    it('preserves text content through native DOCX round-trip', async () => {
       const srcPadId = 'test7538RoundTripSrc';
       const dstPadId = 'test7538RoundTripDst';
       const tmpFile = path.join(os.tmpdir(), `roundtrip-${process.pid}.docx`);
@@ -215,7 +219,7 @@ describe(__filename, function (this: any) {
 
     const SAMPLE_TEXT = 'Line one\nLine two\n\nAfter blank\n';
 
-    it('a==c round-trip: txt export -> import -> export', async function (this: any) {
+    it('a==c round-trip: txt export -> import -> export', async () => {
       const src = 'test7538RtTxtSrc';
       const dst = 'test7538RtTxtDst';
       await seedPad(src, SAMPLE_TEXT);
@@ -226,7 +230,7 @@ describe(__filename, function (this: any) {
           `txt round-trip drift\nA:${JSON.stringify(a.toString('utf8'))}\nC:${JSON.stringify(c.toString('utf8'))}`);
     });
 
-    it('a==c round-trip: etherpad export -> import -> export', async function (this: any) {
+    it('a==c round-trip: etherpad export -> import -> export', async () => {
       const src = 'test7538RtEpadSrc';
       const dst = 'test7538RtEpadDst';
       await seedPad(src, SAMPLE_TEXT);
@@ -244,7 +248,7 @@ describe(__filename, function (this: any) {
           'expected non-empty etherpad bodies');
     });
 
-    it('a==c round-trip: html export -> import -> export', async function (this: any) {
+    it('a==c round-trip: html export -> import -> export', async () => {
       const src = 'test7538RtHtmlSrc';
       const dst = 'test7538RtHtmlDst';
       await seedPad(src, SAMPLE_TEXT);
@@ -266,7 +270,7 @@ describe(__filename, function (this: any) {
     });
 
     it('a==c round-trip: docx export -> import -> export (line text)',
-        async function (this: any) {
+        async () => {
       const src = 'test7538RtDocxSrc';
       const dst = 'test7538RtDocxDst';
       await seedPad(src, SAMPLE_TEXT);
@@ -286,25 +290,22 @@ describe(__filename, function (this: any) {
     });
   });
 
-  describe('HTML import — adjacent headings (#7538)', function (this: any) {
-    before(async function (this: any) {
-      // These tests assume ep_headings2 (or another plugin) registers
-      // h1/h2/etc. as server-side block elements via
-      // `ccRegisterBlockElements`. Without that hook, contentcollector
-      // treats <h1>/<h2> as inline and adjacent ones merge into a
-      // single pad line — making the assertions below moot. The CI
-      // backend-tests job runs without plugins installed, so skip
-      // there. Local dev with ep_headings2 installed exercises these.
+  // These tests assume ep_headings2 (or another plugin) registers h1/h2/etc.
+  // as server-side block elements via `ccRegisterBlockElements`. Without that
+  // hook, contentcollector treats <h1>/<h2> as inline and adjacent ones merge
+  // into a single pad line — making the assertions below moot. The CI
+  // backend-tests job runs without plugins installed, so each test skips at
+  // runtime via ctx.skip() if the hook isn't registered. Local dev with
+  // ep_headings2 installed exercises them.
+  describe('HTML import — adjacent headings (#7538)', () => {
+    let headingsAreBlocks = false;
+    before(async () => {
       const hooks = require('../../../static/js/pluginfw/hooks');
       const ccBlockElems: string[] = ([] as string[]).concat(
           ...(hooks.callAll('ccRegisterBlockElements') || []));
-      const headingsAreBlocks = ccBlockElems.map((t: string) => t.toLowerCase())
+      headingsAreBlocks = ccBlockElems.map((t: string) => t.toLowerCase())
           .includes('h1');
-      if (!headingsAreBlocks) {
-        this.skip();
-        return;
-      }
-      settings.soffice = null;
+      if (headingsAreBlocks) settings.soffice = null;
     });
 
     const importHtml = async (padId: string, html: string) => {
@@ -322,7 +323,8 @@ describe(__filename, function (this: any) {
       }
     };
 
-    it('does not introduce a blank line between H1 and H2', async function (this: any) {
+    it('does not introduce a blank line between H1 and H2', async (ctx) => {
+      if (!headingsAreBlocks) ctx.skip();
       const padId = 'test7538HtmlH1H2';
       await importHtml(padId, '<html><body><h1>A</h1><h2>B</h2></body></html>');
       const pad = await padManager.getPad(padId);
@@ -346,7 +348,8 @@ describe(__filename, function (this: any) {
     // (encoded by ep_align as `<br><p style></p><br><p style></p><br>`)
     // + H2. The pad should round-trip back to H1, blank, blank, H2 -- not
     // gain or lose blank lines.
-it('preserves blank-line count between H1 and H2 (realistic shape)', async function (this: any) {
+    it('preserves blank-line count between H1 and H2 (realistic shape)', async (ctx) => {
+      if (!headingsAreBlocks) ctx.skip();
       const padId = 'test7538HtmlBlankLines';
       const html =
           '<html><body>' +
@@ -371,15 +374,8 @@ it('preserves blank-line count between H1 and H2 (realistic shape)', async funct
     });
   });
 
-  describe('Round-trip integrity: heading-style content (#7538)', function (this: any) {
-    before(function (this: any) {
-      try {
-        require.resolve('html-to-docx');
-        require.resolve('mammoth');
-      } catch {
-        this.skip();
-        return;
-      }
+  describe.skipIf(!hasDocxRoundTrip)('Round-trip integrity: heading-style content (#7538)', () => {
+    before(() => {
       settings.soffice = null;
     });
 
@@ -391,7 +387,7 @@ it('preserves blank-line count between H1 and H2 (realistic shape)', async funct
           resp.on('end', () => cb(null, Buffer.concat(chunks)));
         });
 
-    it('keeps adjacent heading-style blocks on separate lines after round-trip', async function (this: any) {
+    it('keeps adjacent heading-style blocks on separate lines after round-trip', async () => {
       // Regression: ep_headings2 emits <h1>/<h2>/<code> that aren't in
       // contentcollector's default block-element set. Without the
       // separateAdjacentHeadingBlocks fix, mammoth's <h1>A</h1><h2>B</h2>
@@ -440,7 +436,7 @@ it('preserves blank-line count between H1 and H2 (realistic shape)', async funct
       }
     });
 
-    it('preserves text content through native PDF export (sanity check)', async function (this: any) {
+    it('preserves text content through native PDF export (sanity check)', async () => {
       // PDF round-trip is one-way (no native PDF import) -- this just
       // verifies the exported PDF has the source text in its visible
       // content stream, so we know nothing got dropped on export.

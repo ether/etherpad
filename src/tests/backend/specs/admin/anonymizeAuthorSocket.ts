@@ -61,14 +61,13 @@ const ask = (socket: any, evt: string, payload: any, replyEvt: string) =>
       socket.emit(evt, payload);
     });
 
-describe(__filename, function (this: any) {
+describe(__filename, () => {
   let socket: any;
   let originalFlag: boolean;
   let savedUsers: any;
   let savedRequireAuthentication: boolean;
 
-  before(async function (this: any) {
-    this.timeout(60000);
+  before(async () => {
     await common.init();
     settings.gdprAuthorErasure = settings.gdprAuthorErasure || {enabled: false};
     originalFlag = settings.gdprAuthorErasure.enabled;
@@ -78,7 +77,7 @@ describe(__filename, function (this: any) {
     socket = await adminSocket();
   });
 
-  after(function (this: any) {
+  after(() => {
     if (socket) socket.disconnect();
     settings.gdprAuthorErasure.enabled = originalFlag;
     // savedUsers and settings.users point at the same object — restoring
@@ -89,7 +88,7 @@ describe(__filename, function (this: any) {
     settings.requireAuthentication = savedRequireAuthentication;
   });
 
-  it('authorLoad returns paginated rows', async function (this: any) {
+  it('authorLoad returns paginated rows', async () => {
     const tag = `sock-${Date.now()}`;
     await authorManager.createAuthorIfNotExistsFor(`m-${tag}`, `Sock ${tag}`);
     const res = await ask(socket, 'authorLoad',
@@ -101,7 +100,7 @@ describe(__filename, function (this: any) {
   });
 
   it('anonymizeAuthorPreview returns counters without flipping erased',
-      async function (this: any) {
+      async function () {
         const tag = `prev-${Date.now()}`;
         const {authorID} = await authorManager.createAuthorIfNotExistsFor(
             `m-${tag}`, `Prev ${tag}`);
@@ -114,7 +113,7 @@ describe(__filename, function (this: any) {
             'preview must not flip erased');
       });
 
-  it('anonymizeAuthor commits when the flag is enabled', async function (this: any) {
+  it('anonymizeAuthor commits when the flag is enabled', async () => {
     const tag = `live-${Date.now()}`;
     const {authorID} = await authorManager.createAuthorIfNotExistsFor(
         `m-${tag}`, `Live ${tag}`);
@@ -127,7 +126,7 @@ describe(__filename, function (this: any) {
   });
 
   it('anonymizeAuthor returns {error: "disabled"} when flag is off',
-      async function (this: any) {
+      async function () {
         settings.gdprAuthorErasure.enabled = false;
         try {
           const tag = `disabled-${Date.now()}`;
@@ -145,7 +144,7 @@ describe(__filename, function (this: any) {
       });
 
   it('anonymizeAuthorPreview returns {error: "disabled"} when flag is off',
-      async function (this: any) {
+      async function () {
         // Per Qodo Compliance ID 6 ('new features behind a feature flag,
         // disabled by default') the preview event is also gated, not just
         // the live anonymizeAuthor. The page renders its disabled banner
@@ -166,7 +165,7 @@ describe(__filename, function (this: any) {
       });
 
   it('authorLoad returns {error: "disabled"} when flag is off',
-      async function (this: any) {
+      async function () {
         settings.gdprAuthorErasure.enabled = false;
         try {
           const res = await ask(socket, 'authorLoad',
@@ -181,7 +180,7 @@ describe(__filename, function (this: any) {
       });
 
   it('handlers do not crash on payload-less emits',
-      async function (this: any) {
+      async function () {
         // Pre-Qodo-fix the destructure `({authorID}: ...)` threw before
         // try/catch when client emitted with no payload. Both gated
         // handlers now accept `payload: any` and read defensively.

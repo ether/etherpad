@@ -18,11 +18,10 @@ const callApi = async (point: string, query: Record<string, string> = {}) => {
       .expect('Content-Type', /json/);
 };
 
-describe(__filename, function (this: any) {
+describe(__filename, () => {
   let originalErasureFlag: boolean | undefined;
 
-  before(async function (this: any) {
-    this.timeout(60000);
+  before(async () => {
     agent = await common.init();
     const res = await agent.get('/api/').expect(200);
     apiVersion = res.body.currentVersion;
@@ -31,11 +30,11 @@ describe(__filename, function (this: any) {
     settings.gdprAuthorErasure.enabled = true;
   });
 
-  after(function (this: any) {
+  after(() => {
     settings.gdprAuthorErasure.enabled = originalErasureFlag;
   });
 
-  it('anonymizeAuthor zeroes the author and returns counters', async function (this: any) {
+  it('anonymizeAuthor zeroes the author and returns counters', async () => {
     const create = await callApi('createAuthor', {name: 'Alice'});
     assert.equal(create.body.code, 0);
     const authorID = create.body.data.authorID;
@@ -50,7 +49,7 @@ describe(__filename, function (this: any) {
     assert.equal(name.body.data, null);
   });
 
-  it('anonymizeAuthor with missing authorID returns an error', async function (this: any) {
+  it('anonymizeAuthor with missing authorID returns an error', async () => {
     const res = await agent.get(`${endPoint('anonymizeAuthor')}?authorID=`)
         .set('authorization', await common.generateJWTToken())
         .expect(200)
@@ -60,7 +59,7 @@ describe(__filename, function (this: any) {
   });
 
   it('anonymizeAuthor returns an apierror when gdprAuthorErasure is disabled',
-      async function (this: any) {
+      async function () {
         settings.gdprAuthorErasure.enabled = false;
         try {
           const res = await callApi('anonymizeAuthor', {authorID: 'a.dummy'});

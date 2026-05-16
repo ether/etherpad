@@ -21,20 +21,19 @@ const callApi = async (point: string, query: Record<string, string> = {}) => {
       .expect('Content-Type', /json/);
 };
 
-describe(__filename, function (this: any) {
-  before(async function (this: any) {
-    this.timeout(60000);
+describe(__filename, () => {
+  before(async () => {
     agent = await common.init();
     const res = await agent.get('/api/').expect(200);
     apiVersion = res.body.currentVersion;
   });
 
-  afterEach(function (this: any) {
+  afterEach(() => {
     settings.allowPadDeletionByAllUsers = false;
     settings.requireAuthentication = false;
   });
 
-  it('createPad returns a plaintext deletionToken the first time', async function (this: any) {
+  it('createPad returns a plaintext deletionToken the first time', async () => {
     const padId = makeId();
     const res = await callApi('createPad', {padID: padId});
     assert.equal(res.body.code, 0, JSON.stringify(res.body));
@@ -43,7 +42,7 @@ describe(__filename, function (this: any) {
     await callApi('deletePad', {padID: padId, deletionToken: res.body.data.deletionToken});
   });
 
-  it('deletePad with a valid deletionToken succeeds', async function (this: any) {
+  it('deletePad with a valid deletionToken succeeds', async () => {
     const padId = makeId();
     const create = await callApi('createPad', {padID: padId});
     const token = create.body.data.deletionToken;
@@ -53,7 +52,7 @@ describe(__filename, function (this: any) {
     assert.equal(check.body.code, 1); // "padID does not exist"
   });
 
-  it('deletePad with a wrong deletionToken is refused', async function (this: any) {
+  it('deletePad with a wrong deletionToken is refused', async () => {
     const padId = makeId();
     await callApi('createPad', {padID: padId});
     const del = await callApi('deletePad', {padID: padId, deletionToken: 'not-the-real-token'});
@@ -63,7 +62,7 @@ describe(__filename, function (this: any) {
     await callApi('deletePad', {padID: padId});
   });
 
-  it('deletePad with allowPadDeletionByAllUsers=true bypasses the token check', async function (this: any) {
+  it('deletePad with allowPadDeletionByAllUsers=true bypasses the token check', async () => {
     const padId = makeId();
     await callApi('createPad', {padID: padId});
     settings.allowPadDeletionByAllUsers = true;
@@ -71,7 +70,7 @@ describe(__filename, function (this: any) {
     assert.equal(del.body.code, 0);
   });
 
-  it('createPad returns null deletionToken when requireAuthentication is on', async function (this: any) {
+  it('createPad returns null deletionToken when requireAuthentication is on', async () => {
     settings.requireAuthentication = true;
     const padId = makeId();
     const res = await callApi('createPad', {padID: padId});
@@ -80,7 +79,7 @@ describe(__filename, function (this: any) {
     await callApi('deletePad', {padID: padId});
   });
 
-  it('JWT admin call (no deletionToken) still works — admins stay trusted', async function (this: any) {
+  it('JWT admin call (no deletionToken) still works — admins stay trusted', async () => {
     const padId = makeId();
     await callApi('createPad', {padID: padId});
     const del = await callApi('deletePad', {padID: padId});

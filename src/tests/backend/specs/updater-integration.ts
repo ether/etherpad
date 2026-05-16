@@ -63,9 +63,7 @@ const stubSpawn = (pnpmExits: Record<string, number>) =>
     return spawn(cmd, args, opts);
   };
 
-describe(__filename, function (this: any) {
-  this.timeout(30_000);
-
+describe(__filename, () => {
   it('happy path: executes against tmp repo, lands on pending-verification, exits 75', async () => {
     const {dir, v1Sha} = await buildTmpRepo();
     try {

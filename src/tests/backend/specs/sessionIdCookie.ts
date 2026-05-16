@@ -25,17 +25,16 @@ const io = require('socket.io-client');
 
 const cookiePrefix = () => settings.cookie?.prefix || '';
 
-describe(__filename, function (this: any) {
-  this.timeout(30000);
+describe(__filename, () => {
   let socket: any;
 
-  before(async function (this: any) { await common.init(); });
+  before(async () => { await common.init(); });
 
-  beforeEach(async function (this: any) {
+  beforeEach(async () => {
     assert(socket == null);
   });
 
-  afterEach(async function (this: any) {
+  afterEach(async () => {
     if (socket) socket.close();
     socket = null;
     if (await padManager.doesPadExist('pad')) {
@@ -64,37 +63,37 @@ describe(__filename, function (this: any) {
     assert.equal(reply.type, 'CLIENT_VARS');
   };
 
-  it('reads sessionID from the handshake Cookie header', async function (this: any) {
+  it('reads sessionID from the handshake Cookie header', async () => {
     socket = await connectWithCookie('sessionID=s.aaaaaaaaaaaaaaaa');
     await sendClientReady(socket, {});
     assert.equal(sessioninfos[socket.id].auth.sessionID, 's.aaaaaaaaaaaaaaaa');
   });
 
-  it('honours the configured cookie prefix', async function (this: any) {
+  it('honours the configured cookie prefix', async () => {
     socket = await connectWithCookie(`${cookiePrefix()}sessionID=s.bbbbbbbbbbbbbbbb`);
     await sendClientReady(socket, {});
     assert.equal(sessioninfos[socket.id].auth.sessionID, 's.bbbbbbbbbbbbbbbb');
   });
 
-  it('falls back to message.sessionID for legacy clients (no cookie)', async function (this: any) {
+  it('falls back to message.sessionID for legacy clients (no cookie)', async () => {
     socket = await connectWithCookie('');
     await sendClientReady(socket, {sessionID: 's.cccccccccccccccc'});
     assert.equal(sessioninfos[socket.id].auth.sessionID, 's.cccccccccccccccc');
   });
 
-  it('prefers the cookie over the legacy message field', async function (this: any) {
+  it('prefers the cookie over the legacy message field', async () => {
     socket = await connectWithCookie('sessionID=s.dddddddddddddddd');
     await sendClientReady(socket, {sessionID: 's.eeeeeeeeeeeeeeee'});
     assert.equal(sessioninfos[socket.id].auth.sessionID, 's.dddddddddddddddd');
   });
 
-  it('records null when no sessionID is provided', async function (this: any) {
+  it('records null when no sessionID is provided', async () => {
     socket = await connectWithCookie('');
     await sendClientReady(socket, {});
     assert.equal(sessioninfos[socket.id].auth.sessionID, null);
   });
 
-  it('treats a malformed (undecodable) cookie as absent rather than aborting', async function (this: any) {
+  it('treats a malformed (undecodable) cookie as absent rather than aborting', async () => {
     // %ZZ is not a valid percent-encoded sequence; decodeURIComponent() throws
     // URIError. Without the guard this would tear down CLIENT_READY and let
     // any client log-spam the server (Qodo bug on #7755). The handshake must
