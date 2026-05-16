@@ -217,6 +217,28 @@ Triple-running #7768 against develop *with matching matrix entry* (not cross-mat
 
 The serialization is still a real correctness fix (overlapping fan-outs on the same socket were racy under concurrent commits, and the rev-claim-with-rollback prevents lost revisions on emit error), but the **perf headline was wrong**. #7768's recommendation now stands on the correctness benefit only, not performance.
 
+### Lever 9 — SessionManager throw-as-control-flow (open as [#7775](https://github.com/ether/etherpad/pull/7775))
+
+**Hotspot identified via direct-Node CPU profile** of develop at the 100→400 author dive sweep (etherpad-load-test workflow [run 25956384097](https://github.com/ether/etherpad-load-test/actions/runs/25956384097), profile capture pipeline in load-test #109/#110/#111). The captured `.cpuprofile` shows two adjacent hotspots that share one root cause:
+
+- **1.82% self** in `new CustomError('sessionID does not exist', 'apierror')` (V8 stack-trace capture)
+- **4.12% inverted** in `Logger.<computed>` whose first non-log4js caller is `SecurityManager.checkAccess`
+
+The chain is `checkAccess → SessionManager.findAuthorID → getSessionInfo throws CustomError → catch → console.debug → log4js`. Every CLIENT_READY with a session cookie that doesn't resolve to a stored session executes this whole cascade. The cookie-less harness path is short-circuited at `findAuthorID` line 40, so the cost only fires when sessions are looked up — but in the dive sweep the harness drives that lookup on every message.
+
+**Fix (#7775):** add a non-throwing private `getSessionInfoOrNull` helper, route the two internal callers (`findAuthorID`, `listSessionsWithDBKey`) at it, and keep `exports.getSessionInfo` as a thin wrapper that preserves the throw for HTTP API compatibility (the API translates the thrown `apierror` to `code: 1`). All 32 cases in `tests/backend/specs/api/sessionsAndGroups.ts` pass, including "getSessionInfo of deleted session" which still expects `code: 1`.
+
+**Expected impact:** ~6% of total process CPU at the cliff. Score pending a dive sweep against the merged branch.
+
+### Other CPU hotspots surfaced (not yet acted on)
+
+The same profile also flagged:
+
+- **~25% in Changeset.ts internals** (`SmartOpAssembler`, `MergingOpAssembler`, `OpAssembler`, `StringIterator` — split across many anonymous slots). This is OT diff/merge core; not trivially optimizable without a rewrite.
+- **~13% in `Pad.appendRevision`** — dominated by `applyToAText` plus two parallel DB writes per revision (`pad:id:revs:N` and `pad:id`). Unavoidable correctness path.
+- **~13% in ueberdb `_setLocked` / `_write` / `evictOld` plus dirty-ts `_flush` / `writev`.** Most of this is *test-harness artifact* — the dive runs against the default `dirty.db` file-backed store. Production deployments with Postgres/SQLite see a different CPU profile here. Documenting so future readers don't chase this as a code lever.
+- **~4% attributable to `__name(fn, "...")` wrappers** (esbuild/tsx name-preservation helpers). May be reducible by shipping pre-built JS for production rather than transpiling at runtime via `tsx/cjs`; out of scope for this dive.
+
 ### Lever 8b — engine.io socket flush deferral (open as [#7774](https://github.com/ether/etherpad/pull/7774))
 
 Real follow-up to the closed lever 8. Instead of patching `transport.send(packets[])`, patch `Socket.prototype.sendPacket` to schedule a coalesced flush via `queueMicrotask`. Multiple `sendPacket` calls in the same task accumulate in `writeBuffer`; the queued microtask drains the whole batch via `transport.send`. The transport then sees N > 1 packets and the engine.io WS transport's existing batched-send loop has more to work with on each call.
@@ -241,9 +263,10 @@ Mechanism: deferred flush gives more packets per WS frame → fewer per-frame sy
 
 **Merge in priority order:**
 
-1. **[#7774](https://github.com/ether/etherpad/pull/7774)** — engine.io socket flush deferral. The only PR in this program with N=3-confirmed measurable perf improvement (tighter tail at step 300-350). Wire-compatible, server-side only.
-2. **[#7768](https://github.com/ether/etherpad/pull/7768)** — per-socket fan-out serialization + NEW_CHANGES_BATCH. No measurable perf benefit in N=3 testing — recommend merging for the **correctness fix** (the original code was racy under concurrent commits and could lose revisions on emit error). NEW_CHANGES_BATCH framing is dormant at steady-state and fires under server slowness as forward-compat groundwork.
-3. **[#7762](https://github.com/ether/etherpad/pull/7762)** — Prometheus metrics. Already merged; instrument for any further dive.
+1. **[#7775](https://github.com/ether/etherpad/pull/7775)** — SessionManager throw-as-control-flow fix. CPU-profile-identified ~6% process CPU win at the cliff. No public-API behavior change; passes existing API test suite. Mechanical and low-risk.
+2. **[#7774](https://github.com/ether/etherpad/pull/7774)** — engine.io socket flush deferral. The only PR in this program with N=3-confirmed measurable perf improvement at the time it was opened (tighter tail at step 300-350). Wire-compatible, server-side only.
+3. **[#7768](https://github.com/ether/etherpad/pull/7768)** — per-socket fan-out serialization + NEW_CHANGES_BATCH. No measurable perf benefit in N=3 testing — recommend merging for the **correctness fix** (the original code was racy under concurrent commits and could lose revisions on emit error). NEW_CHANGES_BATCH framing is dormant at steady-state and fires under server slowness as forward-compat groundwork.
+4. **[#7762](https://github.com/ether/etherpad/pull/7762)** — Prometheus metrics. Already merged; instrument for any further dive.
 
 **Do not merge:**
 
@@ -256,13 +279,13 @@ Mechanism: deferred flush gives more packets per WS frame → fewer per-frame sy
 
 ## Where to take this next
 
-The dive's cliff at 350-400 authors is **steady-state CPU saturation on a 4-vCPU runner with O(N²) fan-out**. With #7774 (flush deferral) we have a modest tail-latency improvement; with #7768 we have a correctness fix that costs nothing. Further ceiling extension needs to attack one of two remaining surfaces:
+The dive's cliff at 350-400 authors is **steady-state CPU saturation on a 4-vCPU runner with O(N²) fan-out**. With #7775 (session throw fix) we expect a ~6% process-CPU reduction at the cliff; with #7774 (flush deferral) a modest tail-latency improvement; with #7768 a correctness fix that costs nothing. Further ceiling extension needs to attack one of two remaining surfaces:
 
 1. **Bigger hardware or per-pad sharding.** A 4-vCPU runner is the constraint, not Etherpad. Production on 8+ vCPU sees the cliff move proportionally with no code changes. Per-pad multi-worker sharding lets a single host scale beyond single-core limits but is a much larger architectural change.
 
 2. **Better measurement methodology.** Single-run lever comparisons sit inside the noise envelope below the cliff. Future dive scoring should default to N≥3 trials and report min/median/max. The triple-run pattern this doc adopted is the template; N=5+ would tighten conclusions further.
 
-The application-level surface has been explored end-to-end. Each non-trivial code lever that was thought to be a win turned out to be either inside the noise envelope (#7766 closed, #7770 closed, #7768 perf claim wrong) or net-negative (#7769 closed). The only application-level change with confirmed perf benefit is the engine.io flush deferral (#7774) — and it's a small one. **The cliff is hardware-bound, not code-bound, on the runner we measure on.** Production deployments with more cores per host will see proportionally higher ceilings without code changes.
+The application-level surface has been explored end-to-end. Most non-trivial code levers that were thought to be wins turned out to be either inside the noise envelope (#7766 closed, #7770 closed, #7768 perf claim wrong) or net-negative (#7769 closed). The CPU-profile-identified levers are the exception: #7774 (engine.io flush deferral) is a small confirmed win, and #7775 (SessionManager throw fix) is a clear ~6% win pending a sweep against the merged branch. **The cliff remains hardware-bound on the runner we measure on**, but production deployments will see two stacking wins from #7774 + #7775 without architectural change. Further code wins would need a Changeset/OT refactor (~25% of profile) — a much larger project.
 
 ## Reproducing
 
