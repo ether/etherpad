@@ -48,11 +48,31 @@ export const getDetectedInstallMethod = () => detectedMethod;
  * set; never imported when mail is disabled (keeps boot costs predictable for
  * installs that don't care about outbound mail).
  *
- * Rebuilt automatically only if the cached host doesn't match current
- * settings — a settings reload mid-process therefore picks up new mail config
- * without requiring a restart.
+ * The cache is keyed on the full set of SMTP options that `buildTransport`
+ * consumes (host, port, secure, auth). `reloadSettings()` can mutate any of
+ * these at runtime, so a host-only key would silently keep using a stale
+ * transport when an operator rotates credentials or moves to a different
+ * port without changing host.
  */
-let transportCache: {host: string; transporter: {sendMail: (m: any) => Promise<any>}} | null = null;
+let transportCache: {key: string; transporter: {sendMail: (m: any) => Promise<any>}} | null = null;
+
+/**
+ * Stable string key derived from the SMTP options `buildTransport` consumes.
+ * Exported as `_internal` so tests can verify that runtime mutations to
+ * `port`/`secure`/`auth` (without a host change) actually invalidate the
+ * cache — a regression caught by Qodo on PR #7753.
+ */
+export const smtpTransportKey = (mail: {
+  host?: string | null;
+  port?: number | string | null;
+  secure?: boolean | null;
+  auth?: unknown;
+}): string => JSON.stringify({
+  host: mail.host ?? null,
+  port: Number(mail.port) || 587,
+  secure: !!mail.secure,
+  auth: mail.auth ?? null,
+});
 
 const buildTransport = async (host: string) => {
   const {default: nodemailer} = await import('nodemailer');
@@ -73,8 +93,9 @@ const sendEmailViaSmtp = async (to: string, subject: string, body: string): Prom
     logger.info(`(would send email) to=${to} subject="${subject}"`);
     return;
   }
-  if (!transportCache || transportCache.host !== host) {
-    transportCache = {host, transporter: await buildTransport(host)};
+  const key = smtpTransportKey(settings.mail);
+  if (!transportCache || transportCache.key !== key) {
+    transportCache = {key, transporter: await buildTransport(host)};
   }
   try {
     await transportCache.transporter.sendMail({

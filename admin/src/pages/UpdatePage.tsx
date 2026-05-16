@@ -192,12 +192,17 @@ export const UpdatePage = () => {
               values={{tag: scheduled.targetTag, remaining: fmtRemaining(remainingMs)}}
             />
           </p>
-          {/* Tier 4: when the next fire is gated by a maintenance window, the
-              backend persists `scheduledFor` to the next opening. Surface that
-              so the admin understands why the countdown is long. */}
+          {/* Tier 4: only surface the deferral subtitle when `scheduledFor`
+              was actually snapped forward to the next window opening. The
+              backend keeps `scheduledFor = now + grace` whenever that lands
+              inside the window, so we can't use a fixed time-distance
+              heuristic (a normal 15-min grace would falsely match). Instead,
+              compare against `nextWindowOpensAt` with a small tolerance — the
+              two are computed seconds apart at request time, so an exact-ish
+              match is the only safe signal that the schedule was deferred. */}
           {us.tier === 'autonomous' && us.nextWindowOpensAt
-              && new Date(scheduled.scheduledFor).getTime()
-                 > Date.now() + 60 * 1000 && (
+              && Math.abs(new Date(scheduled.scheduledFor).getTime()
+                          - new Date(us.nextWindowOpensAt).getTime()) < 60 * 1000 && (
             <p className="update-scheduled-deferred">
               <Trans
                 i18nKey="update.page.scheduled.deferred_until"

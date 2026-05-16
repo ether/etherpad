@@ -1,11 +1,11 @@
 import {UpdateState} from './types';
-import {PreflightResult, PreflightReason} from './preflight';
+import {PreflightResult} from './preflight';
 import {ExecutorResult} from './UpdateExecutor';
 import {Drainer, DrainBroadcastKey} from './SessionDrainer';
 
 export type ApplyOutcome =
   | {outcome: 'pending-verification'}
-  | {outcome: 'preflight-failed'; reason: PreflightReason}
+  | {outcome: 'preflight-failed'; reason: string}
   | {outcome: 'cancelled'}
   | {outcome: 'lock-held'}
   | {outcome: 'busy'; status: string}
@@ -99,7 +99,7 @@ export const applyUpdate = async (
         lastResult: {targetTag, fromSha: '', outcome: 'preflight-failed', reason: reasonStr, at},
       });
       deps.appendLog(`[${at}] PREFLIGHT_FAILED ${reasonStr}`);
-      return {outcome: 'preflight-failed', reason: pf.reason};
+      return {outcome: 'preflight-failed', reason: reasonStr};
     }
 
     // Re-load state after preflight: the cancel endpoint can flip execution
