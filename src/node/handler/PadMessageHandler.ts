@@ -875,6 +875,18 @@ const handleUserChanges = async (socket:any, message: {
                           `${opAuthorId} in changeset ${changeset}`);
         }
       }
+      // Reject '+' ops that do not carry the author attribute. The standard
+      // JS client always tags inserts with the author; rejecting unattributed
+      // inserts here keeps pad.atext.text and pad.atext.attribs in lock-step.
+      // Without this check, an insert op with empty attribs grows the text
+      // without contributing matching markers to the attribs string, leaving
+      // the stored AText in a state where the two iterables disagree on
+      // length — applyToAText then desyncs and breaks reconciliation in
+      // every client that later loads the pad.
+      if (op.opcode === '+' && !opAuthorId) {
+        throw new Error(`Author ${thisSession.author} submitted an insert without an ` +
+                        `author attribute in changeset ${changeset}`);
+      }
     }
 
     // ex. adoptChangesetAttribs
