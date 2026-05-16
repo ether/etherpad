@@ -59,7 +59,7 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: 25
+          node-version: 24
           cache: pnpm
           cache-dependency-path: etherpad/pnpm-lock.yaml
       -

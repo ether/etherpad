@@ -11,7 +11,7 @@ export NODE_ENV
 export ETHERPAD_PRODUCTION=true
 
 # Resolve `node` explicitly to the apt-installed binary (the .deb declares
-# `Depends: nodejs (>= 25)`, which always lands at /usr/bin/node). Relying
+# `Depends: nodejs (>= 24)`, which always lands at /usr/bin/node). Relying
 # on PATH would let a stray /usr/local/bin/node — e.g. an older nvm or
 # toolcache install — shadow the version we actually require, and the
 # server would crash on startup with "Node 20.x is not supported".

@@ -9,12 +9,13 @@ ARG BUILD_ENV=git
 
 ARG PnpmVersion=11.0.6
 
-FROM node:25-alpine AS adminbuild
-# Node 25 no longer ships corepack at all, so install pnpm directly via
-# npm. The node:25-alpine image also bundles yarn; remove it first to
-# avoid leaving an unused binary on PATH. Drop bundled npm afterwards
-# — its older transitives (picomatch, brace-expansion) carry CVEs we
-# don't otherwise need.
+FROM node:24-alpine AS adminbuild
+# Install pnpm directly via npm (rather than via corepack) so the same
+# image recipe keeps working on Node 25+, where corepack has been
+# dropped from the distribution. The node:24-alpine image also bundles
+# yarn; remove it first to avoid leaving an unused binary on PATH.
+# Drop bundled npm afterwards — its older transitives (picomatch,
+# brace-expansion) carry CVEs we don't otherwise need.
 RUN rm -f /usr/local/bin/yarn /usr/local/bin/yarnpkg && \
     npm install -g pnpm@${PnpmVersion} && \
     rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
@@ -24,7 +25,7 @@ RUN pnpm install
 RUN pnpm run build:ui
 
 
-FROM node:25-alpine AS build
+FROM node:24-alpine AS build
 LABEL maintainer="Etherpad team, https://github.com/ether/etherpad"
 
 # Set these arguments when building the image from behind a proxy
@@ -99,7 +100,8 @@ RUN groupadd --system ${EP_GID:+--gid "${EP_GID}" --non-unique} etherpad && \
 ARG EP_DIR=/opt/etherpad-lite
 RUN mkdir -p "${EP_DIR}" && chown etherpad:etherpad "${EP_DIR}"
 
-# Node 25 dropped corepack; install pnpm directly via npm, then drop
+# Install pnpm directly via npm (rather than via corepack) so the same
+# recipe stays valid on Node 25+, which dropped corepack. Then drop
 # both npm and the pre-bundled yarn binary to keep the runtime image
 # free of unused tooling and known-CVE transitives.
 #

@@ -190,8 +190,10 @@ export type ClientReadyMessage = {
   type: 'CLIENT_READY',
   component: string,
   padId: string,
-  sessionID: string,
-  token: string,
+  /** @deprecated since #7045 — read server-side from the HttpOnly cookie. */
+  sessionID?: string,
+  /** @deprecated since GDPR PR3 — read server-side from the HttpOnly cookie. */
+  token?: string,
   userInfo: UserInfo,
   padSettingsDefaults?: PadOption,
   reconnect?: boolean
@@ -329,8 +331,10 @@ export type SocketClientReadyMessage = {
   type: string
   component: string
   padId: string
-  sessionID: string
-  token: string
+  /** @deprecated since #7045 — read server-side from the HttpOnly cookie. */
+  sessionID?: string
+  /** @deprecated since GDPR PR3 — read server-side from the HttpOnly cookie. */
+  token?: string
   userInfo: {
     colorId: string|null
     name: string|null

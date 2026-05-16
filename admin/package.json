@@ -30,7 +30,7 @@
     "@typescript-eslint/parser": "^8.59.3",
     "@vitejs/plugin-react": "^6.0.2",
     "babel-plugin-react-compiler": "19.1.0-rc.3",
-    "eslint": "^10.3.0",
+    "eslint": "^10.4.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "i18next": "^26.2.0",
@@ -46,7 +46,7 @@
     "tsx": "^4.22.0",
     "typescript": "^6.0.3",
     "vite": "^8.0.13",
-    "vite-plugin-babel": "^1.7.0",
+    "vite-plugin-babel": "^1.7.1",
     "zustand": "^5.0.13"
   }
 }
