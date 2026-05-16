@@ -27,21 +27,24 @@
  * limitations under the License.
  */
 
-import {MapArrayType} from "../types/MapType";
-import {SettingsNode} from "./SettingsTree";
+import {MapArrayType} from "../types/MapType.js";
+import {SettingsNode} from "./SettingsTree.js";
 
-import * as absolutePaths from './AbsolutePaths';
+import * as absolutePaths from './AbsolutePaths.js';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import {argv} from './Cli'
+import {argv} from './Cli.js'
 import jsonminify from 'jsonminify';
 import log4js from 'log4js';
+import randomString from './randomstring.js';
 import {createHash} from 'node:crypto';
-import randomString from './randomstring';
+import { createRequire } from 'node:module';
 const suppressDisableMsg = ' -- To suppress these warning messages change ' +
     'suppressErrorsInPadText to true in your settings.json\n';
 import _ from 'underscore';
+
+const requireFromHere = createRequire(import.meta.url);
 
 const logger = log4js.getLogger('settings');
 
@@ -848,21 +851,17 @@ export const getPublicPrivacyBanner = () => ({
 });
 
 export default settings;
-// CJS compatibility: plugins use require('ep_etherpad-lite/node/utils/Settings')
-// and expect settings properties directly on the module object, not under .default
-if (typeof module !== 'undefined' && module.exports) {
-  const currentExports = module.exports;
-  for (const key of Object.keys(settings)) {
-    if (!(key in currentExports)) {
-      Object.defineProperty(currentExports, key, {
-        get: () => (settings as any)[key],
-        set: (v: any) => { (settings as any)[key] = v; },
-        enumerable: true,
-        configurable: true,
-      });
-    }
-  }
-}
+// Note: under ESM (`"type": "module"`), the CJS compatibility shim that used
+// to live here (Object.defineProperty over module.exports) is dead code — there
+// is no `module` binding in ESM. Plugins that previously did
+// `require('ep_etherpad-lite/node/utils/Settings').toolbar` and expected fields
+// directly on the module object will see them under `.default` instead, because
+// Node's CJS-from-ESM interop wraps the namespace object.
+//
+// The plugin loader in `src/static/js/pluginfw/shared.ts` uses `createRequire`,
+// so plugins can still `require()` this module. If a plugin reads a top-level
+// field directly, update it to `settings.default.X` (or migrate to `import
+// settings from 'ep_etherpad-lite/node/utils/Settings'` in ESM plugins).
 
 /**
  * This setting is passed with dbType to ueberDB to set up the database
@@ -882,7 +881,7 @@ export const exportAvailable = () => sofficeAvailable();
 
 
 // Return etherpad version from package.json
-export const getEpVersion = () => require('../../package.json').version;
+export const getEpVersion = () => requireFromHere('../../package.json').version;
 
 
 
@@ -1344,9 +1343,8 @@ export const reloadSettings = () => {
     if (explicit) {
         settings.randomVersionString = explicit;
     } else {
-        const pkgVersion = require('../../package.json').version as string;
         settings.randomVersionString = createHash('sha256')
-            .update(`${pkgVersion}|${settings.gitVersion || ''}`)
+            .update(`${getEpVersion()}|${settings.gitVersion || ''}`)
             .digest('hex')
             .slice(0, 8);
     }

@@ -1,31 +1,31 @@
 'use strict';
-import type {Database} from "ueberdb2";
-import {AChangeSet, APool, AText} from "../types/PadType";
-import {MapArrayType} from "../types/MapType";
+import {Database} from "ueberdb2";
+import {AChangeSet, APool, AText} from "../types/PadType.js";
+import {MapArrayType} from "../types/MapType.js";
 
 /**
  * The pad object, defined with joose
  */
 
-import AttributeMap from '../../static/js/AttributeMap';
-import {applyToAText, checkRep, copyAText, deserializeOps, makeAText, makeSplice, opsFromAText, pack, unpack} from '../../static/js/Changeset';
-import ChatMessage from '../../static/js/ChatMessage';
-import AttributePool from '../../static/js/AttributePool';
-const Stream = require('../utils/Stream');
-const assert = require('assert').strict;
-const db = require('./DB');
-import settings from '../utils/Settings';
-const authorManager = require('./AuthorManager');
-const padDeletionManager = require('./PadDeletionManager');
-const padManager = require('./PadManager');
-const padMessageHandler = require('../handler/PadMessageHandler');
-const groupManager = require('./GroupManager');
-const CustomError = require('../utils/customError');
-import readOnlyManager from './ReadOnlyManager';
-import randomString from '../utils/randomstring';
-const hooks = require('../../static/js/pluginfw/hooks');
-import pad_utils from "../../static/js/pad_utils";
-import {SmartOpAssembler} from "../../static/js/SmartOpAssembler";
+import AttributeMap from '../../static/js/AttributeMap.js';
+import {applyToAText, checkRep, copyAText, deserializeOps, makeAText, makeSplice, opsFromAText, pack, unpack} from '../../static/js/Changeset.js';
+import ChatMessage from '../../static/js/ChatMessage.js';
+import AttributePool from '../../static/js/AttributePool.js';
+import Stream from '../utils/Stream.js';
+import { strict as assert } from 'assert';
+import db from './DB.js';
+import settings from '../utils/Settings.js';
+import * as authorManager from './AuthorManager.js';
+import * as padDeletionManager from './PadDeletionManager.js';
+import * as padManager from './PadManager.js';
+import padMessageHandler from '../handler/PadMessageHandler.js';
+import * as groupManager from './GroupManager.js';
+import CustomError from '../utils/customError.js';
+import readOnlyManager from './ReadOnlyManager.js';
+import randomString from '../utils/randomstring.js';
+import hooks from '../../static/js/pluginfw/hooks.js';
+import pad_utils from "../../static/js/pad_utils.js";
+import {SmartOpAssembler} from "../../static/js/SmartOpAssembler.js";
 import {timesLimit} from "async";
 
 type PadViewSettings = {
@@ -88,7 +88,7 @@ const validatePluginValue = (
  * @param {String} txt The text to clean
  * @returns {String} The cleaned text
  */
-exports.cleanText = (txt:string): string => txt.replace(/\r\n/g, '\n')
+export const cleanText = (txt:string): string => txt.replace(/\r\n/g, '\n')
     .replace(/\r/g, '\n')
     .replace(/\t/g, '        ');
 
@@ -104,13 +104,13 @@ class Pad {
    */
   static readonly SYSTEM_AUTHOR_ID = 'a.etherpad-system';
 
-  private db: Database;
-  private atext: AText;
-  private pool: AttributePool;
-  private head: number;
-    private chatHead: number;
+  public db: Database;
+  public atext: AText;
+  public pool: AttributePool;
+  public head: number;
+    public chatHead: number;
     private publicStatus: boolean;
-    private id: string;
+    public id: string;
     private savedRevisions: any[];
     private padSettings: PadSettings;
   /**
@@ -364,7 +364,7 @@ class Pad {
     await Promise.all(
         authorIds.map((authorId) => authorManager.getAuthorColorId(authorId).then((colorId:string) => {
           // colorId might be a hex color or an number out of the palette
-          returnTable[authorId] = colorPalette[colorId] || colorId;
+          returnTable[authorId] = colorPalette[colorId as any] || colorId;
         })));
 
     return returnTable;
@@ -419,7 +419,7 @@ class Pad {
     const orig = this.text();
     assert(orig.endsWith('\n'));
     if (start + ndel > orig.length) throw new RangeError('start/delete past the end of the text');
-    ins = exports.cleanText(ins);
+    ins = cleanText(ins);
     const willEndWithNewline =
         start + ndel < orig.length || // Keeping last char (which is guaranteed to be a newline).
         ins.endsWith('\n') ||
@@ -506,9 +506,9 @@ class Pad {
    *     (inclusive), in order. Note: `start` and `end` form a closed interval, not a half-open
    *     interval as is typical in code.
    */
-  async getChatMessages(start: string, end: number) {
+  async getChatMessages(start: string|number, end: string|number) {
     const entries =
-        await Promise.all(Stream.range(start, end + 1).map(this.getChatMessage.bind(this)));
+        await Promise.all(Stream.range(Number(start), Number(end) + 1).map(this.getChatMessage.bind(this)));
 
     // sort out broken chat entries
     // it looks like in happened in the past that the chat head was
@@ -522,7 +522,7 @@ class Pad {
     });
   }
 
-  async init(text:string, authorId = '') {
+  async init(text?: string|null, authorId = '') {
     // try to load the pad
     const value = await this.db.get(`pad:${this.id}`) as Record<string, any> | null;
 
@@ -535,7 +535,7 @@ class Pad {
         const context = {pad: this, authorId, type: 'text', content: settings.defaultPadText};
         await hooks.aCallAll('padDefaultContent', context);
         if (context.type !== 'text') throw new Error(`unsupported content type: ${context.type}`);
-        text = exports.cleanText(context.content);
+        text = cleanText(context.content);
       }
       const firstAttribs = authorId ? [['author', authorId] as [string, string]] : undefined;
       const firstChangeset = makeSplice('\n', 0, 0, text, firstAttribs, this.pool);
@@ -911,4 +911,4 @@ class Pad {
     await hooks.aCallAll('padCheck', {pad: this});
   }
 }
-exports.Pad = Pad;
+export { Pad };

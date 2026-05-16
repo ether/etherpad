@@ -1,5 +1,5 @@
 import {expect, test} from "@playwright/test";
-import {loginToAdmin} from "../helper/adminhelper";
+import {loginToAdmin} from "../helper/adminhelper.js";
 
 test.beforeEach(async ({ page })=>{
   await loginToAdmin(page, 'admin', 'changeme1');

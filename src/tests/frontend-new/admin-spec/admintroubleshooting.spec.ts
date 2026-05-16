@@ -1,5 +1,5 @@
 import {expect, test} from "@playwright/test";
-import {loginToAdmin} from "../helper/adminhelper";
+import {loginToAdmin} from "../helper/adminhelper.js";
 
 // Admin tests observe global server state (installed plugins, hooks,
 // settings). Run serially so a parallel test's mutation can't leak in.

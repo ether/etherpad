@@ -1,6 +1,6 @@
 'use strict';
 
-import {generateJWTToken} from "../common";
+import {generateJWTToken} from "../common.js";
 
 const assert = require('assert').strict;
 const common = require('../common');

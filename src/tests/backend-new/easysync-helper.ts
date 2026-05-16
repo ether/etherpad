@@ -1,10 +1,10 @@
-import AttributePool from "../../static/js/AttributePool";
-import { Attribute } from "../../static/js/types/Attribute";
-import {StringAssembler} from "../../static/js/StringAssembler";
-import {SmartOpAssembler} from "../../static/js/SmartOpAssembler";
-import Op from "../../static/js/Op";
-import {numToString} from "../../static/js/ChangesetUtils";
-import {checkRep, pack} from "../../static/js/Changeset";
+import AttributePool from "../../static/js/AttributePool.js";
+import { Attribute } from "../../static/js/types/Attribute.js";
+import {StringAssembler} from "../../static/js/StringAssembler.js";
+import {SmartOpAssembler} from "../../static/js/SmartOpAssembler.js";
+import Op from "../../static/js/Op.js";
+import {numToString} from "../../static/js/ChangesetUtils.js";
+import {checkRep, pack} from "../../static/js/Changeset.js";
 
 export const poolOrArray = (attribs: any) => {
   if (attribs.getAttrib) {

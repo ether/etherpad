@@ -1,7 +1,12 @@
 'use strict';
 
-const assert = require('assert').strict;
-const common = require('../common');
+import {fileURLToPath} from 'node:url';
+import {dirname} from 'node:path';
+import assert from 'assert';
+import * as common from '../common.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 let agent: any;
 let apiVersion = 1;
@@ -17,7 +22,6 @@ describe(__filename, function () {
   });
 
   it('can set and retrieve 50,000 characters of text on a pad', async function () {
-    this.timeout(30000);
     const padId = `largePasteTest${Date.now()}`;
     const largeText = 'A'.repeat(50000);
 

@@ -17,13 +17,13 @@
  * limitations under the License.
  */
 
-const async = require('async');
-const fs = require('fs').promises;
-const log4js = require('log4js');
-const os = require('os');
-const path = require('path');
-const runCmd = require('./run_cmd');
-import settings from './Settings';
+import async from 'async';
+import { promises as fs } from 'fs';
+import log4js from 'log4js';
+import os from 'os';
+import path from 'path';
+import runCmd from './run_cmd.js';
+import settings from './Settings.js';
 
 const logger = log4js.getLogger('LibreOffice');
 
@@ -36,7 +36,7 @@ const doConvertTask = async (task:{
   const tmpDir = os.tmpdir();
   // @ts-ignore
   const p = runCmd([
-    settings.soffice,
+    settings.soffice!,
     '--headless',
     '--invisible',
     '--nologo',
@@ -48,29 +48,29 @@ const doConvertTask = async (task:{
     '--outdir',
     tmpDir,
   ], {stdio: [
-    null,
+    null as any,
       // @ts-ignore
-      (line) => logger.info(`[${p.child.pid}] stdout: ${line}`),
+      (line) => logger.info(`[${p.child!.pid}] stdout: ${line}`),
       // @ts-ignore
-      (line) => logger.error(`[${p.child.pid}] stderr: ${line}`),
+      (line) => logger.error(`[${p.child!.pid}] stderr: ${line}`),
   ]});
-  logger.info(`[${p.child.pid}] Converting ${task.srcFile} to ${task.type} in ${tmpDir}`);
+  logger.info(`[${p.child!.pid}] Converting ${task.srcFile} to ${task.type} in ${tmpDir}`);
   // Soffice/libreoffice is buggy and often hangs.
   // To remedy this we kill the spawned process after a while.
   // TODO: Use the timeout option once support for Node.js < v15.13.0 is dropped.
   const hangTimeout = setTimeout(() => {
-    logger.error(`[${p.child.pid}] Conversion timed out; killing LibreOffice...`);
-    p.child.kill();
+    logger.error(`[${p.child!.pid}] Conversion timed out; killing LibreOffice...`);
+    p.child!.kill();
   }, 120000);
   try {
     await p;
   } catch (err:any) {
-    logger.error(`[${p.child.pid}] Conversion failed: ${err.stack || err}`);
+    logger.error(`[${p.child!.pid}] Conversion failed: ${err.stack || err}`);
     throw err;
   } finally {
     clearTimeout(hangTimeout);
   }
-  logger.info(`[${p.child.pid}] Conversion done.`);
+  logger.info(`[${p.child!.pid}] Conversion done.`);
   const filename = path.basename(task.srcFile);
   const sourceFile = `${filename.substr(0, filename.lastIndexOf('.'))}.${task.fileExtension}`;
   const sourcePath = path.join(tmpDir, sourceFile);
@@ -89,7 +89,7 @@ const queue = async.queue(doConvertTask, 1);
  * @param  {String}     type        The type to convert into
  * @param  {Function}   callback    Standard callback function
  */
-exports.convertFile = async (srcFile: string, destFile: string, type:string) => {
+export const convertFile = async (srcFile: string, destFile: string, type:string) => {
   // Used for the moving of the file, not the conversion
   const fileExtension = type;
 

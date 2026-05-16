@@ -17,8 +17,9 @@ window.clientVars = {
   const basePath = new URL('..', window.location.href).pathname;
   window.browser = require('../../src/static/js/vendors/browser');
   const pad = require('../../src/static/js/pad');
-  pad.baseURL = basePath;
-  window.plugins = require('../../src/static/js/pluginfw/client_plugins');
+  if (typeof pad.setBaseURL === 'function') pad.setBaseURL(basePath);
+  const clientPlugins = require('../../src/static/js/pluginfw/client_plugins');
+  window.plugins = clientPlugins.default || clientPlugins;
   const hooks = require('../../src/static/js/pluginfw/hooks');
 
   // TODO: These globals shouldn't exist.

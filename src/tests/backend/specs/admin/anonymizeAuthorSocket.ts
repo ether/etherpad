@@ -61,14 +61,13 @@ const ask = (socket: any, evt: string, payload: any, replyEvt: string) =>
       socket.emit(evt, payload);
     });
 
-describe(__filename, function () {
+describe(__filename, () => {
   let socket: any;
   let originalFlag: boolean;
   let savedUsers: any;
   let savedRequireAuthentication: boolean;
 
-  before(async function () {
-    this.timeout(60000);
+  before(async () => {
     await common.init();
     settings.gdprAuthorErasure = settings.gdprAuthorErasure || {enabled: false};
     originalFlag = settings.gdprAuthorErasure.enabled;
@@ -78,7 +77,7 @@ describe(__filename, function () {
     socket = await adminSocket();
   });
 
-  after(function () {
+  after(() => {
     if (socket) socket.disconnect();
     settings.gdprAuthorErasure.enabled = originalFlag;
     // savedUsers and settings.users point at the same object — restoring
@@ -89,7 +88,7 @@ describe(__filename, function () {
     settings.requireAuthentication = savedRequireAuthentication;
   });
 
-  it('authorLoad returns paginated rows', async function () {
+  it('authorLoad returns paginated rows', async () => {
     const tag = `sock-${Date.now()}`;
     await authorManager.createAuthorIfNotExistsFor(`m-${tag}`, `Sock ${tag}`);
     const res = await ask(socket, 'authorLoad',
@@ -114,7 +113,7 @@ describe(__filename, function () {
             'preview must not flip erased');
       });
 
-  it('anonymizeAuthor commits when the flag is enabled', async function () {
+  it('anonymizeAuthor commits when the flag is enabled', async () => {
     const tag = `live-${Date.now()}`;
     const {authorID} = await authorManager.createAuthorIfNotExistsFor(
         `m-${tag}`, `Live ${tag}`);

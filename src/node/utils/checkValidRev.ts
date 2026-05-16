@@ -1,6 +1,6 @@
 'use strict';
 
-const CustomError = require('../utils/customError');
+import CustomError from './customError.js';
 
 // checks if a rev is a legal number
 // pre-condition is that `rev` is not undefined
@@ -30,5 +30,4 @@ const checkValidRev = (rev: number|string) => {
 // checks if a number is an int
 const isInt = (value:number) => (parseFloat(String(value)) === parseInt(String(value), 10)) && !isNaN(value);
 
-exports.isInt = isInt;
-exports.checkValidRev = checkValidRev;
+export { isInt, checkValidRev };

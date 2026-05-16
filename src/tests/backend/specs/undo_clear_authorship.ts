@@ -1,5 +1,8 @@
 'use strict';
 
+import {fileURLToPath} from 'node:url';
+import {dirname} from 'node:path';
+
 /**
  * Tests for https://github.com/ether/etherpad-lite/issues/2802
  *
@@ -11,13 +14,16 @@
  * The server should allow undo of clear authorship without disconnecting the user.
  */
 
-import {PadType} from "../../../node/types/PadType";
+import {PadType} from "../../../node/types/PadType.js";
 
-const assert = require('assert').strict;
-const common = require('../common');
-const padManager = require('../../../node/db/PadManager');
-import AttributePool from '../../../static/js/AttributePool';
-import padutils from '../../../static/js/pad_utils';
+import assert from 'assert';
+import * as common from '../common.js';
+import * as padManager from '../../../node/db/PadManager.js';
+import AttributePool from '../../../static/js/AttributePool.js';
+import padutils from '../../../static/js/pad_utils.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 describe(__filename, function () {
   let agent: any;
@@ -127,7 +133,6 @@ describe(__filename, function () {
 
   describe('undo of clear authorship colors (bug #2802)', function () {
     it('should not disconnect when undoing clear authorship with multiple authors', async function () {
-      this.timeout(30000);
 
       // Step 1: Connect User A
       const userA = await connectUser();

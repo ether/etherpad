@@ -1,12 +1,12 @@
 'use strict';
 
-import {APool} from "../../../node/types/PadType";
+import {APool} from "../../../node/types/PadType.js";
 
-import AttributePool from '../../../static/js/AttributePool';
-import attributes from '../../../static/js/attributes';
+import AttributePool from '../../../static/js/AttributePool.js';
+import attributes from '../../../static/js/attributes.js';
 
 import {expect, describe, it, beforeEach} from 'vitest';
-import {Attribute} from "../../../static/js/types/Attribute";
+import {Attribute} from "../../../static/js/types/Attribute.js";
 
 describe('attributes', function () {
   const attribs: Attribute[] = [['foo', 'bar'], ['baz', 'bif']];

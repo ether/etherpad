@@ -5,7 +5,7 @@ import {
   isChatBoxShown,
   setUserName,
   toggleUserList,
-} from '../helper/padHelper';
+} from '../helper/padHelper.js';
 
 /**
  * Coverage for the click-a-user-to-prefill-@-mention UX added in #7660.

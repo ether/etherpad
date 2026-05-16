@@ -1,4 +1,4 @@
-import {timesLimit} from '../../../node/utils/promises';
+import {timesLimit} from '../../../node/utils/promises.js';
 import {describe, it, expect} from "vitest";
 
 describe(__filename, function () {

@@ -1,4 +1,4 @@
-import type {VulnerableBelowDirective} from './types';
+import type {VulnerableBelowDirective} from './types.js';
 
 export interface ParsedSemver {
   major: number;

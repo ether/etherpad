@@ -1,5 +1,5 @@
 import {expect, Page, test} from "@playwright/test";
-import {appendQueryParams, goToNewPad} from "../helper/padHelper";
+import {appendQueryParams, goToNewPad} from "../helper/padHelper.js";
 
 test.beforeEach(async ({page}) => {
   // clearCookies on the page's own context — creating a separate

@@ -1,6 +1,6 @@
 import {describe, it, expect, vi} from 'vitest';
-import {runPreflight, PreflightDeps} from '../../../../node/updater/preflight';
-import type {VerifyResult} from '../../../../node/updater/trustedKeys';
+import {runPreflight, PreflightDeps} from '../../../../node/updater/preflight.js';
+import type {VerifyResult} from '../../../../node/updater/trustedKeys.js';
 
 const baseDeps = (): PreflightDeps => ({
   installMethod: 'git',

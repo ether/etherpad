@@ -1,6 +1,6 @@
 import {expect, test} from "@playwright/test";
 import {goToNewPad, getPadBody, clearPadContent, selectAllText, writeToPad}
-  from "../helper/padHelper";
+  from "../helper/padHelper.js";
 
 /**
  * Regression test for https://github.com/ether/etherpad-lite/issues/5214

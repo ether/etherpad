@@ -6,13 +6,12 @@ const common = require('../common');
 const authorManager = require('../../../node/db/AuthorManager');
 const DB = require('../../../node/db/DB');
 
-describe(__filename, function () {
-  before(async function () {
-    this.timeout(60000);
+describe(__filename, () => {
+  before(async () => {
     await common.init();
   });
 
-  it('zeroes the display identity on globalAuthor:<id>', async function () {
+  it('zeroes the display identity on globalAuthor:<id>', async () => {
     const mapper = `mapper-${Date.now()}-${Math.random().toString(36).slice(2)}`;
     const {authorID} = await authorManager.createAuthorIfNotExistsFor(mapper, 'Alice');
     assert.equal(await authorManager.getAuthorName(authorID), 'Alice');
@@ -49,7 +48,7 @@ describe(__filename, function () {
         assert.ok((await DB.db.get(`mapper2author:${mapper}`)) == null);
       });
 
-  it('is idempotent — second call returns zero counters', async function () {
+  it('is idempotent — second call returns zero counters', async () => {
     const mapper = `mapper-${Date.now()}-${Math.random().toString(36).slice(2)}`;
     const {authorID} = await authorManager.createAuthorIfNotExistsFor(mapper, 'Carol');
     await authorManager.anonymizeAuthor(authorID);
@@ -62,7 +61,7 @@ describe(__filename, function () {
     });
   });
 
-  it('returns zero counters for an unknown authorID', async function () {
+  it('returns zero counters for an unknown authorID', async () => {
     const res = await authorManager.anonymizeAuthor('a.does-not-exist');
     assert.deepEqual(res, {
       affectedPads: 0,

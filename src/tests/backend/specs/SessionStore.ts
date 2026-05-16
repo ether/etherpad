@@ -1,10 +1,13 @@
 'use strict';
 
-const SessionStore = require('../../../node/db/SessionStore');
+import SessionStore from '../../../node/db/SessionStore.js';
 import {strict as assert} from 'assert';
-const common = require('../common');
-const db = require('../../../node/db/DB');
+import * as common from '../common.js';
+import db from '../../../node/db/DB.js';
 import util from 'util';
+import {fileURLToPath} from 'node:url';
+
+const __filename = fileURLToPath(import.meta.url);
 
 type Session = {
   set: (sid: string|null,sess:any, sess2:any) => void;
@@ -18,7 +21,7 @@ type Session = {
 }
 
 describe(__filename, function () {
-  let ss: Session|null;
+  let ss: any;
   let sid: string|null;
 
   const set = async (sess: string|null) => await util.promisify(ss!.set).call(ss, sid, sess);

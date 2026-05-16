@@ -1,8 +1,8 @@
 import path from 'node:path';
 import log4js from 'log4js';
-import {UpdateState} from './types';
-import type {SpawnFn} from './UpdateExecutor';
-import {appendLine} from './updateLog';
+import {UpdateState} from './types.js';
+import type {SpawnFn} from './UpdateExecutor.js';
+import {appendLine} from './updateLog.js';
 
 const logger = log4js.getLogger('updater');
 

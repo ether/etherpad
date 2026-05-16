@@ -1,6 +1,6 @@
 # 3.0.0
 
-3.0 is a feature-heavy release that closes out the self-update programme (Tiers 2 and 3 land alongside Tier 1 from 2.7.3), removes the last identified upstream telemetry vector, and ships a parsed JSONC settings editor, native DOCX export, in-place pad history scrubbing, and an admin UI for GDPR author erasure. It also marks the start of the broader Etherpad app ecosystem (see *Companion apps* below).
+3.0 is a feature-heavy release that closes out the self-update programme (Tiers 2 and 3 land alongside Tier 1 from 2.7.3), removes the last identified upstream telemetry vector, and ships a parsed JSONC settings editor, native DOCX export, in-place pad history scrubbing, and an admin UI for GDPR author erasure. It also completes the backend ESM migration and replaces mocha with vitest as the backend test runner, and marks the start of the broader Etherpad app ecosystem (see *Companion apps* below).
 
 ### Breaking changes
 
@@ -8,6 +8,11 @@
 - **`pnpm` floor raised to `pnpm@11.1.2`.** `packageManager` is now pinned to `pnpm@11.1.2` and `engines.pnpm` requires `>=11.1.2`. The Dockerfile, snap, .deb and all GitHub workflows are aligned.
 - **`swagger-ui-express` removed.** `/api-docs` now serves a vendored, telemetry-free copy of [Scalar](https://github.com/scalar/scalar) (see the privacy item below). The route, the OpenAPI document, and the rendered output are unchanged for downstream consumers, but anything that introspected `swagger-ui-express` internals will need updating.
 - **Debian package depends on `nodejs (>= 24)`.** The signed apt repository at `etherpad.org/apt` is rebuilt against this floor; older Node packages are no longer acceptable as a dependency (#7754).
+
+### Breaking changes for plugin authors
+
+- Migrated the Etherpad backend (everything under `src/node/` and the server-side parts of `src/static/js/pluginfw/`) from CommonJS to ECMAScript modules. **Existing CommonJS plugins continue to load unchanged** — the plugin loader now uses Node's `createRequire` to keep `require()` working synchronously against CJS plugin entry files. ESM plugins are also supported (use `"type": "module"` or `.mjs`, export hooks with `export const`). One contract change: the accessor-property shim that exposed `Settings` top-level fields directly on the `require()` result has been removed (it was dead code under ESM). Plugins reading core settings via `require('ep_etherpad-lite/node/utils/Settings').toolbar` must now use `import settings from '...'` (ESM) or `require('...').default.toolbar` (CJS via the bridge). See `doc/plugins.md` for the full updated contract.
+- Replaced mocha with vitest as the backend test runner. `pnpm test` now runs vitest. Plugin authors with backend test suites that ran under the core mocha runner via `../node_modules/ep_*/static/tests/backend/specs/**` should expect to migrate their tests to vitest.
 
 ### Companion apps
 

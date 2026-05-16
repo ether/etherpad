@@ -1,6 +1,6 @@
 import {describe, it, expect} from 'vitest';
-import {checkLatestRelease, FetchResult} from '../../../../node/updater/VersionChecker';
-import {ReleaseInfo} from '../../../../node/updater/types';
+import {checkLatestRelease, FetchResult} from '../../../../node/updater/VersionChecker.js';
+import {ReleaseInfo} from '../../../../node/updater/types.js';
 
 const ghBody = (overrides: Partial<{tag_name: string; body: string; prerelease: boolean; html_url: string; published_at: string}> = {}) => ({
   tag_name: 'v2.7.2',

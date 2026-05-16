@@ -1,7 +1,7 @@
 'use strict';
 
 import {strict as assert} from 'assert';
-import {anonymizeIp} from '../../../node/utils/anonymizeIp';
+import {anonymizeIp} from '../../../node/utils/anonymizeIp.js';
 
 describe(__filename, function () {
   describe('anonymous mode', function () {

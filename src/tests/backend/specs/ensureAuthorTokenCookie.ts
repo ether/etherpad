@@ -1,7 +1,7 @@
 'use strict';
 
 import {strict as assert} from 'assert';
-import {ensureAuthorTokenCookie} from '../../../node/utils/ensureAuthorTokenCookie';
+import {ensureAuthorTokenCookie} from '../../../node/utils/ensureAuthorTokenCookie.js';
 
 type CookieCall = {name: string, value: string, opts: any};
 const fakeRes = () => {

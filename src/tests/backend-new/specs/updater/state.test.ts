@@ -2,8 +2,8 @@ import {describe, it, expect, beforeEach} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
-import {loadState, saveState} from '../../../../node/updater/state';
-import {EMPTY_STATE} from '../../../../node/updater/types';
+import {loadState, saveState} from '../../../../node/updater/state.js';
+import {EMPTY_STATE} from '../../../../node/updater/types.js';
 
 let dir: string;
 const statePath = () => path.join(dir, 'update-state.json');

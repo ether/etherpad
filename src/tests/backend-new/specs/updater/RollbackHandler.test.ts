@@ -1,7 +1,7 @@
 import path from 'node:path';
 import {describe, it, expect, vi, beforeEach, afterEach} from 'vitest';
-import {checkPendingVerification, performRollback, RollbackDeps} from '../../../../node/updater/RollbackHandler';
-import {EMPTY_STATE} from '../../../../node/updater/types';
+import {checkPendingVerification, performRollback, RollbackDeps} from '../../../../node/updater/RollbackHandler.js';
+import {EMPTY_STATE} from '../../../../node/updater/types.js';
 
 const okSpawn = (exit: number) => vi.fn(() => ({
   stdout: {on: () => {}},

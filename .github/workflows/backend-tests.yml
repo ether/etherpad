@@ -84,9 +84,6 @@ jobs:
           path: node-report/
           if-no-files-found: ignore
           retention-days: 7
-      - name: Run the new vitest tests
-        working-directory: src
-        run: pnpm run test:vitest
 
   withpluginsLinux:
     env:
@@ -166,9 +163,6 @@ jobs:
           path: node-report/
           if-no-files-found: ignore
           retention-days: 7
-      - name: Run the new vitest tests
-        working-directory: src
-        run: pnpm run test:vitest
 
   # Windows tests only run on push to develop/master, not on PRs
   withoutpluginsWindows:
@@ -222,11 +216,7 @@ jobs:
           NODE_OPTIONS: "--report-on-fatalerror --report-uncaught-exception --report-on-signal --report-compact --report-directory=${{ github.workspace }}/node-report"
         run: |
           mkdir -p "${{ github.workspace }}/node-report"
-          # --exit forces process.exit(failures) after the suite completes,
-          # closing the post-suite event-loop drain window where Windows +
-          # Node 24 hard-kills the process. Scoped to Windows so Linux/local
-          # runs still surface real handle leaks via natural drain.
-          pnpm test -- --exit
+          pnpm test
       - name: Upload Node diagnostic reports on failure
         if: ${{ failure() }}
         uses: actions/upload-artifact@v7
@@ -235,9 +225,6 @@ jobs:
           path: node-report/
           if-no-files-found: ignore
           retention-days: 7
-      - name: Run the new vitest tests
-        working-directory: src
-        run: pnpm run test:vitest
 
   withpluginsWindows:
     env:
@@ -319,11 +306,7 @@ jobs:
           NODE_OPTIONS: "--report-on-fatalerror --report-uncaught-exception --report-on-signal --report-compact --report-directory=${{ github.workspace }}/node-report"
         run: |
           mkdir -p "${{ github.workspace }}/node-report"
-          # --exit forces process.exit(failures) after the suite completes,
-          # closing the post-suite event-loop drain window where Windows +
-          # Node 24 hard-kills the process. Scoped to Windows so Linux/local
-          # runs still surface real handle leaks via natural drain.
-          pnpm test -- --exit
+          pnpm test
       - name: Upload Node diagnostic reports on failure
         if: ${{ failure() }}
         uses: actions/upload-artifact@v7
@@ -332,6 +315,3 @@ jobs:
           path: node-report/
           if-no-files-found: ignore
           retention-days: 7
-      - name: Run the new vitest tests
-        working-directory: src
-        run: pnpm run test:vitest

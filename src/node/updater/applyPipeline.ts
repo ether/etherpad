@@ -1,7 +1,7 @@
-import {UpdateState} from './types';
-import {PreflightResult, PreflightReason} from './preflight';
-import {ExecutorResult} from './UpdateExecutor';
-import {Drainer, DrainBroadcastKey} from './SessionDrainer';
+import {UpdateState} from './types.js';
+import {PreflightResult, PreflightReason} from './preflight.js';
+import {ExecutorResult} from './UpdateExecutor.js';
+import {Drainer, DrainBroadcastKey} from './SessionDrainer.js';
 
 export type ApplyOutcome =
   | {outcome: 'pending-verification'}

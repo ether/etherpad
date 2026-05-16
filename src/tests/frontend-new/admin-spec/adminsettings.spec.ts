@@ -1,5 +1,5 @@
 import {expect, test} from "@playwright/test";
-import {loginToAdmin, restartEtherpad, saveSettings} from "../helper/adminhelper";
+import {loginToAdmin, restartEtherpad, saveSettings} from "../helper/adminhelper.js";
 
 // Settings tests mutate and restart the server. Run serially so restarts
 // don't collide with parallel tests reading/writing the same settings.

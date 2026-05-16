@@ -1,6 +1,6 @@
 'use strict';
 
-import {toolbarColorForTokens} from '../../static/js/skin_toolbar_colors';
+import {toolbarColorForTokens} from '../../static/js/skin_toolbar_colors.js';
 
 // The toolbar color the user actually sees on first paint, derived from the
 // configured skin and skinVariants. Only the colibris skin has a known

@@ -1,5 +1,5 @@
-import {ArgsExpressType} from "../../types/ArgsExpressType";
-import settings from '../../utils/Settings';
+import {ArgsExpressType} from "../../types/ArgsExpressType.js";
+import settings from '../../utils/Settings.js';
 
 const pwa = {
   name: settings.title || "Etherpad",
@@ -23,7 +23,7 @@ const pwa = {
   background_color: "#0f775b"
 }
 
-exports.expressCreateServer = (hookName:string, args:ArgsExpressType, cb:Function) => {
+export const expressCreateServer = (hookName:string, args:ArgsExpressType, cb:Function) => {
   args.app.get('/manifest.json', (req:any, res:any) => {
     res.json(pwa);
   });

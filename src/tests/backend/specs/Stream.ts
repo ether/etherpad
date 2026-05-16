@@ -1,9 +1,12 @@
 'use strict';
 
-const Stream = require('../../../node/utils/Stream');
+import Stream from '../../../node/utils/Stream.js';
 import {strict} from "assert";
+import {fileURLToPath} from 'node:url';
 
-class DemoIterable {
+const __filename = fileURLToPath(import.meta.url);
+
+class DemoIterable implements Iterable<any>, Iterator<any> {
   private value: number;
     errs: Error[];
     rets: any[];
@@ -15,12 +18,12 @@ class DemoIterable {
 
   completed() { return this.errs.length > 0 || this.rets.length > 0; }
 
-  next() {
+  next(): IteratorResult<any> {
     if (this.completed()) return {value: undefined, done: true}; // Mimic standard generators.
     return {value: this.value++, done: false};
   }
 
-  throw(err: any) {
+  throw(err: any): IteratorResult<any> {
     const alreadyCompleted = this.completed();
     this.errs.push(err);
     if (alreadyCompleted) throw err; // Mimic standard generator objects.
@@ -34,7 +37,7 @@ class DemoIterable {
     return {value: ret, done: true};
   }
 
-  [Symbol.iterator]() { return this; }
+  [Symbol.iterator](): IterableIterator<any> { return this as any; }
 }
 
 const assertUnhandledRejection = async (action: any, want: any) => {
@@ -116,7 +119,7 @@ describe(__filename, function () {
       const iter = s[Symbol.iterator]();
       strict.deepEqual(iter.next(), {value: 0, done: false});
       const err = new Error('injected');
-      strict.throws(() => iter.throw(err), err);
+      strict.throws(() => iter.throw!(err), err);
       strict.equal(underlying.errs[0], err);
     });
 
@@ -125,7 +128,7 @@ describe(__filename, function () {
       const s = new Stream(underlying);
       const iter = s[Symbol.iterator]();
       strict.deepEqual(iter.next(), {value: 0, done: false});
-      strict.deepEqual(iter.return(42), {value: 42, done: true});
+      strict.deepEqual(iter.return!(42), {value: 42, done: true});
       strict.equal(underlying.rets[0], 42);
     });
   });
@@ -225,7 +228,7 @@ describe(__filename, function () {
       strict.equal(lastYield, 'promise of 2');
       strict.equal(await nextp, 0);
       await strict.rejects(iter.next().value, err);
-      iter.return();
+      iter.return!();
     });
 
     it('batched Promise rejections are unsuppressed when iteration completes', async function () {
@@ -243,7 +246,7 @@ describe(__filename, function () {
       const iter = s[Symbol.iterator]();
       strict.equal(await iter.next().value, 0);
       strict.equal(lastYield, 'promise of 2');
-      await assertUnhandledRejection(() => iter.return(), err);
+      await assertUnhandledRejection(() => iter.return!(), err);
     });
   });
 
@@ -319,7 +322,7 @@ describe(__filename, function () {
       strict.equal(lastYield, 'promise of 2');
       strict.equal(await nextp, 0);
       await strict.rejects(iter.next().value, err);
-      iter.return();
+      iter.return!();
     });
 
     it('buffered Promise rejections are unsuppressed when iteration completes', async function () {
@@ -337,7 +340,7 @@ describe(__filename, function () {
       const iter = s[Symbol.iterator]();
       strict.equal(await iter.next().value, 0);
       strict.equal(lastYield, 'promise of 2');
-      await assertUnhandledRejection(() => iter.return(), err);
+      await assertUnhandledRejection(() => iter.return!(), err);
     });
   });
 

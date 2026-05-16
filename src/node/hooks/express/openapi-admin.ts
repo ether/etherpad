@@ -1,7 +1,7 @@
 'use strict';
 
-import {ArgsExpressType} from '../../types/ArgsExpressType';
-import settings, {getEpVersion} from '../../utils/Settings';
+import {ArgsExpressType} from '../../types/ArgsExpressType.js';
+import settings, {getEpVersion} from '../../utils/Settings.js';
 
 const OPENAPI_VERSION = '3.0.2';
 
@@ -153,8 +153,6 @@ export const generateAdminDefinition = (): any => ({
   },
 });
 
-exports.generateAdminDefinition = generateAdminDefinition;
-
 export const expressPreSession = async (
   _hookName: string,
   {app}: ArgsExpressType,
@@ -179,4 +177,3 @@ export const expressPreSession = async (
   });
 };
 
-exports.expressPreSession = expressPreSession;

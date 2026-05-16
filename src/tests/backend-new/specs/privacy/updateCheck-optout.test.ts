@@ -1,6 +1,6 @@
 import {describe, it, expect, beforeEach, vi} from 'vitest';
-import settings from '../../../../node/utils/Settings';
-import {check} from '../../../../node/utils/UpdateCheck';
+import settings from '../../../../node/utils/Settings.js';
+import {check} from '../../../../node/utils/UpdateCheck.js';
 
 describe('UpdateCheck opt-out', () => {
   beforeEach(() => {

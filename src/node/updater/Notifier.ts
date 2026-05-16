@@ -1,4 +1,4 @@
-import {EmailSendLog} from './types';
+import {EmailSendLog} from './types.js';
 
 // TODO(future): surface the threshold version in email bodies so admins know which version
 // clears the vulnerability. Requires extending NotifierInput with the relevant directive(s).

@@ -22,23 +22,23 @@
  * https://github.com/ether/pad/blob/master/infrastructure/ace/www/easysync2.js
  */
 
-import AttributeMap from './AttributeMap'
-import AttributePool from "./AttributePool";
-import {attribsFromString} from './attributes';
-import padutils from "./pad_utils";
-import Op, {OpCode} from './Op'
-import {numToString, parseNum} from './ChangesetUtils'
-import {StringAssembler} from "./StringAssembler";
-import {OpIter} from "./OpIter";
-import {Attribute} from "./types/Attribute";
-import {SmartOpAssembler} from "./SmartOpAssembler";
-import TextLinesMutator from "./TextLinesMutator";
-import {ChangeSet} from "./types/ChangeSet";
-import {AText} from "./types/AText";
-import {ChangeSetBuilder} from "./types/ChangeSetBuilder";
-import {Builder} from "./Builder";
-import {StringIterator} from "./StringIterator";
-import {MergingOpAssembler} from "./MergingOpAssembler";
+import AttributeMap from './AttributeMap.js'
+import AttributePool from "./AttributePool.js";
+import {attribsFromString} from './attributes.js';
+import padutils from "./pad_utils.js";
+import Op, {OpCode} from './Op.js'
+import {numToString, parseNum} from './ChangesetUtils.js'
+import {StringAssembler} from "./StringAssembler.js";
+import {OpIter} from "./OpIter.js";
+import {Attribute} from "./types/Attribute.js";
+import {SmartOpAssembler} from "./SmartOpAssembler.js";
+import TextLinesMutator from "./TextLinesMutator.js";
+import {ChangeSet} from "./types/ChangeSet.js";
+import {AText} from "./types/AText.js";
+import {ChangeSetBuilder} from "./types/ChangeSetBuilder.js";
+import {Builder} from "./Builder.js";
+import {StringIterator} from "./StringIterator.js";
+import {MergingOpAssembler} from "./MergingOpAssembler.js";
 
 /**
  * A `[key, value]` pair of strings describing a text attribute.

@@ -1,4 +1,4 @@
-import check from "../../../node/utils/path_exists";
+import check from "../../../node/utils/path_exists.js";
 import {expect, describe, it} from "vitest";
 
 describe('Test path exists', function () {

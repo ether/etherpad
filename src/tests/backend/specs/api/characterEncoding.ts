@@ -6,12 +6,15 @@
  * TODO: maybe unify those two files and merge in a single one.
  */
 
-import {generateJWTToken, generateJWTTokenUser} from "../../common";
+import {generateJWTToken, generateJWTTokenUser} from "../../common.js";
 
-const assert = require('assert').strict;
-const common = require('../../common');
-const fs = require('fs');
+import {strict as assert} from 'assert';
+import * as common from '../../common.js';
+import fs from 'fs';
+import {fileURLToPath} from 'node:url';
+
 const fsp = fs.promises;
+const __filename = fileURLToPath(import.meta.url);
 
 let agent:any;
 let apiVersion = 1;

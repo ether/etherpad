@@ -1,5 +1,5 @@
 import {expect, test} from '@playwright/test';
-import {clearPadContent, goToNewPad, writeToPad} from '../helper/padHelper';
+import {clearPadContent, goToNewPad, writeToPad} from '../helper/padHelper.js';
 
 // Issue #7659 — in-pad history mode.
 //

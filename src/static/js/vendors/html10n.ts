@@ -1,4 +1,4 @@
-import {Func} from "mocha";
+type Func = (...args: any[]) => any;
 
 
 type PluralFunc = (n: number) => string

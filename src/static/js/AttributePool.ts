@@ -44,7 +44,7 @@
  * @property {number} nextNum - The attribute ID to assign to the next new attribute.
  */
 
-import {Attribute} from "./types/Attribute";
+import {Attribute} from "./types/Attribute.js";
 
 /**
  * Represents an attribute pool, which is a collection of attributes (pairs of key and value

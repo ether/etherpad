@@ -10,8 +10,8 @@ import {
   getCurrentChatMessageCount, goToNewPad, hideChat, isChatBoxShown, isChatBoxSticky,
   sendChatMessage,
   showChat,
-} from "../helper/padHelper";
-import {disableStickyChat, enableStickyChatviaSettings, hideSettings, showSettings} from "../helper/settingsHelper";
+} from "../helper/padHelper.js";
+import {disableStickyChat, enableStickyChatviaSettings, hideSettings, showSettings} from "../helper/settingsHelper.js";
 
 
 test.beforeEach(async ({ page, context })=>{

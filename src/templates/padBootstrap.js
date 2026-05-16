@@ -17,8 +17,9 @@
   window.$ = window.jQuery = require('ep_etherpad-lite/static/js/rjquery').jQuery;
   window.browser = require('ep_etherpad-lite/static/js/vendors/browser');
   const pad = require('ep_etherpad-lite/static/js/pad');
-  pad.baseURL = basePath;
-  window.plugins = require('ep_etherpad-lite/static/js/pluginfw/client_plugins');
+  if (typeof pad.setBaseURL === 'function') pad.setBaseURL(basePath);
+  const clientPlugins = require('ep_etherpad-lite/static/js/pluginfw/client_plugins');
+  window.plugins = clientPlugins.default || clientPlugins;
   const hooks = require('ep_etherpad-lite/static/js/pluginfw/hooks');
 
   // TODO: These globals shouldn't exist.

@@ -1,4 +1,4 @@
-import {splitTextLines} from "./Changeset";
+import {splitTextLines} from "./Changeset.js";
 
 /**
  * Class to iterate and modify texts which have several lines. It is used for applying Changesets on

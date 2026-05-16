@@ -1,5 +1,5 @@
 import {expect, test} from '@playwright/test';
-import {clearPadContent, goToNewPad, writeToPad} from '../helper/padHelper';
+import {clearPadContent, goToNewPad, writeToPad} from '../helper/padHelper.js';
 
 test.describe('unaccepted commit warning', () => {
   test('hasUnacceptedCommit clears once the server acknowledges the commit',
