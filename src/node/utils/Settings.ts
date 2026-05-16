@@ -272,6 +272,7 @@ export type SettingsType = {
   automaticReconnectionTimeout: number,
   loadTest: boolean,
   scalingDiveMetrics: boolean,
+  engineFlushDefer: boolean,
   dumpOnUncleanExit: boolean,
   indentationOnNewLine: boolean,
   logconfig: any | null,
@@ -658,6 +659,19 @@ const settings: SettingsType = {
    * production deployments aren't paying for instrumentation they don't use.
    */
   scalingDiveMetrics: false,
+  /**
+   * Defer engine.io socket flush onto the next microtask so multiple
+   * sendPacket() calls within the same task accumulate in the writeBuffer
+   * before drain. Pairs with engine.io's existing transport.send([packets])
+   * fast path so a batched send produces fewer WebSocket frames.
+   *
+   * Adds no meaningful wall-clock latency — microtasks drain before any
+   * subsequent macrotask. Backward-compatible at the wire level; existing
+   * clients receive identical packet bytes.
+   *
+   * Default false. Enable only when scoring under the scaling dive.
+   */
+  engineFlushDefer: false,
   /**
    * Disable dump of objects preventing a clean exit
    */
