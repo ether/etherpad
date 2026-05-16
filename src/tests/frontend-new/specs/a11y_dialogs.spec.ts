@@ -161,7 +161,9 @@ test('editbar toolbars have role=toolbar with accessible names (#7255)', async (
   const cases: Array<[string, string, string]> = [
     ['.menu_left', 'editbar-formatting-label', 'Formatting toolbar'],
     ['.menu_right', 'editbar-actions-label', 'Pad actions toolbar'],
-    ['#history-controls', 'editbar-history-label', 'History playback toolbar'],
+    // History toolbar reuses pad.historyMode.controlsLabel (already
+    // translated in multiple locales) instead of a new English-only key.
+    ['#history-controls', 'editbar-history-label', 'Pad history controls'],
   ];
   for (const [sel, labelId, expected] of cases) {
     const toolbar = page.locator(sel);

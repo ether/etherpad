@@ -86,8 +86,12 @@
        accessible name via aria-labelledby. See ether/etherpad#7255. -->
   <span id="editbar-formatting-label" class="sr-only"
         data-l10n-id="pad.editor.toolbar.formatting">Formatting toolbar</span>
+  <!-- Reuses pad.historyMode.controlsLabel rather than minting a new key:
+       pad_mode.ts already set this as aria-label on #history-controls via JS,
+       and the existing key has translations in nl/de/etc. A new English-only
+       key would cause non-English locales to regress to fallback English. -->
   <span id="editbar-history-label" class="sr-only"
-        data-l10n-id="pad.editor.toolbar.history">History playback toolbar</span>
+        data-l10n-id="pad.historyMode.controlsLabel">Pad history controls</span>
   <span id="editbar-actions-label" class="sr-only"
         data-l10n-id="pad.editor.toolbar.actions">Pad actions toolbar</span>
   <span id="editbar-showmore-label" class="sr-only"
