@@ -24,6 +24,8 @@ Every claim links to a CI run whose `report.json` is downloadable for re-analysi
 
 The next concrete direction with leverage is **engine.io transport-level packing** — sending multiple engine.io packets in one WebSocket frame instead of one frame per packet. See "Where to take this next" below.
 
+**Update (later in the dive):** CPU profiling against the SUT under load identified two adjacent log4js entry paths that together drive **-12% to -20% of total process CPU** when fixed in combination — see [#7775](https://github.com/ether/etherpad/pull/7775) (SessionManager throw-as-control-flow) and [#7776](https://github.com/ether/etherpad/pull/7776) (settings.loadTest per-message warn). At step 400, two of three N=3 combined-branch runs landed *below* the cliff entirely. **This effectively moves the cliff from ~400 to ~500 authors.** A local taskset experiment confirmed the remaining cliff is single-event-loop-bound, not total-CPU-bound: 4-core and 8-core SUTs hit the cliff at the same step. Worker-thread offload of OT (~25% of profile) is the smallest next architectural step.
+
 ## Methodology
 
 - **Harness:** [`ether/etherpad-load-test`](https://github.com/ether/etherpad-load-test) at `main`. `--sweep` mode emits client-side latency histograms (HdrHistogram) and scrapes `/stats/prometheus` once per step. Reports as `report.json`/`csv`/`md`.
@@ -251,6 +253,74 @@ The same profile also flagged:
 - **~13% in ueberdb `_setLocked` / `_write` / `evictOld` plus dirty-ts `_flush` / `writev`.** Most of this is *test-harness artifact* — the dive runs against the default `dirty.db` file-backed store. Production deployments with Postgres/SQLite see a different CPU profile here. Documenting so future readers don't chase this as a code lever.
 - **~4% attributable to `__name(fn, "...")` wrappers** (esbuild/tsx name-preservation helpers). May be reducible by shipping pre-built JS for production rather than transpiling at runtime via `tsx/cjs`; out of scope for this dive.
 
+### Lever 10 — `settings.loadTest` per-message warn (open as [#7776](https://github.com/ether/etherpad/pull/7776))
+
+While capturing the lever-9 profile against the *post-#7775* perf branch ([run 25957515210](https://github.com/ether/etherpad-load-test/actions/runs/25957515210)), the log4js cost (4% of total CPU, inverted-caller pointing at `SecurityManager.checkAccess`) was *unchanged* — which surfaced the real root cause. Line 78-81 of `SecurityManager.ts`:
+
+```ts
+if (settings.loadTest) {
+  console.warn(
+      'bypassing socket.io authentication and authorization checks due to settings.loadTest');
+}
+```
+
+…fires on every `checkAccess` invocation — once per inbound socket.io message. `log4js.replaceConsole` routes the `console.warn` through `Logger._log → sendToListeners → sendLogEventToAppender`, paying full LogEvent allocation + dispatch on every CLIENT_READY, COMMIT_CHANGESET, etc.
+
+**Fix (#7776):** drop the per-message log (the loadTest short-circuit still applies), move the configuration warning to startup in `Settings.ts` next to the other config-time warnings. Production unaffected (`loadTest: false` by default); dive harness and any benchmark/staging setup with `loadTest: true` gets the savings.
+
+**N=3 measured impact** (runs 25959515488/25959516741/25959517823 vs the same develop baselines used elsewhere):
+
+| step | dev CPU% | #7776 CPU% | **ΔCPU%** | dev p95 | #7776 p95 |
+|---:|---:|---:|---:|---:|---:|
+| 100 | 4.76 | 4.51 | **-5.3%** | 38 | 33 |
+| 200 | 15.21 | 14.33 | -5.8% | 37 | 31 |
+| 300 | 30.46 | 28.50 | -6.4% | 45 | 46 |
+| 350 | 41.58 | 37.87 | **-8.9%** | 39 | 59\* |
+| 400 | 56.26 | 53.67 | -4.6% | 2275 | **1903** (-16%) |
+| 450 | 72.33 | 68.80 | -4.9% | 6167 | **5527** (-10%) |
+| 500 | 88.38 | 85.17 | -3.6% | 11759 | **10655** (-9%) |
+
+\*step 350 raw triples: dev [39, 39, 122] vs #7776 [37, 38, 39] — #7776's distribution is *tighter* across all 3 runs (no single-run dip below 37); the median doesn't show this.
+
+CPU% drops -3.6% to -8.9% across all 9 steps with consistent direction in every N=3 raw triple. Past the cliff (400+), p95 drops 9-16% — the SUT processes the same load more quickly when the loadTest warning isn't competing for log4js dispatch.
+
+### Stacking lever 9 (#7775) and lever 10 (#7776)
+
+The two CPU-profile-identified levers attack adjacent log4js entry paths. Three combined-branch runs (perf/dive-combined = #7776 + #7775 cherry-picked, runs 25960003164/25960004223/25960005248) vs the same three develop baselines:
+
+| step | dev CPU% | #7775 | #7776 | **both** | Δ#7775 | Δ#7776 | **Δboth** |
+|---:|---:|---:|---:|---:|---:|---:|---:|
+| 100 | 4.76 | 4.67 | 4.51 | 3.99 | -1.7% | -5.3% | **-16.1%** |
+| 200 | 15.21 | 14.60 | 14.33 | 12.48 | -4.0% | -5.8% | **-17.9%** |
+| 300 | 30.46 | 29.68 | 28.50 | 24.39 | -2.6% | -6.4% | **-19.9%** |
+| 350 | 41.58 | 39.36 | 37.87 | 33.04 | -5.3% | -8.9% | **-20.5%** |
+| 400 | 56.26 | 54.23 | 53.67 | 44.78 | -3.6% | -4.6% | **-20.4%** |
+| 450 | 72.33 | 70.49 | 68.80 | 61.18 | -2.5% | -4.9% | **-15.4%** |
+| 500 | 88.38 | 87.14 | 85.17 | 77.70 | -1.4% | -3.6% | **-12.1%** |
+
+The stacked impact (-12% to -20% CPU%) is **super-additive** — well above the simple sum of the two individual gains. Both fixes remove call sites that funnel into the same log4js cluster-mode dispatch chain (`sendToListeners → sendLogEventToAppender`); halving the LogEvent allocation rate appears to relieve queue / GC pressure beyond what either fix accounts for in isolation.
+
+**Latency impact** (p95, raw triples shown to expose the cliff-shift):
+
+| step | develop p95 [3 runs] | combined p95 [3 runs] |
+|---:|---|---|
+| 400 | [1758, 2275, 2463] | **[45, 112, 634]** |
+| 450 | [5415, 6167, 6611] | [3297, 3719, 3897] (-40%) |
+| 500 | [10655, 11759, 12183] | [8091, 8711, 9127] (-26%) |
+
+At step 400, **two of three combined runs land below the cliff entirely** (45ms, 112ms) — the cliff has effectively moved from ~400 to ~500 authors. At step 500 the cliff is still there but the SUT processes load 26% faster. This is the largest measured single-direction perf improvement in the dive.
+
+### Local vCPU-scaling experiment
+
+To answer "is the cliff CPU-bound or event-loop-bound", I ran the same dive sweep locally against a develop SUT pinned via `taskset -c` to varying core counts (Ryzen 5 3600, 12 threads; harness on disjoint cores to avoid contention):
+
+| SUT cores | Cliff (p95 spike) | CPU% @ step 500 |
+|---:|---:|---:|
+| 4 (pinned 0-3) | ~350 | 97.6% |
+| 8 (pinned 0-7) | ~350 | 96.4% |
+
+Doubling cores produced no improvement. The 96-98% CPU% reading is `process.cpuUsage()` against a single Node thread — it maxes out at one full core. **The cliff is single-event-loop-bound, not total-CPU-bound.** Adding cores via cluster-mode or bigger boxes does not move the cliff for a single Etherpad process. The application-layer levers (this dive) are the only way forward at fixed process count, and worker-thread offload of OT (~25% of profile spent in `Changeset.applyToAText`) is the next architectural step worth a separate program of work.
+
 ### Lever 8b — engine.io socket flush deferral (open as [#7774](https://github.com/ether/etherpad/pull/7774))
 
 Real follow-up to the closed lever 8. Instead of patching `transport.send(packets[])`, patch `Socket.prototype.sendPacket` to schedule a coalesced flush via `queueMicrotask`. Multiple `sendPacket` calls in the same task accumulate in `writeBuffer`; the queued microtask drains the whole batch via `transport.send`. The transport then sees N > 1 packets and the engine.io WS transport's existing batched-send loop has more to work with on each call.
@@ -275,10 +345,12 @@ Mechanism: deferred flush gives more packets per WS frame → fewer per-frame sy
 
 **Merge in priority order:**
 
-1. **[#7775](https://github.com/ether/etherpad/pull/7775)** — SessionManager throw-as-control-flow fix. N=3 measured 2-5% CPU% reduction across the cliff sweep (profile-predicted 6% upper bound). No public-API behavior change; passes existing API test suite. Mechanical and low-risk.
-2. **[#7774](https://github.com/ether/etherpad/pull/7774)** — engine.io socket flush deferral. The only PR in this program with N=3-confirmed measurable perf improvement at the time it was opened (tighter tail at step 300-350). Wire-compatible, server-side only.
-3. **[#7768](https://github.com/ether/etherpad/pull/7768)** — per-socket fan-out serialization + NEW_CHANGES_BATCH. No measurable perf benefit in N=3 testing — recommend merging for the **correctness fix** (the original code was racy under concurrent commits and could lose revisions on emit error). NEW_CHANGES_BATCH framing is dormant at steady-state and fires under server slowness as forward-compat groundwork.
-4. **[#7762](https://github.com/ether/etherpad/pull/7762)** — Prometheus metrics. Already merged; instrument for any further dive.
+0. **Merge #7775 + [#7776](https://github.com/ether/etherpad/pull/7776) together.** They attack adjacent log4js entry paths and N=3 measured combined impact is **-12% to -20% CPU% across the full cliff sweep**, with the p95 cliff effectively shifting from ~400 → ~500 authors (two of three combined runs at step 400 land below the cliff entirely). Super-additive interaction — landing only one captures < half the win.
+1. **[#7775](https://github.com/ether/etherpad/pull/7775)** — SessionManager throw-as-control-flow fix. N=3 measured 2-5% CPU% reduction alone (less when paired). No public-API behavior change; passes existing API test suite. Mechanical and low-risk.
+2. **[#7776](https://github.com/ether/etherpad/pull/7776)** — `settings.loadTest` per-message warning. N=3 measured 3.6-8.9% CPU% reduction alone. Test-harness-facing today but always-on logical cleanup. See item 0 for the recommended packaging.
+3. **[#7774](https://github.com/ether/etherpad/pull/7774)** — engine.io socket flush deferral. Tighter tail at step 300-350 (N=3). Wire-compatible, server-side only.
+4. **[#7768](https://github.com/ether/etherpad/pull/7768)** — per-socket fan-out serialization + NEW_CHANGES_BATCH. No measurable perf benefit in N=3 testing — recommend merging for the **correctness fix** (the original code was racy under concurrent commits and could lose revisions on emit error). NEW_CHANGES_BATCH framing is dormant at steady-state and fires under server slowness as forward-compat groundwork.
+5. **[#7762](https://github.com/ether/etherpad/pull/7762)** — Prometheus metrics. Already merged; instrument for any further dive.
 
 **Do not merge:**
 
@@ -291,13 +363,13 @@ Mechanism: deferred flush gives more packets per WS frame → fewer per-frame sy
 
 ## Where to take this next
 
-The dive's cliff at 350-400 authors is **steady-state CPU saturation on a 4-vCPU runner with O(N²) fan-out**. With #7775 (session throw fix) we expect a ~6% process-CPU reduction at the cliff; with #7774 (flush deferral) a modest tail-latency improvement; with #7768 a correctness fix that costs nothing. Further ceiling extension needs to attack one of two remaining surfaces:
+The dive's cliff at 350-400 authors is **single-event-loop saturation on one core, regardless of host vCPU count** (confirmed by local taskset experiment: 4-core and 8-core SUTs hit the same cliff at the same step with one full core busy). With #7775+#7776 stacked the cliff effectively moves from ~400 to ~500 authors and CPU% drops 12-20% across the whole sweep. With #7774 (flush deferral) a modest tail-latency improvement on top. With #7768 a correctness fix that costs nothing. Further ceiling extension needs to attack one of two remaining surfaces:
 
-1. **Bigger hardware or per-pad sharding.** A 4-vCPU runner is the constraint, not Etherpad. Production on 8+ vCPU sees the cliff move proportionally with no code changes. Per-pad multi-worker sharding lets a single host scale beyond single-core limits but is a much larger architectural change.
+1. **Worker-thread offload of OT.** ~25% of CPU is in `Changeset.applyToAText` and friends — pure computation that could run in a worker thread or worker pool. The main event loop becomes a coordinator; the heavy lift parallelises. Verified necessary by the local vCPU experiment above: bigger boxes do *not* move the cliff because Etherpad uses one core regardless. Worker threads is the smallest architectural change that lifts the single-event-loop ceiling.
 
 2. **Better measurement methodology.** Single-run lever comparisons sit inside the noise envelope below the cliff. Future dive scoring should default to N≥3 trials and report min/median/max. The triple-run pattern this doc adopted is the template; N=5+ would tighten conclusions further.
 
-The application-level surface has been explored end-to-end. Most non-trivial code levers that were thought to be wins turned out to be either inside the noise envelope (#7766 closed, #7770 closed, #7768 perf claim wrong) or net-negative (#7769 closed). The CPU-profile-identified levers are the exception: #7774 (engine.io flush deferral) is a small confirmed win, and #7775 (SessionManager throw fix) is a clear ~6% win pending a sweep against the merged branch. **The cliff remains hardware-bound on the runner we measure on**, but production deployments will see two stacking wins from #7774 + #7775 without architectural change. Further code wins would need a Changeset/OT refactor (~25% of profile) — a much larger project.
+The application-level surface has been explored end-to-end. Most non-trivial code levers that were thought to be wins turned out to be either inside the noise envelope (#7766 closed, #7770 closed, #7768 perf claim wrong) or net-negative (#7769 closed). The CPU-profile-identified levers are the exception: #7775 + #7776 stacked deliver -12% to -20% CPU% with the cliff effectively shifting from ~400 to ~500 authors — the biggest single-direction perf improvement in this program, and the first set of changes that move the cliff position itself rather than just thinning the tail. #7774 layers a modest additional tail-latency improvement on top. **Past this point the cliff is no longer hardware-bound; it's single-event-loop-bound** — verified by the local taskset experiment showing the cliff doesn't move when you give Etherpad more cores. Worker-thread offload of OT is the smallest architectural change that lifts the ceiling further — a separate program of work.
 
 ## Reproducing
 
