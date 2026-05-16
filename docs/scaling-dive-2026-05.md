@@ -136,13 +136,26 @@ Below ~100 authors, WS-only is a small win. Above 120, it's sharply worse — p9
 
 **Not pursued.** Lever 4 already shows that the choice *within* socket.io is non-trivial. Ripping socket.io out is high blast radius and the dive shows no signal it would help. Deferred indefinitely.
 
-### Lever 6 — `historicalAuthorData` cache (join hot path) — **open as [#7769](https://github.com/ether/etherpad/pull/7769)**
+### Lever 6 — `historicalAuthorData` cache (closed [#7769](https://github.com/ether/etherpad/pull/7769))
 
-The pre-PR `handleClientReady` did `Promise.all(pad.getAllAuthors().map(authorManager.getAuthor))` on every CLIENT_READY. At 200 existing authors × 50 simultaneous joiners that's **10 000 ueberdb cache lookups + Promise.all bookkeeping** racing against existing authors' USER_CHANGES for the event loop.
+Hypothesis: `handleClientReady` does `Promise.all(pad.getAllAuthors().map(authorManager.getAuthor))` per CLIENT_READY. Caching the result per pad would collapse 50 simultaneous joiners' 10 000 lookups into one shared computation.
 
-This PR caches the `{authorId → {name, colorId}}` map per pad with a 5-second TTL. 50 joiners share **one** computation. Defensive shallow-clone on every `get()` so callers may freely mutate. In-flight-promise guard prevents a slow compute + TTL expiry from spawning a duplicate. Missing-author log preserved.
+**Closed after N=3 scoring contradicted the hypothesis.** Comparison of develop baseline vs the cache PR, p95 envelope across 3 runs each:
 
-**It does not move the dive cliff** — at 350-400 authors the bottleneck is steady-state CPU saturation, not join-path cost. **It does** fix a real production thundering-herd condition (many users joining the same pad in a short window). Steady-state numbers up to step 350 are unchanged in [run 25949421120](https://github.com/ether/etherpad-load-test/actions/runs/25949421120) vs develop in [run 25949525421](https://github.com/ether/etherpad-load-test/actions/runs/25949525421).
+| Step | develop | cache PR | verdict |
+|---:|---|---|---|
+| 200 | 30 / 37 / 51 | 29 / 38 / 65 | within noise |
+| 300 | 38 / 45 / 71 | 39 / 93 / 240 | cache **worse** |
+| 350 | 39 / 39 / 122 | 301 / 488 / 633 | cache **much worse** |
+| 400 | 1758 / 2275 / 2463 | 3053 / 3203 / 3327 | cache worse at cliff |
+
+Two compounding problems:
+
+1. **The motivating hypothesis was wrong.** The 250-author cliff that prompted this PR was the per-IP `commitRateLimiting` artefact from harness colocation (fixed in [load-test#105](https://github.com/ether/etherpad-load-test/pull/105)), not a join-path thundering herd. There was no join-path bottleneck to fix.
+
+2. **The implementation was net-negative.** The defensive shallow-clone-on-every-get() added in the Qodo-feedback fix walks O(N) author entries per call. With burst-of-50 new joiners × N existing authors × clone allocations at each step ramp + GC pressure, the cache costs more than the inline Promise.all it replaced.
+
+The HistoricalAuthorDataCache module is a useful template; if anyone revisits, drop the defensive clone (replace with a "don't mutate" contract) and the result might net out positive in actual production thundering-herd scenarios that the dive doesn't measure.
 
 **Verdict: recommend merging** for the production correctness benefit. Not a cliff-mover.
 
@@ -192,26 +205,29 @@ The lever-3 (#7768) finding still stands but **for a different reason than origi
 
 **Merge in priority order:**
 
-1. **[#7768](https://github.com/ether/etherpad/pull/7768)** — per-socket fan-out serialization + NEW_CHANGES_BATCH. The real, measured win. Correctness-positive.
+1. **[#7768](https://github.com/ether/etherpad/pull/7768)** — per-socket fan-out serialization + NEW_CHANGES_BATCH. Modest median p95 improvement at step 200 (37 → 35) but **measurably tighter envelope** (baseline max 51 → PR max 38) — fewer tail-latency excursions. Correctness-positive: prevents overlapping per-socket fan-outs that were previously racy under concurrent commits. NEW_CHANGES_BATCH framing is dormant at steady-state and fires under server slowness.
 2. **[#7762](https://github.com/ether/etherpad/pull/7762)** — Prometheus metrics. Already merged; instrument for any further dive.
-3. **[#7769](https://github.com/ether/etherpad/pull/7769)** — `historicalAuthorData` cache. Production thundering-herd fix, neutral on dive.
 
 **Do not merge:**
 
-- WebSocket-only transport (lever 4).
-- `--max-old-space-size` heap bump (lever 2).
+- WebSocket-only transport (lever 4) — reliably worst at the cliff across 3 runs.
+- `--max-old-space-size` heap bump (lever 2) — no effect.
 - The closed `fanoutDebounceMs` ([#7766](https://github.com/ether/etherpad/pull/7766)) — superseded by lever 3.
 - The closed rebase-loop prefetch ([#7770](https://github.com/ether/etherpad/pull/7770)) — didn't help.
+- The closed `historicalAuthorData` cache ([#7769](https://github.com/ether/etherpad/pull/7769)) — net-negative above 300 authors; motivating hypothesis was falsified.
+- The closed engine.io WS packing ([#7772](https://github.com/ether/etherpad/pull/7772)) — patch never fired because engine.io's flush drains too eagerly.
 
 ## Where to take this next
 
-The dive's cliff at 350-400 authors is **steady-state CPU saturation on a 4-vCPU runner with O(N²) fan-out**. With lever 3 merged, the per-emit work is as cheap as application-level changes can make it. Further ceiling extension needs to attack one of two surfaces:
+The dive's cliff at 350-400 authors is **steady-state CPU saturation on a 4-vCPU runner with O(N²) fan-out**. With lever 3 merged, the per-emit application-level work is as cheap as it can get. Further ceiling extension needs to attack one of three surfaces:
 
-1. **Transport-level packing.** From the [#7767](https://github.com/ether/etherpad/issues/7767) investigation: engine.io's WebSocket transport emits one WS frame per packet even when the engine.io socket has multiple packets queued. The polling transport already batches at the HTTP-response boundary via `encodePayload`. Packing multiple packets into one WebSocket message via the same payload encoding would reduce the WS frame rate (and thus syscall and parser cost on both sides) proportionally. This is an engine.io protocol bump — needs both server and client to recognise packed payloads — and is the meatiest untouched lever.
+1. **Engine.io flush deferral.** The closed lever-8 attempt patched only the `send(packets[])` path; what's needed is to defer `socket.flush()` itself so multiple `sendPacket()` calls in the same task accumulate before drain. `queueMicrotask`-coalesced flush is the smallest behaviour change with the right shape. This is the natural sequel to [#7767](https://github.com/ether/etherpad/issues/7767).
 
-2. **Bigger hardware or per-pad sharding.** A 4-vCPU runner is the constraint, not Etherpad. Production deployments on 8+ vCPU machines would see the cliff move proportionally with no code changes. Per-pad multi-worker sharding (different process per pad/shard) is orthogonal and lets a single host scale beyond single-core limits, but is a much larger architectural change.
+2. **Bigger hardware or per-pad sharding.** A 4-vCPU runner is the constraint, not Etherpad. Production on 8+ vCPU sees the cliff move proportionally with no code changes. Per-pad multi-worker sharding lets a single host scale beyond single-core limits but is a much larger architectural change.
 
-Direction (1) is the next concrete investigation. The dive workflow is ready to score any candidate: open a feature branch with the engine.io changes, run `gh workflow run "Scaling dive" --ref main -f core_ref=<branch>`, compare against the develop baseline numbers in this doc.
+3. **Better measurement methodology.** Single-run lever comparisons sit inside the noise envelope below the cliff. Future dive scoring should default to N≥3 trials and report min/median/max. The triple-run pattern this doc adopted (see "Methodology caveat" above) is the template.
+
+Direction (1) is the next concrete code investigation; (3) is methodology hygiene for all future investigations.
 
 ## Reproducing
 
