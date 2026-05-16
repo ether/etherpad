@@ -69,6 +69,16 @@ const socketSessionMiddleware = (args: any) => (socket: any, next: Function) => 
 };
 
 export const expressCreateServer = (hookName:string, args:ArgsExpressType, cb:Function) => {
+  // Engine.io WebSocket transport-level packing (ether/etherpad#7756 lever 8).
+  // Apply BEFORE constructing the socket.io Server so the patched transport
+  // prototype is in effect when the Server instantiates its engine.
+  if (settings.enginePacking === true) {
+    // Require lazily so production deployments that don't set the flag
+    // don't even load the patch module.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    require('../../utils/EnginePacking').installEngineWsPacking();
+  }
+
   // init socket.io and redirect all requests to the MessageHandler
   // there shouldn't be a browser that isn't compatible to all
   // transports in this list at once

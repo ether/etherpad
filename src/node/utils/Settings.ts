@@ -272,6 +272,7 @@ export type SettingsType = {
   automaticReconnectionTimeout: number,
   loadTest: boolean,
   scalingDiveMetrics: boolean,
+  enginePacking: boolean,
   dumpOnUncleanExit: boolean,
   indentationOnNewLine: boolean,
   logconfig: any | null,
@@ -658,6 +659,23 @@ const settings: SettingsType = {
    * production deployments aren't paying for instrumentation they don't use.
    */
   scalingDiveMetrics: false,
+  /**
+   * Pack multiple engine.io packets into a single WebSocket frame
+   * (ether/etherpad#7756 lever 8). engine.io's WS transport otherwise
+   * sends one frame per packet, while the polling transport already
+   * batches via encodePayload. Enabling this matches the polling
+   * coalescing behaviour on the WS path; at high fan-out rates it cuts
+   * the WS frame count proportionally to packets-per-flush.
+   *
+   * WARNING: enabling this requires connected clients to recognise
+   * payload-encoded WS frames (split on the `\x1e` record separator
+   * and decodePayload). Clients that pass each frame straight to
+   * decodePacket will fail to parse a multi-packet frame and silently
+   * miss those messages. The etherpad browser bundle and
+   * etherpad-cli-client are forward-compatible (they detect the
+   * separator); third-party clients may not be. Coordinate rollouts.
+   */
+  enginePacking: false,
   /**
    * Disable dump of objects preventing a clean exit
    */
