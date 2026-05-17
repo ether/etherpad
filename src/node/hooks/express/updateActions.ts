@@ -6,7 +6,7 @@ import {spawn} from 'node:child_process';
 import log4js from 'log4js';
 import {ArgsExpressType} from '../../types/ArgsExpressType';
 import settings, {getEpVersion} from '../../utils/Settings';
-import {getDetectedInstallMethod, stateFilePath, getRollbackDeps} from '../../updater';
+import {getDetectedInstallMethod, stateFilePath, getRollbackDeps, notifyApplyFailure} from '../../updater';
 import {evaluatePolicy} from '../../updater/UpdatePolicy';
 import {loadState, saveState} from '../../updater/state';
 import {acquireLock, releaseLock} from '../../updater/lock';
@@ -104,6 +104,20 @@ const buildPreflightDeps = (installMethod: ReturnType<typeof getDetectedInstallM
     requireSignature: settings.updates.requireSignature,
     trustedKeysPath: settings.updates.trustedKeysPath,
   }),
+  readTargetEnginesNode: (tag: string) => new Promise<string | null>((resolve) => {
+    const c = spawn('git', ['show', `${tag}:package.json`],
+                    {cwd: settings.root, stdio: ['ignore', 'pipe', 'ignore']});
+    let out = '';
+    c.stdout.on('data', (b) => { out += b.toString(); });
+    c.on('close', () => {
+      try {
+        const pkg = JSON.parse(out);
+        const range = pkg?.engines?.node;
+        resolve(typeof range === 'string' && range.trim().length > 0 ? range : null);
+      } catch { resolve(null); }
+    });
+    c.on('error', () => resolve(null));
+  }),
 });
 
 /**
@@ -193,6 +207,7 @@ export const expressCreateServer = (
                 diskSpaceMinMB: Number(settings.updates.diskSpaceMinMB) || 500,
                 requireSignature: settings.updates.requireSignature,
                 trustedKeysPath: settings.updates.trustedKeysPath,
+                currentNodeVersion: process.versions.node,
               },
               {
                 ...baseDeps,
@@ -255,6 +270,20 @@ export const expressCreateServer = (
         },
       });
       drainer = null;
+
+      // Fire the failure-notification email path for outcomes the admin needs
+      // to know about even on manual apply (an admin might click Apply and
+      // walk away; rolling back silently isn't enough). Errors here are
+      // swallowed by notifyApplyFailure — they must not block the response.
+      if (result.outcome === 'preflight-failed') {
+        void notifyApplyFailure({
+          outcome: 'preflight-failed', targetTag, reason: result.reason,
+        });
+      } else if (result.outcome === 'rolled-back') {
+        void notifyApplyFailure({
+          outcome: 'rolled-back', targetTag, reason: 'rolled-back',
+        });
+      }
 
       if (responded) return; // already 202'd in onAccepted; nothing more to send.
 

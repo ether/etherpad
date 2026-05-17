@@ -614,7 +614,7 @@ describe(__filename, function () {
             .expect((res:any) => assert.equal(res.text, 'ofoo\n'));
       });
 
-      it('txt request rev test1 is 403', async function () {
+      it('txt request rev test1 returns 500 with error message', async function () {
         await agent.get(`/p/${testPadId}/test1/export/txt`)
             .set("authorization", await common.generateJWTToken())
             .expect(500)

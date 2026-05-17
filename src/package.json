@@ -65,6 +65,7 @@
     "mssql": "^12.5.3",
     "mysql2": "^3.22.3",
     "nano": "^11.0.5",
+    "nodemailer": "^8.0.7",
     "oidc-provider": "9.8.3",
     "openapi-backend": "^5.16.1",
     "pdfkit": "^0.18.0",
@@ -114,6 +115,7 @@
     "@types/mime-types": "^3.0.1",
     "@types/mocha": "^10.0.9",
     "@types/node": "^25.8.0",
+    "@types/nodemailer": "^8.0.0",
     "@types/oidc-provider": "^9.5.0",
     "@types/pdfkit": "^0.17.6",
     "@types/semver": "^7.7.1",
@@ -147,7 +149,7 @@
   },
   "scripts": {
     "lint": "eslint .",
-    "test": "cross-env NODE_ENV=production mocha --import=tsx --require ./tests/backend/diagnostics.ts --timeout 120000 --recursive tests/backend/specs/**.ts ../node_modules/ep_*/static/tests/backend/specs/**",
+    "test": "cross-env NODE_ENV=production mocha --import=tsx --require ./tests/backend/diagnostics.ts --timeout 120000 --extension ts --recursive tests/backend/specs ../node_modules/ep_*/static/tests/backend/specs",
     "test-utils": "cross-env NODE_ENV=production mocha --import=tsx --timeout 5000 --recursive tests/backend/specs/*utils.ts",
     "test-container": "mocha --import=tsx --timeout 5000 tests/container/specs/api",
     "dev": "cross-env NODE_ENV=development  node --require tsx/cjs node/server.ts",
@@ -161,6 +163,6 @@
     "debug:socketio": "cross-env DEBUG=socket.io* node --require tsx/cjs node/server.ts",
     "test:vitest": "vitest"
   },
-  "version": "3.0.0",
+  "version": "3.1.0",
   "license": "Apache-2.0"
 }

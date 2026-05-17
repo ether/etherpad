@@ -698,6 +698,8 @@ return true of false
 
 returns an array of authors who contributed to this pad
 
+The synthetic `a.etherpad-system` author (used internally when content is inserted without an explicit `authorId` — HTTP API `setText`/`appendText`/`setHTML` calls without `authorId`, server-side imports, plugins like `ep_post_data`) is omitted from the returned list.
+
 *Example returns:*
 * `{code: 0, message:"ok", data: {authorIDs : ["a.s8oes9dhwrvt0zif", "a.akf8finncvomlqva"]}`
 * `{code: 1, message:"padID does not exist", data: null}`

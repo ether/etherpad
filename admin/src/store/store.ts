@@ -25,6 +25,12 @@ export type LastResult = null | {
   at: string;
 };
 
+export interface MaintenanceWindow {
+  start: string;
+  end: string;
+  tz: 'local' | 'utc';
+}
+
 export interface UpdateStatusPayload {
   currentVersion: string;
   latest: null | {
@@ -44,6 +50,9 @@ export interface UpdateStatusPayload {
   execution: Execution;
   lastResult: LastResult;
   lockHeld: boolean;
+  // Tier 4 additions:
+  maintenanceWindow: MaintenanceWindow | null;
+  nextWindowOpensAt: string | null;
 }
 
 type ToastState = {

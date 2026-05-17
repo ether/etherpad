@@ -20,7 +20,6 @@
  */
 
 import {MapArrayType} from "../types/MapType";
-import { jwtDecode } from "jwt-decode";
 const api = require('../db/API');
 const padManager = require('../db/PadManager');
 import settings from '../utils/Settings';
@@ -29,6 +28,7 @@ import {Http2ServerRequest} from "node:http2";
 import {publicKeyExported} from "../security/OAuth2Provider";
 import {jwtVerify} from "jose";
 import {APIFields, apikey} from './APIKeyHandler'
+import crypto from 'node:crypto';
 // a list of all functions
 const version:MapArrayType<any> = {};
 
@@ -179,27 +179,41 @@ exports.handle = async function (apiVersion: string, functionName: string, field
 
   if (apikey !== null && apikey.trim().length > 0) {
     fields.apikey = fields.apikey || fields.api_key || fields.authorization;
-    // API key is configured, check if it is valid
-    if (fields.apikey !== apikey!.trim()) {
+    // Constant-time compare — see crypto.timingSafeEqual docs.
+    const provided = Buffer.from(String(fields.apikey ?? ''), 'utf8');
+    const want = Buffer.from(apikey!.trim(), 'utf8');
+    const ok = provided.length === want.length &&
+        crypto.timingSafeEqual(provided, want);
+    if (!ok) {
       throw new createHTTPError.Unauthorized('no or wrong API Key');
     }
   } else {
-    if(!req.headers.authorization) {
+    if (!req.headers.authorization) {
       throw new createHTTPError.Unauthorized('no or wrong API Key');
     }
     try {
-      const clientIds: string[] = settings.sso.clients?.map((client: {client_id: string}) => client.client_id) ?? [];
-      const jwtToCheck = req.headers.authorization.replace("Bearer ", "")
-      const payload = jwtDecode(jwtToCheck)
-      // client_credentials
-      if (clientIds.includes(<string>payload.sub)) {
-        await jwtVerify(jwtToCheck, publicKeyExported!, {algorithms: ['RS256']})
-      } else {
-        // authorization_code
-        await jwtVerify(jwtToCheck, publicKeyExported!, {algorithms: ['RS256'],
-          requiredClaims: ["admin"]})
+      const clientIds: string[] = settings.sso.clients?.map(
+          (client: {client_id: string}) => client.client_id) ?? [];
+      const jwtToCheck = req.headers.authorization.replace('Bearer ', '');
+      // Verify the JWT signature first, then read claims off the verified
+      // payload only.
+      const {payload: verified} = await jwtVerify(
+          jwtToCheck, publicKeyExported!, {algorithms: ['RS256']});
+      const isClientCredentials =
+          clientIds.includes(verified.sub as string);
+      if (!isClientCredentials) {
+        // authorization_code branch: require the admin claim to be
+        // strictly true. Checking only that the claim is present is not
+        // sufficient — the provider issues it as `admin: is_admin`, so
+        // non-admin users would have it set to false.
+        if (verified.admin !== true) {
+          throw new createHTTPError.Unauthorized(
+              'admin claim missing or not true');
+        }
       }
     } catch (e) {
+      // Single error string regardless of the underlying failure so we
+      // don't leak which check rejected the token.
       throw new createHTTPError.Unauthorized('no or wrong OAuth token');
     }
   }

@@ -192,6 +192,54 @@ export const UpdatePage = () => {
               values={{tag: scheduled.targetTag, remaining: fmtRemaining(remainingMs)}}
             />
           </p>
+          {/* Tier 4: only surface the deferral subtitle when `scheduledFor`
+              was actually snapped forward to the next window opening. The
+              backend keeps `scheduledFor = now + grace` whenever that lands
+              inside the window, so we can't use a fixed time-distance
+              heuristic (a normal 15-min grace would falsely match). Instead,
+              compare against `nextWindowOpensAt` with a small tolerance — the
+              two are computed seconds apart at request time, so an exact-ish
+              match is the only safe signal that the schedule was deferred. */}
+          {us.tier === 'autonomous' && us.nextWindowOpensAt
+              && Math.abs(new Date(scheduled.scheduledFor).getTime()
+                          - new Date(us.nextWindowOpensAt).getTime()) < 60 * 1000 && (
+            <p className="update-scheduled-deferred">
+              <Trans
+                i18nKey="update.page.scheduled.deferred_until"
+                values={{at: us.nextWindowOpensAt}}
+              />
+            </p>
+          )}
+        </section>
+      )}
+
+      {us.tier === 'autonomous' && (
+        <section className="update-maintenance-window">
+          <h2><Trans i18nKey="update.window.title"/></h2>
+          {us.maintenanceWindow ? (
+            <>
+              <p>
+                <Trans
+                  i18nKey="update.window.summary"
+                  values={{
+                    start: us.maintenanceWindow.start,
+                    end: us.maintenanceWindow.end,
+                    tz: us.maintenanceWindow.tz,
+                  }}
+                />
+              </p>
+              {us.nextWindowOpensAt && (
+                <p>
+                  <Trans
+                    i18nKey="update.window.next_opens_at"
+                    values={{at: us.nextWindowOpensAt}}
+                  />
+                </p>
+              )}
+            </>
+          ) : (
+            <p><Trans i18nKey="update.window.unset"/></p>
+          )}
         </section>
       )}
 
