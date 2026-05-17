@@ -13,7 +13,7 @@
 
 import {execFileSync} from 'child_process';
 import {readFileSync} from 'fs';
-import {join, sep} from 'path';
+import {isAbsolute, join, relative} from 'path';
 import {describe, it, expect} from 'vitest';
 
 const srcRoot = join(__dirname, '..', '..', '..');
@@ -47,13 +47,16 @@ describe('backend test glob', () => {
     );
     // mocha --list-files prints absolute paths with platform separators.
     // Normalise to repo-relative POSIX paths so the assertions match on
-    // both Linux and Windows runners.
-    const prefix = `${srcRoot}${sep}`;
+    // both Linux and Windows runners. path.relative handles drive-letter
+    // casing and mixed separators consistently; absolute lines that fall
+    // outside srcRoot (shouldn't happen with --recursive on srcRoot, but
+    // be defensive) are passed through untouched and would fail the
+    // toContain() check loudly rather than silently.
     const seen = out.split(/\r?\n/)
         .map((l) => l.trim())
         .filter(Boolean)
-        .map((l) => (l.startsWith(prefix) ? l.slice(prefix.length) : l))
-        .map((l) => l.split(sep).join('/'));
+        .map((l) => (isAbsolute(l) ? relative(srcRoot, l) : l))
+        .map((l) => l.split(/[\\/]/).join('/'));
     for (const required of REQUIRED) {
       expect(seen, `mocha test glob missed ${required}`).toContain(required);
     }
