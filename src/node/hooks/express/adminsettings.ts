@@ -1,7 +1,7 @@
 'use strict';
 
 
-import {PadQueryResult, PadSearchQuery} from "../../types/PadSearchQuery";
+import {PAD_FILTERS, PadFilter, PadQueryResult, PadSearchQuery} from "../../types/PadSearchQuery";
 import log4js from 'log4js';
 
 const fsp = require('fs').promises;
@@ -110,137 +110,111 @@ exports.socketio = (hookName: string, {io}: any) => {
     socket.on('padLoad', async (query: PadSearchQuery) => {
       const {padIDs} = await padManager.listAllPads();
 
-      const data: {
-        total: number,
-        results?: PadQueryResult[]
-      } = {
-        total: padIDs.length,
-      };
-      let result: string[] = padIDs;
-      let maxResult;
-
-      // Filter out matches
+      // ── 1. Pattern filter (cheap, by name only) ─────────────────────
+      let candidateNames: string[] = padIDs;
       if (query.pattern) {
-        result = result.filter((padName: string) => padName.includes(query.pattern));
+        candidateNames = candidateNames.filter(
+            (padName: string) => padName.includes(query.pattern));
       }
 
-      data.total = result.length;
+      // ── 2. Resolve filter chip ──────────────────────────────────────
+      // PadPage sends a chip id; "all" (default) means no additional
+      // filtering. We accept missing values from older clients gracefully.
+      const filter: PadFilter =
+          (query.filter && PAD_FILTERS.includes(query.filter)) ? query.filter : 'all';
 
-      maxResult = result.length - 1;
-      if (maxResult < 0) {
-        maxResult = 0;
+      // ── 3. Decide whether we need full metadata for every candidate ──
+      // The fast path — name-sort with no filter chip — only needs to
+      // hydrate metadata for the 12-row page slice. Any other path
+      // (filter chip OR non-name sort) requires every candidate's revs
+      // / users / lastEdited up front so we can sort and slice against
+      // the right universe. The expensive call is `padManager.getPad`;
+      // user counts come from an in-memory map.
+      const needsFullScan = filter !== 'all' || query.sortBy !== 'padName';
+
+      const loadMeta = async (padName: string): Promise<PadQueryResult> => {
+        const pad = await padManager.getPad(padName);
+        return {
+          padName,
+          lastEdited: await pad.getLastEdit(),
+          userCount: api.padUsersCount(padName).padUsersCount,
+          revisionNumber: pad.getHeadRevisionNumber(),
+        };
+      };
+
+      // Lazily lifted so we don't load every pad twice on the fast path.
+      let hydrated: PadQueryResult[] | null = null;
+      const hydrateAll = async () => {
+        if (hydrated == null) {
+          hydrated = await Promise.all(candidateNames.map(loadMeta));
+        }
+        return hydrated;
+      };
+
+      // ── 4. Filter chip — applied to hydrated metadata ────────────────
+      // Bucket boundaries match the client chips in PadPage.tsx so the
+      // counts on the stats cards keep meaning the same thing. Compute
+      // `now` once per request so a pad doesn't slip between buckets
+      // mid-loop.
+      const now = Date.now();
+      const isRecent = (lastEdited: number) => now - lastEdited < 86_400_000 * 7;
+      const isStale  = (lastEdited: number) => now - lastEdited > 86_400_000 * 365;
+      const matchesFilter = (m: PadQueryResult) => {
+        switch (filter) {
+          case 'active': return m.userCount > 0;
+          case 'recent': return isRecent(Number(m.lastEdited));
+          case 'empty':  return m.revisionNumber === 0;
+          case 'stale':  return isStale(Number(m.lastEdited));
+          default:       return true;
+        }
+      };
+
+      // ── 5. Total — i.e. the count the pagination footer reflects ────
+      // For the fast path this is just the pattern-filtered name list;
+      // for full-scan we report the post-chip total.
+      let totalNames: string[] | null = needsFullScan ? null : candidateNames;
+      let postFilterMetas: PadQueryResult[] | null = null;
+      if (needsFullScan) {
+        postFilterMetas = (await hydrateAll()).filter(matchesFilter);
       }
+      const total = needsFullScan ? postFilterMetas!.length : totalNames!.length;
 
-      // Reset to default values if out of bounds
+      // ── 6. Clamp offset/limit ──────────────────────────────────────
+      const maxOffset = Math.max(total - 1, 0);
       if (query.offset && query.offset < 0) {
         query.offset = 0;
-      } else if (query.offset > maxResult) {
-        query.offset = maxResult;
+      } else if (query.offset > maxOffset) {
+        query.offset = maxOffset;
       }
-
       if (query.limit && query.limit < 0) {
-       // Too small
         query.limit = 0;
       } else if (query.limit > queryPadLimit) {
-       // Too big
         query.limit = queryPadLimit;
       }
 
+      // ── 7. Sort + slice ────────────────────────────────────────────
+      const dir = query.ascending ? 1 : -1;
+      const cmpStr = (a: string, b: string) => a < b ? -dir : a > b ? dir : 0;
+      const cmpNum = (a: number, b: number) => a < b ? -dir : a > b ? dir : 0;
 
-      if (query.sortBy === 'padName') {
-        result = result.sort((a, b) => {
-          if (a < b) return query.ascending ? -1 : 1;
-          if (a > b) return query.ascending ? 1 : -1;
-          return 0;
-        }).slice(query.offset, query.offset + query.limit);
-
-        data.results = await Promise.all(result.map(async (padName: string) => {
-          const pad = await padManager.getPad(padName);
-          const revisionNumber = pad.getHeadRevisionNumber()
-          const userCount = api.padUsersCount(padName).padUsersCount;
-          const lastEdited = await pad.getLastEdit();
-
-          return {
-            padName,
-            lastEdited,
-            userCount,
-            revisionNumber
+      let results: PadQueryResult[];
+      if (needsFullScan) {
+        const sorted = postFilterMetas!.sort((a, b) => {
+          switch (query.sortBy) {
+            case 'padName':        return cmpStr(a.padName, b.padName);
+            case 'revisionNumber': return cmpNum(a.revisionNumber, b.revisionNumber);
+            case 'userCount':      return cmpNum(a.userCount, b.userCount);
+            case 'lastEdited':     return cmpStr(String(a.lastEdited), String(b.lastEdited));
+            default:               return 0;
           }
-        }));
-      } else if (query.sortBy === "revisionNumber") {
-        const currentWinners: PadQueryResult[] = []
-        const padMapping = [] as {padId: string, revisionNumber: number}[]
-        for (let res of result) {
-          const pad = await padManager.getPad(res);
-          const revisionNumber = pad.getHeadRevisionNumber()
-          padMapping.push({padId: res, revisionNumber})
-        }
-        padMapping.sort((a, b) => {
-          if (a.revisionNumber < b.revisionNumber) return query.ascending ? -1 : 1;
-          if (a.revisionNumber > b.revisionNumber) return query.ascending ? 1 : -1;
-          return 0;
-        })
-
-       for (const padRetrieval of padMapping.slice(query.offset, query.offset + query.limit)) {
-        let pad = await padManager.getPad(padRetrieval.padId);
-        currentWinners.push({
-         padName: padRetrieval.padId,
-         lastEdited: await pad.getLastEdit(),
-         userCount: api.padUsersCount(pad.padName).padUsersCount,
-         revisionNumber: padRetrieval.revisionNumber
-        })
-       }
-
-       data.results = currentWinners;
-      } else if (query.sortBy === "userCount") {
-       const currentWinners: PadQueryResult[] = []
-       const padMapping = [] as {padId: string, userCount: number}[]
-       for (let res of result) {
-        const userCount = api.padUsersCount(res).padUsersCount
-        padMapping.push({padId: res, userCount})
-       }
-       padMapping.sort((a, b) => {
-        if (a.userCount < b.userCount) return query.ascending ? -1 : 1;
-        if (a.userCount > b.userCount) return query.ascending ? 1 : -1;
-        return 0;
-       })
-
-       for (const padRetrieval of padMapping.slice(query.offset, query.offset + query.limit)) {
-        let pad = await padManager.getPad(padRetrieval.padId);
-        currentWinners.push({
-         padName: padRetrieval.padId,
-         lastEdited: await pad.getLastEdit(),
-         userCount: padRetrieval.userCount,
-         revisionNumber: pad.getHeadRevisionNumber()
-        })
-       }
-       data.results = currentWinners;
-      } else if (query.sortBy === "lastEdited") {
-       const currentWinners: PadQueryResult[] = []
-       const padMapping = [] as {padId: string, lastEdited: string}[]
-       for (let res of result) {
-        const pad = await padManager.getPad(res);
-        const lastEdited = await pad.getLastEdit();
-        padMapping.push({padId: res, lastEdited})
-       }
-       padMapping.sort((a, b) => {
-        if (a.lastEdited < b.lastEdited) return query.ascending ? -1 : 1;
-        if (a.lastEdited > b.lastEdited) return query.ascending ? 1 : -1;
-        return 0;
-       })
-
-       for (const padRetrieval of padMapping.slice(query.offset, query.offset + query.limit)) {
-        let pad = await padManager.getPad(padRetrieval.padId);
-        currentWinners.push({
-         padName: padRetrieval.padId,
-         lastEdited: padRetrieval.lastEdited,
-         userCount: api.padUsersCount(pad.padName).padUsersCount,
-         revisionNumber: pad.getHeadRevisionNumber()
-        })
-       }
-       data.results = currentWinners;
+        });
+        results = sorted.slice(query.offset, query.offset + query.limit);
+      } else {
+        const sliceNames = totalNames!.sort(cmpStr).slice(query.offset, query.offset + query.limit);
+        results = await Promise.all(sliceNames.map(loadMeta));
       }
 
+      const data: {total: number, results?: PadQueryResult[]} = {total, results};
       socket.emit('results:padLoad', data);
     })
 

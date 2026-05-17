@@ -1,7 +1,7 @@
 import {Trans, useTranslation} from "react-i18next";
 import {useEffect, useMemo, useState} from "react";
 import {useStore} from "../store/store.ts";
-import {PadSearchQuery, PadSearchResult} from "../utils/PadSearch.ts";
+import {PadFilter, PadSearchQuery, PadSearchResult} from "../utils/PadSearch.ts";
 import {useDebounce} from "../utils/useDebounce.ts";
 import * as Dialog from "@radix-ui/react-dialog";
 import {ChevronLeft, ChevronRight, Eye, Trash2, FileStack, PlusIcon, Search, X, RefreshCw, History} from "lucide-react";
@@ -9,12 +9,8 @@ import {useForm} from "react-hook-form";
 import type {TFunction} from "i18next";
 
 type PadCreateProps = { padName: string }
-type FilterId = 'all' | 'active' | 'recent' | 'empty' | 'stale'
 
-const PAD_FILTER_IDS: FilterId[] = ['all', 'active', 'recent', 'empty', 'stale']
-
-const isRecent = (ts: number) => (Date.now() - ts) < 86_400_000 * 7
-const isStale  = (ts: number) => (Date.now() - ts) > 86_400_000 * 365
+const PAD_FILTER_IDS: PadFilter[] = ['all', 'active', 'recent', 'empty', 'stale']
 
 function relativeTime(t: TFunction, ts: number): string {
   const d = (Date.now() - ts) / 1000
@@ -58,12 +54,19 @@ function sanitizeLocale(lng?: string): string {
 export const PadPage = () => {
   const settingsSocket = useStore(state => state.settingsSocket)
   const [searchParams, setSearchParams] = useState<PadSearchQuery>({
-    offset: 0, limit: 12, pattern: '', sortBy: 'lastEdited', ascending: false,
+    offset: 0, limit: 12, pattern: '', sortBy: 'lastEdited', ascending: false, filter: 'all',
   })
   const {t, i18n} = useTranslation()
   const locale = sanitizeLocale(i18n.resolvedLanguage ?? i18n.language)
   const [searchTerm, setSearchTerm] = useState('')
-  const [filter, setFilter] = useState<FilterId>('all')
+  // Read filter off searchParams so chip changes round-trip through
+  // the server (`filter` is applied before pagination there). Clicking
+  // a chip used to filter only the current 12-row page slice.
+  const filter: PadFilter = searchParams.filter ?? 'all'
+  const setFilter = (f: PadFilter) => {
+    setCurrentPage(0)
+    setSearchParams({...searchParams, filter: f, offset: 0})
+  }
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const pads = useStore(state => state.pads)
   const [currentPage, setCurrentPage] = useState(0)
@@ -78,28 +81,23 @@ export const PadPage = () => {
     [pads, searchParams.limit]
   )
 
-  const filteredResults = useMemo(() => {
-    const r = pads?.results ?? []
-    if (filter === 'active') return r.filter(p => p.userCount > 0)
-    if (filter === 'recent') return r.filter(p => isRecent(p.lastEdited))
-    if (filter === 'empty')  return r.filter(p => p.revisionNumber === 0)
-    if (filter === 'stale')  return r.filter(p => isStale(p.lastEdited))
-    return r
-  }, [pads, filter])
-
-  const totalUsers  = useMemo(() => (pads?.results ?? []).reduce((s, p) => s + p.userCount, 0), [pads])
-  const activeCount = useMemo(() => (pads?.results ?? []).filter(p => p.userCount > 0).length, [pads])
-  const emptyCount  = useMemo(() => (pads?.results ?? []).filter(p => p.revisionNumber === 0).length, [pads])
+  // The server applies `filter` before paginating; the page payload is
+  // already the filtered slice. The stats cards still reflect the
+  // current page (pre-existing behaviour) — making them global would
+  // require a separate aggregate query.
+  const visibleResults = pads?.results ?? []
+  const totalUsers  = useMemo(() => visibleResults.reduce((s, p) => s + p.userCount, 0), [pads])
+  const activeCount = useMemo(() => visibleResults.filter(p => p.userCount > 0).length, [pads])
+  const emptyCount  = useMemo(() => visibleResults.filter(p => p.revisionNumber === 0).length, [pads])
   const lastActivity = useMemo(() => {
-    const r = pads?.results ?? []
-    return r.length ? Math.max(...r.map(p => p.lastEdited)) : null
+    return visibleResults.length ? Math.max(...visibleResults.map(p => p.lastEdited)) : null
   }, [pads])
 
-  const allSelected = filteredResults.length > 0 && filteredResults.every(p => selected.has(p.padName))
+  const allSelected = visibleResults.length > 0 && visibleResults.every(p => selected.has(p.padName))
   const toggleAll = () => {
     const s = new Set(selected)
-    if (allSelected) filteredResults.forEach(p => s.delete(p.padName))
-    else filteredResults.forEach(p => s.add(p.padName))
+    if (allSelected) visibleResults.forEach(p => s.delete(p.padName))
+    else visibleResults.forEach(p => s.add(p.padName))
     setSelected(s)
   }
   const toggleOne = (name: string) => {
@@ -250,7 +248,7 @@ export const PadPage = () => {
       <section className="pm-section">
         <div className="pm-section-header">
           <h2><Trans i18nKey="admin_pads.all_pads"/></h2>
-          <span className="pm-count-badge">{filteredResults.length}</span>
+          <span className="pm-count-badge">{visibleResults.length}</span>
           <div className="pm-spacer"/>
           <div className="pm-toolbar">
             <div className="pm-search">
@@ -330,7 +328,7 @@ export const PadPage = () => {
           </div>
         )}
 
-        {filteredResults.length > 0 ? (
+        {visibleResults.length > 0 ? (
           <div className="pm-table-wrap">
             <table>
               <thead>
@@ -348,7 +346,7 @@ export const PadPage = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredResults.map(pad => {
+                {visibleResults.map(pad => {
                   const isEmpty = pad.revisionNumber === 0
                   const isSel = selected.has(pad.padName)
                   return (
