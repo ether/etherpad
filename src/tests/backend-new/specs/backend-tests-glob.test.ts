@@ -13,21 +13,20 @@
 
 import {execFileSync} from 'child_process';
 import {readFileSync} from 'fs';
-import {join} from 'path';
+import {join, sep} from 'path';
 import {describe, it, expect} from 'vitest';
 
 const srcRoot = join(__dirname, '..', '..', '..');
 const pkg = JSON.parse(readFileSync(join(srcRoot, 'package.json'), 'utf8'));
 
 // Strip `cross-env NAME=value` prefixes and the leading binary name so we
-// can pass the remaining tokens straight to npx mocha --dry-run.
+// invoke mocha directly with the rest of the script's arguments.
 const tokens = String(pkg.scripts.test).split(/\s+/);
 while (tokens[0] && /^[A-Z_][A-Z0-9_]*=/.test(tokens[0])) tokens.shift();
 if (tokens[0] === 'cross-env') {
   tokens.shift();
   while (tokens[0] && /^[A-Z_][A-Z0-9_]*=/.test(tokens[0])) tokens.shift();
 }
-// Drop the binary itself (mocha) — npx will re-add it.
 if (tokens[0] === 'mocha') tokens.shift();
 
 const REQUIRED = [
@@ -38,15 +37,23 @@ const REQUIRED = [
 
 describe('backend test glob', () => {
   it('discovers nested specs under tests/backend/specs/{api,admin}/', () => {
+    // Resolve mocha's JS entry directly and run it under the current node.
+    // Going through `npx` (or even via the package.json bin shim) breaks on
+    // Windows runners where the resolver doesn't auto-pick `.cmd`/`.bat`.
+    const mochaBin = require.resolve('mocha/bin/mocha.js');
     const out = execFileSync(
-        'npx', ['mocha', '--dry-run', '--list-files', ...tokens],
+        process.execPath, [mochaBin, '--dry-run', '--list-files', ...tokens],
         {cwd: srcRoot, encoding: 'utf8', env: {...process.env, NODE_ENV: 'production'}},
     );
-    // mocha --list-files prints absolute paths. Normalise to repo-relative.
-    const seen = out.split('\n')
+    // mocha --list-files prints absolute paths with platform separators.
+    // Normalise to repo-relative POSIX paths so the assertions match on
+    // both Linux and Windows runners.
+    const prefix = `${srcRoot}${sep}`;
+    const seen = out.split(/\r?\n/)
         .map((l) => l.trim())
         .filter(Boolean)
-        .map((l) => l.replace(`${srcRoot}/`, ''));
+        .map((l) => (l.startsWith(prefix) ? l.slice(prefix.length) : l))
+        .map((l) => l.split(sep).join('/'));
     for (const required of REQUIRED) {
       expect(seen, `mocha test glob missed ${required}`).toContain(required);
     }
