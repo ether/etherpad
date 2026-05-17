@@ -15,7 +15,34 @@ import {deleteRevisions} from '../../utils/Cleanup';
 
 
 const queryPadLimit = 12;
+// Cap on concurrent `padManager.getPad()` calls while hydrating the pad
+// universe for filter chip / non-name sort. The old per-sortBy handlers
+// awaited each getPad sequentially (concurrency = 1); the unified
+// pipeline used to issue Promise.all over the full candidate set, which
+// can fan out to thousands of in-flight DB reads on busy deployments.
+// 16 is empirically enough to saturate a single ueberDB driver without
+// pushing the event loop into back-pressure.
+const PAD_HYDRATE_CONCURRENCY = 16;
 const logger = log4js.getLogger('adminSettings');
+
+// Concurrency-limited Promise.all replacement. Preserves the input
+// order in the returned array (caller slices later). Used by padLoad
+// to bound DB reads during hydration.
+async function mapWithConcurrency<T, R>(
+    items: T[], limit: number, fn: (t: T) => Promise<R>): Promise<R[]> {
+  const out: R[] = new Array(items.length);
+  let next = 0;
+  const worker = async () => {
+    while (true) {
+      const i = next++;
+      if (i >= items.length) return;
+      out[i] = await fn(items[i]);
+    }
+  };
+  const workers = Array.from({length: Math.min(limit, items.length)}, worker);
+  await Promise.all(workers);
+  return out;
+}
 
 
 exports.socketio = (hookName: string, {io}: any) => {
@@ -146,7 +173,8 @@ exports.socketio = (hookName: string, {io}: any) => {
       let hydrated: PadQueryResult[] | null = null;
       const hydrateAll = async () => {
         if (hydrated == null) {
-          hydrated = await Promise.all(candidateNames.map(loadMeta));
+          hydrated = await mapWithConcurrency(
+              candidateNames, PAD_HYDRATE_CONCURRENCY, loadMeta);
         }
         return hydrated;
       };

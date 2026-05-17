@@ -135,6 +135,11 @@ describe(__filename, function () {
   after(async function () {
     if (socket) socket.disconnect();
     if (!setupCompleted) return;
+    // `savedUsers` may point at the same object that adminSocket mutated,
+    // so reassigning the reference is a no-op; explicitly delete the
+    // injected key so subsequent backend specs don't see a stale
+    // test-admin user.
+    if (settings.users) delete settings.users['test-admin'];
     settings.users = savedUsers;
     settings.requireAuthentication = savedRequireAuthentication;
     for (const id of [...emptyPadIds, ...editedPadIds]) {

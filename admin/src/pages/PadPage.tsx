@@ -62,10 +62,14 @@ export const PadPage = () => {
   // Read filter off searchParams so chip changes round-trip through
   // the server (`filter` is applied before pagination there). Clicking
   // a chip used to filter only the current 12-row page slice.
+  //
+  // All searchParams mutations go through functional updaters because the
+  // debounced pattern handler captures a render-time snapshot and would
+  // otherwise revert a faster chip click / sort change made in between.
   const filter: PadFilter = searchParams.filter ?? 'all'
   const setFilter = (f: PadFilter) => {
     setCurrentPage(0)
-    setSearchParams({...searchParams, filter: f, offset: 0})
+    setSearchParams((sp) => ({...sp, filter: f, offset: 0}))
   }
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const pads = useStore(state => state.pads)
@@ -107,7 +111,10 @@ export const PadPage = () => {
   }
 
   useDebounce(() => {
-    setSearchParams({...searchParams, pattern: searchTerm})
+    // Functional updater so this delayed callback can't clobber a faster
+    // user interaction (e.g. clicking a filter chip mid-typing).
+    setSearchParams((sp) => ({...sp, pattern: searchTerm, offset: 0}))
+    setCurrentPage(0)
   }, 500, [searchTerm])
 
   useEffect(() => {
@@ -266,12 +273,12 @@ export const PadPage = () => {
             <select
               className="pm-select"
               value={searchParams.sortBy}
-              onChange={e => setSearchParams({
-                ...searchParams,
+              onChange={e => setSearchParams((sp) => ({
+                ...sp,
                 sortBy: e.target.value,
                 // Keep current direction when only the column changes; the
                 // ↑/↓ button below is the sole control for direction.
-              })}
+              }))}
             >
               <option value="lastEdited">{t('ep_admin_pads:ep_adminpads2_last-edited')}</option>
               <option value="padName">{t('admin_pads.sort.name')}</option>
@@ -280,10 +287,10 @@ export const PadPage = () => {
             </select>
             <button
               className="pm-sort-dir"
-              onClick={() => setSearchParams({
-                ...searchParams,
-                ascending: !searchParams.ascending,
-              })}
+              onClick={() => setSearchParams((sp) => ({
+                ...sp,
+                ascending: !sp.ascending,
+              }))}
               title={t(searchParams.ascending
                 ? 'admin_plugins.sort_ascending'
                 : 'admin_plugins.sort_descending')}
@@ -430,7 +437,7 @@ export const PadPage = () => {
             onClick={() => {
               const p = currentPage - 1
               setCurrentPage(p)
-              setSearchParams({...searchParams, offset: p * searchParams.limit})
+              setSearchParams((sp) => ({...sp, offset: p * sp.limit}))
             }}
           >
             <ChevronLeft size={14}/> <Trans i18nKey="admin_pads.pagination.previous"/>
@@ -442,7 +449,7 @@ export const PadPage = () => {
             onClick={() => {
               const p = currentPage + 1
               setCurrentPage(p)
-              setSearchParams({...searchParams, offset: p * searchParams.limit})
+              setSearchParams((sp) => ({...sp, offset: p * sp.limit}))
             }}
           >
             <Trans i18nKey="admin_pads.pagination.next"/> <ChevronRight size={14}/>
