@@ -21,7 +21,7 @@
  * limitations under the License.
  */
 
-import {Database, DatabaseType} from 'ueberdb2';
+import type {DatabaseType} from 'ueberdb2';
 import settings from '../utils/Settings';
 import log4js from 'log4js';
 const stats = require('../stats')
@@ -37,6 +37,8 @@ exports.db = null;
  * Initializes the database with the settings provided by the settings module
  */
 exports.init = async () => {
+  // ueberdb2 v6 is ESM-only; load via dynamic import so CJS consumers work.
+  const {Database} = await import('ueberdb2');
   exports.db = new Database(settings.dbType as DatabaseType, settings.dbSettings, null, logger);
   await exports.db.init();
   if (exports.db.metrics != null) {

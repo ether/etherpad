@@ -1,7 +1,7 @@
 {
   "name": "admin",
   "private": true,
-  "version": "2.7.3",
+  "version": "3.0.0",
   "type": "module",
   "scripts": {
     "dev": "pnpm gen:api && vite",

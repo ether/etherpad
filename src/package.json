@@ -36,6 +36,7 @@
     "cookie-parser": "^1.4.7",
     "cross-env": "^10.1.0",
     "cross-spawn": "^7.0.6",
+    "dirty-ts": "^1.1.8",
     "ejs": "^5.0.2",
     "esbuild": "^0.28.0",
     "express": "^5.2.1",
@@ -86,7 +87,7 @@
     "surrealdb": "^2.0.3",
     "tinycon": "0.6.8",
     "tsx": "4.22.0",
-    "ueberdb2": "^5.0.48",
+    "ueberdb2": "^6.0.3",
     "underscore": "1.13.8",
     "undici": "^8.3.0",
     "unorm": "1.6.0",
@@ -148,7 +149,7 @@
   },
   "scripts": {
     "lint": "eslint .",
-    "test": "cross-env NODE_ENV=production mocha --import=tsx --require ./tests/backend/diagnostics.ts --timeout 120000 --recursive tests/backend/specs/**.ts ../node_modules/ep_*/static/tests/backend/specs/**",
+    "test": "cross-env NODE_ENV=production mocha --import=tsx --require ./tests/backend/diagnostics.ts --timeout 120000 --extension ts --recursive tests/backend/specs ../node_modules/ep_*/static/tests/backend/specs",
     "test-utils": "cross-env NODE_ENV=production mocha --import=tsx --timeout 5000 --recursive tests/backend/specs/*utils.ts",
     "test-container": "mocha --import=tsx --timeout 5000 tests/container/specs/api",
     "dev": "cross-env NODE_ENV=development  node --require tsx/cjs node/server.ts",
@@ -162,6 +163,6 @@
     "debug:socketio": "cross-env DEBUG=socket.io* node --require tsx/cjs node/server.ts",
     "test:vitest": "vitest"
   },
-  "version": "2.7.3",
+  "version": "3.0.0",
   "license": "Apache-2.0"
 }

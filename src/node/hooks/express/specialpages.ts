@@ -20,12 +20,10 @@ import prometheus from "../../prometheus";
 
 let ioI: { sockets: { sockets: any[]; }; } | null = null
 
-// Sanitize x-proxy-path header to prevent XSS via header injection.
-// Only allow path-like characters (letters, digits, hyphens, underscores, slashes, dots).
-const sanitizeProxyPath = (req: any): string => {
-  const raw = req.header('x-proxy-path') || '';
-  return raw.replace(/[^a-zA-Z0-9\-_\/\.]/g, '');
-};
+// Shared sanitizer for the `x-proxy-path` header. See the helper for the
+// allowed character class and the protocol-relative / traversal rejection
+// rules. Reused by admin.ts so both call sites share one definition.
+import {sanitizeProxyPath} from '../../utils/sanitizeProxyPath';
 
 
 exports.socketio = (hookName: string, {io}: any) => {

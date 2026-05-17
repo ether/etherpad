@@ -1,5 +1,5 @@
 'use strict';
-import {Database} from "ueberdb2";
+import type {Database} from "ueberdb2";
 import {AChangeSet, APool, AText} from "../types/PadType";
 import {MapArrayType} from "../types/MapType";
 
@@ -103,6 +103,58 @@ class Pad {
    * every plugin to allocate its own author up-front.
    */
   static readonly SYSTEM_AUTHOR_ID = 'a.etherpad-system';
+
+  /**
+   * Validate that every `+` (insert) op in `aChangeset` carries an
+   * `author` attribute that resolves through `pool`. Callers that have
+   * already rebased onto pad.pool pass the post-rebase changeset, so
+   * we accept the pad's own pool here.
+   *
+   * Throws an Error if any insert op is missing an author attribute,
+   * carries an empty author, or references an attribute number that
+   * is not present in the pool.
+   *
+   * Tolerates `=` and `-` ops with empty attribs (those are the
+   * canonical form for keeps/deletes that don't change attribution).
+   * Also tolerates pure-newline `+` ops: the client's line assembler
+   * handles those regardless of attribs, and the API restoreRevision
+   * path emits them at line boundaries.
+   */
+  private static _assertInsertOpsCarryAuthor(aChangeset: string, pool: AttributePool) {
+    let unpacked;
+    try {
+      unpacked = unpack(aChangeset);
+    } catch (e: any) {
+      // unpack already throws a descriptive error; rethrow as-is so the
+      // caller's failure mode stays the same.
+      throw e;
+    }
+    for (const op of deserializeOps(unpacked.ops)) {
+      if (op.opcode !== '+') continue;
+      // Pure-newline inserts (e.g. `|1+1` for a single line break) are
+      // tolerated — the client's line assembler handles them regardless
+      // of attribs, and the API restoreRevision path emits them at
+      // line boundaries.
+      if (op.lines > 0 && op.chars === op.lines) continue;
+      if (!op.attribs) {
+        throw new Error(
+            'insert op without an author attribute ' +
+            `(empty attribs): ${aChangeset}`);
+      }
+      let authorIdSeen: string | undefined;
+      try {
+        authorIdSeen = AttributeMap.fromString(op.attribs, pool).get('author');
+      } catch (e: any) {
+        throw new Error(
+            'insert op references an attribute number ' +
+            `not present in the pool: ${aChangeset} (${e && e.message || e})`);
+      }
+      if (!authorIdSeen) {
+        throw new Error(
+            'insert op without an author attribute: ' + aChangeset);
+      }
+    }
+  }
 
   private db: Database;
   private atext: AText;
@@ -226,6 +278,13 @@ class Pad {
    * @return {Promise<number|string>}
    */
   async appendRevision(aChangeset:string, authorId = '') {
+    // Centralised "every insert op carries an author attribute"
+    // invariant. The socket handler enforces the same rule at the wire
+    // boundary; checking here covers the non-wire callers (HTTP API
+    // setHTML/setText/restoreRevision, plugin paths that call
+    // appendRevision directly).
+    Pad._assertInsertOpsCarryAuthor(aChangeset, this.pool);
+
     const newAText = applyToAText(aChangeset, this.atext, this.pool);
     if (newAText.text === this.atext.text && newAText.attribs === this.atext.attribs &&
         this.head !== -1) {
@@ -347,8 +406,8 @@ class Pad {
           Stream.range(keyRev + 1, targetRev + 1).map(this.getRevisionChangeset.bind(this))),
     ]);
     const apool = this.apool();
-    let atext = keyAText;
-    for (const cs of changesets) atext = applyToAText(cs, atext, apool);
+    let atext = keyAText as AText;
+    for (const cs of changesets) atext = applyToAText(cs as string, atext, apool);
     return atext;
   }
 
@@ -494,7 +553,7 @@ class Pad {
   async getChatMessage(entryNum: number) {
     const entry = await this.db.get(`pad:${this.id}:chat:${entryNum}`);
     if (entry == null) return null;
-    const message = ChatMessage.fromObject(entry);
+    const message = ChatMessage.fromObject(entry as ChatMessage);
     message.displayName = await authorManager.getAuthorName(message.authorId);
     return message;
   }
@@ -524,7 +583,7 @@ class Pad {
 
   async init(text:string, authorId = '') {
     // try to load the pad
-    const value = await this.db.get(`pad:${this.id}`);
+    const value = await this.db.get(`pad:${this.id}`) as Record<string, any> | null;
 
     // if this pad exists, load it
     if (value != null) {
@@ -537,9 +596,19 @@ class Pad {
         if (context.type !== 'text') throw new Error(`unsupported content type: ${context.type}`);
         text = exports.cleanText(context.content);
       }
-      const firstAttribs = authorId ? [['author', authorId] as [string, string]] : undefined;
+      // When the initial pad text is non-empty but no authorId was
+      // supplied (internal getPad calls during HTTP API setup,
+      // padDefaultContent flows, plugin-driven pad creation), fall back
+      // to the stable system author so the initial changeset's insert
+      // op carries an `author` attribute. Mirrors the same substitution
+      // setText/appendText already do via spliceText.
+      const effectiveAuthorId =
+          (text.length > 0 && !authorId) ? Pad.SYSTEM_AUTHOR_ID : authorId;
+      const firstAttribs = effectiveAuthorId
+          ? [['author', effectiveAuthorId] as [string, string]]
+          : undefined;
       const firstChangeset = makeSplice('\n', 0, 0, text, firstAttribs, this.pool);
-      await this.appendRevision(firstChangeset, authorId);
+      await this.appendRevision(firstChangeset, effectiveAuthorId);
     }
     this.padSettings = Pad.normalizePadSettings(this.padSettings);
     await hooks.aCallAll('padLoad', {pad: this});
@@ -665,9 +734,25 @@ class Pad {
 
     const oldAText = this.atext;
 
+    // The author to attribute inserts to when the historical op lacks
+    // one (legacy server-internal flows / .etherpad imports). Caller-
+    // supplied authorId wins; otherwise the stable system author.
+    // appendRevision now requires every insert to carry an author, so
+    // unattributed ops in the source pad would otherwise throw here.
+    const replayAuthorId = authorId || Pad.SYSTEM_AUTHOR_ID;
+
     // based on Changeset.makeSplice
     const assem = new SmartOpAssembler();
-    for (const op of opsFromAText(oldAText)) assem.append(op);
+    for (const op of opsFromAText(oldAText)) {
+      if (op.opcode === '+') {
+        const map = AttributeMap.fromString(op.attribs, dstPad.pool);
+        if (!map.get('author')) {
+          map.set('author', replayAuthorId);
+          op.attribs = map.toString();
+        }
+      }
+      assem.append(op);
+    }
     assem.endDocument();
 
     // although we have instantiated the dstPad with '\n', an additional '\n' is
@@ -733,13 +818,13 @@ class Pad {
     // delete all chat messages
     // @ts-ignore
     p.push(timesLimit(this.chatHead + 1, 500, async (i: string) => {
-      await this.db.remove(`pad:${this.id}:chat:${i}`, null);
+      await this.db.remove(`pad:${this.id}:chat:${i}`);
     }));
 
     // delete all revisions
     // @ts-ignore
     p.push(timesLimit(this.head + 1, 500, async (i: string) => {
-      await this.db.remove(`pad:${this.id}:revs:${i}`, null);
+      await this.db.remove(`pad:${this.id}:revs:${i}`);
     }));
 
     // remove pad from all authors who contributed
@@ -867,6 +952,12 @@ class Pad {
         assert(changeset != null);
         assert.equal(typeof changeset, 'string');
         checkRep(changeset);
+        // NOTE: pad.check() intentionally does not invoke
+        // _assertInsertOpsCarryAuthor — it runs against historical
+        // stored data (including legacy .etherpad files) where some
+        // server-internal flows did not previously substitute the
+        // system author. The write-time guard in appendRevision is
+        // where the invariant is enforced for new content.
         const unpacked = unpack(changeset);
         let text = atext.text;
         for (const op of deserializeOps(unpacked.ops)) {

@@ -23,6 +23,7 @@
 const exporthtml = require('../utils/ExportHtml');
 const exporttxt = require('../utils/ExportTxt');
 const exportEtherpad = require('../utils/ExportEtherpad');
+import crypto from 'node:crypto';
 import fs from 'fs';
 import settings from '../utils/Settings';
 import os from 'os';
@@ -44,6 +45,15 @@ const tempDirectory = os.tmpdir();
  * @param {String} type the type to export
  */
 exports.doExport = async (req: any, res: any, padId: string, readOnlyId: string, type:string) => {
+  // Validate :rev BEFORE setting Content-Disposition. A bad rev causes
+  // checkValidRev to throw, which the route handler catches and renders as a
+  // plain-text 500. If we set the attachment header first, the browser would
+  // download the error message as a file instead of displaying it.
+  if (req.params.rev !== undefined) {
+    // modify req, as we use it in a later call to exportConvert
+    req.params.rev = checkValidRev(req.params.rev);
+  }
+
   // avoid naming the read-only file as the original pad's id
   let fileName = readOnlyId ? readOnlyId : padId;
 
@@ -57,12 +67,6 @@ exports.doExport = async (req: any, res: any, padId: string, readOnlyId: string,
 
   // tell the browser that this is a downloadable file
   res.attachment(`${fileName}.${type}`);
-
-  if (req.params.rev !== undefined) {
-    // ensure revision is a number
-    // modify req, as we use it in a later call to exportConvert
-    req.params.rev = checkValidRev(req.params.rev);
-  }
 
   // if this is a plain text export, we can do this directly
   // We have to over engineer this because tabs are stored as attributes and not plain text
@@ -155,8 +159,9 @@ exports.doExport = async (req: any, res: any, padId: string, readOnlyId: string,
       }
     }
 
-    // soffice path — write the html export to a file
-    const randNum = Math.floor(Math.random() * 0xFFFFFFFF);
+    // soffice path — write the html export to a file. Use CSPRNG output
+    // for the temp path token (see matching note in ImportHandler.ts).
+    const randNum = crypto.randomBytes(16).toString('hex');
     const srcFile = `${tempDirectory}/etherpad_export_${randNum}.html`;
     await fsp_writeFile(srcFile, html);
 

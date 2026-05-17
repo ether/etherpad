@@ -23,6 +23,7 @@
 
 const padManager = require('../db/PadManager');
 const padMessageHandler = require('./PadMessageHandler');
+import crypto from 'node:crypto';
 import {promises as fs} from 'fs';
 import path from 'path';
 import settings from '../utils/Settings';
@@ -83,7 +84,10 @@ const doImport = async (req:any, res:any, padId:string, authorId:string) => {
   // pipe to a file
   // convert file to html via soffice
   // set html in the pad
-  const randNum = Math.floor(Math.random() * 0xFFFFFFFF);
+  //
+  // Use CSPRNG output for the temp path token so the destination path
+  // can't be predicted by another process on the same host.
+  const randNum = crypto.randomBytes(16).toString('hex');
 
   // setting flag for whether to use converter or not
   let useConverter = (converter != null);

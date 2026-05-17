@@ -84,6 +84,22 @@ export const generateJWTTokenUser =  () => {
   return jwt.sign(privateKeyExported!)
 }
 
+// Token whose `admin` claim is explicitly `false`. Used to pin the
+// API's JWT validation: tokens that carry the claim with a non-true
+// value must be rejected, not just tokens that omit it entirely.
+export const generateJWTTokenAdminFalse = () => {
+  const jwt = new SignJWT({
+    sub: 'admin',
+    jti: '123',
+    exp: Math.floor(Date.now() / 1000) + 60 * 60,
+    aud: 'account',
+    iss: 'http://localhost:9001',
+    admin: false,
+  });
+  jwt.setProtectedHeader({alg: 'RS256'});
+  return jwt.sign(privateKeyExported!);
+};
+
 export const init = async function () {
   if (agentPromise != null) return await agentPromise;
   let agentResolve;
