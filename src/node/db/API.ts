@@ -831,7 +831,13 @@ Example returns:
 exports.listAuthorsOfPad = async (padID: string) => {
   // get the pad
   const pad = await getPadSafe(padID, true);
-  const authorIDs = pad.getAllAuthors();
+  // Pad.SYSTEM_AUTHOR_ID is the synthetic author Etherpad attributes inserts to
+  // when no authorId is supplied (HTTP API setText/appendText/setHTML without
+  // authorId, server-side import flows, plugins like ep_post_data). It is an
+  // implementation detail of changeset bookkeeping, not a real contributor, so
+  // it should not surface through this public API.
+  const {Pad} = require('./Pad');
+  const authorIDs = pad.getAllAuthors().filter((id: string) => id !== Pad.SYSTEM_AUTHOR_ID);
   return {authorIDs};
 };
 
