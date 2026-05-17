@@ -8,6 +8,15 @@ const common = require('../../common');
 const settings = require('../../../../node/utils/Settings');
 const authorManager = require('../../../../node/db/AuthorManager');
 
+// Detect ep_hash_auth at the package level. We can't read pluginDefs.plugins
+// in the before hook because Etherpad's plugin loader populates that map
+// asynchronously after common.init() — by the time we'd check there, the
+// damage is done. require.resolve hits node_modules directly: if the
+// package is installed it returns a path, otherwise it throws.
+const hasEpHashAuth = (() => {
+  try { require.resolve('ep_hash_auth'); return true; } catch (_e) { return false; }
+})();
+
 /**
  * Connects to the /settings admin namespace using cookie-based auth.
  * The /settings namespace reads is_admin from socket.conn.request.session,
@@ -69,6 +78,20 @@ describe(__filename, function () {
 
   before(async function () {
     this.timeout(60000);
+    // ep_hash_auth registers a handleMessage hook that fires for every
+    // socket message including those on the /settings admin namespace.
+    // It reads from the deprecated `client` context property which is
+    // undefined for non-pad namespaces, leaving every emit/reply pair on
+    // /settings hanging until mocha's 120s timeout. The suite still runs
+    // in the no-plugin matrix (where the admin socket is actually
+    // exercised); skip when ep_hash_auth is loaded so the with-plugins
+    // matrix doesn't pay 14 minutes of CI for 7 stalled tests.
+    // Tracked in https://github.com/ether/etherpad/issues/7795 — drop
+    // this guard once the plugin or namespace dispatch is fixed.
+    if (hasEpHashAuth) {
+      this.skip();
+      return;
+    }
     await common.init();
     settings.gdprAuthorErasure = settings.gdprAuthorErasure || {enabled: false};
     originalFlag = settings.gdprAuthorErasure.enabled;
