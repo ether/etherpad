@@ -59,6 +59,41 @@ test('html10n auto-populates aria-label on <textarea> with data-l10n-id', async 
   await expect(ta).toHaveAttribute('data-l10n-aria-label', 'true');
 });
 
+test('no "could not translate element content" warning for <select data-l10n-id>', async ({page}) => {
+  // Regression: thm reported the warning on Etherpad 3.1.0 because the
+  // <select data-l10n-id="ep_headings.style"> in ep_headings2 has only
+  // <option> element children — the text-node hunt in translateNode finds
+  // nothing and used to warn before the SELECT/INPUT/TEXTAREA short-circuit
+  // landed. The accessible name still ends up on aria-label.
+  const warnings: string[] = [];
+  page.on('console', (msg) => {
+    if (msg.type() === 'warning') warnings.push(msg.text());
+  });
+
+  await page.evaluate(() => {
+    const sel = document.createElement('select');
+    sel.id = 'html10n-test-no-warn';
+    sel.setAttribute('data-l10n-id', 'pad.toolbar.bold.title');
+    for (const v of ['a', 'b', 'c']) {
+      const opt = document.createElement('option');
+      opt.value = v;
+      opt.textContent = v.toUpperCase();
+      sel.appendChild(opt);
+    }
+    document.body.appendChild(sel);
+    // @ts-ignore
+    window.html10n.localize(['en']);
+  });
+
+  // Give html10n a tick to run.
+  await page.waitForTimeout(50);
+
+  const offending = warnings.filter((m) =>
+      m.includes('could not translate element content') &&
+      m.includes('pad.toolbar.bold.title'));
+  expect(offending).toEqual([]);
+});
+
 test('an author-supplied aria-label on a form control is preserved', async ({page}) => {
   // Mirror the existing semantics for non-form-control elements: if the
   // template author wrote their own aria-label, html10n must not
