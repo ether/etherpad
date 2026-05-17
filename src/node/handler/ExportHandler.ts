@@ -23,6 +23,7 @@
 const exporthtml = require('../utils/ExportHtml');
 const exporttxt = require('../utils/ExportTxt');
 const exportEtherpad = require('../utils/ExportEtherpad');
+import crypto from 'node:crypto';
 import fs from 'fs';
 import settings from '../utils/Settings';
 import os from 'os';
@@ -155,8 +156,9 @@ exports.doExport = async (req: any, res: any, padId: string, readOnlyId: string,
       }
     }
 
-    // soffice path — write the html export to a file
-    const randNum = Math.floor(Math.random() * 0xFFFFFFFF);
+    // soffice path — write the html export to a file. Use CSPRNG output
+    // for the temp path token (see matching note in ImportHandler.ts).
+    const randNum = crypto.randomBytes(16).toString('hex');
     const srcFile = `${tempDirectory}/etherpad_export_${randNum}.html`;
     await fsp_writeFile(srcFile, html);
 
