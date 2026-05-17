@@ -71,7 +71,15 @@ exports.expressCreateServer = (hookName:string, args:ArgsExpressType, cb:Functio
         console.log(`Exporting pad "${req.params.pad}" in ${req.params.type} format`);
         await exportHandler.doExport(req, res, padId, readOnlyId, req.params.type);
       }
-    })().catch((err) => next(err || new Error(err)));
+    })().catch((err) => {
+      // checkValidRev throws CustomError('...', 'apierror') for non-numeric or
+      // out-of-range :rev. Surface the message as a plain-text body so callers
+      // see why the request failed instead of Express's default HTML page.
+      if (err && err.name === 'apierror' && !res.headersSent) {
+        return res.status(500).type('text/plain').send(err.message);
+      }
+      return next(err || new Error(err));
+    });
   });
 
   // handle import requests
