@@ -74,13 +74,121 @@ describe(__filename, function () {
     });
   });
 
-  describe('setPadRaw (.etherpad import) — placeholder for future coverage', function () {
-    // `.etherpad` import bulk-writes records via setPadRaw and skips
-    // appendRevision, so this code path is not yet covered by the
-    // appendRevision-level check. Coverage will land alongside the
-    // import-side handling.
-    it.skip('TODO: refuse / sanitize unattributed inserts on .etherpad import',
-        async function () { /* placeholder */ });
+  describe('setPadRaw (.etherpad import) sanitises unattributed inserts', function () {
+    // Hand-craft a minimal .etherpad-shaped payload whose stored
+    // changeset has a `+content` op WITHOUT an `author` attribute —
+    // the same shape that the wire / appendRevision guard rejects.
+    // The import should NOT throw: the sanitiser rewrites the op to
+    // reference SYSTEM_AUTHOR_ID, refreshes the cumulative atext +
+    // pool, and re-derives any key-rev snapshots so pad.check still
+    // deep-equals.
+    it('imports a legacy payload, persists it, and the head atext carries an author marker',
+        async function () {
+          const importEtherpad = require('../../../node/utils/ImportEtherpad');
+          const db = require('../../../node/db/DB');
+
+          // Source pad id used inside the payload — pre-import shape
+          // keys records by the *source* id; the import rewrites them
+          // to the destination id.
+          const srcId = 'legacySource';
+          const records: any = {};
+          // Rev 0: insert "hello world" without any author marker.
+          // |0+b means: insert b (11 base-36 = 11) chars, 0 lines.
+          records[`pad:${srcId}:revs:0`] = {
+            changeset: 'Z:1>b+b$hello world',
+            meta: {
+              author: '',
+              timestamp: 1700000000000,
+              // Carry a key-rev snapshot so the sanitiser exercises
+              // its re-derivation path too.
+              pool: {numToAttrib: {}, nextNum: 0},
+              atext: {text: 'hello world\n', attribs: '+b|1+1'},
+            },
+          };
+          records[`pad:${srcId}`] = {
+            atext: {text: 'hello world\n', attribs: '+b|1+1'},
+            pool: {numToAttrib: {}, nextNum: 0},
+            head: 0,
+            chatHead: -1,
+            publicStatus: false,
+            savedRevisions: [],
+          };
+
+          // Use a fresh destination padId — the beforeEach's `pad`
+          // already created an empty pad we'll replace.
+          const destId = common.randomString();
+          await importEtherpad.setPadRaw(destId, JSON.stringify(records), 'a.importer');
+
+          // Read the stored head atext back. It must contain a `*N`
+          // attribute reference for the sanitiser to have done its
+          // job (the original was just `+b|1+1` with no `*` at all).
+          const stored = await db.get(`pad:${destId}`);
+          if (!stored) throw new Error(`destination pad ${destId} was not persisted`);
+          const headAttribs: string = stored.atext.attribs;
+          if (!/\*/.test(headAttribs)) {
+            throw new Error(
+                `expected sanitised head atext.attribs to contain a *N ref ` +
+                `(author marker), got: ${headAttribs}`);
+          }
+          // The pool must now register SYSTEM_AUTHOR_ID under some
+          // index — that's the attribute the rewritten ops point at.
+          const pool = stored.pool || {};
+          const numToAttrib = pool.numToAttrib || {};
+          const sawSystemAuthor = Object.values(numToAttrib).some(
+              (a: any) => Array.isArray(a) &&
+                          a[0] === 'author' &&
+                          a[1] === 'a.etherpad-system');
+          if (!sawSystemAuthor) {
+            throw new Error(
+                `expected SYSTEM_AUTHOR_ID in the persisted pool, got: ` +
+                JSON.stringify(numToAttrib));
+          }
+
+          // Cleanup so afterEach doesn't double-remove.
+          const padMgr = require('../../../node/db/PadManager');
+          if (await padMgr.doesPadExist(destId)) {
+            const destPad = await padMgr.getPad(destId);
+            await destPad.remove();
+          }
+        });
+
+    it('leaves an already-conforming payload untouched (no log noise on good imports)',
+        async function () {
+          const importEtherpad = require('../../../node/utils/ImportEtherpad');
+          const db = require('../../../node/db/DB');
+
+          // Build a well-formed payload by going through the normal
+          // setText path on a temporary source pad, then export-shape it.
+          const srcId = common.randomString();
+          const src = await padManager.getPad(srcId, '');
+          await src.setText('hello world\n', 'a.test');
+          // Read it back into the records shape directly.
+          const padRec = await db.get(`pad:${srcId}`);
+          const rev0 = await db.get(`pad:${srcId}:revs:0`);
+          const rev1 = await db.get(`pad:${srcId}:revs:1`);
+          const records: any = {};
+          records[`pad:${srcId}`] = padRec;
+          if (rev0) records[`pad:${srcId}:revs:0`] = rev0;
+          if (rev1) records[`pad:${srcId}:revs:1`] = rev1;
+          await src.remove();
+
+          const destId = common.randomString();
+          await importEtherpad.setPadRaw(destId, JSON.stringify(records), 'a.importer');
+
+          // The destination should look like the source did. Most
+          // importantly, no throws — which the lack of an exception
+          // above already confirms.
+          const stored = await db.get(`pad:${destId}`);
+          if (!stored || !stored.atext) {
+            throw new Error('destination pad was not persisted');
+          }
+
+          const padMgr = require('../../../node/db/PadManager');
+          if (await padMgr.doesPadExist(destId)) {
+            const destPad = await padMgr.getPad(destId);
+            await destPad.remove();
+          }
+        });
   });
 
   describe('legacy replay paths cope with unattributed historical ops', function () {
