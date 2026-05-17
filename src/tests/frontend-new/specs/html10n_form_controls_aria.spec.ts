@@ -65,15 +65,21 @@ test('no "could not translate element content" warning for <select data-l10n-id>
   // <option> element children — the text-node hunt in translateNode finds
   // nothing and used to warn before the SELECT/INPUT/TEXTAREA short-circuit
   // landed. The accessible name still ends up on aria-label.
+  //
+  // To actually exercise the bug path the key must default `prop` to
+  // textContent (i.e. the suffix after the last `.` must NOT be one of
+  // title|innerHTML|alt|textContent|value|placeholder, see
+  // html10n.translateNode). `pad.loading` is a stable pad-bundle key that
+  // satisfies that.
   const warnings: string[] = [];
   page.on('console', (msg) => {
     if (msg.type() === 'warning') warnings.push(msg.text());
   });
 
-  await page.evaluate(() => {
+  await page.evaluate(() => new Promise<void>((res) => {
     const sel = document.createElement('select');
     sel.id = 'html10n-test-no-warn';
-    sel.setAttribute('data-l10n-id', 'pad.toolbar.bold.title');
+    sel.setAttribute('data-l10n-id', 'pad.loading');
     for (const v of ['a', 'b', 'c']) {
       const opt = document.createElement('option');
       opt.value = v;
@@ -81,16 +87,18 @@ test('no "could not translate element content" warning for <select data-l10n-id>
       sel.appendChild(opt);
     }
     document.body.appendChild(sel);
+    // localize completes asynchronously inside a build() callback; wait
+    // on the `localized` event instead of a fixed timeout so the test
+    // is deterministic on slow CI runners.
+    // @ts-ignore window.html10n is exposed by pad.ts
+    window.html10n.mt.bind('localized', () => res());
     // @ts-ignore
     window.html10n.localize(['en']);
-  });
-
-  // Give html10n a tick to run.
-  await page.waitForTimeout(50);
+  }));
 
   const offending = warnings.filter((m) =>
       m.includes('could not translate element content') &&
-      m.includes('pad.toolbar.bold.title'));
+      m.includes('pad.loading'));
   expect(offending).toEqual([]);
 });
 
