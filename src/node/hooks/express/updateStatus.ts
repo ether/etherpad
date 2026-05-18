@@ -29,6 +29,34 @@ export const firstAuthorOf = (pad: {pool?: {numToAttrib?: Record<number | string
   return null;
 };
 
+/**
+ * Resolve the express-session author for a plain HTTP GET. The pad-side fetch
+ * is `credentials: 'same-origin'`, so the `express_sid` cookie is sent
+ * automatically. The global express-session middleware should have populated
+ * `req.session` already — but if not (e.g. test harness without middleware),
+ * we re-invoke it ourselves. On any failure path we return null and the
+ * caller treats the request as anonymous.
+ */
+export const resolveRequestAuthor = async (req: any): Promise<string | null> => {
+  const readAuthor = (): string | null => {
+    const a = req?.session?.user?.author;
+    return typeof a === 'string' && a !== '' ? a : null;
+  };
+  const fromSession = readAuthor();
+  if (fromSession !== null) return fromSession;
+  try {
+    const expressModule = await import('../express');
+    const mw = (expressModule as any).sessionMiddleware;
+    if (typeof mw !== 'function') return null;
+    await new Promise<void>((resolve, reject) => {
+      mw(req, {} as any, (err?: unknown) => (err ? reject(err) : resolve()));
+    });
+  } catch {
+    return null;
+  }
+  return readAuthor();
+};
+
 let badgeCache: {value: 'severe' | null; at: number} = {value: null, at: 0};
 // Coalesce concurrent computeOutdated() calls during a cache-miss so a burst of
 // requests at expiry doesn't fan out into N redundant disk reads.
