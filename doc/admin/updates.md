@@ -2,7 +2,7 @@
 
 Etherpad ships with a built-in update subsystem.
 
-- **Tier 1 (notify)** — default. A banner appears in the admin UI when a new release is available, and pad users see a discreet badge if the running version is severely outdated or flagged as vulnerable. No execution.
+- **Tier 1 (notify)** — default. A banner appears in the admin UI when a new release is available, and pad users see a dismissable gritter notification if the running version is at least one minor version behind the latest release. No execution.
 - **Tier 2 (manual click)** — admins on a git install can click "Apply update" at `/admin/update`. Etherpad drains active sessions, runs `git fetch / checkout / pnpm install / pnpm run build:ui`, and exits with code 75 so a process supervisor restarts it on the new version. Auto-rolls back on failure.
 - **Tier 3 (auto with grace window)** — opt-in. On a git install, a newly detected release transitions execution state to `scheduled` and is applied after `preApplyGraceMinutes`. During the grace window, `/admin/update` shows a live countdown plus Cancel and Apply now buttons; an admin email (if `adminEmail` is set) fires once per scheduled tag.
 - **Tier 4 (autonomous in maintenance window)** — opt-in. Tier 3 + `updates.maintenanceWindow` is required; the scheduler only fires while the wall clock is inside the configured window. Updates detected outside the window queue for the next opening.
@@ -52,30 +52,27 @@ In `settings.json`:
 
 ## What "outdated" means
 
-- **`severe`** — running at least one major version behind the latest release.
-- **`vulnerable`** — the running version is below a `vulnerable-below` threshold announced in a recent release. Releases declare these via a `<!-- updater: vulnerable-below X.Y.Z -->` HTML comment in their body. The newest such directive wins.
+- **`minor`** — the running server is at least one minor version behind the latest published release. Patch-only deltas (same major and minor, higher patch) do not fire the notice.
 
 ## Email cadence (when `adminEmail` is set)
 
 | Trigger | First send | Repeat |
 | --- | --- | --- |
-| Vulnerable status detected | Immediate | Weekly while still vulnerable |
-| New release announced while still vulnerable | Immediate | n/a (one event per tag change) |
-| Severely outdated detected | Immediate | Monthly while still severely outdated |
+| Outdated (minor or more behind) detected | Immediate | Monthly while still outdated |
 | Up to date | No email | — |
 
 If `adminEmail` is unset, the updater never sends mail. The admin UI banner and the pad-side badge still work without it.
 
 PR 1 ships the cadence machinery but does not yet wire a real SMTP transport — emails are logged with `(would send email)` until a future PR adds the transport. The dedupe state still advances correctly so admins are not bombarded once SMTP is wired.
 
-## Pad-side badge
+## Pad-side notice
 
-Pad users see no version information by default. A small badge appears in the bottom-right corner only when:
+Pad users see no version information by default. A dismissable gritter notification appears only when:
 
-- The instance is `severe` (one or more major versions behind), or
-- The instance is `vulnerable` (running below an announced threshold).
+- The running server is at least one minor version behind the latest published release (patch-only deltas do not fire), **and**
+- The requesting user is the first author of the pad.
 
-The public endpoint `/api/version-status` returns only `{outdated: null|"severe"|"vulnerable"}` — it never leaks the running version, so attackers do not gain a fingerprint vector.
+The notice auto-fades after 8 seconds and can be dismissed immediately. The public endpoint `/api/version-status` accepts an optional `?padId=<id>` query parameter and returns `{outdated: "minor" | null, isFirstAuthor: boolean}` — it never leaks the running version, so attackers do not gain a fingerprint vector. Results are cached per `(padId, authorId)` for 60 seconds.
 
 ## Disabling everything
 
