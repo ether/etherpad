@@ -45,7 +45,6 @@ export interface UpdateStatusPayload {
   installMethod: string;
   tier: string;
   policy: null | {canNotify: boolean; canManual: boolean; canAuto: boolean; canAutonomous: boolean; reason: string};
-  vulnerableBelow: Array<{announcedBy: string; threshold: string}>;
   // Tier 2 additions:
   execution: Execution;
   lastResult: LastResult;

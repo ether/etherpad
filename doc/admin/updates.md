@@ -61,7 +61,7 @@ In `settings.json`:
 | Outdated (minor or more behind) detected | Immediate | Monthly while still outdated |
 | Up to date | No email | — |
 
-If `adminEmail` is unset, the updater never sends mail. The admin UI banner and the pad-side badge still work without it.
+If `adminEmail` is unset, the updater never sends mail. The admin UI banner and the pad-side notice still work without it.
 
 PR 1 ships the cadence machinery but does not yet wire a real SMTP transport — emails are logged with `(would send email)` until a future PR adds the transport. The dedupe state still advances correctly so admins are not bombarded once SMTP is wired.
 

@@ -53,8 +53,8 @@ export const decideEmails = (input: NotifierInput): NotifierResult => {
     if (sinceSevere >= SEVERE_INTERVAL) {
       toSend.push({
         kind: 'severe',
-        subject: `[Etherpad] Your instance is severely outdated (${current})`,
-        body: `Your Etherpad version (${current}) is more than one major release behind ${latest}.`,
+        subject: `[Etherpad] Your instance is outdated (${current})`,
+        body: `Your Etherpad version (${current}) is at least one minor release behind the latest published version (${latest}). Consider scheduling an upgrade.`,
       });
       newState.severeAt = now.toISOString();
     }

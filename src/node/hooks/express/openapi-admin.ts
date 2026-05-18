@@ -89,7 +89,7 @@ export const generateAdminDefinition = (): any => ({
         summary: 'Fetch updater status for the admin UI banner and update page',
         description:
           'Returns the cached update state (current version, latest known release, ' +
-          'install method, tier, policy verdict, and vulnerability directives). ' +
+          'install method, tier, policy verdict, execution state, lastResult, and lockHeld). ' +
           'Open by default; gated to authenticated admin sessions when ' +
           'updates.requireAdminForStatus=true in settings.',
         security: [

@@ -13,9 +13,6 @@ export interface MaintenanceWindow {
   tz: 'local' | 'utc';
 }
 
-/** null = up-to-date (or not yet checked); 'severe' = at least one major version behind. */
-export type OutdatedLevel = null | 'severe';
-
 export interface ReleaseInfo {
   /** semver string without leading 'v', e.g. "2.7.2". */
   version: string;
