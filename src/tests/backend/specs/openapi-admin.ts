@@ -90,7 +90,6 @@ describe('admin OpenAPI document', function () {
         'latest',
         'policy',
         'tier',
-        'vulnerableBelow',
       ]);
     });
 
@@ -104,10 +103,9 @@ describe('admin OpenAPI document', function () {
       assert.deepEqual(enums.slice().sort(), ['auto', 'autonomous', 'manual', 'notify', 'off']);
     });
 
-    it('declares ReleaseInfo, PolicyResult, VulnerableBelowDirective sub-schemas', function () {
+    it('declares ReleaseInfo and PolicyResult sub-schemas', function () {
       assert.ok(doc.components.schemas.ReleaseInfo);
       assert.ok(doc.components.schemas.PolicyResult);
-      assert.ok(doc.components.schemas.VulnerableBelowDirective);
     });
 
     it('ReleaseInfo properties mirror updater/types.ts', function () {
@@ -124,10 +122,6 @@ describe('admin OpenAPI document', function () {
       ]);
     });
 
-    it('VulnerableBelowDirective properties mirror updater/types.ts', function () {
-      const props = Object.keys(doc.components.schemas.VulnerableBelowDirective.properties).sort();
-      assert.deepEqual(props, ['announcedBy', 'threshold']);
-    });
   });
 
   describe('cross-collision with public spec', function () {

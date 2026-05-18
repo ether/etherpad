@@ -4,7 +4,7 @@ import {ReleaseInfo} from '../../../../node/updater/types';
 
 const ghBody = (overrides: Partial<{tag_name: string; body: string; prerelease: boolean; html_url: string; published_at: string}> = {}) => ({
   tag_name: 'v2.7.2',
-  body: 'Some changes.\n<!-- updater: vulnerable-below 2.6.4 -->',
+  body: 'Some changes.',
   prerelease: false,
   html_url: 'https://github.com/ether/etherpad/releases/tag/v2.7.2',
   published_at: '2026-04-25T00:00:00Z',
@@ -24,14 +24,13 @@ describe('checkLatestRelease', () => {
     const expected: ReleaseInfo = {
       version: '2.7.2',
       tag: 'v2.7.2',
-      body: 'Some changes.\n<!-- updater: vulnerable-below 2.6.4 -->',
+      body: 'Some changes.',
       publishedAt: '2026-04-25T00:00:00Z',
       prerelease: false,
       htmlUrl: 'https://github.com/ether/etherpad/releases/tag/v2.7.2',
     };
     expect(r.release).toEqual(expected);
     expect(r.etag).toBe('abc');
-    expect(r.vulnerableBelow).toEqual([{announcedBy: 'v2.7.2', threshold: '2.6.4'}]);
   });
 
   it('returns notmodified on 304', async () => {

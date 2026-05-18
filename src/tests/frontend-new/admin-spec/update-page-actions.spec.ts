@@ -15,7 +15,6 @@ const baseStatus = {
   installMethod: 'git',
   tier: 'manual',
   policy: {canNotify: true, canManual: true, canAuto: false, canAutonomous: false, reason: 'ok'},
-  vulnerableBelow: [],
   execution: {status: 'idle'},
   lastResult: null,
   lockHeld: false,
