@@ -11,6 +11,24 @@ import {isHeld} from '../../updater/lock';
 import {nextWindowStart, parseWindow} from '../../updater/MaintenanceWindow';
 
 
+/**
+ * Returns the authorID of whoever first contributed to the pad — i.e. the
+ * `['author', X]` entry at the lowest numeric key in the pool, with empty-X
+ * placeholders skipped. Returns null for a pad with no real author attribs yet.
+ */
+export const firstAuthorOf = (pad: {pool?: {numToAttrib?: Record<number | string, unknown>}}): string | null => {
+  const num2attrib = pad?.pool?.numToAttrib;
+  if (!num2attrib) return null;
+  const keys = Object.keys(num2attrib).map(Number).sort((a, b) => a - b);
+  for (const k of keys) {
+    const a = num2attrib[k];
+    if (Array.isArray(a) && a[0] === 'author' && typeof a[1] === 'string' && a[1] !== '') {
+      return a[1];
+    }
+  }
+  return null;
+};
+
 let badgeCache: {value: 'severe' | null; at: number} = {value: null, at: 0};
 // Coalesce concurrent computeOutdated() calls during a cache-miss so a burst of
 // requests at expiry doesn't fan out into N redundant disk reads.
