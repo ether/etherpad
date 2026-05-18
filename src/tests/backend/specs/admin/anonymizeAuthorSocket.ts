@@ -62,17 +62,21 @@ const ask = (socket: any, evt: string, payload: any, replyEvt: string) =>
     });
 
 // adminSocket() depends on Etherpad's default plain-text password check for
-// settings.users[name].password. Plugins like ep_hash_auth replace the
-// authenticate hook to expect hashed credentials, so the basic-auth probe
-// returns no admin session, /settings's connection handler returns without
+// settings.users[name].password. Any authenticate-hook plugin that claims
+// the request before the built-in basic-auth fallback can block this:
+// the historical offender was ep_readonly_guest, whose authenticate hook
+// sorts itself first and silently swaps req.session.user with a guest
+// (#7795); ep_hash_auth-style plugins that expect hashed credentials
+// would do the same. When that happens the basic-auth probe returns no
+// admin session, /settings's connection handler returns without
 // registering listeners (see src/node/hooks/express/adminsettings.ts:25),
 // and every socket.emit() afterwards waits forever for a reply that
 // nothing will ever send. The socket itself still connects when admin
 // session is missing, so the probe has to run at the application layer:
-// emit a known `/settings` event (`load`) and wait for the matching reply
-// (`settings`). If it doesn't arrive within the budget, skip — much
-// cheaper than letting mocha's 120s per-test timeout absorb 7 stalled
-// tests. Tracked in #7795.
+// emit a known `/settings` event (`authorLoad`) and wait for the matching
+// reply (`results:authorLoad`). If it doesn't arrive within the budget,
+// skip — much cheaper than letting mocha's 120s per-test timeout absorb
+// 7 stalled tests.
 const PROBE_BUDGET_MS = 15000;
 const adminSocketWithProbe = async (budgetMs: number): Promise<{
   ok: true; socket: any;
@@ -135,8 +139,9 @@ describe(__filename, function () {
     if (!probe.ok) {
       console.warn(
           `[anonymizeAuthorSocket] admin socket probe failed (${probe.reason}); ` +
-          'skipping suite — likely an authenticate-hook plugin (e.g. ep_hash_auth) ' +
-          'rejecting the test\'s plain-text admin credentials. Tracked in #7795.');
+          'skipping suite — an authenticate-hook plugin (e.g. ep_readonly_guest, ' +
+          'or an ep_hash_auth-style plugin requiring hashed credentials) is ' +
+          'rejecting the test\'s plain-text admin credentials.');
       this.skip();
       return;
     }
