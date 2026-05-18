@@ -177,7 +177,7 @@ const handleLiveReload = async (args: ArgsExpressType, padString: string, timeSl
           req, settings, availableLangs: i18n.availableLangs, locales: i18n.locales, kind: 'home',
           proxyPath,
         });
-        res.send(eejs.require('ep_etherpad-lite/templates/index.html', {req, entrypoint: proxyPath + '/watch/index?hash=' + hash, settings, socialMetaHtml}));
+        res.send(eejs.require('ep_etherpad-lite/templates/index.html', {req, entrypoint: proxyPath + '/watch/index?hash=' + hash, settings, socialMetaHtml, proxyPath}));
       })
     })
 
@@ -371,7 +371,7 @@ exports.expressCreateServer = async (_hookName: string, args: ArgsExpressType, c
         req, settings, availableLangs: i18n.availableLangs, locales: i18n.locales, kind: 'home',
         proxyPath,
       });
-      res.send(eejs.require('ep_etherpad-lite/templates/index.html', {req, settings, entrypoint: "./"+fileNameIndex, socialMetaHtml}));
+      res.send(eejs.require('ep_etherpad-lite/templates/index.html', {req, settings, entrypoint: "./"+fileNameIndex, socialMetaHtml, proxyPath}));
     });
 
 
