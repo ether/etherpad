@@ -258,6 +258,7 @@ const handleLiveReload = async (args: ArgsExpressType, padString: string, timeSl
           entrypoint: proxyPath + '/watch/timeslider?hash=' + hash,
           settings: settings.getPublicSettings(),
           socialMetaHtml,
+          proxyPath,
         })
         res.send(content);
       })
@@ -435,6 +436,7 @@ exports.expressCreateServer = async (_hookName: string, args: ArgsExpressType, c
         entrypoint: "../../"+fileNameTimeSlider,
         settings: settings.getPublicSettings(),
         socialMetaHtml,
+        proxyPath,
       }));
     });
   } else {
