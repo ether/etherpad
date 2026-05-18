@@ -139,9 +139,16 @@ What is NOT covered today, and forms the plan's actual scope:
    `export_html.html`** — manifest link, jslicense link, reconnect
    form action. Each can be made relative or `proxyPath`-prefixed.
 5. **Plugin DOM injection** — plugins that emit `<link href="/static/...">`
-   at runtime aren't covered by any existing rewrite. A `<base href="${proxyPath}/">`
-   tag in `<head>` would route those through the prefix without each
-   plugin opting in.
+   at runtime aren't covered by any existing rewrite. A `<base href>`
+   tag was considered as a belt-and-braces fix but rejected: path-absolute
+   URLs (`/foo`) deliberately ignore the path component of `<base href>` and
+   resolve against the origin, so `<base href="/sub/">` + `<link href="/static/foo">`
+   still resolves to `/static/foo`. And `<base href>` would change the
+   resolution base for existing relative URLs in `pad.html` /
+   `timeslider.html` (e.g. `../static/css/pad.css`), breaking them. Plugin
+   authors emitting leading-slash URLs need to use `clientVars`-derived or
+   relative paths — documented separately as a plugin guidance issue, not
+   resolved here.
 6. **Settings documentation** — `settings.json.template` and `Settings.ts`
    doc comment for `trustProxy` need to mention the new header sources.
 
@@ -155,7 +162,7 @@ Reflects the discovery above — extends existing helpers; smaller surface than 
 | `src/node/hooks/express/pwa.ts` | `/manifest.json` handler reads `sanitizeProxyPath(req)` and emits `${proxyPath}/favicon.ico`, `${proxyPath}/static/skins/...`, `${proxyPath}/` for `start_url`. Mark response `Vary: x-proxy-path, x-ingress-path, x-forwarded-prefix` + `Cache-Control: private, no-store` when proxyPath is non-empty (mirrors the admin handler's pattern). |
 | `src/node/utils/socialMeta.ts` | `buildAbsoluteUrl` honors `proxyPath` when falling back to from-request origin: `${origin}${proxyPath}${pathname}`. `publicURL` still wins when set. |
 | `src/templates/index.html` | Replace `<link rel="manifest" href="/manifest.json">` and the jslicense `<a href="/javascript">` with `proxyPath`-prefixed values. Route handler in `specialpages.ts` passes `proxyPath` as an explicit template variable. |
-| `src/templates/timeslider.html`, `pad.html` | jslicense `<a href>` and `<form action="/ep/pad/reconnect">` use `proxyPath`. Add `<base href="<%= proxyPath || '' %>/">` to `<head>` for plugin-DOM-injection coverage. |
+| `src/templates/timeslider.html`, `pad.html` | jslicense `<a href>` and `<form action="/ep/pad/reconnect">` use `proxyPath`. Fix pre-existing `..`-count bug in the manifest `<link>` (`../../manifest.json` in pad.html resolves under a prefix as `/manifest.json` instead of `/sub/manifest.json`; ditto `../../../manifest.json` in timeslider). Reduce by one to make the path correct in both root-mount and prefix-mount cases. |
 | `src/templates/export_html.html` | `<link rel="manifest">` uses proxyPath via the export route's render context. |
 | `src/node/hooks/express/specialpages.ts` + export route | Pass `proxyPath` into every `eejs.require` call that renders the affected templates. |
 | `settings.json.template` + `Settings.ts` doc comment | Document the three honored header names and the trustProxy gate. No new field. |
@@ -178,10 +185,9 @@ X-Ingress-Path: /api/hassio_ingress/abc123
 1. `app.enable('trust proxy')` → `req.protocol === 'https'`, `req.hostname === 'ha.example'`.
 2. `sanitizeProxyPath(req)` → `'/api/hassio_ingress/abc123'` (read from `X-Ingress-Path` because trustProxy is on; would also accept `X-Forwarded-Prefix`).
 3. `specialpages.ts` route handler for `/p/:pad`: renders `pad.html` with `proxyPath` in the template context. Output includes:
-   - `<base href="/api/hassio_ingress/abc123/">` in `<head>`.
-   - jslicense `<a href>` and reconnect form `action` prefixed.
-   - `<link rel="manifest" href="../../manifest.json">` is already relative — resolves to `/api/hassio_ingress/abc123/manifest.json`.
-   - `<link href="../static/css/pad.css...">` is already relative — resolves under the prefix.
+   - jslicense `<a href>` and reconnect form `action` prefixed via the EJS variable.
+   - `<link rel="manifest" href="../manifest.json">` (fixed from `../../manifest.json` — see Risks): resolves to `/api/hassio_ingress/abc123/manifest.json`.
+   - `<link href="../static/css/pad.css...">` is already relative — resolves under the prefix to `/api/hassio_ingress/abc123/static/css/pad.css`.
 4. Browser fetches `/api/hassio_ingress/abc123/manifest.json` → `pwa.ts` route emits manifest with all icon `src` values prefixed; `start_url` prefixed.
 5. Browser establishes socket.io: client-side `padBootstrap.js` computes `basePath = new URL('..', window.location).pathname` → `/api/hassio_ingress/abc123/` → `pad.baseURL` set → `socketio.connect('/api/hassio_ingress/abc123/', ...)` → socket.io path is `/api/hassio_ingress/abc123/socket.io/`. No code change here — pre-existing logic.
 6. `socialMeta`: `og:url = https://ha.example/api/hassio_ingress/abc123/p/scratch`, `og:image = https://ha.example/api/hassio_ingress/abc123/favicon.ico`.
@@ -190,7 +196,7 @@ X-Ingress-Path: /api/hassio_ingress/abc123
 Direct (non-proxied) request — same code path:
 
 1. No `x-proxy-path`, no `X-Forwarded-Prefix`, no `X-Ingress-Path` → `sanitizeProxyPath(req) === ''`.
-2. Templates render today's output. `<base href="/">` is a no-op for the absolute and relative URLs in use. See "Risks" for the fragment-link audit.
+2. Templates render today's output. The reduced-`..`-count manifest link still resolves to `/manifest.json` from a root-mount pad URL (`/p/test`), so no observable change for non-proxied users.
 3. `pwa.ts` returns today's manifest (icon srcs `'/favicon.ico'` etc.) when `proxyPath === ''`.
 
 ## Backwards compatibility
@@ -206,19 +212,19 @@ Direct (non-proxied) request — same code path:
 
 ## Risks
 
-- **`<base href>` retargets in-page fragment links.** With `<base
-  href="/foo/">` an `<a href="#chat">` resolves to `/foo/#chat`, which can
-  change scroll behavior. Mitigation: every in-template fragment link is
-  audited during implementation; if any rely on bare `#` resolution, they're
-  rewritten as `href="<%= currentPath %>#chat"` or with `event.preventDefault`
-  + JS scroll (already the pattern in `pad.html` chat). To minimize churn we
-  only inject `<base>` on pages that don't have problematic fragment usage
-  today; the audit is part of the plan.
 - **Plugin templates and plugin-rendered HTML** outside `src/templates/` may
-  contain leading-slash URLs. We can't auto-rewrite them, but the `<base
-  href>` injection covers them at runtime. Documentation will note that
-  plugins emitting absolute URLs should prefer relative or `clientVars.basePath`-prefixed
-  paths.
+  contain leading-slash URLs. We cannot auto-rewrite them. `<base href>`
+  was considered as a runtime catch-all and rejected (see "Plugin DOM
+  injection" above). Plugins emitting absolute URLs should prefer relative
+  or `clientVars`-derived paths; documenting that recommendation is a
+  separate follow-up.
+- **Manifest `..`-count fix is a strict improvement.** Today's
+  `../../manifest.json` in `pad.html` resolves to `/manifest.json` from a
+  root-mount pad URL — a happy accident: the relative path has one `..` too
+  many but the browser silently caps `..` at the path root. After the fix
+  to `../manifest.json`, the result is `/manifest.json` from root and
+  `/<prefix>/manifest.json` under a prefix. No regression possible at root.
+  Same logic for `timeslider.html`'s `../../../manifest.json`.
 - **Malicious header injection** when `trustProxy === false` is irrelevant
   (we ignore the headers). When `trustProxy === true` the operator has
   already declared the proxy trusted; sanitization (rejects `..`, scheme,
