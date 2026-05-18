@@ -101,21 +101,66 @@ Backwards compatible by construction: no header → `req.basePath = ''` →
 templates emit `/static/...` (today's exact output) → `<base href="/">` is a
 no-op.
 
+## Pre-existing infrastructure (discovered during plan write-up)
+
+The codebase already has substantial proxy-path support that wasn't visible
+from the issue text. The plan extends rather than replaces:
+
+- `src/node/utils/sanitizeProxyPath.ts` — already reads `x-proxy-path`,
+  sanitizes the value, returns `''` or `/...`. Same shape as the spec's
+  proposed `parseBasePath`. Plan: extend the header list to also check
+  `X-Ingress-Path` and `X-Forwarded-Prefix`, gated on `trustProxy`.
+- `src/templates/padBootstrap.js` and `timeSliderBootstrap.js` — already
+  compute `basePath` from `window.location` and set `pad.baseURL`,
+  `window.plugins.baseURL`, `timeSlider.baseURL`. socket.io path
+  (`socketio.connect(exports.baseURL, ...)`) and the `fetch` call in
+  `pad.ts:1040` already follow the prefix without any change.
+- `src/node/hooks/express/admin.ts` — already substitutes `/admin` and
+  `/socket.io` in the admin SPA HTML/JS/CSS using `sanitizeProxyPath`.
+  No admin Vite rebuild needed.
+- `src/templates/pad.html`, `timeslider.html` — already use relative
+  paths (`../static/...`, `../favicon.ico`, `../../manifest.json`), so
+  they pick up the prefix naturally when served behind one.
+- `src/node/hooks/express/specialpages.ts` — already calls
+  `sanitizeProxyPath(req)` and threads `proxyPath` into the rendered
+  `entrypoint` URL.
+
+What is NOT covered today, and forms the plan's actual scope:
+
+1. **Header source list** — HA Ingress sends `X-Ingress-Path`; nginx
+   subpath users typically rely on `X-Forwarded-Prefix`. Etherpad only
+   reads `x-proxy-path`. Mismatched header → no prefix → all symptoms.
+2. **`/manifest.json` icons** (`src/node/hooks/express/pwa.ts`) emit
+   hard-coded `/favicon.ico` and `/static/skins/...` paths.
+3. **`socialMeta` from-request URLs** (`src/node/utils/socialMeta.ts`)
+   don't honor `proxyPath` when building the from-request fallback,
+   producing wrong `og:url` / `og:image` under a prefix.
+4. **Leading-slash URLs in `index.html`, `timeslider.html`, `pad.html`,
+   `export_html.html`** — manifest link, jslicense link, reconnect
+   form action. Each can be made relative or `proxyPath`-prefixed.
+5. **Plugin DOM injection** — plugins that emit `<link href="/static/...">`
+   at runtime aren't covered by any existing rewrite. A `<base href="${proxyPath}/">`
+   tag in `<head>` would route those through the prefix without each
+   plugin opting in.
+6. **Settings documentation** — `settings.json.template` and `Settings.ts`
+   doc comment for `trustProxy` need to mention the new header sources.
+
 ## Components
+
+Reflects the discovery above — extends existing helpers; smaller surface than the original draft.
 
 | File | Change |
 |---|---|
-| `src/node/utils/basePath.ts` *(new)* | Exports `parseBasePath(req): string`. Pure function; tested in isolation. |
-| `src/node/hooks/express.ts` | New middleware right after `app.enable('trust proxy')`: `req.basePath = parseBasePath(req); res.locals.basePath = req.basePath; next()`. |
-| `src/node/eejs/index.ts` *(or wherever EJS context is built)* | Inject `basePath` into render context for every template. |
-| `src/templates/pad.html`, `index.html`, `timeslider.html`, `error.html`, `javascript.html`, `export_html.html` | Replace every leading-slash `href`/`src`/`content` with `<%= basePath %>/...`. Add `<base href="<%= basePath %>/">` to `<head>` of pad/index/timeslider/error. |
-| `src/templates/admin/index.html` | Regenerated from a Vite build with `base: './'` so it ships relative paths (`./assets/...`); `<base href>` injected by the admin route handler at request time (the admin SPA HTML is served via Express, so the handler can `res.locals.basePath`-render it through EJS or do a small string injection). |
-| `admin/vite.config.ts` | `base: './'`. Commit regenerated `src/templates/admin/index.html`. |
-| `src/node/handler/PadMessageHandler.ts` | Thread `basePath` from the socket handshake (`socket.request.basePath`) into `clientVars.basePath`. |
-| `src/static/js/pad.ts` | `exports.baseURL = (clientVars.basePath || '') + '/'`. Existing `socketio.connect(exports.baseURL, ...)` picks it up. |
-| `src/static/js/timeslider.ts` | Same — pass `clientVars.basePath + '/'` to `socketio.connect`. |
-| `src/node/utils/socialMeta.ts` | `buildAbsoluteUrl` honors `req.basePath` when falling back to request-derived origin: `${origin}${req.basePath}${pathname}`. `publicURL` still wins when set. |
-| `settings.json.template`, `Settings.ts` doc comment | Document that `trustProxy: true` also makes Etherpad honor `X-Forwarded-Prefix` and `X-Ingress-Path`. No new field. |
+| `src/node/utils/sanitizeProxyPath.ts` | Extend header source list to also read `x-forwarded-prefix` and `x-ingress-path`. Standard headers (everything other than the existing `x-proxy-path`) gated on `settings.trustProxy === true`. First non-empty wins, after sanitization. |
+| `src/node/hooks/express/pwa.ts` | `/manifest.json` handler reads `sanitizeProxyPath(req)` and emits `${proxyPath}/favicon.ico`, `${proxyPath}/static/skins/...`, `${proxyPath}/` for `start_url`. Mark response `Vary: x-proxy-path, x-ingress-path, x-forwarded-prefix` + `Cache-Control: private, no-store` when proxyPath is non-empty (mirrors the admin handler's pattern). |
+| `src/node/utils/socialMeta.ts` | `buildAbsoluteUrl` honors `proxyPath` when falling back to from-request origin: `${origin}${proxyPath}${pathname}`. `publicURL` still wins when set. |
+| `src/templates/index.html` | Replace `<link rel="manifest" href="/manifest.json">` and the jslicense `<a href="/javascript">` with `proxyPath`-prefixed values. Route handler in `specialpages.ts` passes `proxyPath` as an explicit template variable. |
+| `src/templates/timeslider.html`, `pad.html` | jslicense `<a href>` and `<form action="/ep/pad/reconnect">` use `proxyPath`. Add `<base href="<%= proxyPath || '' %>/">` to `<head>` for plugin-DOM-injection coverage. |
+| `src/templates/export_html.html` | `<link rel="manifest">` uses proxyPath via the export route's render context. |
+| `src/node/hooks/express/specialpages.ts` + export route | Pass `proxyPath` into every `eejs.require` call that renders the affected templates. |
+| `settings.json.template` + `Settings.ts` doc comment | Document the three honored header names and the trustProxy gate. No new field. |
+
+Out: no new `basePath.ts`, no Express middleware, no EJS-context-wide helper, no admin Vite rebuild, no `clientVars.basePath`, no edits to `pad.ts` / `timeslider.ts` / `padBootstrap.js`. Pre-existing code already covers those surfaces (`pad.baseURL` and `window.plugins.baseURL` are derived client-side from `window.location` in `padBootstrap.js` / `timeSliderBootstrap.js`).
 
 ## Data flow — concrete example
 
@@ -131,21 +176,22 @@ X-Ingress-Path: /api/hassio_ingress/abc123
 ```
 
 1. `app.enable('trust proxy')` → `req.protocol === 'https'`, `req.hostname === 'ha.example'`.
-2. `basePath` middleware → `req.basePath === '/api/hassio_ingress/abc123'`.
-3. EJS render of `pad.html`:
-   - `<base href="/api/hassio_ingress/abc123/">`
-   - `<link rel="manifest" href="/api/hassio_ingress/abc123/manifest.json">`
-   - All `<script>`/`<link>` tags prefixed.
-4. `clientVars.basePath = '/api/hassio_ingress/abc123'` sent over socket.io.
-5. Client `pad.ts`: `exports.baseURL = '/api/hassio_ingress/abc123/'` → next `socketio.connect` reconnect uses `/api/hassio_ingress/abc123/socket.io/`.
+2. `sanitizeProxyPath(req)` → `'/api/hassio_ingress/abc123'` (read from `X-Ingress-Path` because trustProxy is on; would also accept `X-Forwarded-Prefix`).
+3. `specialpages.ts` route handler for `/p/:pad`: renders `pad.html` with `proxyPath` in the template context. Output includes:
+   - `<base href="/api/hassio_ingress/abc123/">` in `<head>`.
+   - jslicense `<a href>` and reconnect form `action` prefixed.
+   - `<link rel="manifest" href="../../manifest.json">` is already relative — resolves to `/api/hassio_ingress/abc123/manifest.json`.
+   - `<link href="../static/css/pad.css...">` is already relative — resolves under the prefix.
+4. Browser fetches `/api/hassio_ingress/abc123/manifest.json` → `pwa.ts` route emits manifest with all icon `src` values prefixed; `start_url` prefixed.
+5. Browser establishes socket.io: client-side `padBootstrap.js` computes `basePath = new URL('..', window.location).pathname` → `/api/hassio_ingress/abc123/` → `pad.baseURL` set → `socketio.connect('/api/hassio_ingress/abc123/', ...)` → socket.io path is `/api/hassio_ingress/abc123/socket.io/`. No code change here — pre-existing logic.
 6. `socialMeta`: `og:url = https://ha.example/api/hassio_ingress/abc123/p/scratch`, `og:image = https://ha.example/api/hassio_ingress/abc123/favicon.ico`.
-7. Inner ace iframe loads `../static/empty.html` (relative) → resolves to `/api/hassio_ingress/abc123/static/empty.html` naturally. No code change in the inner iframe.
+7. Inner ace iframe loads `../static/empty.html` (relative) → resolves to `/api/hassio_ingress/abc123/static/empty.html` naturally. No code change in the inner iframe; plugin CSS injected via `aceEditorCSS` is also relative-prefixed (`../static/plugins/...`).
 
 Direct (non-proxied) request — same code path:
 
-1. No `X-Forwarded-Prefix`, no `X-Ingress-Path` → `req.basePath = ''`.
-2. EJS render: `<link rel="manifest" href="/manifest.json">`, etc. — every emitted URL identical to today. A new `<base href="/">` tag is added to `<head>`; that's a no-op for absolute URLs and unchanged for the relative URLs already in use. See "Risks" for the fragment-link audit.
-3. `clientVars.basePath = ''` → `exports.baseURL = '/'` (today's value).
+1. No `x-proxy-path`, no `X-Forwarded-Prefix`, no `X-Ingress-Path` → `sanitizeProxyPath(req) === ''`.
+2. Templates render today's output. `<base href="/">` is a no-op for the absolute and relative URLs in use. See "Risks" for the fragment-link audit.
+3. `pwa.ts` returns today's manifest (icon srcs `'/favicon.ico'` etc.) when `proxyPath === ''`.
 
 ## Backwards compatibility
 
