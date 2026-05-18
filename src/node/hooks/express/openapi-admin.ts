@@ -102,17 +102,9 @@ export const generateAdminDefinition = (): any => ({
           reason:        {type: 'string'},
         },
       },
-      VulnerableBelowDirective: {
-        type: 'object',
-        required: ['announcedBy', 'threshold'],
-        properties: {
-          announcedBy: {type: 'string'},
-          threshold:   {type: 'string'},
-        },
-      },
       UpdateStatus: {
         type: 'object',
-        required: ['currentVersion', 'installMethod', 'tier', 'vulnerableBelow'],
+        required: ['currentVersion', 'installMethod', 'tier'],
         properties: {
           currentVersion: {type: 'string'},
           latest: {
@@ -131,10 +123,6 @@ export const generateAdminDefinition = (): any => ({
           policy: {
             allOf: [{$ref: '#/components/schemas/PolicyResult'}],
             nullable: true,
-          },
-          vulnerableBelow: {
-            type: 'array',
-            items: {$ref: '#/components/schemas/VulnerableBelowDirective'},
           },
         },
       },

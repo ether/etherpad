@@ -6,7 +6,7 @@ import settings, {getEpVersion} from '../utils/Settings';
 import {detectInstallMethod} from './InstallMethodDetector';
 import {checkLatestRelease, realFetcher} from './VersionChecker';
 import {loadState, saveState} from './state';
-import {isMajorBehind, isVulnerable} from './versionCompare';
+import {isMajorBehind} from './versionCompare';
 import {evaluatePolicy} from './UpdatePolicy';
 import {decideEmails, decideOutcomeEmail, FailureOutcome} from './Notifier';
 import {checkPendingVerification, CheckResult, RollbackDeps, performRollback} from './RollbackHandler';
@@ -132,11 +132,6 @@ const performCheck = async (): Promise<void> => {
     if (result.kind === 'updated') {
       state.latest = result.release;
       state.lastEtag = result.etag;
-      // Union new directives with existing — same announcedBy is a no-op.
-      const existingTags = new Set(state.vulnerableBelow.map((v) => v.announcedBy));
-      for (const v of result.vulnerableBelow) {
-        if (!existingTags.has(v.announcedBy)) state.vulnerableBelow.push(v);
-      }
     } else if (result.kind === 'skipped-prerelease') {
       // Preserve ETag so we don't re-fetch an unchanged prerelease body next tick.
       state.lastEtag = result.etag;
@@ -164,7 +159,6 @@ const performCheck = async (): Promise<void> => {
           current,
           latest: state.latest.version,
           latestTag: state.latest.tag,
-          isVulnerable: isVulnerable(current, state.vulnerableBelow),
           isSevere: isMajorBehind(current, state.latest.version),
           state: state.email,
           now,

@@ -85,7 +85,6 @@ describe(__filename, function () {
       assert.ok(typeof res.body.currentVersion === 'string');
       assert.equal(res.body.latest, null);
       assert.equal(res.body.tier, settings.updates.tier);
-      assert.ok(Array.isArray(res.body.vulnerableBelow));
     });
 
     it('redacts execution.reason / lastResult.reason for unauth callers', async function () {

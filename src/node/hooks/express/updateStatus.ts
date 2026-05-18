@@ -5,24 +5,23 @@ import {ArgsExpressType} from '../../types/ArgsExpressType';
 import settings, {getEpVersion} from '../../utils/Settings';
 import {getDetectedInstallMethod, stateFilePath} from '../../updater';
 import {evaluatePolicy} from '../../updater/UpdatePolicy';
-import {compareSemver, isMajorBehind, isVulnerable} from '../../updater/versionCompare';
+import {compareSemver, isMajorBehind} from '../../updater/versionCompare';
 import {loadState} from '../../updater/state';
 import {isHeld} from '../../updater/lock';
 import {nextWindowStart, parseWindow} from '../../updater/MaintenanceWindow';
 
 
-let badgeCache: {value: 'severe' | 'vulnerable' | null; at: number} = {value: null, at: 0};
+let badgeCache: {value: 'severe' | null; at: number} = {value: null, at: 0};
 // Coalesce concurrent computeOutdated() calls during a cache-miss so a burst of
 // requests at expiry doesn't fan out into N redundant disk reads.
-let badgeInFlight: Promise<'severe' | 'vulnerable' | null> | null = null;
+let badgeInFlight: Promise<'severe' | null> | null = null;
 const BADGE_CACHE_MS = 60 * 1000;
 
-const computeOutdated = async (): Promise<'severe' | 'vulnerable' | null> => {
+const computeOutdated = async (): Promise<'severe' | null> => {
   const state = await loadState(stateFilePath());
   if (!state.latest) return null;
   const current = getEpVersion();
   if (compareSemver(current, state.latest.version) >= 0) return null;
-  if (isVulnerable(current, state.vulnerableBelow)) return 'vulnerable';
   if (isMajorBehind(current, state.latest.version)) return 'severe';
   return null;
 };
@@ -138,7 +137,6 @@ export const expressCreateServer = (
       installMethod,
       tier: settings.updates.tier,
       policy,
-      vulnerableBelow: state.vulnerableBelow,
       // PR 2 additions:
       execution,
       lastResult,

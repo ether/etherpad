@@ -78,14 +78,6 @@ const isValidLatest = (v: unknown): boolean => {
     && typeof v.prerelease === 'boolean';
 };
 
-const isValidVulnerableBelow = (v: unknown): boolean => {
-  if (!Array.isArray(v)) return false;
-  return v.every((entry) =>
-    isPlainObject(entry)
-    && typeof entry.announcedBy === 'string'
-    && typeof entry.threshold === 'string');
-};
-
 const isValidEmail = (v: unknown): boolean => {
   if (!isPlainObject(v)) return false;
   // graceStartTag (Tier 3) and lastFailureKey (Tier 4) are both optional for
@@ -114,7 +106,6 @@ const isValid = (raw: unknown): raw is Partial<UpdateState> & object => {
   if (!isStringOrNull(raw.lastCheckAt)) return false;
   if (!isStringOrNull(raw.lastEtag)) return false;
   if (!isValidLatest(raw.latest)) return false;
-  if (!isValidVulnerableBelow(raw.vulnerableBelow)) return false;
   if (!isValidEmail(raw.email)) return false;
   if (raw.execution !== undefined && !isValidExecution(raw.execution)) return false;
   if (raw.bootCount !== undefined && typeof raw.bootCount !== 'number') return false;
