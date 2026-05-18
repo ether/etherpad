@@ -6,7 +6,7 @@ import settings, {getEpVersion} from '../utils/Settings';
 import {detectInstallMethod} from './InstallMethodDetector';
 import {checkLatestRelease, realFetcher} from './VersionChecker';
 import {loadState, saveState} from './state';
-import {isMajorBehind} from './versionCompare';
+import {isMinorOrMoreBehind} from './versionCompare';
 import {evaluatePolicy} from './UpdatePolicy';
 import {decideEmails, decideOutcomeEmail, FailureOutcome} from './Notifier';
 import {checkPendingVerification, CheckResult, RollbackDeps, performRollback} from './RollbackHandler';
@@ -159,7 +159,7 @@ const performCheck = async (): Promise<void> => {
           current,
           latest: state.latest.version,
           latestTag: state.latest.tag,
-          isSevere: isMajorBehind(current, state.latest.version),
+          isSevere: isMinorOrMoreBehind(current, state.latest.version),
           state: state.email,
           now,
         });
