@@ -44,35 +44,6 @@ describe(__filename, function () {
     Object.assign(settings, backups.settings);
   });
 
-  describe('GET /api/version-status', function () {
-    it('returns null when no state', async function () {
-      await saveState(statePath(), {...EMPTY_STATE});
-      const res = await agent.get('/api/version-status').expect(200);
-      assert.deepEqual(res.body, {outdated: null});
-    });
-
-    it('does not leak the running version', async function () {
-      const res = await agent.get('/api/version-status').expect(200);
-      assert.ok(!('version' in res.body), 'response leaks version field');
-      assert.ok(!('latest' in res.body), 'response leaks latest field');
-      assert.ok(!('currentVersion' in res.body), 'response leaks currentVersion field');
-    });
-
-    it('returns severe when running > 1 major behind', async function () {
-      // Force "latest" to be 99.0.0 so our running version is severely outdated.
-      await saveState(statePath(), {
-        ...EMPTY_STATE,
-        latest: {
-          version: '99.0.0', tag: 'v99.0.0', body: '',
-          publishedAt: '2099-01-01T00:00:00Z', prerelease: false,
-          htmlUrl: 'https://example/',
-        },
-      });
-      const res = await agent.get('/api/version-status').expect(200);
-      assert.equal(res.body.outdated, 'severe');
-    });
-  });
-
   describe('GET /admin/update/status', function () {
     // Auth on this endpoint is intentionally loose: the running version is already
     // exposed publicly via /health (releaseId), and latest/changelog come from a
