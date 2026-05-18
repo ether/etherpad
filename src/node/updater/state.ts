@@ -86,8 +86,6 @@ const isValidEmail = (v: unknown): boolean => {
   const graceOk = v.graceStartTag === undefined || isStringOrNull(v.graceStartTag);
   const failOk = v.lastFailureKey === undefined || isStringOrNull(v.lastFailureKey);
   return isStringOrNull(v.severeAt)
-    && isStringOrNull(v.vulnerableAt)
-    && isStringOrNull(v.vulnerableNewReleaseTag)
     && graceOk
     && failOk;
 };

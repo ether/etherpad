@@ -43,10 +43,6 @@ export interface PolicyResult {
 export interface EmailSendLog {
   /** Last time we emailed about being severely-outdated, ISO-8601. */
   severeAt: string | null;
-  /** Last time we emailed about being vulnerable, ISO-8601. */
-  vulnerableAt: string | null;
-  /** Tag of the release the last "new release while vulnerable" email referenced. */
-  vulnerableNewReleaseTag: string | null;
   /** Tag of the most recent release for which we sent a Tier 3 `grace-start` email. */
   graceStartTag: string | null;
   /**
@@ -128,8 +124,6 @@ export const EMPTY_STATE: UpdateState = {
   latest: null,
   email: {
     severeAt: null,
-    vulnerableAt: null,
-    vulnerableNewReleaseTag: null,
     graceStartTag: null,
     lastFailureKey: null,
   },

@@ -63,7 +63,7 @@ describe('loadState', () => {
   });
 
   it('returns empty state when email subfield is wrong type', async () => {
-    const broken = {...EMPTY_STATE, email: {severeAt: 0, vulnerableAt: null, vulnerableNewReleaseTag: null}};
+    const broken = {...EMPTY_STATE, email: {severeAt: 0}};
     await fs.writeFile(statePath(), JSON.stringify(broken));
     const s = await loadState(statePath());
     expect(s).toEqual(EMPTY_STATE);
