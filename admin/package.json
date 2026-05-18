@@ -11,7 +11,7 @@
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "build-copy": "pnpm gen:api && tsc && vite build --outDir ../src/templates/admin --emptyOutDir",
     "preview": "vite preview",
-    "test": "pnpm gen:api && tsx --test 'src/**/__tests__/*.test.ts'"
+    "test": "pnpm gen:api && tsx --test 'src/**/__tests__/*.test.ts' 'src/**/__tests__/*.test.tsx'"
   },
   "dependencies": {
     "@radix-ui/react-switch": "^1.2.6",

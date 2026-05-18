@@ -233,6 +233,32 @@ textarea.settings:focus {
   outline: 2px solid var(--accent, #2b8a3e);
   outline-offset: 1px;
 }
+.settings-widget-env-runtime {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 4px;
+  padding: 1px 8px;
+  border-radius: 10px;
+  background: #e6f4ea;
+  color: #1e5631;
+  font-family: "Fira Code", monospace;
+  font-size: 12px;
+}
+.settings-widget-env-runtime-redacted {
+  background: #ececec;
+  color: #555;
+}
+.settings-widget-env-runtime-arrow {
+  opacity: 0.6;
+}
+.settings-widget-env-runtime-label {
+  font-style: italic;
+  opacity: 0.7;
+}
+.settings-widget-env-runtime-value {
+  font-weight: 600;
+}
 
 /* Radix switch (boolean) */
 .settings-widget-boolean {

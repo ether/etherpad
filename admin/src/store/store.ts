@@ -1,8 +1,10 @@
 import {create} from "zustand";
 import {Socket} from "socket.io-client";
+import type {JSONPath} from "jsonc-parser";
 import {PadSearchResult} from "../utils/PadSearch.ts";
 import {AuthorSearchResult} from "../utils/AuthorSearch.ts";
 import {InstalledPlugin} from "../pages/Plugin.ts";
+import {resolveByPath} from "../utils/resolveByPath.ts";
 
 export type Execution =
   | {status: 'idle'}
@@ -66,6 +68,11 @@ type ToastState = {
 type StoreState = {
   settings: string|undefined,
   setSettings: (settings: string) => void,
+  // Resolved runtime values for the /admin/settings page. The server
+  // emits this alongside the raw `settings` string so the SPA can show
+  // env-substituted values; secrets are redacted to "[REDACTED]".
+  resolved: unknown | null,
+  setResolved: (resolved: unknown | null) => void,
   settingsSocket: Socket|undefined,
   setSettingsSocket: (socket: Socket) => void,
   showLoading: boolean,
@@ -92,6 +99,8 @@ type StoreState = {
 export const useStore = create<StoreState>()((set) => ({
   settings: undefined,
   setSettings: (settings: string) => set({settings}),
+  resolved: null,
+  setResolved: (resolved) => set({resolved}),
   settingsSocket: undefined,
   setSettingsSocket: (socket: Socket) => set({settingsSocket: socket}),
   showLoading: false,
@@ -118,3 +127,6 @@ export const useStore = create<StoreState>()((set) => ({
   gdprAuthorErasureEnabled: false,
   setGdprAuthorErasureEnabled: (gdprAuthorErasureEnabled)=>set({gdprAuthorErasureEnabled}),
 }));
+
+export const useResolvedAt = (path: JSONPath): unknown =>
+  useStore(s => resolveByPath(s.resolved, path));
