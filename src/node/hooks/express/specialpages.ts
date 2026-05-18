@@ -213,6 +213,7 @@ const handleLiveReload = async (args: ArgsExpressType, padString: string, timeSl
           entrypoint: proxyPath + '/watch/pad?hash=' + hash,
           settings: settings.getPublicSettings(),
           socialMetaHtml,
+          proxyPath,
         })
         res.send(content);
       })
@@ -398,6 +399,7 @@ exports.expressCreateServer = async (_hookName: string, args: ArgsExpressType, c
         entrypoint: "../"+fileNamePad,
         settings: settings.getPublicSettings(),
         socialMetaHtml,
+        proxyPath,
       })
       res.send(content);
     });

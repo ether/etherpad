@@ -20,7 +20,7 @@
   <% e.end_block(); %>
   <title><%=settings.title%></title>
 <%- typeof socialMetaHtml !== 'undefined' ? socialMetaHtml : '' %>
-  <link rel="manifest" href="../../manifest.json" />
+  <link rel="manifest" href="../manifest.json" />
   <script>
     /*
     |@licstart  The following is the entire license notice for the
@@ -515,7 +515,7 @@
             <button id="forcereconnect" class="btn btn-primary" data-l10n-id="pad.modals.forcereconnect"></button>
             <% e.end_block(); %>
           </div>
-          <form id="reconnectform" method="post" action="/ep/pad/reconnect" accept-charset="UTF-8" style="display: none;">
+          <form id="reconnectform" method="post" action="<%= typeof proxyPath !== 'undefined' ? proxyPath : '' %>/ep/pad/reconnect" accept-charset="UTF-8" style="display: none;">
               <input type="hidden" class="padId" name="padId">
               <input type="hidden" class="diagnosticInfo" name="diagnosticInfo">
               <input type="hidden" class="missedChanges" name="missedChanges">
@@ -662,7 +662,7 @@
   <% e.begin_block("customScripts"); %>
   <script type="text/javascript" src="../static/skins/<%=encodeURI(settings.skinName)%>/pad.js?v=<%=settings.randomVersionString%>"></script>
   <% e.end_block(); %>
-  <div style="display:none"><a href="/javascript" data-jslicense="1">JavaScript license information</a></div>
+  <div style="display:none"><a href="<%= typeof proxyPath !== 'undefined' ? proxyPath : '' %>/javascript" data-jslicense="1">JavaScript license information</a></div>
   <% e.end_block(); %>
 </body>
 </html>
