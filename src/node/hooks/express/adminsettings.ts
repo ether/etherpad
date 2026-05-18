@@ -9,6 +9,7 @@ const hooks = require('../../../static/js/pluginfw/hooks');
 const plugins = require('../../../static/js/pluginfw/plugins');
 import settings, {getEpVersion, getGitCommit, reloadSettings} from '../../utils/Settings';
 import {getLatestVersion} from '../../utils/UpdateCheck';
+import {redactSettings} from '../../utils/AdminSettingsRedact';
 const padManager = require('../../db/PadManager');
 const api = require('../../db/API');
 import {deleteRevisions} from '../../utils/Cleanup';
@@ -65,7 +66,8 @@ exports.socketio = (hookName: string, {io}: any) => {
       if (settings.showSettingsInAdminPage === false) {
         socket.emit('settings', {results: 'NOT_ALLOWED', flags});
       } else {
-        socket.emit('settings', {results: data, flags});
+        const resolved = redactSettings(settings);
+        socket.emit('settings', {results: data, resolved, flags});
       }
     });
 
