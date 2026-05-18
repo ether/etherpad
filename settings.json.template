@@ -535,6 +535,15 @@
    *
    * The other effect will be that the logs will contain the real client's IP,
    * instead of the reverse proxy's IP.
+   *
+   * Setting this to `true` also makes Etherpad honor two standard URL-path-
+   * prefix headers from upstream proxies:
+   *   - `X-Forwarded-Prefix` (HAProxy / Traefik convention)
+   *   - `X-Ingress-Path` (Home Assistant supervisor ingress)
+   *
+   * Both are sanitised before use. Etherpad's own `x-proxy-path` header is
+   * honored regardless of this setting; the operator is presumed to have
+   * configured their proxy intentionally when sending the custom header.
    */
   "trustProxy": false,
 

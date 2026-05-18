@@ -721,9 +721,19 @@ const settings: SettingsType = {
  * Deprecated cookie signing key.
  */
   sessionKey: null,
-  /*
- * Trust Proxy, whether or not trust the x-forwarded-for header.
- */
+  /**
+   * Trust Proxy, whether or not trust the x-forwarded-for header.
+   *
+   * Setting this to `true` also makes Etherpad honor two standard URL-path-
+   * prefix headers from upstream proxies:
+   *   - `X-Forwarded-Prefix` (HAProxy / Traefik convention)
+   *   - `X-Ingress-Path` (Home Assistant supervisor ingress)
+   *
+   * Both are sanitised before use (see src/node/utils/sanitizeProxyPath.ts).
+   * Etherpad's own `x-proxy-path` header is honored regardless of this
+   * setting; the operator is presumed to have configured their proxy
+   * intentionally when sending the custom header.
+   */
   trustProxy: false,
   /*
  * Settings controlling the session cookie issued by Etherpad.
