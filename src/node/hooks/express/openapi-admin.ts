@@ -45,6 +45,44 @@ export const generateAdminDefinition = (): any => ({
         },
       },
     },
+    '/api/version-status': {
+      get: {
+        operationId: 'getVersionStatus',
+        summary: 'Outdated-version notice signal for the pad UI',
+        description:
+          'Returns a non-null `outdated` value only to the first author of the supplied pad, ' +
+          'and only when the running server is at least one minor version behind the latest ' +
+          'published release. Result is cached per (padId, authorId) for 60 s.',
+        parameters: [
+          {
+            name: 'padId',
+            in: 'query',
+            required: false,
+            schema: {type: 'string'},
+            description:
+              'Pad whose first-author membership is being checked. ' +
+              'Omitted padId always yields a null result.',
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Outdated-notice signal.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['outdated', 'isFirstAuthor'],
+                  properties: {
+                    outdated: {type: 'string', enum: ['minor'], nullable: true},
+                    isFirstAuthor: {type: 'boolean'},
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
     '/admin/update/status': {
       get: {
         operationId: 'getUpdateStatus',
