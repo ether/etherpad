@@ -5,12 +5,12 @@
  * (same as production), then exercised via supertest. `loadState` is mocked so
  * tests control the "latest" version without touching the filesystem.
  * `PadManager` is mocked so pad-creation doesn't require a running database.
+ * `AuthorManager` is mocked so token→authorID resolution doesn't require a DB.
  *
- * Session injection: `resolveRequestAuthor` reads `req.session.user.author`
- * directly. A simple before-route middleware sets that property on each
- * request, keyed by the `X-Test-Author` request header, so individual tests
- * can choose which author the request "belongs to" without needing real
- * session middleware.
+ * Author injection: `resolveRequestAuthor` reads the `token` cookie and calls
+ * `authorManager.getAuthorId(token, user)`. Tests set `sessionAuthor` to
+ * control which authorID the mock returns for the test token `t.alice`.
+ * `null` means "anonymous" (getAuthorId returns null / empty for the token).
  */
 
 import {describe, it, expect, vi, beforeAll, beforeEach, afterEach} from 'vitest';
@@ -38,6 +38,14 @@ vi.mock('../../../../../node/updater', () => ({
   getDetectedInstallMethod: () => 'git',
 }));
 
+// AuthorManager is dynamically imported inside resolveRequestAuthor(). Stubbing
+// it here lets tests control token→authorID resolution without a DB.
+vi.mock('../../../../../node/db/AuthorManager', () => ({
+  default: {
+    getAuthorId: vi.fn(),
+  },
+}));
+
 // PadManager is dynamically imported inside computeOutdated(). Stubbing it
 // here lets us control pad existence and author-pool contents without a DB.
 vi.mock('../../../../../node/db/PadManager', () => {
@@ -58,6 +66,7 @@ vi.mock('../../../../../node/db/PadManager', () => {
 // ---------------------------------------------------------------------------
 
 import * as stateModule from '../../../../../node/updater/state';
+import * as authorManagerModule from '../../../../../node/db/AuthorManager';
 import {
   expressCreateServer,
   _resetBadgeCacheForTests,
@@ -112,21 +121,22 @@ let app: Express;
 let request: ReturnType<typeof supertest>;
 
 /**
- * The author that the fake session middleware will inject into req.session.
- * Tests that need a specific author set this before making a request.
- * `null` means "anonymous" (no session author).
+ * The author that `authorManager.getAuthorId` will return for the test token
+ * `t.alice`. Tests set this before making a request. `null` means "anonymous"
+ * (getAuthorId returns null/empty, so resolveRequestAuthor returns null).
  */
 let sessionAuthor: string | null = null;
+
+/** Fixed test token used in every request. The cookie name has no prefix in tests. */
+const TEST_TOKEN = 't.alice';
 
 beforeAll(() => {
   app = express();
 
-  // Fake session middleware: sets req.session.user.author from our test
-  // variable, so resolveRequestAuthor() in the route sees the right identity.
+  // Inject the test token cookie so resolveRequestAuthor() sees it.
+  // The real cookie-parser middleware is not needed: we set req.cookies directly.
   app.use((req: any, _res, next) => {
-    if (sessionAuthor !== null) {
-      req.session = {user: {author: sessionAuthor}};
-    }
+    req.cookies = {token: TEST_TOKEN};
     next();
   });
 
@@ -143,6 +153,13 @@ beforeEach(() => {
   sessionAuthor = null;
   // Reset the loadState spy so each test controls its own return value.
   vi.mocked(stateModule.loadState).mockReset();
+  // Wire up the AuthorManager mock: return sessionAuthor (or null) for our test token.
+  vi.mocked((authorManagerModule as any).default.getAuthorId).mockImplementation(
+    async (token: string) => {
+      if (token === TEST_TOKEN && sessionAuthor !== null) return sessionAuthor;
+      return null;
+    },
+  );
 });
 
 afterEach(() => {

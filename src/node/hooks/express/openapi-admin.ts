@@ -20,7 +20,10 @@ export const generateAdminDefinition = (): any => ({
     title: 'Etherpad Admin API',
     description:
       'Authenticated administrative endpoints consumed by the Etherpad admin UI. ' +
-      'Distinct from the public /api/{version}/* surface served by /api/openapi.json.',
+      'Distinct from the public /api/{version}/* surface served by /api/openapi.json. ' +
+      'For completeness this document also includes non-admin endpoints that are ' +
+      'consumed by the pad UI itself (e.g. /api/version-status) since they share the ' +
+      'same internal route registration.',
     version: getEpVersion(),
   },
   paths: {

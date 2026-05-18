@@ -31,31 +31,32 @@ export const firstAuthorOf = (pad: {pool?: {numToAttrib?: Record<number | string
 };
 
 /**
- * Resolve the express-session author for a plain HTTP GET. The pad-side fetch
- * is `credentials: 'same-origin'`, so the `express_sid` cookie is sent
- * automatically. The global express-session middleware should have populated
- * `req.session` already — but if not (e.g. test harness without middleware),
- * we re-invoke it ourselves. On any failure path we return null and the
- * caller treats the request as anonymous.
+ * Resolve the pad-visitor's authorID from the HttpOnly token cookie. This
+ * mirrors how Etherpad's own socket.io handshake resolves pad-visitor identity:
+ * the browser sends the `token` cookie (or `<prefix>token`) with every
+ * same-origin request, and `authorManager.getAuthorId(token, user)` maps the
+ * token to a stable authorID via the `token2author` DB key.
+ *
+ * We do NOT use `req.session.user.author` because Etherpad does not populate
+ * an authorID into the express-session `user` object for pad visitors, so that
+ * field is always undefined in production.
+ *
+ * On any failure path we return null and the caller treats the request as
+ * anonymous, resulting in an EMPTY (no-badge) response.
  */
 export const resolveRequestAuthor = async (req: any): Promise<string | null> => {
-  const readAuthor = (): string | null => {
-    const a = req?.session?.user?.author;
-    return typeof a === 'string' && a !== '' ? a : null;
-  };
-  const fromSession = readAuthor();
-  if (fromSession !== null) return fromSession;
   try {
-    const expressModule = await import('../express');
-    const mw = (expressModule as any).sessionMiddleware;
-    if (typeof mw !== 'function') return null;
-    await new Promise<void>((resolve, reject) => {
-      mw(req, {} as any, (err?: unknown) => (err ? reject(err) : resolve()));
-    });
+    const cookiePrefix = (settings as any).cookie?.prefix ?? '';
+    const token = req?.cookies?.[`${cookiePrefix}token`];
+    if (typeof token !== 'string' || token === '') return null;
+    const authorManagerMod: any = await import('../../db/AuthorManager');
+    const authorManager = authorManagerMod.default ?? authorManagerMod;
+    if (typeof authorManager.getAuthorId !== 'function') return null;
+    const authorId = await authorManager.getAuthorId(token, req?.session?.user);
+    return typeof authorId === 'string' && authorId !== '' ? authorId : null;
   } catch {
     return null;
   }
-  return readAuthor();
 };
 
 interface OutdatedResponse {
