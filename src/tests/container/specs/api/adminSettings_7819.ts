@@ -87,15 +87,15 @@ const save = (socket: any, payload: string): Promise<{status: string; detail?: a
 describe('admin /settings socket (Docker container) — #7819', function () {
   this.timeout(20000);
   let socket: any;
-  let originalRaw: string;
 
   before(async function () {
     const cookieHdr = await adminCookieHeader();
     socket = await settingsSocket(cookieHdr);
+    // Sanity: load works as admin. We don't keep the result — the file
+    // we're about to save replaces settings.json entirely.
     const reply = await load(socket);
     assert.equal(typeof reply.results, 'string',
         'settings.results must be a string — container started without ADMIN_PASSWORD?');
-    originalRaw = reply.results;
   });
 
   after(function () {
@@ -108,26 +108,47 @@ describe('admin /settings socket (Docker container) — #7819', function () {
     // leftover state doesn't poison anything.
   });
 
-  it('save → load round-trip preserves a new top-level plugin block', async function () {
-    // Inject `"ep_oauth": {...},` right after the opening brace. Pure
-    // textual splice — keeps every existing key/comment intact, which
-    // is exactly what a user adding a plugin section would do.
-    const augmented = originalRaw.replace(
-        /^(\s*\{)/,
-        `$1"ep_oauth":{"clientID":"${MARKER}","clientSecret":"x",` +
-        '"callbackURL":"http://x/cb"},',
-    );
-    assert.notEqual(augmented, originalRaw, 'splice should have changed the string');
-    assert.ok(augmented.includes(MARKER), 'sanity: marker is in payload');
+  it('save → load round-trip preserves a top-level plugin block', async function () {
+    // Hand-built minimal-but-viable settings document. Three reasons we
+    // don't splice into the original:
+    //   1. settings.json.docker uses jsonc `/* */` and `//` comments and
+    //      keeps a trailing-comma-before-comment-before-close pattern
+    //      that's annoying to patch correctly from the test side.
+    //   2. The backend `saveSettings` handler writes bytes verbatim with
+    //      zero validation — so what we save IS what should come back.
+    //      Whether the payload is "realistic" is orthogonal to whether
+    //      the file persists.
+    //   3. After this save the container will be `docker restart`ed by
+    //      the workflow. Minimal-but-viable means Etherpad starts back
+    //      up: `port` is required by the HTTP server, `users.admin`
+    //      keeps admin auth working post-restart, dbType=dirty keeps DB
+    //      init happy.
+    const augmented = JSON.stringify({
+      title: 'Etherpad',
+      ip: '0.0.0.0',
+      port: 9001,
+      dbType: 'dirty',
+      dbSettings: {filename: 'var/dirty.db'},
+      showSettingsInAdminPage: true,
+      enableAdminUITests: true,
+      users: {admin: {password: ADMIN_PASSWORD, is_admin: true}},
+      ep_oauth: {
+        clientID: MARKER,
+        clientSecret: 'x',
+        callbackURL: 'http://x/cb',
+      },
+    }, null, 2);
 
     const ack = await save(socket, augmented);
     assert.equal(ack.status, 'saved',
         `saveSettings did not ack 'saved' — got ${JSON.stringify(ack)}`);
 
-    // Re-load over the same socket. The server re-reads
+    // Re-load over the same socket. adminsettings.ts re-reads
     // settings.settingsFilename on every `load`, so this reflects the
     // actual file on disk — not a client-side echo.
     const reply = await load(socket);
+    assert.equal(reply.results, augmented,
+        'load.results must equal the bytes we just saved');
     assert.ok(reply.results.includes('"ep_oauth"'),
         'ep_oauth block missing from next load — file on disk does not match payload');
     assert.ok(reply.results.includes(MARKER),
