@@ -50,8 +50,8 @@ importers:
         specifier: ^5.100.10
         version: 5.100.10(react@19.2.6)
       '@tanstack/react-query-devtools':
-        specifier: ^5.100.10
-        version: 5.100.10(@tanstack/react-query@5.100.10(react@19.2.6))(react@19.2.6)
+        specifier: ^5.100.11
+        version: 5.100.11(@tanstack/react-query@5.100.10(react@19.2.6))(react@19.2.6)
       jsonc-parser:
         specifier: ^3.3.1
         version: 3.3.1
@@ -1799,13 +1799,13 @@ packages:
   '@tanstack/query-core@5.100.10':
     resolution: {integrity: sha512-8UR0yJR+GiQ40m3lPhUr0xbfAupe6GSQiksSBSa9SM2NjezFyxXCIA69/lz8cSoNKZLrw1/PktIyQBJcVeMi3w==}
 
-  '@tanstack/query-devtools@5.100.10':
-    resolution: {integrity: sha512-3DmJf25hDPus5IpVvp6ujXv6bKV2zPzI9vpbAmpJigsL/H6DPvPjmf7/Q9yVKEke//8fgeQ45abjgnLuyYxAiw==}
+  '@tanstack/query-devtools@5.100.11':
+    resolution: {integrity: sha512-47rVBDuGMW/A4ekt3YQdz+q0JSIwktwGnWCYyQUvSs2/g/Oa+6Fi2/IQk4/Y4vf6u1uwI7hOogHslgMC8f3X/Q==}
 
-  '@tanstack/react-query-devtools@5.100.10':
-    resolution: {integrity: sha512-zes0+o9ef5rAZXJ9f/SeaLs2nufJaeVkZkl/Or9NGrWVF41kL9Od9ED9nCwtQlgiF2VGtrzhEw5AU/igAO+aAg==}
+  '@tanstack/react-query-devtools@5.100.11':
+    resolution: {integrity: sha512-75RFlJEG53Ed/Cxe5WLmgIpOElPNpgLZq7h0fLFnM5XwTYxSTk1rX/gC6MqGVXsSdrbP7zn7hPSJx9MinwiUHA==}
     peerDependencies:
-      '@tanstack/react-query': ^5.100.10
+      '@tanstack/react-query': ^5.100.11
       react: ^18 || ^19
 
   '@tanstack/react-query@5.100.10':
@@ -7180,11 +7180,11 @@ snapshots:
 
   '@tanstack/query-core@5.100.10': {}
 
-  '@tanstack/query-devtools@5.100.10': {}
+  '@tanstack/query-devtools@5.100.11': {}
 
-  '@tanstack/react-query-devtools@5.100.10(@tanstack/react-query@5.100.10(react@19.2.6))(react@19.2.6)':
+  '@tanstack/react-query-devtools@5.100.11(@tanstack/react-query@5.100.10(react@19.2.6))(react@19.2.6)':
     dependencies:
-      '@tanstack/query-devtools': 5.100.10
+      '@tanstack/query-devtools': 5.100.11
       '@tanstack/react-query': 5.100.10(react@19.2.6)
       react: 19.2.6
 
