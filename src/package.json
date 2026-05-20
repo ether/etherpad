@@ -48,7 +48,7 @@
     "htmlparser2": "^12.0.0",
     "http-errors": "^2.0.1",
     "jose": "^6.2.3",
-    "js-cookie": "^3.0.6",
+    "js-cookie": "^3.0.7",
     "jsdom": "^29.1.1",
     "jsonminify": "0.4.2",
     "jsonwebtoken": "^9.0.3",
