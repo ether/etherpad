@@ -114,7 +114,7 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/mime-types": "^3.0.1",
     "@types/mocha": "^10.0.9",
-    "@types/node": "^25.8.0",
+    "@types/node": "^25.9.1",
     "@types/nodemailer": "^8.0.0",
     "@types/oidc-provider": "^9.5.0",
     "@types/pdfkit": "^0.17.6",
