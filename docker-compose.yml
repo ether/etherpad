@@ -7,6 +7,14 @@ services:
     volumes:
       - plugins:/opt/etherpad-lite/src/plugin_packages
       - etherpad-var:/opt/etherpad-lite/var
+      # OPTIONAL: persist admin /settings edits across container recreates.
+      # Without this mount, settings.json lives in the image's writable
+      # layer — `docker compose restart` preserves it, but `docker compose
+      # down && up`, `pull`, or watchtower reverts it to the image
+      # template. Uncomment if you intend to edit settings.json through
+      # the /admin UI instead of (or in addition to) env vars. See
+      # https://github.com/ether/etherpad/issues/7819.
+      # - ./settings.json:/opt/etherpad-lite/settings.json
     depends_on:
       - postgres
     environment:
