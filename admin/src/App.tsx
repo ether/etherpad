@@ -75,6 +75,19 @@ export const App = () => {
         const detail = payload?.message ?? '';
         setToastState({open: true, title: t('admin_settings.toast.save_failed') + (detail ? ` (${detail})` : ''), success: false});
       }
+    });
+
+    // Backend emits this when the connecting socket does not have an
+    // admin session. Previously the server just dropped silently, so the
+    // SPA would sit on a loading screen with no clue. Surface it.
+    settingSocket.on('admin_auth_error', (payload?: {message?: string}) => {
+      const {setToastState} = useStore.getState();
+      setToastState({
+        open: true,
+        title: payload?.message || t('admin_settings.toast.auth_error'),
+        success: false,
+      });
+      useStore.getState().setShowLoading(false);
     })
 
     return () => {

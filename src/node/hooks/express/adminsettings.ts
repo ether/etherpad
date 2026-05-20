@@ -50,7 +50,17 @@ exports.socketio = (hookName: string, {io}: any) => {
   io.of('/settings').on('connection', (socket: any) => {
     // @ts-ignore
     const {session: {user: {is_admin: isAdmin} = {}} = {}} = socket.conn.request;
-    if (!isAdmin) return;
+    if (!isAdmin) {
+      // Previously this branch silently returned, so a non-admin client
+      // (e.g. a misrouted Traefik / OIDC session that didn't carry the
+      // admin cookie) would connect, emit load/save, and get nothing
+      // back — no error toast, no way to tell the save was ignored. Emit
+      // a dedicated event the SPA can surface, then drop the socket.
+      socket.emit('admin_auth_error',
+          {message: 'Not authenticated as admin. Re-authenticate and retry.'});
+      socket.disconnect(true);
+      return;
+    }
 
     socket.on('load', async (query: string): Promise<any> => {
       let data;

@@ -34,6 +34,37 @@ textarea.settings:focus {
   border-top: 1px solid #ddd;
 }
 
+/* --- env-var banner --- */
+/* Shown only when settings.json contains ${VAR} placeholders. The
+   typical reader is a Docker/K8s operator who has just been surprised
+   by env-var substitution semantics, so the copy must explain rather
+   than warn — visual weight matches a note, not an error. */
+.settings-envvar-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  background: #f5f7ff;
+  border: 1px solid #c7d2fe;
+  border-radius: 6px;
+  color: #1e293b;
+}
+.settings-envvar-banner svg {
+  flex-shrink: 0;
+  color: #4f46e5;
+  margin-top: 2px;
+}
+.settings-envvar-banner strong {
+  display: block;
+  margin-bottom: 4px;
+}
+.settings-envvar-banner p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
 /* --- mode toggle --- */
 .settings-mode-toggle {
   display: inline-flex;
