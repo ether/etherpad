@@ -217,4 +217,5 @@ describe(__filename, function () {
     assert.ok(onDisk.includes('persisted-marker-7819'),
         'comment must survive the write path');
   });
+
 });

@@ -32,12 +32,19 @@ export const App = () => {
 
     const settingSocket = connect(`${WS_URL}/settings`, {transports: ['websocket']});
     const pluginsSocket = connect(`${WS_URL}/pluginfw/installer`, {transports: ['websocket']})
+    // When the server explicitly rejects us for not being admin, we must
+    // NOT reconnect on the subsequent `disconnect` event — otherwise the
+    // socket cycles forever (connect → admin_auth_error → server
+    // disconnect → SPA auto-reconnect → …). The flag is reset on each
+    // successful connect.
+    let authErrored = false;
 
     pluginsSocket.on('connect', () => {
       useStore.getState().setPluginsSocket(pluginsSocket);
     });
 
     settingSocket.on('connect', () => {
+      authErrored = false;
       useStore.getState().setSettingsSocket(settingSocket);
       useStore.getState().setShowLoading(false)
       settingSocket.emit('load');
@@ -46,7 +53,7 @@ export const App = () => {
 
     settingSocket.on('disconnect', (reason) => {
       useStore.getState().setShowLoading(true)
-      if (reason === 'io server disconnect') settingSocket.connect();
+      if (reason === 'io server disconnect' && !authErrored) settingSocket.connect();
     });
 
     settingSocket.on('settings', (settings: any) => {
@@ -75,6 +82,22 @@ export const App = () => {
         const detail = payload?.message ?? '';
         setToastState({open: true, title: t('admin_settings.toast.save_failed') + (detail ? ` (${detail})` : ''), success: false});
       }
+    });
+
+    // Backend emits this when the connecting socket does not have an
+    // admin session. Previously the server just dropped silently, so the
+    // SPA would sit on a loading screen with no clue. Surface it AND
+    // suppress the automatic reconnect — without this flag the SPA would
+    // immediately reconnect to a socket that will reject it again.
+    settingSocket.on('admin_auth_error', (payload?: {message?: string}) => {
+      authErrored = true;
+      const {setToastState} = useStore.getState();
+      setToastState({
+        open: true,
+        title: payload?.message || t('admin_settings.toast.auth_error'),
+        success: false,
+      });
+      useStore.getState().setShowLoading(false);
     })
 
     return () => {
