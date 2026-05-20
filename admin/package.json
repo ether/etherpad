@@ -24,10 +24,10 @@
   "devDependencies": {
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-toast": "^1.2.15",
-    "@types/react": "^19.2.14",
+    "@types/react": "^19.2.15",
     "@types/react-dom": "^19.2.3",
-    "@typescript-eslint/eslint-plugin": "^8.59.3",
-    "@typescript-eslint/parser": "^8.59.3",
+    "@typescript-eslint/eslint-plugin": "^8.59.4",
+    "@typescript-eslint/parser": "^8.59.4",
     "@vitejs/plugin-react": "^6.0.2",
     "babel-plugin-react-compiler": "19.1.0-rc.3",
     "eslint": "^10.4.0",
@@ -39,14 +39,14 @@
     "openapi-typescript": "^7.13.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
-    "react-hook-form": "^7.75.0",
+    "react-hook-form": "^7.76.0",
     "react-i18next": "^17.0.8",
     "react-router-dom": "^7.15.1",
     "socket.io-client": "^4.8.3",
     "tsx": "^4.22.3",
     "typescript": "^6.0.3",
     "vite": "^8.0.13",
-    "vite-plugin-babel": "^1.7.1",
+    "vite-plugin-babel": "^1.7.3",
     "zustand": "^5.0.13"
   }
 }
