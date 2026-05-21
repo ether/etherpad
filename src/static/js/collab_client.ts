@@ -188,7 +188,12 @@ const getCollabClient = (ace2editor, serverVars, initialUserInfo, options, _pad)
     if (wrapper.type !== 'COLLABROOM' && wrapper.type !== 'CUSTOM') return;
     const msg = wrapper.data;
 
-    if (msg.type === 'NEW_CHANGES') {
+    if (msg.type === 'NEW_CHANGES' || msg.type === 'NEW_CHANGES_BATCH') {
+      // NEW_CHANGES_BATCH (added in #7756 lever 3b) carries an array of
+      // revisions in one emit. Each revision has the same shape as the
+      // legacy single-rev message, so we normalise to a list and apply in
+      // order, sharing the same compose-safety await.
+      const changes = msg.type === 'NEW_CHANGES_BATCH' ? msg.changes : [msg];
       serverMessageTaskQueue.enqueue(async () => {
         // Avoid updating the DOM while the user is composing a character. Notes about this `await`:
         //   * `await null;` is equivalent to `await Promise.resolve(null);`, so if the user is not
@@ -198,14 +203,16 @@ const getCollabClient = (ace2editor, serverVars, initialUserInfo, options, _pad)
         //     possible, that the chances are so small or the consequences so minor that it's not
         //     worth addressing).
         await editor.getInInternationalComposition();
-        const {newRev, changeset, author = '', apool} = msg;
-        if (newRev !== (rev + 1)) {
-          window.console.warn(`bad message revision on NEW_CHANGES: ${newRev} not ${rev + 1}`);
-          // setChannelState("DISCONNECTED", "badmessage_newchanges");
-          return;
+        for (const change of changes) {
+          const {newRev, changeset, author = '', apool} = change;
+          if (newRev !== (rev + 1)) {
+            window.console.warn(`bad message revision on ${msg.type}: ${newRev} not ${rev + 1}`);
+            // setChannelState("DISCONNECTED", "badmessage_newchanges");
+            return;
+          }
+          rev = newRev;
+          editor.applyChangesToBase(changeset, author, apool);
         }
-        rev = newRev;
-        editor.applyChangesToBase(changeset, author, apool);
       });
     } else if (msg.type === 'ACCEPT_COMMIT') {
       serverMessageTaskQueue.enqueue(() => {
