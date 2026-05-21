@@ -40,6 +40,7 @@ export const padUsersGauge = new client.Gauge({
 // state.
 const KNOWN_TYPES = new Set([
   'NEW_CHANGES',
+  'NEW_CHANGES_BATCH',
   'ACCEPT_COMMIT',
   'CHAT_MESSAGE',
   'CLIENT_VARS',
