@@ -1,0 +1,11 @@
+body {
+  color: #485365;
+  color: var(--text-color);
+  font-family: Quicksand, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+  font-family: var(--main-font-family);
+}
+
+h1 {
+  color: #64d29b;
+  color: var(--primary-color);
+}

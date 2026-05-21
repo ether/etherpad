@@ -1,0 +1,177 @@
+.popup-content {
+  border-radius: 5px;
+  padding: 25px;
+  background: none;
+  background-color: #ffffff;
+  background-color: var(--bg-color);
+  color: #576273;
+  color: var(--text-soft-color);
+  border: none;
+  box-shadow: 0 0 0 1px rgba(99, 114, 130, 0.16), 0 8px 16px rgba(27, 39, 51, 0.08);
+}
+
+#mycolorpicker, #users {
+  min-width: 0;
+}
+
+.popup h1 {
+  margin-bottom: 20px;
+  font-size: 1.6rem;
+}
+
+.popup h2 {
+  margin-bottom: 15px;
+  margin-top: 20px;
+  color: #485365;
+  color: var(--text-color);
+}
+
+.settings-sections {
+  display: grid;
+  gap: 24px;
+}
+
+.settings-section {
+  margin-bottom: 20px;
+  min-width: 0;
+}
+
+#settings .settings-section > h2 {
+  margin-top: 0;
+}
+
+.popup:not(.comment-modal) p {
+  margin: 10px 0;
+}
+
+.popup .dropdowns-container .dropdown-line {
+  margin-top: 15px;
+}
+.popup .dropdowns-container label {
+  width: 120px;
+  display: inline-block;
+}
+.popup .dropdowns-container .nice-select {
+  min-width: 180px;
+}
+
+.settings-notice {
+  color: var(--text-color);
+  font-size: 0.95rem;
+  line-height: 1.4;
+  border-left: 3px solid var(--primary-color);
+  padding-left: 10px;
+}
+
+@media (min-width: 1100px) {
+  .settings-sections.has-pad-settings {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: start;
+  }
+}
+
+@media (prefers-reduced-motion) {
+  .popup>.popup-content {
+    transform: scale(1);
+    transition: none;
+  }
+  .nice-select .list {
+    transform: scale(1) translateY(0px);
+    -webkit-transform: scale(1) translateY(0px);
+    -ms-transform: scale(1) translateY(0px);
+    transition: none;
+  }
+}
+
+@media (max-width: 800px) {
+  .popup-content {
+    padding: 1rem;
+    box-shadow: 0 0 0 1px rgba(99, 114, 130, 0.16), -1px 1px 16px 3px rgba(27, 39, 51, 0.12);
+  }
+  .popup .dropdowns-container select {
+    min-width: 0;
+  }
+}
+
+/* SKIN Variants Popup */
+#skin-variants {
+  bottom: 0;
+  left: 0;
+  right: auto;
+  top: auto;
+}
+#skin-variants .popup-content > p {
+  margin-top: 25px;
+}
+#skin-variants-result{
+  background-color: #f2f3f4;
+  background-color: var(--bg-soft-color);
+}
+.skin-variant-container {
+  text-transform: capitalize;
+}
+
+#delete-pad {
+  margin-top: 20px;
+}
+
+
+/* Pad deletion-token modal + delete-with-token disclosure (GDPR PR1) */
+#deletiontoken-modal .popup-content {
+  max-width: 32rem;
+}
+
+#deletiontoken-modal .deletiontoken-row {
+  display: flex;
+  gap: 0.5rem;
+  margin: 1rem 0;
+  align-items: center;
+}
+
+#deletiontoken-modal #deletiontoken-copy {
+  padding-top: 10px;
+}
+
+#deletiontoken-modal #deletiontoken-value {
+  flex: 1;
+  font-family: monospace;
+  padding: 0.4rem;
+  user-select: all;
+}
+
+#delete-pad-with-token {
+  margin-top: 0.5rem;
+}
+
+#delete-pad-with-token summary {
+  display: inline-block;
+  list-style: none;
+  cursor: pointer;
+  padding: 5px 20px;
+  border-radius: 4px;
+  font-weight: bold;
+  background: #d1242f;
+  color: #fff;
+}
+
+#delete-pad-with-token summary::-webkit-details-marker {
+  display: none;
+}
+
+#delete-pad-with-token summary:hover {
+  background: #b71c26;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 1px 2px rgba(0,0,0,0.12);
+  transform: translateY(-1px);
+}
+
+#delete-pad-with-token label {
+  display: block;
+  padding-top: 12px;
+}
+
+#delete-pad-with-token input {
+  margin: 0.5rem 0;
+  width: 100%;
+  font-family: monospace;
+  padding: 0.4rem;
+}
