@@ -781,6 +781,19 @@
    */
   "loadTest": false,
 
+  /*
+   * Defer engine.io socket flush onto the next microtask so multiple
+   * sendPacket() calls in the same task accumulate in writeBuffer before
+   * the underlying transport.send drains. Pairs with engine.io's existing
+   * batched-send path so high-fan-out scenarios produce fewer WebSocket
+   * frames. Microtask deferral adds no meaningful wall-clock latency —
+   * microtasks drain before any subsequent macrotask. Wire bytes are
+   * unchanged.
+   *
+   * #7756 / #7767. Default off; production unaffected.
+   */
+  "engineFlushDefer": false,
+
   /**
   * Disable dump of objects preventing a clean exit
   */
