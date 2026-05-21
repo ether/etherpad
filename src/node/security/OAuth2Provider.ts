@@ -1,14 +1,14 @@
-import {ArgsExpressType} from "../types/ArgsExpressType";
+import {ArgsExpressType} from "../types/ArgsExpressType.js";
 import Provider, {Account, Configuration} from 'oidc-provider';
 import {generateKeyPair, exportJWK, CryptoKey} from 'jose'
-import MemoryAdapter from "./OIDCAdapter";
+import MemoryAdapter from "./OIDCAdapter.js";
 import path from "path";
-import settings from '../utils/Settings';
+import settings from '../utils/Settings.js';
 import {IncomingForm} from 'formidable'
 import express from 'express';
 import {format} from 'url'
 import {ParsedUrlQuery} from "node:querystring";
-import {MapArrayType} from "../types/MapType";
+import {MapArrayType} from "../types/MapType.js";
 
 const configuration: Configuration = {
     scopes: ['openid', 'profile', 'email'],

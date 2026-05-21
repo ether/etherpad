@@ -1,5 +1,5 @@
-import Op from "./Op";
-import {assert} from './Changeset'
+import Op from "./Op.js";
+import {assert} from './Changeset.js'
 
 /**
  * @returns {OpAssembler}

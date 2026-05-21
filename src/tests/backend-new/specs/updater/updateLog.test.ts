@@ -2,7 +2,7 @@ import {describe, it, expect, beforeEach, afterEach} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
-import {tailLines} from '../../../../node/updater/updateLog';
+import {tailLines} from '../../../../node/updater/updateLog.js';
 
 describe('tailLines', () => {
   let dir: string;
@@ -61,14 +61,14 @@ describe('appendLine + rotation', () => {
   afterEach(async () => { await fs.rm(dir, {recursive: true, force: true}); });
 
   it('appendLine creates parent dir and writes a newline-terminated line', async () => {
-    const {appendLine} = await import('../../../../node/updater/updateLog');
+    const {appendLine} = await import('../../../../node/updater/updateLog.js');
     const nested = path.join(dir, 'a', 'b', 'update.log');
     await appendLine(nested, 'hello world');
     expect(await fs.readFile(nested, 'utf8')).toBe('hello world\n');
   });
 
   it('appendLine swallows errors so the caller never breaks on a read-only fs', async () => {
-    const {appendLine} = await import('../../../../node/updater/updateLog');
+    const {appendLine} = await import('../../../../node/updater/updateLog.js');
     // Make the would-be parent dir a regular file — fs.mkdir then fails with ENOTDIR
     // (or EEXIST depending on platform), which the helper must swallow.
     const collide = path.join(dir, 'not-a-dir');
@@ -78,7 +78,7 @@ describe('appendLine + rotation', () => {
   });
 
   it('rotateIfNeeded shifts .1 -> .2, current -> .1 once over the size threshold', async () => {
-    const {rotateIfNeeded} = await import('../../../../node/updater/updateLog');
+    const {rotateIfNeeded} = await import('../../../../node/updater/updateLog.js');
     // Force rotation by passing a tiny limit; write a line above the limit.
     await fs.writeFile(logPath, 'a'.repeat(50));
     await rotateIfNeeded(logPath, 10, 3);
@@ -90,7 +90,7 @@ describe('appendLine + rotation', () => {
   });
 
   it('rotateIfNeeded preserves up to BACKUPS-1 older backups', async () => {
-    const {rotateIfNeeded} = await import('../../../../node/updater/updateLog');
+    const {rotateIfNeeded} = await import('../../../../node/updater/updateLog.js');
     await fs.writeFile(logPath, 'newest'.repeat(20));
     await fs.writeFile(`${logPath}.1`, 'older-1');
     await fs.writeFile(`${logPath}.2`, 'older-2');
@@ -101,7 +101,7 @@ describe('appendLine + rotation', () => {
   });
 
   it('rotateIfNeeded is a no-op when under the limit', async () => {
-    const {rotateIfNeeded} = await import('../../../../node/updater/updateLog');
+    const {rotateIfNeeded} = await import('../../../../node/updater/updateLog.js');
     await fs.writeFile(logPath, 'small');
     await rotateIfNeeded(logPath, 10 * 1024 * 1024, 3);
     expect(await fs.readFile(logPath, 'utf8')).toBe('small');

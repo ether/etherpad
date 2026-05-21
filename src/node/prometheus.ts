@@ -1,7 +1,6 @@
 import client from 'prom-client';
-
-const db = require('./db/DB').db;
-const PadMessageHandler = require('./handler/PadMessageHandler');
+import dbModule from './db/DB.js';
+import * as PadMessageHandler from './handler/PadMessageHandler.js';
 
 const register = new client.Registry();
 const gaugeDB = new client.Gauge({
@@ -29,7 +28,7 @@ register.registerMetric(activePadsGauge);
 // with PadMessageHandler (which records into them on the hot path).
 // Gated behind settings.scalingDiveMetrics so production deployments don't
 // pay for the instrumentation by default.
-import {padUsersGauge, changesetApplyDuration, socketEmitsTotal, enabled as scalingDiveMetricsEnabled} from './prom-instruments';
+import {padUsersGauge, changesetApplyDuration, socketEmitsTotal, enabled as scalingDiveMetricsEnabled} from './prom-instruments.js';
 if (scalingDiveMetricsEnabled()) {
   register.registerMetric(padUsersGauge);
   register.registerMetric(changesetApplyDuration);
@@ -39,6 +38,7 @@ if (scalingDiveMetricsEnabled()) {
 client.collectDefaultMetrics({register});
 
 const monitor = async function () {
+  const db = dbModule.db;
   for (const [metric, value] of Object.entries(db.metrics)) {
     if (typeof value !== 'number') continue;
     gaugeDB.set({type: metric}, value);

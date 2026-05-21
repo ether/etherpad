@@ -16,21 +16,16 @@
  */
 
 import log4js from 'log4js';
-import AttributeMap from '../../static/js/AttributeMap';
-import {deserializeOps} from '../../static/js/Changeset';
-const contentcollector = require('../../static/js/contentcollector');
+import {deserializeOps} from '../../static/js/Changeset.js';
+import * as contentcollector from '../../static/js/contentcollector.js';
 import jsdom from 'jsdom';
-import {PadType} from "../types/PadType";
-import {Builder} from "../../static/js/Builder";
-
-// Mirror of `Pad.SYSTEM_AUTHOR_ID`. Imported as a literal to avoid a
-// circular require between Pad and ImportHtml during module init.
-const SYSTEM_AUTHOR_ID = 'a.etherpad-system';
+import {PadType} from "../types/PadType.js";
+import {Builder} from "../../static/js/Builder.js";
 
 const apiLogger = log4js.getLogger('ImportHtml');
 let processor:any;
 
-exports.setPadHTML = async (pad: PadType, html:string, authorId = '') => {
+export const setPadHTML = async (pad: PadType, html:string|null|undefined, authorId = '') => {
   if (processor == null) {
     const [{rehype}, {default: minifyWhitespace}] =
         await Promise.all([import('rehype'), import('rehype-minify-whitespace')]);
@@ -77,15 +72,6 @@ exports.setPadHTML = async (pad: PadType, html:string, authorId = '') => {
   // create a new changeset with a helper builder object
   const builder = new Builder(1);
 
-  // Every insert op needs an `author` attribute (the appendRevision
-  // precondition). The contentcollector tags ops with style
-  // attributes (bold, italic, etc.) but doesn't add an author; for
-  // server-side imports the author is implicit in the caller, so
-  // substitute the system author when no explicit one was supplied —
-  // same pattern setText/spliceText already use.
-  const effectiveAuthorId =
-      (newText.length > 0 && !authorId) ? SYSTEM_AUTHOR_ID : authorId;
-
   // assemble each line into the builder
   let textIndex = 0;
   const newTextStart = 0;
@@ -95,16 +81,7 @@ exports.setPadHTML = async (pad: PadType, html:string, authorId = '') => {
     if (!(nextIndex <= newTextStart || textIndex >= newTextEnd)) {
       const start = Math.max(newTextStart, textIndex);
       const end = Math.min(newTextEnd, nextIndex);
-      // Merge via AttributeMap so the result is in canonical order
-      // (sorted by pool index) — a raw `*N` prefix could violate
-      // checkRep's canonical-form assertion.
-      let mergedAttribs = op.attribs;
-      if (effectiveAuthorId) {
-        mergedAttribs = AttributeMap.fromString(op.attribs, pad.pool)
-            .set('author', effectiveAuthorId)
-            .toString();
-      }
-      builder.insert(newText.substring(start, end), mergedAttribs);
+      builder.insert(newText.substring(start, end), op.attribs);
     }
     textIndex = nextIndex;
   }
@@ -113,10 +90,6 @@ exports.setPadHTML = async (pad: PadType, html:string, authorId = '') => {
   const theChangeset = builder.toString();
 
   apiLogger.debug(`The changeset: ${theChangeset}`);
-  // Pass effectiveAuthorId here too so meta.author on the stored
-  // revision matches the author attribute we merged into the op
-  // attribs above — and so the padCreate / padUpdate hooks and
-  // authorManager.addPad link the same author identity.
-  await pad.setText('\n', effectiveAuthorId);
-  await pad.appendRevision(theChangeset, effectiveAuthorId);
+  await pad.setText('\n', authorId);
+  await pad.appendRevision(theChangeset, authorId);
 };

@@ -1,10 +1,10 @@
 'use strict';
 
-import {MapArrayType} from "../../../node/types/MapType";
+import {MapArrayType} from "../../../node/types/MapType.js";
 
 const assert = require('assert').strict;
 const common = require('../common');
-import settings from '../../../node/utils/Settings';
+import settings from '../../../node/utils/Settings.js';
 
 const ogTag = (html: string, prop: string): string | null => {
   const re = new RegExp(

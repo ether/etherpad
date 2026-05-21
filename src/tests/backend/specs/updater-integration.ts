@@ -5,9 +5,9 @@ import {execSync, spawn} from 'node:child_process';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import {executeUpdate} from '../../../node/updater/UpdateExecutor';
-import {performRollback, checkPendingVerification} from '../../../node/updater/RollbackHandler';
-import {EMPTY_STATE, UpdateState} from '../../../node/updater/types';
+import {executeUpdate} from '../../../node/updater/UpdateExecutor.js';
+import {performRollback, checkPendingVerification} from '../../../node/updater/RollbackHandler.js';
+import {EMPTY_STATE, UpdateState} from '../../../node/updater/types.js';
 
 const sh = (cmd: string, opts: any = {}) =>
   execSync(cmd, {stdio: 'pipe', ...opts}).toString().trim();
@@ -63,9 +63,7 @@ const stubSpawn = (pnpmExits: Record<string, number>) =>
     return spawn(cmd, args, opts);
   };
 
-describe(__filename, function () {
-  this.timeout(30_000);
-
+describe(__filename, () => {
   it('happy path: executes against tmp repo, lands on pending-verification, exits 75', async () => {
     const {dir, v1Sha} = await buildTmpRepo();
     try {

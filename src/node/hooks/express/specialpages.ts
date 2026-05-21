@@ -1,22 +1,23 @@
 'use strict';
 
 import path from 'node:path';
-const eejs = require('../../eejs')
+import eejs from '../../eejs/index.js';
 import fs from 'node:fs';
 const fsp = fs.promises;
-const toolbar = require('../../utils/toolbar');
-const hooks = require('../../../static/js/pluginfw/hooks');
-import settings, {getEpVersion} from '../../utils/Settings';
-import {ensureAuthorTokenCookie} from '../../utils/ensureAuthorTokenCookie';
+import toolbar from '../../utils/toolbar.js';
+import hooks from '../../../static/js/pluginfw/hooks.js';
+import settings, {getEpVersion} from '../../utils/Settings.js';
+import {ensureAuthorTokenCookie} from '../../utils/ensureAuthorTokenCookie.js';
 import util from 'node:util';
-const webaccess = require('./webaccess');
-const plugins = require('../../../static/js/pluginfw/plugin_defs');
-const i18n = require('../i18n');
-import {renderSocialMeta} from '../../utils/socialMeta';
+import * as webaccess from './webaccess.js';
+import plugins from '../../../static/js/pluginfw/plugin_defs.js';
+import * as i18n from '../i18n.js';
+import {renderSocialMeta} from '../../utils/socialMeta.js';
 
 import {build, buildSync} from 'esbuild'
-import {ArgsExpressType} from "../../types/ArgsExpressType";
-import prometheus from "../../prometheus";
+import {ArgsExpressType} from "../../types/ArgsExpressType.js";
+import prometheus from "../../prometheus.js";
+import stats from '../../stats.js';
 
 let ioI: { sockets: { sockets: any[]; }; } | null = null
 
@@ -26,12 +27,12 @@ let ioI: { sockets: { sockets: any[]; }; } | null = null
 import {sanitizeProxyPath} from '../../utils/sanitizeProxyPath';
 
 
-exports.socketio = (hookName: string, {io}: any) => {
+export const socketio = (hookName: string, {io}: any) => {
   ioI = io
 }
 
 
-exports.expressPreSession = async (hookName:string, {app}:ArgsExpressType) => {
+export const expressPreSession = async (hookName:string, {app}:ArgsExpressType) => {
   // This endpoint is intended to conform to:
   // https://www.ietf.org/archive/id/draft-inadarei-api-health-check-06.html
   app.get('/health', (req:any, res:any) => {
@@ -44,7 +45,7 @@ exports.expressPreSession = async (hookName:string, {app}:ArgsExpressType) => {
 
   if (settings.enableMetrics) {
     app.get('/stats', (req:any, res:any) => {
-      res.json(require('../../stats').toJSON());
+      res.json(stats.toJSON());
     });
 
     app.get('/stats/prometheus', async (req, res) => {
@@ -298,7 +299,7 @@ const convertTypescriptWatched = (content: string, cb: (output:string, hash: str
   })
 }
 
-exports.expressCreateServer = async (_hookName: string, args: ArgsExpressType, cb: Function) => {
+export const expressCreateServer = async (_hookName: string, args: ArgsExpressType, cb: Function) => {
   const padString =   eejs.require('ep_etherpad-lite/templates/padBootstrap.js', {
     pluginModules: (() => {
       const pluginModules = new Set();

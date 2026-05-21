@@ -1,14 +1,14 @@
 'use strict';
 
-import {applyToAttribution, applyToText, checkRep, joinAttributionLines, mutateAttributionLines, mutateTextLines, pack} from '../../../static/js/Changeset';
-import AttributePool from '../../../static/js/AttributePool';
-import {poolOrArray} from '../easysync-helper';
+import {applyToAttribution, applyToText, checkRep, joinAttributionLines, mutateAttributionLines, mutateTextLines, pack} from '../../../static/js/Changeset.js';
+import AttributePool from '../../../static/js/AttributePool.js';
+import {poolOrArray} from '../easysync-helper.js';
 import {expect, describe,it } from "vitest";
-import {SmartOpAssembler} from "../../../static/js/SmartOpAssembler";
-import Op from "../../../static/js/Op";
-import {StringAssembler} from "../../../static/js/StringAssembler";
-import TextLinesMutator from "../../../static/js/TextLinesMutator";
-import {numToString} from "../../../static/js/ChangesetUtils";
+import {SmartOpAssembler} from "../../../static/js/SmartOpAssembler.js";
+import Op from "../../../static/js/Op.js";
+import {StringAssembler} from "../../../static/js/StringAssembler.js";
+import TextLinesMutator from "../../../static/js/TextLinesMutator.js";
+import {numToString} from "../../../static/js/ChangesetUtils.js";
 
 describe('easysync-mutations', function () {
   const applyMutations = (mu: TextLinesMutator, arrayOfArrays: any[]) => {

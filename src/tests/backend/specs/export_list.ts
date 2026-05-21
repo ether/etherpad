@@ -1,10 +1,15 @@
 'use strict';
 
-const assert = require('assert').strict;
-const common = require('../common');
-const padManager = require('../../../node/db/PadManager');
-const importHtml = require('../../../node/utils/ImportHtml');
-const exportHtml = require('../../../node/utils/ExportHtml');
+import {fileURLToPath} from 'node:url';
+import {dirname} from 'node:path';
+import assert from 'assert';
+import * as common from '../common.js';
+import * as padManager from '../../../node/db/PadManager.js';
+import * as importHtml from '../../../node/utils/ImportHtml.js';
+import * as exportHtml from '../../../node/utils/ExportHtml.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 describe(__filename, function () {
   before(async function () {

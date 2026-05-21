@@ -1,5 +1,5 @@
 import {expect, test} from '@playwright/test';
-import {getPadBody, goToNewPad} from '../helper/padHelper';
+import {getPadBody, goToNewPad} from '../helper/padHelper.js';
 
 test.beforeEach(async ({page}) => {
   await goToNewPad(page);

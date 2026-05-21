@@ -1,4 +1,4 @@
-import {numToString} from "./ChangesetUtils";
+import {numToString} from "./ChangesetUtils.js";
 
 export type OpCode = ''|'='|'+'|'-';
 

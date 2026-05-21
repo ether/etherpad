@@ -5,11 +5,11 @@
  * based on a SkipList
  */
 
-import {RepModel} from "./types/RepModel";
-import {ChangeSetBuilder} from "./types/ChangeSetBuilder";
-import {Attribute} from "./types/Attribute";
-import AttributePool from "./AttributePool";
-import {Builder} from "./Builder";
+import {RepModel} from "./types/RepModel.js";
+import {ChangeSetBuilder} from "./types/ChangeSetBuilder.js";
+import {Attribute} from "./types/Attribute.js";
+import AttributePool from "./AttributePool.js";
+import {Builder} from "./Builder.js";
 
 /**
  * Copyright 2009 Google Inc.

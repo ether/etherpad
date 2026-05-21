@@ -1,5 +1,5 @@
 import {expect, test, Page} from '@playwright/test';
-import {goToNewPad} from '../helper/padHelper';
+import {goToNewPad} from '../helper/padHelper.js';
 
 const themeColor = (page: Page) =>
   page.locator('meta[name="theme-color"]').getAttribute('content');

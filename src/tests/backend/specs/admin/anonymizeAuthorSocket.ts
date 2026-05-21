@@ -61,100 +61,24 @@ const ask = (socket: any, evt: string, payload: any, replyEvt: string) =>
       socket.emit(evt, payload);
     });
 
-// adminSocket() depends on Etherpad's default plain-text password check for
-// settings.users[name].password. Any authenticate-hook plugin that claims
-// the request before the built-in basic-auth fallback can block this:
-// the historical offender was ep_readonly_guest, whose authenticate hook
-// sorts itself first and silently swaps req.session.user with a guest
-// (#7795); ep_hash_auth-style plugins that expect hashed credentials
-// would do the same. When that happens the basic-auth probe returns no
-// admin session, /settings's connection handler returns without
-// registering listeners (see src/node/hooks/express/adminsettings.ts:25),
-// and every socket.emit() afterwards waits forever for a reply that
-// nothing will ever send. The socket itself still connects when admin
-// session is missing, so the probe has to run at the application layer:
-// emit a known `/settings` event (`authorLoad`) and wait for the matching
-// reply (`results:authorLoad`). If it doesn't arrive within the budget,
-// skip — much cheaper than letting mocha's 120s per-test timeout absorb
-// 7 stalled tests.
-const PROBE_BUDGET_MS = 15000;
-const adminSocketWithProbe = async (budgetMs: number): Promise<{
-  ok: true; socket: any;
-} | {ok: false; reason: string;}> => {
-  const deadline = Date.now() + budgetMs;
-  let socket: any;
-  try {
-    socket = await Promise.race([
-      adminSocket(),
-      new Promise<never>((_, rej) =>
-          setTimeout(() => rej(new Error('adminSocket connect timed out')),
-              Math.max(0, deadline - Date.now()))),
-    ]);
-  } catch (err: any) {
-    return {ok: false, reason: String(err && err.message || err)};
-  }
-  const remaining = Math.max(0, deadline - Date.now());
-  // authorLoad is gated on the admin session being present (see
-  // adminsettings.ts:25 — non-admin connections never register it) but
-  // doesn't depend on any disk-resident settings file the way `load`
-  // does, so it's a stable application-level liveness probe.
-  const replied = new Promise<true>((res) => socket.once('results:authorLoad', () => res(true)));
-  socket.emit('authorLoad', {
-    pattern: '__anonymizeAuthorSocket-probe__', offset: 0, limit: 1,
-    sortBy: 'name', ascending: true, includeErased: false,
-  });
-  const probed = await Promise.race([
-    replied,
-    new Promise<false>((res) => setTimeout(() => res(false), remaining)),
-  ]);
-  if (!probed) {
-    socket.disconnect();
-    return {ok: false, reason: `no \`results:authorLoad\` reply within ${budgetMs}ms (no admin handlers registered)`};
-  }
-  return {ok: true, socket};
-};
-
-describe(__filename, function () {
+describe(__filename, () => {
   let socket: any;
   let originalFlag: boolean;
   let savedUsers: any;
   let savedRequireAuthentication: boolean;
-  let setupCompleted = false;
 
-  before(async function () {
-    this.timeout(60000);
+  before(async () => {
     await common.init();
-
-    // Capture backups BEFORE any mutation so after() can restore cleanly
-    // even if the probe times out (adminSocket mutates settings.users
-    // and settings.requireAuthentication on its way in).
     settings.gdprAuthorErasure = settings.gdprAuthorErasure || {enabled: false};
     originalFlag = settings.gdprAuthorErasure.enabled;
+    settings.gdprAuthorErasure.enabled = true;
     savedUsers = settings.users;
     savedRequireAuthentication = settings.requireAuthentication;
-    settings.gdprAuthorErasure.enabled = true;
-    setupCompleted = true;
-
-    const probe = await adminSocketWithProbe(PROBE_BUDGET_MS);
-    if (!probe.ok) {
-      console.warn(
-          `[anonymizeAuthorSocket] admin socket probe failed (${probe.reason}); ` +
-          'skipping suite — an authenticate-hook plugin (e.g. ep_readonly_guest, ' +
-          'or an ep_hash_auth-style plugin requiring hashed credentials) is ' +
-          'rejecting the test\'s plain-text admin credentials.');
-      this.skip();
-      return;
-    }
-    socket = probe.socket;
+    socket = await adminSocket();
   });
 
-  after(function () {
+  after(() => {
     if (socket) socket.disconnect();
-    // before() may have called this.skip() before capturing backups (e.g.
-    // a common.init() failure), so guard against writing undefined into
-    // settings. Once setupCompleted flips true the backup variables are
-    // safe to read.
-    if (!setupCompleted) return;
     settings.gdprAuthorErasure.enabled = originalFlag;
     // savedUsers and settings.users point at the same object — restoring
     // the reference is a no-op against the in-place mutation. Delete the
@@ -164,7 +88,7 @@ describe(__filename, function () {
     settings.requireAuthentication = savedRequireAuthentication;
   });
 
-  it('authorLoad returns paginated rows', async function () {
+  it('authorLoad returns paginated rows', async () => {
     const tag = `sock-${Date.now()}`;
     await authorManager.createAuthorIfNotExistsFor(`m-${tag}`, `Sock ${tag}`);
     const res = await ask(socket, 'authorLoad',
@@ -189,7 +113,7 @@ describe(__filename, function () {
             'preview must not flip erased');
       });
 
-  it('anonymizeAuthor commits when the flag is enabled', async function () {
+  it('anonymizeAuthor commits when the flag is enabled', async () => {
     const tag = `live-${Date.now()}`;
     const {authorID} = await authorManager.createAuthorIfNotExistsFor(
         `m-${tag}`, `Live ${tag}`);

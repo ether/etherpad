@@ -1,7 +1,7 @@
 'use strict';
 
 import {describe, it, expect, vi} from 'vitest';
-import {InstallerTaskQueue} from '../../../static/js/pluginfw/installerTasks';
+import {InstallerTaskQueue} from '../../../static/js/pluginfw/installerTasks.js';
 
 describe('InstallerTaskQueue', () => {
   it('fires onFinished after a single successful task', () => {

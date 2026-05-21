@@ -20,16 +20,24 @@
  * limitations under the License.
  */
 
-const exporthtml = require('../utils/ExportHtml');
-const exporttxt = require('../utils/ExportTxt');
-const exportEtherpad = require('../utils/ExportEtherpad');
-import crypto from 'node:crypto';
+import {createRequire} from 'node:module';
+import * as exporthtml from '../utils/ExportHtml.js';
+import * as exporttxt from '../utils/ExportTxt.js';
+import * as exportEtherpad from '../utils/ExportEtherpad.js';
 import fs from 'fs';
-import settings from '../utils/Settings';
+import settings, {sofficeAvailable} from '../utils/Settings.js';
+import * as ExportSanitizeHtml from '../utils/ExportSanitizeHtml.js';
 import os from 'os';
-const hooks = require('../../static/js/pluginfw/hooks');
+import hooks from '../../static/js/pluginfw/hooks.js';
 import util from 'util';
-const { checkValidRev } = require('../utils/checkValidRev');
+import { checkValidRev } from '../utils/checkValidRev.js';
+import * as converterModule from '../utils/LibreOffice.js';
+
+// Lazy CJS bridge for optional native-export modules (html-to-docx,
+// ExportPdfNative). Loaded at call sites that are gated by sofficeAvailable
+// and require.resolve() probes — keeps the legacy convert path the default
+// and only pulls in the in-process renderers when soffice is unconfigured.
+const require = createRequire(import.meta.url);
 
 const fsp_writeFile = util.promisify(fs.writeFile);
 const fsp_unlink = util.promisify(fs.unlink);
@@ -44,16 +52,7 @@ const tempDirectory = os.tmpdir();
  * @param {String} readOnlyId the read only id of the pad to export
  * @param {String} type the type to export
  */
-exports.doExport = async (req: any, res: any, padId: string, readOnlyId: string, type:string) => {
-  // Validate :rev BEFORE setting Content-Disposition. A bad rev causes
-  // checkValidRev to throw, which the route handler catches and renders as a
-  // plain-text 500. If we set the attachment header first, the browser would
-  // download the error message as a file instead of displaying it.
-  if (req.params.rev !== undefined) {
-    // modify req, as we use it in a later call to exportConvert
-    req.params.rev = checkValidRev(req.params.rev);
-  }
-
+export const doExport = async (req: any, res: any, padId: string, readOnlyId: string, type:string) => {
   // avoid naming the read-only file as the original pad's id
   let fileName = readOnlyId ? readOnlyId : padId;
 
@@ -67,6 +66,12 @@ exports.doExport = async (req: any, res: any, padId: string, readOnlyId: string,
 
   // tell the browser that this is a downloadable file
   res.attachment(`${fileName}.${type}`);
+
+  if (req.params.rev !== undefined) {
+    // ensure revision is a number
+    // modify req, as we use it in a later call to exportConvert
+    req.params.rev = checkValidRev(req.params.rev);
+  }
 
   // if this is a plain text export, we can do this directly
   // We have to over engineer this because tabs are stored as attributes and not plain text
@@ -99,7 +104,6 @@ exports.doExport = async (req: any, res: any, padId: string, readOnlyId: string,
     // hand DOCX to html-to-docx and PDF to our pdfkit walker — both
     // pure-JS, in-process. No fallback chain: native errors surface as
     // 5xx so admins see real failures instead of silent shadowing.
-    const {sofficeAvailable} = require('../utils/Settings');
     const sofState = sofficeAvailable();
     const goNative = sofState === 'no'
         || (sofState === 'withoutPDF' && type === 'pdf');
@@ -108,7 +112,7 @@ exports.doExport = async (req: any, res: any, padId: string, readOnlyId: string,
       const {
         stripRemoteImages, extractBody, wrapLooseLines, dropEmptyBlocks,
         applyMonospaceToCode,
-      } = require('../utils/ExportSanitizeHtml');
+      } = ExportSanitizeHtml;
       // The HTML pipeline returns a full document (head, style, body); the
       // legacy soffice path renders that fine, but the in-process
       // converters need just the body content to avoid leaking CSS into
@@ -159,9 +163,8 @@ exports.doExport = async (req: any, res: any, padId: string, readOnlyId: string,
       }
     }
 
-    // soffice path — write the html export to a file. Use CSPRNG output
-    // for the temp path token (see matching note in ImportHandler.ts).
-    const randNum = crypto.randomBytes(16).toString('hex');
+    // soffice path — write the html export to a file
+    const randNum = Math.floor(Math.random() * 0xFFFFFFFF);
     const srcFile = `${tempDirectory}/etherpad_export_${randNum}.html`;
     await fsp_writeFile(srcFile, html);
 
@@ -176,8 +179,7 @@ exports.doExport = async (req: any, res: any, padId: string, readOnlyId: string,
     if (result.length > 0) {
       // console.log("export handled by plugin", destFile);
     } else {
-      const converter = require('../utils/LibreOffice');
-      await converter.convertFile(srcFile, destFile, type);
+      await converterModule.convertFile(srcFile, destFile, type);
     }
 
     // send the file

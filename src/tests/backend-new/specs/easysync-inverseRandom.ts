@@ -1,7 +1,7 @@
 'use strict';
 
-import AttributePool from '../../../static/js/AttributePool';
-import {checkRep, inverse, makeAttribution, mutateAttributionLines, mutateTextLines, splitAttributionLines} from '../../../static/js/Changeset';
+import AttributePool from '../../../static/js/AttributePool.js';
+import {checkRep, inverse, makeAttribution, mutateAttributionLines, mutateTextLines, splitAttributionLines} from '../../../static/js/Changeset.js';
 import {randomMultiline, randomTestChangeset, poolOrArray} from '../easysync-helper.js';
 import {expect, describe, it} from 'vitest'
 

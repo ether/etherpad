@@ -66,10 +66,19 @@ jobs:
         run: pnpm build
       -
         name: Run the backend tests
-        run: pnpm test
-      - name: Run the new vitest tests
-        working-directory: src
-        run: pnpm run test:vitest
+        env:
+          NODE_OPTIONS: "--report-on-fatalerror --report-uncaught-exception --report-on-signal --report-compact --report-directory=${{ github.workspace }}/node-report"
+        run: |
+          mkdir -p "${{ github.workspace }}/node-report"
+          pnpm test
+      - name: Upload Node diagnostic reports on failure
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: node-diagnostic-report-${{ runner.os }}-node${{ matrix.node }}-${{ github.job }}
+          path: node-report/
+          if-no-files-found: ignore
+          retention-days: 7
 
   withpluginsLinux:
     env:
@@ -136,10 +145,19 @@ jobs:
           ep_table_of_contents
       -
         name: Run the backend tests
-        run: pnpm test
-      - name: Run the new vitest tests
-        working-directory: src
-        run: pnpm run test:vitest
+        env:
+          NODE_OPTIONS: "--report-on-fatalerror --report-uncaught-exception --report-on-signal --report-compact --report-directory=${{ github.workspace }}/node-report"
+        run: |
+          mkdir -p "${{ github.workspace }}/node-report"
+          pnpm test
+      - name: Upload Node diagnostic reports on failure
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: node-diagnostic-report-${{ runner.os }}-node${{ matrix.node }}-${{ github.job }}
+          path: node-report/
+          if-no-files-found: ignore
+          retention-days: 7
 
   # Windows tests only run on push to develop/master, not on PRs
   withoutpluginsWindows:
@@ -200,12 +218,19 @@ jobs:
         name: Run the backend tests
         shell: bash
         working-directory: src
-        # --exit makes mocha call process.exit() after the run so a leaked handle
-        # cannot hang the job on Windows.
-        run: pnpm test -- --exit
-      - name: Run the new vitest tests
-        working-directory: src
-        run: pnpm run test:vitest
+        env:
+          NODE_OPTIONS: "--report-on-fatalerror --report-uncaught-exception --report-on-signal --report-compact --report-directory=${{ github.workspace }}/node-report"
+        run: |
+          mkdir -p "${{ github.workspace }}/node-report"
+          pnpm test
+      - name: Upload Node diagnostic reports on failure
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: node-diagnostic-report-${{ runner.os }}-node${{ matrix.node }}-${{ github.job }}
+          path: node-report/
+          if-no-files-found: ignore
+          retention-days: 7
 
   withpluginsWindows:
     env:
@@ -294,9 +319,16 @@ jobs:
         name: Run the backend tests
         shell: bash
         working-directory: src
-        # --exit makes mocha call process.exit() after the run so a leaked handle
-        # cannot hang the job on Windows.
-        run: pnpm test -- --exit
-      - name: Run the new vitest tests
-        working-directory: src
-        run: pnpm run test:vitest
+        env:
+          NODE_OPTIONS: "--report-on-fatalerror --report-uncaught-exception --report-on-signal --report-compact --report-directory=${{ github.workspace }}/node-report"
+        run: |
+          mkdir -p "${{ github.workspace }}/node-report"
+          pnpm test
+      - name: Upload Node diagnostic reports on failure
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: node-diagnostic-report-${{ runner.os }}-node${{ matrix.node }}-${{ github.job }}
+          path: node-report/
+          if-no-files-found: ignore
+          retention-days: 7

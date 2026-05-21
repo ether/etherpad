@@ -19,16 +19,16 @@
  * limitations under the License.
  */
 
-import {MapArrayType} from "../types/MapType";
-const api = require('../db/API');
-const padManager = require('../db/PadManager');
-import settings from '../utils/Settings';
+import {MapArrayType} from "../types/MapType.js";
+import { jwtDecode } from "jwt-decode";
+import * as api from '../db/API.js';
+import * as padManager from '../db/PadManager.js';
+import settings from '../utils/Settings.js';
 import createHTTPError from 'http-errors';
 import {Http2ServerRequest} from "node:http2";
-import {publicKeyExported} from "../security/OAuth2Provider";
+import {publicKeyExported} from "../security/OAuth2Provider.js";
 import {jwtVerify} from "jose";
-import {APIFields, apikey} from './APIKeyHandler'
-import crypto from 'node:crypto';
+import {APIFields, apikey} from './APIKeyHandler.js'
 // a list of all functions
 const version:MapArrayType<any> = {};
 
@@ -149,10 +149,10 @@ version['1.3.1'] = {
 };
 
 // set the latest available API version here
-exports.latestApiVersion = '1.3.1';
+export const latestApiVersion = '1.3.1';
 
 // exports the versions so it can be used by the new Swagger endpoint
-exports.version = version;
+export { version };
 
 
 
@@ -163,8 +163,8 @@ exports.version = version;
  * @param fields the params of the called function
  * @param req express request object
  */
-exports.handle = async function (apiVersion: string, functionName: string, fields: APIFields,
-                                 req: Http2ServerRequest) {
+export const handle = async function (apiVersion: string, functionName: string, fields: APIFields,
+                                 req: Http2ServerRequest|any, res?: any) {
   // say goodbye if this is an unknown API version
   if (!(apiVersion in version)) {
     throw new createHTTPError.NotFound('no such api version');
@@ -179,41 +179,27 @@ exports.handle = async function (apiVersion: string, functionName: string, field
 
   if (apikey !== null && apikey.trim().length > 0) {
     fields.apikey = fields.apikey || fields.api_key || fields.authorization;
-    // Constant-time compare — see crypto.timingSafeEqual docs.
-    const provided = Buffer.from(String(fields.apikey ?? ''), 'utf8');
-    const want = Buffer.from(apikey!.trim(), 'utf8');
-    const ok = provided.length === want.length &&
-        crypto.timingSafeEqual(provided, want);
-    if (!ok) {
+    // API key is configured, check if it is valid
+    if (fields.apikey !== apikey!.trim()) {
       throw new createHTTPError.Unauthorized('no or wrong API Key');
     }
   } else {
-    if (!req.headers.authorization) {
+    if(!req.headers.authorization) {
       throw new createHTTPError.Unauthorized('no or wrong API Key');
     }
     try {
-      const clientIds: string[] = settings.sso.clients?.map(
-          (client: {client_id: string}) => client.client_id) ?? [];
-      const jwtToCheck = req.headers.authorization.replace('Bearer ', '');
-      // Verify the JWT signature first, then read claims off the verified
-      // payload only.
-      const {payload: verified} = await jwtVerify(
-          jwtToCheck, publicKeyExported!, {algorithms: ['RS256']});
-      const isClientCredentials =
-          clientIds.includes(verified.sub as string);
-      if (!isClientCredentials) {
-        // authorization_code branch: require the admin claim to be
-        // strictly true. Checking only that the claim is present is not
-        // sufficient — the provider issues it as `admin: is_admin`, so
-        // non-admin users would have it set to false.
-        if (verified.admin !== true) {
-          throw new createHTTPError.Unauthorized(
-              'admin claim missing or not true');
-        }
+      const clientIds: string[] = settings.sso.clients?.map((client: {client_id: string}) => client.client_id) ?? [];
+      const jwtToCheck = req.headers.authorization.replace("Bearer ", "")
+      const payload = jwtDecode(jwtToCheck)
+      // client_credentials
+      if (clientIds.includes(<string>payload.sub)) {
+        await jwtVerify(jwtToCheck, publicKeyExported!, {algorithms: ['RS256']})
+      } else {
+        // authorization_code
+        await jwtVerify(jwtToCheck, publicKeyExported!, {algorithms: ['RS256'],
+          requiredClaims: ["admin"]})
       }
     } catch (e) {
-      // Single error string regardless of the underlying failure so we
-      // don't leak which check rejected the token.
       throw new createHTTPError.Unauthorized('no or wrong OAuth token');
     }
   }
@@ -234,5 +220,5 @@ exports.handle = async function (apiVersion: string, functionName: string, field
   const functionParams = version[apiVersion][functionName].map((field) => fields[field]);
 
   // call the api function
-  return api[functionName].apply(this, functionParams);
+  return (api as any)[functionName].apply(null, functionParams);
 };

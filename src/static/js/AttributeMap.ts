@@ -1,9 +1,9 @@
 'use strict';
 
-import AttributePool from "./AttributePool";
-import {Attribute} from "./types/Attribute";
+import AttributePool from "./AttributePool.js";
+import {Attribute} from "./types/Attribute.js";
 
-import attributes from './attributes';
+import attributes from './attributes.js';
 
 /**
  * A `[key, value]` pair of strings describing a text attribute.

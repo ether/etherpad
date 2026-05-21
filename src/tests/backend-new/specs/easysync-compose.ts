@@ -1,8 +1,8 @@
 'use strict';
 
-import {applyToText, checkRep, compose} from '../../../static/js/Changeset';
-import AttributePool from '../../../static/js/AttributePool';
-import {randomMultiline, randomTestChangeset} from '../easysync-helper';
+import {applyToText, checkRep, compose} from '../../../static/js/Changeset.js';
+import AttributePool from '../../../static/js/AttributePool.js';
+import {randomMultiline, randomTestChangeset} from '../easysync-helper.js';
 import {expect, describe, it} from 'vitest';
 
 describe('easysync-compose', function () {

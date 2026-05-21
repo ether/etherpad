@@ -1,6 +1,5 @@
-import semver from 'semver';
-import {InstallMethod} from './types';
-import type {VerifyResult} from './trustedKeys';
+import {InstallMethod} from './types.js';
+import type {VerifyResult} from './trustedKeys.js';
 
 export type PreflightReason =
   | 'install-method-not-writable'
@@ -9,20 +8,13 @@ export type PreflightReason =
   | 'pnpm-not-found'
   | 'lock-held'
   | 'remote-tag-missing'
-  | 'signature-verification-failed'
-  | 'node-engine-mismatch';
+  | 'signature-verification-failed';
 
 export interface PreflightInput {
   targetTag: string;
   diskSpaceMinMB: number;
   requireSignature: boolean;
   trustedKeysPath: string | null;
-  /**
-   * Running Node version (typically `process.versions.node`). Threaded
-   * through `input` rather than read from globals so the function stays
-   * fully testable without process mocking.
-   */
-  currentNodeVersion: string;
 }
 
 export interface PreflightDeps {
@@ -33,16 +25,9 @@ export interface PreflightDeps {
   lockHeld: () => Promise<boolean>;
   remoteHasTag: (tag: string) => Promise<boolean>;
   verifyTag: () => Promise<VerifyResult>;
-  /**
-   * Returns the `engines.node` field from the target tag's `package.json`
-   * without mutating the working tree. The implementation typically runs
-   * `git show <tag>:package.json` and parses the JSON. Returns `null` if
-   * the field is absent — that's treated as "no constraint, pass".
-   */
-  readTargetEnginesNode: (tag: string) => Promise<string | null>;
 }
 
-export type PreflightResult = {ok: true} | {ok: false; reason: PreflightReason; detail?: string};
+export type PreflightResult = {ok: true} | {ok: false; reason: PreflightReason};
 
 const WRITABLE_METHODS: ReadonlySet<Exclude<InstallMethod, 'auto'>> = new Set(['git']);
 
@@ -50,11 +35,6 @@ const WRITABLE_METHODS: ReadonlySet<Exclude<InstallMethod, 'auto'>> = new Set(['
  * Sequenced preflight: each check is fast and reads the world. Order matters —
  * cheap, definitive failures (install method) run before slow ones (network
  * tag lookup, gpg). The first failure short-circuits.
- *
- * The Node-engine check runs *after* signature verification: we want the
- * range to come from a trusted tag. It runs *before* anything mutates the
- * working tree (the executor does the first `git checkout` after we return
- * ok), so a failure leaves the system exactly as it was — no rollback needed.
  */
 export const runPreflight = async (
   input: PreflightInput,
@@ -70,15 +50,5 @@ export const runPreflight = async (
   if (!await deps.remoteHasTag(input.targetTag)) return {ok: false, reason: 'remote-tag-missing'};
   const sig = await deps.verifyTag();
   if (!sig.ok) return {ok: false, reason: 'signature-verification-failed'};
-
-  const range = await deps.readTargetEnginesNode(input.targetTag);
-  if (range && !semver.satisfies(input.currentNodeVersion, range, {includePrerelease: true})) {
-    return {
-      ok: false,
-      reason: 'node-engine-mismatch',
-      detail: `target requires Node ${range}, running ${input.currentNodeVersion}`,
-    };
-  }
-
   return {ok: true};
 };

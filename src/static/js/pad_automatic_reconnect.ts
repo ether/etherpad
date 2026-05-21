@@ -1,8 +1,8 @@
 // @ts-nocheck
 'use strict';
-import html10n from './vendors/html10n';
+import html10n from './vendors/html10n.js';
 
-exports.showCountDownTimerToReconnectOnModal = ($modal, pad) => {
+export const showCountDownTimerToReconnectOnModal = ($modal, pad) => {
   if (clientVars.automaticReconnectionTimeout && $modal.is('.with_reconnect_timer')) {
     createCountDownElementsIfNecessary($modal);
 
@@ -194,3 +194,7 @@ CountDownTimer.parse = (seconds) => ({
   minutes: (seconds / 60) | 0,
   seconds: (seconds % 60) | 0,
 });
+
+export default {
+  showCountDownTimerToReconnectOnModal,
+};

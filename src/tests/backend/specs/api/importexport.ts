@@ -7,8 +7,11 @@
  */
 
 import { strict as assert } from 'assert';
-import {MapArrayType} from "../../../../node/types/MapType";
-const common = require('../../common');
+import {MapArrayType} from "../../../../node/types/MapType.js";
+import * as common from '../../common.js';
+import {fileURLToPath} from 'node:url';
+
+const __filename = fileURLToPath(import.meta.url);
 
 let agent:any;
 const apiVersion = 1;
@@ -227,7 +230,6 @@ const testImports:MapArrayType<any> = {
 };
 
 describe(__filename, function () {
-  this.timeout(1000);
 
   before(async function () { agent = await common.init(); });
 
@@ -236,7 +238,7 @@ describe(__filename, function () {
       const testPadId = makeid();
       const test = testImports[testName];
       if (test.disabled) {
-        return xit(`DISABLED: ${testName}`, function (done) {
+        return xit(`DISABLED: ${testName}`, function (done: any) {
           done();
         });
       }

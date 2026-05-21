@@ -1,5 +1,5 @@
 import {expect, test} from "@playwright/test";
-import {loginToAdmin, saveSettings, restartEtherpad} from "../helper/adminhelper";
+import {loginToAdmin, saveSettings, restartEtherpad} from "../helper/adminhelper.js";
 
 // /admin tests run serially because they mutate global server state.
 test.describe.configure({mode: 'serial'});

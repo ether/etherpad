@@ -1,5 +1,6 @@
-import {ReleaseInfo} from './types';
-import {isValidTag} from './refSafety';
+import {ReleaseInfo, VulnerableBelowDirective} from './types.js';
+import {parseVulnerableBelow} from './versionCompare.js';
+import {isValidTag} from './refSafety.js';
 
 export interface FetchResult {
   status: number;
@@ -13,7 +14,7 @@ export type Fetcher = (url: string, etag: string | null) => Promise<FetchResult>
 
 /** Discriminated union of every outcome the checker can return. */
 export type CheckResult =
-  | {kind: 'updated'; release: ReleaseInfo; etag: string | null}
+  | {kind: 'updated'; release: ReleaseInfo; etag: string | null; vulnerableBelow: VulnerableBelowDirective[]}
   | {kind: 'notmodified'}
   | {kind: 'ratelimited'}
   | {kind: 'skipped-prerelease'; etag: string | null}
@@ -71,7 +72,12 @@ export const checkLatestRelease = async (
     htmlUrl: j.html_url,
   };
 
-  return {kind: 'updated', release, etag: res.etag};
+  const directiveThreshold = parseVulnerableBelow(body);
+  const vulnerableBelow: VulnerableBelowDirective[] = directiveThreshold
+    ? [{announcedBy: tag, threshold: directiveThreshold}]
+    : [];
+
+  return {kind: 'updated', release, etag: res.etag, vulnerableBelow};
 };
 
 /** Production fetcher built on Node 18+ native fetch. Honors If-None-Match for cheap polling. */

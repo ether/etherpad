@@ -6,7 +6,7 @@
 // the cost of an integration test.
 
 const assert = require('assert').strict;
-import {buildSocialMetaHtml, renderSocialMeta} from '../../../node/utils/socialMeta';
+import {buildSocialMetaHtml, renderSocialMeta} from '../../../node/utils/socialMeta.js';
 
 const ogTag = (html: string, prop: string): string | null => {
   const re = new RegExp(

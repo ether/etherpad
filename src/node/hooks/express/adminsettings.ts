@@ -1,52 +1,25 @@
 'use strict';
 
 
-import {PAD_FILTERS, PadFilter, PadQueryResult, PadSearchQuery} from "../../types/PadSearchQuery";
+import {PadQueryResult, PadSearchQuery} from "../../types/PadSearchQuery.js";
 import log4js from 'log4js';
 
-const fsp = require('fs').promises;
-const hooks = require('../../../static/js/pluginfw/hooks');
-const plugins = require('../../../static/js/pluginfw/plugins');
-import settings, {getEpVersion, getGitCommit, reloadSettings} from '../../utils/Settings';
-import {getLatestVersion} from '../../utils/UpdateCheck';
-import {redactSettings} from '../../utils/AdminSettingsRedact';
-const padManager = require('../../db/PadManager');
-const api = require('../../db/API');
-import {deleteRevisions} from '../../utils/Cleanup';
+import { promises as fsp } from 'fs';
+import hooks from '../../../static/js/pluginfw/hooks.js';
+import plugins from '../../../static/js/pluginfw/plugins.js';
+import settings, {getEpVersion, getGitCommit, reloadSettings} from '../../utils/Settings.js';
+import {getLatestVersion} from '../../utils/UpdateCheck.js';
+import * as padManager from '../../db/PadManager.js';
+import * as api from '../../db/API.js';
+import * as authorManager from '../../db/AuthorManager.js';
+import {deleteRevisions} from '../../utils/Cleanup.js';
 
 
 const queryPadLimit = 12;
-// Cap on concurrent `padManager.getPad()` calls while hydrating the pad
-// universe for filter chip / non-name sort. The old per-sortBy handlers
-// awaited each getPad sequentially (concurrency = 1); the unified
-// pipeline used to issue Promise.all over the full candidate set, which
-// can fan out to thousands of in-flight DB reads on busy deployments.
-// 16 is empirically enough to saturate a single ueberDB driver without
-// pushing the event loop into back-pressure.
-const PAD_HYDRATE_CONCURRENCY = 16;
 const logger = log4js.getLogger('adminSettings');
 
-// Concurrency-limited Promise.all replacement. Preserves the input
-// order in the returned array (caller slices later). Used by padLoad
-// to bound DB reads during hydration.
-async function mapWithConcurrency<T, R>(
-    items: T[], limit: number, fn: (t: T) => Promise<R>): Promise<R[]> {
-  const out: R[] = new Array(items.length);
-  let next = 0;
-  const worker = async () => {
-    while (true) {
-      const i = next++;
-      if (i >= items.length) return;
-      out[i] = await fn(items[i]);
-    }
-  };
-  const workers = Array.from({length: Math.min(limit, items.length)}, worker);
-  await Promise.all(workers);
-  return out;
-}
 
-
-exports.socketio = (hookName: string, {io}: any) => {
+export const socketio = (hookName: string, {io}: any) => {
   io.of('/settings').on('connection', (socket: any) => {
     // @ts-ignore
     const {session: {user: {is_admin: isAdmin} = {}} = {}} = socket.conn.request;
@@ -76,8 +49,7 @@ exports.socketio = (hookName: string, {io}: any) => {
       if (settings.showSettingsInAdminPage === false) {
         socket.emit('settings', {results: 'NOT_ALLOWED', flags});
       } else {
-        const resolved = redactSettings(settings);
-        socket.emit('settings', {results: data, resolved, flags});
+        socket.emit('settings', {results: data, flags});
       }
     });
 
@@ -149,112 +121,137 @@ exports.socketio = (hookName: string, {io}: any) => {
     socket.on('padLoad', async (query: PadSearchQuery) => {
       const {padIDs} = await padManager.listAllPads();
 
-      // ── 1. Pattern filter (cheap, by name only) ─────────────────────
-      let candidateNames: string[] = padIDs;
+      const data: {
+        total: number,
+        results?: PadQueryResult[]
+      } = {
+        total: padIDs.length,
+      };
+      let result: string[] = padIDs;
+      let maxResult;
+
+      // Filter out matches
       if (query.pattern) {
-        candidateNames = candidateNames.filter(
-            (padName: string) => padName.includes(query.pattern));
+        result = result.filter((padName: string) => padName.includes(query.pattern));
       }
 
-      // ── 2. Resolve filter chip ──────────────────────────────────────
-      // PadPage sends a chip id; "all" (default) means no additional
-      // filtering. We accept missing values from older clients gracefully.
-      const filter: PadFilter =
-          (query.filter && PAD_FILTERS.includes(query.filter)) ? query.filter : 'all';
+      data.total = result.length;
 
-      // ── 3. Decide whether we need full metadata for every candidate ──
-      // The fast path — name-sort with no filter chip — only needs to
-      // hydrate metadata for the 12-row page slice. Any other path
-      // (filter chip OR non-name sort) requires every candidate's revs
-      // / users / lastEdited up front so we can sort and slice against
-      // the right universe. The expensive call is `padManager.getPad`;
-      // user counts come from an in-memory map.
-      const needsFullScan = filter !== 'all' || query.sortBy !== 'padName';
-
-      const loadMeta = async (padName: string): Promise<PadQueryResult> => {
-        const pad = await padManager.getPad(padName);
-        return {
-          padName,
-          lastEdited: await pad.getLastEdit(),
-          userCount: api.padUsersCount(padName).padUsersCount,
-          revisionNumber: pad.getHeadRevisionNumber(),
-        };
-      };
-
-      // Lazily lifted so we don't load every pad twice on the fast path.
-      let hydrated: PadQueryResult[] | null = null;
-      const hydrateAll = async () => {
-        if (hydrated == null) {
-          hydrated = await mapWithConcurrency(
-              candidateNames, PAD_HYDRATE_CONCURRENCY, loadMeta);
-        }
-        return hydrated;
-      };
-
-      // ── 4. Filter chip — applied to hydrated metadata ────────────────
-      // Bucket boundaries match the client chips in PadPage.tsx so the
-      // counts on the stats cards keep meaning the same thing. Compute
-      // `now` once per request so a pad doesn't slip between buckets
-      // mid-loop.
-      const now = Date.now();
-      const isRecent = (lastEdited: number) => now - lastEdited < 86_400_000 * 7;
-      const isStale  = (lastEdited: number) => now - lastEdited > 86_400_000 * 365;
-      const matchesFilter = (m: PadQueryResult) => {
-        switch (filter) {
-          case 'active': return m.userCount > 0;
-          case 'recent': return isRecent(Number(m.lastEdited));
-          case 'empty':  return m.revisionNumber === 0;
-          case 'stale':  return isStale(Number(m.lastEdited));
-          default:       return true;
-        }
-      };
-
-      // ── 5. Total — i.e. the count the pagination footer reflects ────
-      // For the fast path this is just the pattern-filtered name list;
-      // for full-scan we report the post-chip total.
-      let totalNames: string[] | null = needsFullScan ? null : candidateNames;
-      let postFilterMetas: PadQueryResult[] | null = null;
-      if (needsFullScan) {
-        postFilterMetas = (await hydrateAll()).filter(matchesFilter);
+      maxResult = result.length - 1;
+      if (maxResult < 0) {
+        maxResult = 0;
       }
-      const total = needsFullScan ? postFilterMetas!.length : totalNames!.length;
 
-      // ── 6. Clamp offset/limit ──────────────────────────────────────
-      const maxOffset = Math.max(total - 1, 0);
+      // Reset to default values if out of bounds
       if (query.offset && query.offset < 0) {
         query.offset = 0;
-      } else if (query.offset > maxOffset) {
-        query.offset = maxOffset;
+      } else if (query.offset > maxResult) {
+        query.offset = maxResult;
       }
+
       if (query.limit && query.limit < 0) {
+       // Too small
         query.limit = 0;
       } else if (query.limit > queryPadLimit) {
+       // Too big
         query.limit = queryPadLimit;
       }
 
-      // ── 7. Sort + slice ────────────────────────────────────────────
-      const dir = query.ascending ? 1 : -1;
-      const cmpStr = (a: string, b: string) => a < b ? -dir : a > b ? dir : 0;
-      const cmpNum = (a: number, b: number) => a < b ? -dir : a > b ? dir : 0;
 
-      let results: PadQueryResult[];
-      if (needsFullScan) {
-        const sorted = postFilterMetas!.sort((a, b) => {
-          switch (query.sortBy) {
-            case 'padName':        return cmpStr(a.padName, b.padName);
-            case 'revisionNumber': return cmpNum(a.revisionNumber, b.revisionNumber);
-            case 'userCount':      return cmpNum(a.userCount, b.userCount);
-            case 'lastEdited':     return cmpStr(String(a.lastEdited), String(b.lastEdited));
-            default:               return 0;
+      if (query.sortBy === 'padName') {
+        result = result.sort((a, b) => {
+          if (a < b) return query.ascending ? -1 : 1;
+          if (a > b) return query.ascending ? 1 : -1;
+          return 0;
+        }).slice(query.offset, query.offset + query.limit);
+
+        data.results = await Promise.all(result.map(async (padName: string) => {
+          const pad = await padManager.getPad(padName);
+          const revisionNumber = pad.getHeadRevisionNumber()
+          const userCount = api.padUsersCount(padName).padUsersCount;
+          const lastEdited = await pad.getLastEdit();
+
+          return {
+            padName,
+            lastEdited,
+            userCount,
+            revisionNumber
           }
-        });
-        results = sorted.slice(query.offset, query.offset + query.limit);
-      } else {
-        const sliceNames = totalNames!.sort(cmpStr).slice(query.offset, query.offset + query.limit);
-        results = await Promise.all(sliceNames.map(loadMeta));
+        }));
+      } else if (query.sortBy === "revisionNumber") {
+        const currentWinners: PadQueryResult[] = []
+        const padMapping = [] as {padId: string, revisionNumber: number}[]
+        for (let res of result) {
+          const pad = await padManager.getPad(res);
+          const revisionNumber = pad.getHeadRevisionNumber()
+          padMapping.push({padId: res, revisionNumber})
+        }
+        padMapping.sort((a, b) => {
+          if (a.revisionNumber < b.revisionNumber) return query.ascending ? -1 : 1;
+          if (a.revisionNumber > b.revisionNumber) return query.ascending ? 1 : -1;
+          return 0;
+        })
+
+       for (const padRetrieval of padMapping.slice(query.offset, query.offset + query.limit)) {
+        let pad = await padManager.getPad(padRetrieval.padId);
+        currentWinners.push({
+         padName: padRetrieval.padId,
+         lastEdited: await pad.getLastEdit(),
+         userCount: api.padUsersCount(pad.padName).padUsersCount,
+         revisionNumber: padRetrieval.revisionNumber
+        })
+       }
+
+       data.results = currentWinners;
+      } else if (query.sortBy === "userCount") {
+       const currentWinners: PadQueryResult[] = []
+       const padMapping = [] as {padId: string, userCount: number}[]
+       for (let res of result) {
+        const userCount = api.padUsersCount(res).padUsersCount
+        padMapping.push({padId: res, userCount})
+       }
+       padMapping.sort((a, b) => {
+        if (a.userCount < b.userCount) return query.ascending ? -1 : 1;
+        if (a.userCount > b.userCount) return query.ascending ? 1 : -1;
+        return 0;
+       })
+
+       for (const padRetrieval of padMapping.slice(query.offset, query.offset + query.limit)) {
+        let pad = await padManager.getPad(padRetrieval.padId);
+        currentWinners.push({
+         padName: padRetrieval.padId,
+         lastEdited: await pad.getLastEdit(),
+         userCount: padRetrieval.userCount,
+         revisionNumber: pad.getHeadRevisionNumber()
+        })
+       }
+       data.results = currentWinners;
+      } else if (query.sortBy === "lastEdited") {
+       const currentWinners: PadQueryResult[] = []
+       const padMapping = [] as {padId: string, lastEdited: string|number}[]
+       for (let res of result) {
+        const pad = await padManager.getPad(res);
+        const lastEdited = await pad.getLastEdit();
+        padMapping.push({padId: res, lastEdited})
+       }
+       padMapping.sort((a, b) => {
+        if (a.lastEdited < b.lastEdited) return query.ascending ? -1 : 1;
+        if (a.lastEdited > b.lastEdited) return query.ascending ? 1 : -1;
+        return 0;
+       })
+
+       for (const padRetrieval of padMapping.slice(query.offset, query.offset + query.limit)) {
+        let pad = await padManager.getPad(padRetrieval.padId);
+        currentWinners.push({
+         padName: padRetrieval.padId,
+         lastEdited: padRetrieval.lastEdited,
+         userCount: api.padUsersCount(pad.padName).padUsersCount,
+         revisionNumber: pad.getHeadRevisionNumber()
+        })
+       }
+       data.results = currentWinners;
       }
 
-      const data: {total: number, results?: PadQueryResult[]} = {total, results};
       socket.emit('results:padLoad', data);
     })
 
@@ -321,8 +318,6 @@ exports.socketio = (hookName: string, {io}: any) => {
       }
      }
     })
-
-    const authorManager = require('../../db/AuthorManager');
 
     // The admin author-erasure UI (PR #7667) is gated as a single
     // feature: when gdprAuthorErasure.enabled is false, all three

@@ -1,6 +1,6 @@
 'use strict';
 
-import padUtils from './pad_utils'
+import padUtils from './pad_utils.js'
 
 /**
  * Represents a chat message stored in the database and transmitted among users. Plugins can extend

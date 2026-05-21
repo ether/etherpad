@@ -1,16 +1,21 @@
 'use strict';
 
-import {MapArrayType} from "../../../node/types/MapType";
-import {Func} from "mocha";
-import {SettingsUser} from "../../../node/types/SettingsUser";
+import {fileURLToPath} from 'node:url';
+import {dirname} from 'node:path';
+import {MapArrayType} from "../../../node/types/MapType.js";
+import {SettingsUser} from "../../../node/types/SettingsUser.js";
 
-const assert = require('assert').strict;
-const common = require('../common');
-const plugins = require('../../../static/js/pluginfw/plugin_defs');
-import settings from '../../../node/utils/Settings';
+import assert from 'assert';
+import * as common from '../common.js';
+import pluginDefs from '../../../static/js/pluginfw/plugin_defs.js';
+import settings from '../../../node/utils/Settings.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+const plugins = pluginDefs;
 
 describe(__filename, function () {
-  this.timeout(30000);
   let agent:any;
   const backups:MapArrayType<any> = {};
   const authHookNames = ['preAuthorize', 'authenticate', 'authorize'];

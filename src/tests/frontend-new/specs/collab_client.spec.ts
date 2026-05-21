@@ -1,4 +1,4 @@
-import {clearPadContent, getPadBody, goToNewPad, goToPad, writeToPad} from "../helper/padHelper";
+import {clearPadContent, getPadBody, goToNewPad, goToPad, writeToPad} from "../helper/padHelper.js";
 import {expect, Page, test} from "@playwright/test";
 
 let padId = "";

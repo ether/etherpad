@@ -19,18 +19,18 @@
  * limitations under the License.
  */
 
-const CustomError = require('../utils/customError');
-import {randomString} from "../../static/js/pad_utils";
-const db = require('./DB');
-const padDeletionManager = require('./PadDeletionManager');
-const padManager = require('./PadManager');
-const sessionManager = require('./SessionManager');
+import CustomError from '../utils/customError.js';
+import {randomString} from "../../static/js/pad_utils.js";
+import db from './DB.js';
+import * as padDeletionManager from './PadDeletionManager.js';
+import * as padManager from './PadManager.js';
+import * as sessionManager from './SessionManager.js';
 
 /**
  * Lists all groups
  * @return {Promise<{groupIDs: string[]}>} The ids of all groups
  */
-exports.listAllGroups = async () => {
+export const listAllGroups = async () => {
   let groups = await db.get('groups');
   groups = groups || {};
 
@@ -43,7 +43,7 @@ exports.listAllGroups = async () => {
  * @param {String} groupID The id of the group
  * @return {Promise<void>} Resolves when the group is deleted
  */
-exports.deleteGroup = async (groupID: string): Promise<void> => {
+export const deleteGroup = async (groupID: string): Promise<void> => {
   const group = await db.get(`group:${groupID}`);
 
   // ensure group exists
@@ -85,7 +85,7 @@ exports.deleteGroup = async (groupID: string): Promise<void> => {
  * @param {String} groupID the id of the group to delete
  * @return {Promise<boolean>} Resolves to true if the group exists
  */
-exports.doesGroupExist = async (groupID: string) => {
+export const doesGroupExist = async (groupID: string) => {
   // try to get the group entry
   const group = await db.get(`group:${groupID}`);
 
@@ -96,7 +96,7 @@ exports.doesGroupExist = async (groupID: string) => {
  * Creates a new group
  * @return {Promise<{groupID: string}>} the id of the new group
  */
-exports.createGroup = async () => {
+export const createGroup = async () => {
   const groupID = `g.${randomString(16)}`;
   await db.set(`group:${groupID}`, {pads: {}, mappings: {}});
   // Add the group to the `groups` record after the group's individual record is created so that
@@ -111,13 +111,13 @@ exports.createGroup = async () => {
  * @param groupMapper the mapper of the group
  * @return {Promise<{groupID: string}|{groupID: *}>} a promise that resolves to the group ID
  */
-exports.createGroupIfNotExistsFor = async (groupMapper: string|object) => {
+export const createGroupIfNotExistsFor = async (groupMapper: string|object) => {
   if (typeof groupMapper !== 'string') {
     throw new CustomError('groupMapper is not a string', 'apierror');
   }
   const groupID = await db.get(`mapper2group:${groupMapper}`);
-  if (groupID && await exports.doesGroupExist(groupID)) return {groupID};
-  const result = await exports.createGroup();
+  if (groupID && await doesGroupExist(groupID)) return {groupID};
+  const result = await createGroup();
   await Promise.all([
     db.set(`mapper2group:${groupMapper}`, result.groupID),
     // Remember the mapping in the group record so that it can be cleaned up when the group is
@@ -137,7 +137,7 @@ exports.createGroupIfNotExistsFor = async (groupMapper: string|object) => {
  * @param {String} authorId The id of the author
  * @return {Promise<{padID: string}>} a promise that resolves to the id of the new pad
  */
-exports.createGroupPad = async (
+export const createGroupPad = async (
     groupID: string,
     padName: string,
     text: string,
@@ -147,7 +147,7 @@ exports.createGroupPad = async (
   const padID = `${groupID}$${padName}`;
 
   // ensure group exists
-  const groupExists = await exports.doesGroupExist(groupID);
+  const groupExists = await doesGroupExist(groupID);
 
   if (!groupExists) {
     throw new CustomError('groupID does not exist', 'apierror');
@@ -178,8 +178,8 @@ exports.createGroupPad = async (
  * @param {String} groupID The id of the group
  * @return {Promise<{padIDs: string[]}>} a promise that resolves to the ids of all pads of the group
  */
-exports.listPads = async (groupID: string): Promise<{ padIDs: string[]; }> => {
-  const exists = await exports.doesGroupExist(groupID);
+export const listPads = async (groupID: string): Promise<{ padIDs: string[]; }> => {
+  const exists = await doesGroupExist(groupID);
 
   // ensure the group exists
   if (!exists) {

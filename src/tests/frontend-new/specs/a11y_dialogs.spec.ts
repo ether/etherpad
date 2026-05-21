@@ -1,5 +1,5 @@
 import {expect, test} from '@playwright/test';
-import {goToNewPad} from '../helper/padHelper';
+import {goToNewPad} from '../helper/padHelper.js';
 
 // Pin browser locale so html10n picks the English bundle. Several
 // assertions in this file compare against specific English strings

@@ -12,7 +12,7 @@
 // instrumentation they don't use.
 
 import client from 'prom-client';
-import settings from './utils/Settings';
+import settings from './utils/Settings.js';
 
 export const enabled = (): boolean => settings.scalingDiveMetrics === true;
 

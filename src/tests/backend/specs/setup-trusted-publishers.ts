@@ -20,9 +20,15 @@ import {spawnSync} from 'child_process';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import {fileURLToPath} from 'node:url';
+import {afterEach, beforeEach, describe, it} from 'vitest';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..', '..', '..');
 const SCRIPT = path.join(REPO_ROOT, 'bin', 'setup-trusted-publishers.sh');
+const HAS_SH = spawnSync('sh', ['-c', 'exit 0'], {encoding: 'utf8'}).status === 0;
 
 type Invocation = string[];
 
@@ -94,7 +100,9 @@ const runScript = (
   return {status: result.status, stdout: result.stdout, stderr: result.stderr};
 };
 
-describe(__filename, function () {
+const describeWithSh = HAS_SH ? describe : describe.skip;
+
+describeWithSh(__filename, function () {
   let workdir: string;
 
   beforeEach(function () {

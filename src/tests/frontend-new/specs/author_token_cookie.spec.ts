@@ -1,5 +1,5 @@
 import {expect, test} from '@playwright/test';
-import {goToNewPad} from '../helper/padHelper';
+import {goToNewPad} from '../helper/padHelper.js';
 
 test.describe('author token cookie', () => {
   test.beforeEach(async ({context}) => {

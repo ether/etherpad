@@ -3,9 +3,9 @@
 const assert = require('assert').strict;
 const common = require('../common');
 const plugins = require('../../../static/js/pluginfw/plugin_defs');
-import settings from '../../../node/utils/Settings';
-import {saveState} from '../../../node/updater/state';
-import {EMPTY_STATE} from '../../../node/updater/types';
+import settings from '../../../node/utils/Settings.js';
+import {saveState} from '../../../node/updater/state.js';
+import {EMPTY_STATE} from '../../../node/updater/types.js';
 import path from 'node:path';
 
 const statePath = () => path.join(settings.root, 'var', 'update-state.json');

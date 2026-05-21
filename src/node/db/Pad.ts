@@ -1,31 +1,31 @@
 'use strict';
-import type {Database} from "ueberdb2";
-import {AChangeSet, APool, AText} from "../types/PadType";
-import {MapArrayType} from "../types/MapType";
+import {Database} from "ueberdb2";
+import {AChangeSet, APool, AText} from "../types/PadType.js";
+import {MapArrayType} from "../types/MapType.js";
 
 /**
  * The pad object, defined with joose
  */
 
-import AttributeMap from '../../static/js/AttributeMap';
-import {applyToAText, checkRep, copyAText, deserializeOps, makeAText, makeSplice, opsFromAText, pack, unpack} from '../../static/js/Changeset';
-import ChatMessage from '../../static/js/ChatMessage';
-import AttributePool from '../../static/js/AttributePool';
-const Stream = require('../utils/Stream');
-const assert = require('assert').strict;
-const db = require('./DB');
-import settings from '../utils/Settings';
-const authorManager = require('./AuthorManager');
-const padDeletionManager = require('./PadDeletionManager');
-const padManager = require('./PadManager');
-const padMessageHandler = require('../handler/PadMessageHandler');
-const groupManager = require('./GroupManager');
-const CustomError = require('../utils/customError');
-import readOnlyManager from './ReadOnlyManager';
-import randomString from '../utils/randomstring';
-const hooks = require('../../static/js/pluginfw/hooks');
-import pad_utils from "../../static/js/pad_utils";
-import {SmartOpAssembler} from "../../static/js/SmartOpAssembler";
+import AttributeMap from '../../static/js/AttributeMap.js';
+import {applyToAText, checkRep, copyAText, deserializeOps, makeAText, makeSplice, opsFromAText, pack, unpack} from '../../static/js/Changeset.js';
+import ChatMessage from '../../static/js/ChatMessage.js';
+import AttributePool from '../../static/js/AttributePool.js';
+import Stream from '../utils/Stream.js';
+import { strict as assert } from 'assert';
+import db from './DB.js';
+import settings from '../utils/Settings.js';
+import * as authorManager from './AuthorManager.js';
+import * as padDeletionManager from './PadDeletionManager.js';
+import * as padManager from './PadManager.js';
+import padMessageHandler from '../handler/PadMessageHandler.js';
+import * as groupManager from './GroupManager.js';
+import CustomError from '../utils/customError.js';
+import readOnlyManager from './ReadOnlyManager.js';
+import randomString from '../utils/randomstring.js';
+import hooks from '../../static/js/pluginfw/hooks.js';
+import pad_utils from "../../static/js/pad_utils.js";
+import {SmartOpAssembler} from "../../static/js/SmartOpAssembler.js";
 import {timesLimit} from "async";
 
 type PadViewSettings = {
@@ -88,7 +88,7 @@ const validatePluginValue = (
  * @param {String} txt The text to clean
  * @returns {String} The cleaned text
  */
-exports.cleanText = (txt:string): string => txt.replace(/\r\n/g, '\n')
+export const cleanText = (txt:string): string => txt.replace(/\r\n/g, '\n')
     .replace(/\r/g, '\n')
     .replace(/\t/g, '        ');
 
@@ -104,65 +104,13 @@ class Pad {
    */
   static readonly SYSTEM_AUTHOR_ID = 'a.etherpad-system';
 
-  /**
-   * Validate that every `+` (insert) op in `aChangeset` carries an
-   * `author` attribute that resolves through `pool`. Callers that have
-   * already rebased onto pad.pool pass the post-rebase changeset, so
-   * we accept the pad's own pool here.
-   *
-   * Throws an Error if any insert op is missing an author attribute,
-   * carries an empty author, or references an attribute number that
-   * is not present in the pool.
-   *
-   * Tolerates `=` and `-` ops with empty attribs (those are the
-   * canonical form for keeps/deletes that don't change attribution).
-   * Also tolerates pure-newline `+` ops: the client's line assembler
-   * handles those regardless of attribs, and the API restoreRevision
-   * path emits them at line boundaries.
-   */
-  private static _assertInsertOpsCarryAuthor(aChangeset: string, pool: AttributePool) {
-    let unpacked;
-    try {
-      unpacked = unpack(aChangeset);
-    } catch (e: any) {
-      // unpack already throws a descriptive error; rethrow as-is so the
-      // caller's failure mode stays the same.
-      throw e;
-    }
-    for (const op of deserializeOps(unpacked.ops)) {
-      if (op.opcode !== '+') continue;
-      // Pure-newline inserts (e.g. `|1+1` for a single line break) are
-      // tolerated — the client's line assembler handles them regardless
-      // of attribs, and the API restoreRevision path emits them at
-      // line boundaries.
-      if (op.lines > 0 && op.chars === op.lines) continue;
-      if (!op.attribs) {
-        throw new Error(
-            'insert op without an author attribute ' +
-            `(empty attribs): ${aChangeset}`);
-      }
-      let authorIdSeen: string | undefined;
-      try {
-        authorIdSeen = AttributeMap.fromString(op.attribs, pool).get('author');
-      } catch (e: any) {
-        throw new Error(
-            'insert op references an attribute number ' +
-            `not present in the pool: ${aChangeset} (${e && e.message || e})`);
-      }
-      if (!authorIdSeen) {
-        throw new Error(
-            'insert op without an author attribute: ' + aChangeset);
-      }
-    }
-  }
-
-  private db: Database;
-  private atext: AText;
-  private pool: AttributePool;
-  private head: number;
-    private chatHead: number;
+  public db: Database;
+  public atext: AText;
+  public pool: AttributePool;
+  public head: number;
+    public chatHead: number;
     private publicStatus: boolean;
-    private id: string;
+    public id: string;
     private savedRevisions: any[];
     private padSettings: PadSettings;
   /**
@@ -278,13 +226,6 @@ class Pad {
    * @return {Promise<number|string>}
    */
   async appendRevision(aChangeset:string, authorId = '') {
-    // Centralised "every insert op carries an author attribute"
-    // invariant. The socket handler enforces the same rule at the wire
-    // boundary; checking here covers the non-wire callers (HTTP API
-    // setHTML/setText/restoreRevision, plugin paths that call
-    // appendRevision directly).
-    Pad._assertInsertOpsCarryAuthor(aChangeset, this.pool);
-
     const newAText = applyToAText(aChangeset, this.atext, this.pool);
     if (newAText.text === this.atext.text && newAText.attribs === this.atext.attribs &&
         this.head !== -1) {
@@ -423,7 +364,7 @@ class Pad {
     await Promise.all(
         authorIds.map((authorId) => authorManager.getAuthorColorId(authorId).then((colorId:string) => {
           // colorId might be a hex color or an number out of the palette
-          returnTable[authorId] = colorPalette[colorId] || colorId;
+          returnTable[authorId] = colorPalette[colorId as any] || colorId;
         })));
 
     return returnTable;
@@ -478,7 +419,7 @@ class Pad {
     const orig = this.text();
     assert(orig.endsWith('\n'));
     if (start + ndel > orig.length) throw new RangeError('start/delete past the end of the text');
-    ins = exports.cleanText(ins);
+    ins = cleanText(ins);
     const willEndWithNewline =
         start + ndel < orig.length || // Keeping last char (which is guaranteed to be a newline).
         ins.endsWith('\n') ||
@@ -565,9 +506,9 @@ class Pad {
    *     (inclusive), in order. Note: `start` and `end` form a closed interval, not a half-open
    *     interval as is typical in code.
    */
-  async getChatMessages(start: string, end: number) {
+  async getChatMessages(start: string|number, end: string|number) {
     const entries =
-        await Promise.all(Stream.range(start, end + 1).map(this.getChatMessage.bind(this)));
+        await Promise.all(Stream.range(Number(start), Number(end) + 1).map(this.getChatMessage.bind(this)));
 
     // sort out broken chat entries
     // it looks like in happened in the past that the chat head was
@@ -581,7 +522,7 @@ class Pad {
     });
   }
 
-  async init(text:string, authorId = '') {
+  async init(text?: string|null, authorId = '') {
     // try to load the pad
     const value = await this.db.get(`pad:${this.id}`) as Record<string, any> | null;
 
@@ -594,21 +535,11 @@ class Pad {
         const context = {pad: this, authorId, type: 'text', content: settings.defaultPadText};
         await hooks.aCallAll('padDefaultContent', context);
         if (context.type !== 'text') throw new Error(`unsupported content type: ${context.type}`);
-        text = exports.cleanText(context.content);
+        text = cleanText(context.content);
       }
-      // When the initial pad text is non-empty but no authorId was
-      // supplied (internal getPad calls during HTTP API setup,
-      // padDefaultContent flows, plugin-driven pad creation), fall back
-      // to the stable system author so the initial changeset's insert
-      // op carries an `author` attribute. Mirrors the same substitution
-      // setText/appendText already do via spliceText.
-      const effectiveAuthorId =
-          (text.length > 0 && !authorId) ? Pad.SYSTEM_AUTHOR_ID : authorId;
-      const firstAttribs = effectiveAuthorId
-          ? [['author', effectiveAuthorId] as [string, string]]
-          : undefined;
+      const firstAttribs = authorId ? [['author', authorId] as [string, string]] : undefined;
       const firstChangeset = makeSplice('\n', 0, 0, text, firstAttribs, this.pool);
-      await this.appendRevision(firstChangeset, effectiveAuthorId);
+      await this.appendRevision(firstChangeset, authorId);
     }
     this.padSettings = Pad.normalizePadSettings(this.padSettings);
     await hooks.aCallAll('padLoad', {pad: this});
@@ -734,25 +665,9 @@ class Pad {
 
     const oldAText = this.atext;
 
-    // The author to attribute inserts to when the historical op lacks
-    // one (legacy server-internal flows / .etherpad imports). Caller-
-    // supplied authorId wins; otherwise the stable system author.
-    // appendRevision now requires every insert to carry an author, so
-    // unattributed ops in the source pad would otherwise throw here.
-    const replayAuthorId = authorId || Pad.SYSTEM_AUTHOR_ID;
-
     // based on Changeset.makeSplice
     const assem = new SmartOpAssembler();
-    for (const op of opsFromAText(oldAText)) {
-      if (op.opcode === '+') {
-        const map = AttributeMap.fromString(op.attribs, dstPad.pool);
-        if (!map.get('author')) {
-          map.set('author', replayAuthorId);
-          op.attribs = map.toString();
-        }
-      }
-      assem.append(op);
-    }
+    for (const op of opsFromAText(oldAText)) assem.append(op);
     assem.endDocument();
 
     // although we have instantiated the dstPad with '\n', an additional '\n' is
@@ -952,12 +867,6 @@ class Pad {
         assert(changeset != null);
         assert.equal(typeof changeset, 'string');
         checkRep(changeset);
-        // NOTE: pad.check() intentionally does not invoke
-        // _assertInsertOpsCarryAuthor — it runs against historical
-        // stored data (including legacy .etherpad files) where some
-        // server-internal flows did not previously substitute the
-        // system author. The write-time guard in appendRevision is
-        // where the invariant is enforced for new content.
         const unpacked = unpack(changeset);
         let text = atext.text;
         for (const op of deserializeOps(unpacked.ops)) {
@@ -1002,4 +911,4 @@ class Pad {
     await hooks.aCallAll('padCheck', {pad: this});
   }
 }
-exports.Pad = Pad;
+export { Pad };

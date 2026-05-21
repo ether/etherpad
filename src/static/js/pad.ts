@@ -1,6 +1,6 @@
 // @ts-nocheck
 'use strict';
-const skinVariants = require('./skin_variants');
+import skinVariants from './skin_variants.js';
 
 /**
  * This code is mostly from the old Etherpad. Please help us to comment this code.
@@ -26,36 +26,41 @@ const skinVariants = require('./skin_variants');
 
 let socket;
 
+let baseURL = '';
+export const setBaseURL = (url) => {
+  baseURL = url;
+};
 
 // These jQuery things should create local references, but for now `require()`
 // assigns to the global `$` and augments it with plugins.
-require('./vendors/jquery');
-require('./vendors/farbtastic');
-require('./vendors/gritter');
+import './vendors/jquery.js';
+import './vendors/farbtastic.js';
+import './vendors/gritter.js';
 
-import html10n from './vendors/html10n'
+import html10n from './vendors/html10n.js'
 
-import {Cookies} from "./pad_utils";
+import {Cookies} from "./pad_utils.js";
 
-const chat = require('./chat').chat;
-const getCollabClient = require('./collab_client').getCollabClient;
-const padconnectionstatus = require('./pad_connectionstatus').padconnectionstatus;
-const padcookie = require('./pad_cookie').padcookie;
-const padeditbar = require('./pad_editbar').padeditbar;
-const padMode = require('./pad_mode').padMode;
-const padeditor = require('./pad_editor').padeditor;
-const padimpexp = require('./pad_impexp').padimpexp;
-const padmodals = require('./pad_modals').padmodals;
-const padsavedrevs = require('./pad_savedrevs');
-const paduserlist = require('./pad_userlist').paduserlist;
-import padutils from './pad_utils'
-const colorutils = require('./colorutils').colorutils;
-import {randomString} from "./pad_utils";
-const socketio = require('./socketio');
+import {chat} from './chat.js';
+import {getCollabClient} from './collab_client.js';
+import {padconnectionstatus} from './pad_connectionstatus.js';
+import {padcookie} from './pad_cookie.js';
+import {padeditbar} from './pad_editbar.js';
+import {padMode} from './pad_mode.js';
+import {padeditor} from './pad_editor.js';
+import {padimpexp} from './pad_impexp.js';
+import {padmodals} from './pad_modals.js';
+import padsavedrevs from './pad_savedrevs.js';
+import {paduserlist} from './pad_userlist.js';
+import padutils from './pad_utils.js'
+import {colorutils} from './colorutils.js';
+import {randomString} from "./pad_utils.js";
+import socketio from './socketio.js';
 
-const hooks = require('./pluginfw/hooks');
-import {showPrivacyBannerIfEnabled} from './privacy_banner';
-import {maybeShowOutdatedNotice} from './pad_outdated_notice';
+import hooks from './pluginfw/hooks.js';
+import {showPrivacyBannerIfEnabled} from './privacy_banner.js';
+
+import './pad_version_badge.js';
 
 // This array represents all GET-parameters which can be used to change a setting.
 //   name:     the parameter-name, eg  `?noColors=true`  =>  `noColors`
@@ -356,9 +361,7 @@ const handshake = async () => {
   // unescape necessary due to Safari and Opera interpretation of spaces
   padId = decodeURIComponent(padId);
 
-  // padId is used here for sharding / scaling.  We prefix the padId with padId: so it's clear
-  // to the proxy/gateway/whatever that this is a pad connection and should be treated as such
-  socket = pad.socket = socketio.connect(exports.baseURL, '/', {
+  socket = pad.socket = socketio.connect(baseURL, '/', {
     query: {padId},
     reconnectionAttempts: 5,
     reconnection: true,
@@ -765,7 +768,6 @@ const pad = {
 
       showDeletionTokenModalIfPresent();
       showPrivacyBannerIfEnabled((clientVars as any).privacyBanner);
-      void maybeShowOutdatedNotice();
 
       hooks.aCallAll('postAceInit', {ace: padeditor.ace, clientVars, pad});
     };
@@ -1036,7 +1038,7 @@ const pad = {
   },
   asyncSendDiagnosticInfo: () => {
     const currentUrl = window.location.href;
-    fetch(`${exports.baseURL}ep/pad/connection-diagnostic-info`, {
+    fetch(`${baseURL}ep/pad/connection-diagnostic-info`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1072,7 +1074,7 @@ const pad = {
   },
 };
 
-const init = () => pad.init();
+export const init = () => pad.init();
 
 const settings = {
   LineNumbersDisabled: false,
@@ -1083,12 +1085,10 @@ const settings = {
   rtlIsTrue: false,
   rtlIsExplicit: false,
 };
-
 pad.settings = settings;
 
-exports.baseURL = '';
-exports.settings = settings;
-exports.randomString = randomString;
-exports.getParams = getParams;
-exports.pad = pad;
-exports.init = init;
+export {settings};
+export {randomString};
+export {getParams};
+export {pad};
+export {baseURL};

@@ -1,6 +1,5 @@
-import {EmailSendLog, ExecutionStatus, MaintenanceWindow, PolicyResult, ReleaseInfo, UpdateState} from './types';
-import {PlannedEmail} from './Notifier';
-import {inWindow, nextWindowStart} from './MaintenanceWindow';
+import {EmailSendLog, ExecutionStatus, PolicyResult, ReleaseInfo, UpdateState} from './types.js';
+import {PlannedEmail} from './Notifier.js';
 
 export interface DecideScheduleInput {
   state: UpdateState;
@@ -10,13 +9,6 @@ export interface DecideScheduleInput {
   current: string;
   preApplyGraceMinutes: number;
   adminEmail: string | null;
-  /**
-   * Tier 4 only — when `policy.canAutonomous` is true, the scheduler snaps
-   * `scheduledFor` forward to the next window opening (if it would otherwise
-   * land outside the window) and `decideTriggerApply` defers fires that the
-   * window has closed for. Ignored when `canAutonomous === false`.
-   */
-  maintenanceWindow?: MaintenanceWindow | null;
 }
 
 export type SchedulerDecision =
@@ -56,10 +48,7 @@ const clampGrace = (m: number): number => {
  *    email when `adminEmail` is set and `email.graceStartTag !== latest.tag`.
  */
 export const decideSchedule = (input: DecideScheduleInput): SchedulerDecision => {
-  const {
-    state, now, policy, latest, current, preApplyGraceMinutes, adminEmail,
-    maintenanceWindow,
-  } = input;
+  const {state, now, policy, latest, current, preApplyGraceMinutes, adminEmail} = input;
   const status = state.execution.status;
 
   if (!latest) return {action: 'nothing'};
@@ -77,14 +66,7 @@ export const decideSchedule = (input: DecideScheduleInput): SchedulerDecision =>
   }
 
   const graceMs = clampGrace(preApplyGraceMinutes) * 60 * 1000;
-  let scheduledForDate = new Date(now.getTime() + graceMs);
-  // Tier 4: snap forward to the next opening if grace lands outside the window.
-  if (policy.canAutonomous && maintenanceWindow) {
-    if (!inWindow(scheduledForDate, maintenanceWindow)) {
-      scheduledForDate = nextWindowStart(scheduledForDate, maintenanceWindow);
-    }
-  }
-  const scheduledFor = scheduledForDate.toISOString();
+  const scheduledFor = new Date(now.getTime() + graceMs).toISOString();
   const newExecution = {
     status: 'scheduled' as const,
     targetTag: latest.tag,
@@ -110,8 +92,7 @@ export const decideSchedule = (input: DecideScheduleInput): SchedulerDecision =>
 export type TriggerApplyDecision =
   | {action: 'fire'}
   | {action: 'abort'; reason: string}
-  | {action: 'clear-schedule'; reason: string}
-  | {action: 'defer'; nextStart: string; reason: 'outside-maintenance-window'};
+  | {action: 'clear-schedule'; reason: string};
 
 /**
  * Decide whether the scheduler's timer-fire callback should actually run the
@@ -119,20 +100,10 @@ export type TriggerApplyDecision =
  * arming-to-firing has a long delay (the grace window) during which the
  * admin can cancel, click Apply now, or flip the tier. SchedulerRunnerDeps
  * documents this contract; this helper is the canonical implementation.
- *
- * Tier 4: when `policy.canAutonomous` is true and `now` is outside the
- * configured `maintenanceWindow`, returns `{action: 'defer'}` so the runner
- * persists a new `scheduledFor = nextStart` and re-arms.
  */
 export const decideTriggerApply = ({
-  state, targetTag, policy, now, maintenanceWindow,
-}: {
-  state: UpdateState;
-  targetTag: string;
-  policy: PolicyResult;
-  now?: Date;
-  maintenanceWindow?: MaintenanceWindow | null;
-}): TriggerApplyDecision => {
+  state, targetTag, policy,
+}: {state: UpdateState; targetTag: string; policy: PolicyResult}): TriggerApplyDecision => {
   if (state.execution.status !== 'scheduled') {
     return {action: 'abort', reason: `state=${state.execution.status}`};
   }
@@ -141,13 +112,6 @@ export const decideTriggerApply = ({
   }
   if (!state.latest) return {action: 'abort', reason: 'no-latest'};
   if (!policy.canAuto) return {action: 'clear-schedule', reason: policy.reason || 'policy-denied'};
-  if (policy.canAutonomous && maintenanceWindow && now && !inWindow(now, maintenanceWindow)) {
-    return {
-      action: 'defer',
-      nextStart: nextWindowStart(now, maintenanceWindow).toISOString(),
-      reason: 'outside-maintenance-window',
-    };
-  }
   return {action: 'fire'};
 };
 

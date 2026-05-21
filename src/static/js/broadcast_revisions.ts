@@ -113,4 +113,4 @@ const loadBroadcastRevisionsJS = () => {
   window.revisionInfo = revisionInfo;
 };
 
-exports.loadBroadcastRevisionsJS = loadBroadcastRevisionsJS;
+export {loadBroadcastRevisionsJS};

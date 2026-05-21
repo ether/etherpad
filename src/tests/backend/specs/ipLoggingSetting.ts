@@ -3,8 +3,8 @@
 import {strict as assert} from 'assert';
 import fs from 'node:fs';
 import path from 'node:path';
-import settings from '../../../node/utils/Settings';
-import {anonymizeIp} from '../../../node/utils/anonymizeIp';
+import settings from '../../../node/utils/Settings.js';
+import {anonymizeIp} from '../../../node/utils/anonymizeIp.js';
 
 describe(__filename, function () {
   const backup = {ipLogging: settings.ipLogging, disableIPlogging: settings.disableIPlogging};

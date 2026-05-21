@@ -23,8 +23,8 @@
  * limitations under the License.
  */
 
-import {characterRangeFollow, compose, follow, isIdentity, unpack} from './Changeset';
-const _ = require('./underscore');
+import {characterRangeFollow, compose, follow, isIdentity, unpack} from './Changeset.js';
+import _ from './underscore.js';
 
 const undoModule = (() => {
   const stack = (() => {
@@ -277,4 +277,4 @@ const undoModule = (() => {
   }; // apool is filled in by caller
 })();
 
-exports.undoModule = undoModule;
+export {undoModule};

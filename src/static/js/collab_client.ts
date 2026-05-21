@@ -23,9 +23,9 @@
  * limitations under the License.
  */
 
-const chat = require('./chat').chat;
-const hooks = require('./pluginfw/hooks');
-const browser = require('./vendors/browser');
+import {chat} from './chat.js';
+import hooks from './pluginfw/hooks.js';
+import browser from './vendors/browser.js';
 
 // Dependency fill on init. This exists for `pad.socket` only.
 // TODO: bind directly to the socket.
@@ -510,4 +510,4 @@ const getCollabClient = (ace2editor, serverVars, initialUserInfo, options, _pad)
   return self;
 };
 
-exports.getCollabClient = getCollabClient;
+export {getCollabClient};

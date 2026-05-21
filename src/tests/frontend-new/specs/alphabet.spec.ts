@@ -1,5 +1,5 @@
 import {expect, Page, test} from "@playwright/test";
-import {clearPadContent, getPadBody, getPadOuter, goToNewPad, writeToPad} from "../helper/padHelper";
+import {clearPadContent, getPadBody, getPadOuter, goToNewPad, writeToPad} from "../helper/padHelper.js";
 
 test.beforeEach(async ({ page })=>{
   // create a new pad before each test run

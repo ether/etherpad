@@ -4,7 +4,7 @@ import {describe, it, expect} from 'vitest';
 import {
   checkEngineCompatibility,
   EngineIncompatibleError,
-} from '../../../static/js/pluginfw/pluginEngineCheck';
+} from '../../../static/js/pluginfw/pluginEngineCheck.js';
 
 describe('pluginEngineCheck', () => {
   describe('checkEngineCompatibility', () => {

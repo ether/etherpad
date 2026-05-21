@@ -1,5 +1,8 @@
 'use strict';
 
+import {fileURLToPath} from 'node:url';
+import {dirname} from 'node:path';
+
 /**
  * Regression test for https://github.com/ether/etherpad-lite/issues/4040
  *
@@ -13,12 +16,17 @@
  * production failures were observed.
  */
 
-const assert = require('assert').strict;
-const common = require('../common');
-const padManager = require('../../../node/db/PadManager');
-const plugins = require('../../../static/js/pluginfw/plugin_defs');
-const settings = require('../../../node/utils/Settings');
-import {randomString} from '../../../static/js/pad_utils';
+import assert from 'assert';
+import * as common from '../common.js';
+import * as padManager from '../../../node/db/PadManager.js';
+import pluginDefs from '../../../static/js/pluginfw/plugin_defs.js';
+import settings from '../../../node/utils/Settings.js';
+import {randomString} from '../../../static/js/pad_utils.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+const plugins = pluginDefs;
 
 describe(__filename, function () {
   let agent: any;
@@ -41,7 +49,6 @@ describe(__filename, function () {
   });
 
   it('CLIENT_VARS rev matches initialAttributedText state at that exact rev', async function () {
-    this.timeout(30000);
     const padId = randomString(10);
 
     // Create a pad with initial text
@@ -89,7 +96,6 @@ describe(__filename, function () {
     //   (b) lands several edits during that delay.
     // The bug also applied at higher load — to also reproduce the load
     // scenario, we pre-populate the pad with many revisions before connecting.
-    this.timeout(60000);
     const padId = randomString(10);
     const pad = await padManager.getPad(padId, 'rev0\n');
 
@@ -165,7 +171,6 @@ describe(__filename, function () {
   });
 
   it('client receives revisions created during clientVars hook await window', async function () {
-    this.timeout(30000);
     const padId = randomString(10);
     const pad = await padManager.getPad(padId, 'start\n');
 

@@ -1,15 +1,15 @@
 'use strict';
 
-import type {MapArrayType} from "../types/MapType";
-import {I18nPluginDefs} from "../types/I18nPluginDefs";
+import type {MapArrayType} from "../types/MapType.js";
+import {I18nPluginDefs} from "../types/I18nPluginDefs.js";
 
-const languages = require('languages4translatewiki');
+import languages from 'languages4translatewiki';
 import fs from 'fs';
 import path from 'path';
 import _ from 'underscore';
-const pluginDefs = require('../../static/js/pluginfw/plugin_defs');
-import existsSync from '../utils/path_exists';
-import settings from '../utils/Settings';
+import pluginDefs from '../../static/js/pluginfw/plugin_defs.js';
+import existsSync from '../utils/path_exists.js';
+import settings from '../utils/Settings.js';
 
 // returns all existing messages merged together and grouped by langcode
 // {es: {"foo": "string"}, en:...}
@@ -131,19 +131,23 @@ const generateLocaleIndex = (locales:MapArrayType<string>) => {
 };
 
 
-exports.expressPreSession = async (hookName:string, {app}:any) => {
+export let availableLangs: any;
+// Exported so server-rendered HTML (e.g. Open Graph meta tags) can look
+// up translated strings without re-reading the locale files. Each lang
+// maps to an object of i18n key → translated string for that language.
+export let locales: {[lang: string]: {[key: string]: string}};
+
+export const expressPreSession = async (hookName:string, {app}:any) => {
   // regenerate locales on server restart
-  const locales = getAllLocales();
-  const localeIndex = generateLocaleIndex(locales);
-  exports.availableLangs = getAvailableLangs(locales);
-  // Exported so server-rendered HTML (e.g. Open Graph meta tags) can look
-  // up translated strings without re-reading the locale files.
-  exports.locales = locales;
+  const allLocales = getAllLocales();
+  const localeIndex = generateLocaleIndex(allLocales);
+  availableLangs = getAvailableLangs(allLocales);
+  locales = allLocales;
 
   app.get('/locales/:locale', (req:any, res:any) => {
     // works with /locale/en and /locale/en.json requests
     const locale = req.params.locale.split('.')[0];
-    if (Object.prototype.hasOwnProperty.call(exports.availableLangs, locale)) {
+    if (Object.prototype.hasOwnProperty.call(availableLangs, locale)) {
       res.setHeader('Cache-Control', `public, max-age=${settings.maxAge}`);
       res.setHeader('Content-Type', 'application/json; charset=utf-8');
       res.send(`{"${locale}":${JSON.stringify(locales[locale])}}`);

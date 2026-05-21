@@ -1,9 +1,9 @@
 'use strict';
 
 import crypto from 'node:crypto';
-import randomString from '../utils/randomstring';
+import randomString from '../utils/randomstring.js';
 
-const DB = require('./DB');
+import DB from './DB.js';
 
 const getDeletionTokenKey = (padId: string) => `pad:${padId}:deletionToken`;
 
@@ -17,7 +17,7 @@ const hashDeletionToken = (deletionToken: string) =>
 // outstanding call resolves so this map doesn't grow unbounded.
 const inflightCreate: Map<string, Promise<string | null>> = new Map();
 
-exports.createDeletionTokenIfAbsent = async (padId: string): Promise<string | null> => {
+export const createDeletionTokenIfAbsent = async (padId: string): Promise<string | null> => {
   const prior = inflightCreate.get(padId);
   const next = (prior || Promise.resolve()).then(async () => {
     if (await DB.db.get(getDeletionTokenKey(padId)) != null) return null;
@@ -35,7 +35,7 @@ exports.createDeletionTokenIfAbsent = async (padId: string): Promise<string | nu
   return next;
 };
 
-exports.isValidDeletionToken = async (padId: string, deletionToken: string | null | undefined) => {
+export const isValidDeletionToken = async (padId: string, deletionToken: string | null | undefined) => {
   if (typeof deletionToken !== 'string' || deletionToken === '') return false;
   const storedToken = await DB.db.get(getDeletionTokenKey(padId));
   if (storedToken == null || typeof storedToken.hash !== 'string') return false;
@@ -44,5 +44,5 @@ exports.isValidDeletionToken = async (padId: string, deletionToken: string | nul
   return expected.length === actual.length && crypto.timingSafeEqual(expected, actual);
 };
 
-exports.removeDeletionToken = async (padId: string) =>
+export const removeDeletionToken = async (padId: string) =>
   await DB.db.remove(getDeletionTokenKey(padId));

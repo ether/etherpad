@@ -1,5 +1,5 @@
-import {MapArrayType} from "../../../node/types/MapType";
-import padutils from '../../../static/js/pad_utils';
+import {MapArrayType} from "../../../node/types/MapType.js";
+import padutils from '../../../static/js/pad_utils.js';
 import {describe, it, expect, afterEach, beforeAll} from "vitest";
 
 describe(__filename, function () {

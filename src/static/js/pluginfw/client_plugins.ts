@@ -1,23 +1,23 @@
 // @ts-nocheck
 'use strict';
 
-const pluginUtils = require('./shared');
-const defs = require('./plugin_defs');
+import pluginUtils from './shared.js';
+import defs from './plugin_defs.js';
 
-exports.baseURL = '';
+export let baseURL = '';
 
-exports.ensure = (cb) => !defs.loaded ? exports.update(cb) : cb();
-
-exports.update = async (modules) => {
+export const update = async (modules) => {
   const data = await jQuery.getJSON(
-    `${exports.baseURL}pluginfw/plugin-definitions.json?v=${clientVars.randomVersionString}`);
+    `${baseURL}pluginfw/plugin-definitions.json?v=${clientVars.randomVersionString}`);
   defs.plugins = data.plugins;
   defs.parts = data.parts;
   defs.hooks = pluginUtils.extractHooks(defs.parts, 'client_hooks', null, modules);
   defs.loaded = true;
 };
 
-const adoptPluginsFromAncestorsOf = (frame) => {
+export const ensure = (cb) => !defs.loaded ? update(cb) : cb();
+
+export const adoptPluginsFromAncestorsOf = (frame) => {
   // Bind plugins with parent;
   let parentRequire = null;
   try {
@@ -40,9 +40,16 @@ const adoptPluginsFromAncestorsOf = (frame) => {
   defs.parts = ancestorPluginDefs.parts;
   defs.plugins = ancestorPluginDefs.plugins;
   const ancestorPlugins = parentRequire('ep_etherpad-lite/static/js/pluginfw/client_plugins');
-  exports.baseURL = ancestorPlugins.baseURL;
-  exports.ensure = ancestorPlugins.ensure;
-  exports.update = ancestorPlugins.update;
+  baseURL = ancestorPlugins.baseURL;
+  // Note: assigning the function bindings of `ensure`/`update` is not possible across ESM module
+  // boundaries (named exports are bindings, not mutable variables). The bootstrap re-uses these
+  // names directly, so the ancestor's exports are not strictly required to be re-bound here.
 };
 
-exports.adoptPluginsFromAncestorsOf = adoptPluginsFromAncestorsOf;
+export default {
+  get baseURL() { return baseURL; },
+  set baseURL(v: string) { baseURL = v; },
+  update,
+  ensure,
+  adoptPluginsFromAncestorsOf,
+};

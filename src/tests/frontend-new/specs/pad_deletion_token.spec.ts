@@ -1,7 +1,7 @@
 import {expect, test, Page} from '@playwright/test';
 import {randomUUID} from 'node:crypto';
-import {goToPad} from '../helper/padHelper';
-import {showSettings} from '../helper/settingsHelper';
+import {goToPad} from '../helper/padHelper.js';
+import {showSettings} from '../helper/settingsHelper.js';
 
 // goToNewPad() in the shared helper auto-dismisses the deletion-token modal
 // so unrelated tests aren't blocked. These tests need the modal, so they

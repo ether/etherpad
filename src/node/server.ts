@@ -22,20 +22,29 @@
  * limitations under the License.
  */
 
-import {PluginType} from "./types/Plugin";
-import {ErrorCaused} from "./types/ErrorCaused";
+import {fileURLToPath} from 'node:url';
+import {PluginType} from "./types/Plugin.js";
+import {ErrorCaused} from "./types/ErrorCaused.js";
 import log4js from 'log4js';
-import pkg from '../package.json';
-import {checkForMigration} from "../static/js/pluginfw/installer";
+import pkg from '../package.json' with { type: 'json' };
+import {checkForMigration} from "../static/js/pluginfw/installer.js";
 import {ProxyAgent, setGlobalDispatcher} from 'undici';
 
-import settings from './utils/Settings';
+import settings from './utils/Settings.js';
+
+const forceExit = (code: number): void => {
+  if (process.env.VITEST != null) {
+    process.exitCode = code;
+    return;
+  }
+  process.exit(code);
+};
 
 let wtfnode: any;
 if (settings.dumpOnUncleanExit) {
   // wtfnode should be loaded after log4js.replaceConsole() so that it uses log4js for logging, and
   // it should be above everything else so that it can hook in before resources are used.
-  wtfnode = require('wtfnode');
+  wtfnode = (await import('wtfnode')).default;
 }
 
 const proxyUrl = process.env['https_proxy'] || process.env['http_proxy'];
@@ -50,18 +59,18 @@ if (proxyUrl) {
  * early check for version compatibility before calling
  * any modules that require newer versions of NodeJS
  */
-import {enforceMinNodeVersion, checkDeprecationStatus} from './utils/NodeVersion';
+import {enforceMinNodeVersion, checkDeprecationStatus} from './utils/NodeVersion.js';
 enforceMinNodeVersion(pkg.engines.node.replace(">=", ""));
 checkDeprecationStatus(pkg.engines.node.replace(">=", ""), '2.1.0');
 
-import {check} from './utils/UpdateCheck';
-const db = require('./db/DB');
-const express = require('./hooks/express');
-const hooks = require('../static/js/pluginfw/hooks');
-const pluginDefs = require('../static/js/pluginfw/plugin_defs');
-const plugins = require('../static/js/pluginfw/plugins');
-import {Gate} from './utils/promises';
-const stats = require('./stats')
+import {check} from './utils/UpdateCheck.js';
+import db from './db/DB.js';
+import * as express from './hooks/express.js';
+import hooks from '../static/js/pluginfw/hooks.js';
+import pluginDefs from '../static/js/pluginfw/plugin_defs.js';
+import plugins from '../static/js/pluginfw/plugins.js';
+import {Gate} from './utils/promises.js';
+import stats from './stats.js';
 
 const logger = log4js.getLogger('server');
 
@@ -87,14 +96,14 @@ const removeSignalListener = (signal: NodeJS.Signals, listener: any) => {
 
 
 let startDoneGate: Gate<unknown>
-exports.start = async () => {
+export const start = async (): Promise<any> => {
   switch (state) {
     case State.INITIAL:
       break;
     case State.STARTING:
       await startDoneGate;
       // Retry. Don't fall through because it might have transitioned to STATE_TRANSITION_FAILED.
-      return await exports.start();
+      return await start();
     case State.RUNNING:
       return express.server;
     case State.STOPPING:
@@ -138,32 +147,22 @@ exports.start = async () => {
         logger.debug(`uncaught exception: ${err.stack || err}`);
 
         // eslint-disable-next-line promise/no-promise-in-callback
-        exports.exit(err)
+        exit(err)
             .catch((err: ErrorCaused) => {
               logger.error('Error in process exit', err);
-              // eslint-disable-next-line n/no-process-exit
-              process.exit(1);
+              forceExit(1);
             });
       });
-      // As of v14, Node.js does not exit when there is an unhandled Promise
-      // rejection. Convert an unhandled rejection into an uncaught exception,
-      // which does cause Node.js to exit.
       process.on('unhandledRejection', (err: ErrorCaused) => {
         logger.debug(`unhandled rejection: ${err.stack || err}`);
         throw err;
       });
 
       for (const signal of ['SIGINT', 'SIGTERM'] as NodeJS.Signals[]) {
-        // Forcibly remove other signal listeners to prevent them from
-        // terminating node before we are done cleaning up. See
-        // https://github.com/andywer/threads.js/pull/329 for an example of a
-        // problematic listener. This means that exports.exit is solely
-        // responsible for performing all necessary cleanup tasks.
         for (const listener of process.listeners(signal)) {
           removeSignalListener(signal, listener);
         }
-        process.on(signal, exports.exit);
-        // Prevent signal listeners from being added in the future.
+        process.on(signal, exit);
         process.on('newListener', (event, listener) => {
           if (event !== signal) return;
           removeSignalListener(signal, listener);
@@ -188,7 +187,7 @@ exports.start = async () => {
     state = State.STATE_TRANSITION_FAILED;
     // @ts-ignore
     startDoneGate.resolve();
-    return await exports.exit(err);
+    return await exit(err as ErrorCaused);
   }
 
   logger.info('Etherpad is running');
@@ -200,8 +199,7 @@ exports.start = async () => {
   // health signal the updater's pending-verification timer is waiting for.
   // Wrapped in try/catch because it must never block startup on a bug here.
   try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const updater = require('./updater');
+    const updater = await import('./updater/index.js');
     if (typeof updater.markBootHealthy === 'function') updater.markBootHealthy();
   } catch (err) {
     logger.debug(`markBootHealthy: ${(err as Error).message}`);
@@ -212,12 +210,12 @@ exports.start = async () => {
 };
 
 const stopDoneGate = new Gate();
-exports.stop = async () => {
+export const stop = async (): Promise<any> => {
   switch (state) {
     case State.STARTING:
-      await exports.start();
+      await start();
       // Don't fall through to State.RUNNING in case another caller is also waiting for startup.
-      return await exports.stop();
+      return await stop();
     case State.RUNNING:
       break;
     case State.STOPPING:
@@ -248,7 +246,7 @@ exports.stop = async () => {
     state = State.STATE_TRANSITION_FAILED;
     // @ts-ignore
     stopDoneGate.resolve();
-    return await exports.exit(err);
+    return await exit(err as ErrorCaused);
   }
   logger.info('Etherpad stopped');
   state = State.STOPPED;
@@ -258,7 +256,7 @@ exports.stop = async () => {
 
 let exitGate: any;
 let exitCalled = false;
-exports.exit = async (err: ErrorCaused|string|null = null) => {
+export const exit = async (err: ErrorCaused|string|null = null): Promise<any> => {
   /* eslint-disable no-process-exit */
   if (err === 'SIGTERM') {
     // Termination from SIGTERM is not treated as an abnormal termination.
@@ -270,7 +268,7 @@ exports.exit = async (err: ErrorCaused|string|null = null) => {
     process.exitCode = 1;
     if (exitCalled) {
       logger.error('Error occurred while waiting to exit. Forcing an immediate unclean exit...');
-      process.exit(1);
+      forceExit(1);
     }
   }
   if (!exitCalled) logger.info('Exiting...');
@@ -279,11 +277,11 @@ exports.exit = async (err: ErrorCaused|string|null = null) => {
     case State.STARTING:
     case State.RUNNING:
     case State.STOPPING:
-      await exports.stop();
+      await stop();
       // Don't fall through to State.STOPPED in case another caller is also waiting for stop().
-      // Don't pass err to exports.exit() because this err has already been processed. (If err is
+      // Don't pass err to exit() because this err has already been processed. (If err is
       // passed again to exit() then exit() will think that a second error occurred while exiting.)
-      return await exports.exit();
+      return await exit();
     case State.INITIAL:
     case State.STOPPED:
     case State.STATE_TRANSITION_FAILED:
@@ -315,7 +313,7 @@ exports.exit = async (err: ErrorCaused|string|null = null) => {
     }
 
     logger.error('Forcing an unclean exit...');
-    process.exit(1);
+    forceExit(1);
   }, 5000).unref();
 
   logger.info('Waiting for Node.js to exit...');
@@ -323,7 +321,19 @@ exports.exit = async (err: ErrorCaused|string|null = null) => {
   /* eslint-enable no-process-exit */
 };
 
-if (require.main === module) exports.start();
+// ESM equivalent of `require.main === module`: check whether this file was the
+// process entry point.
+const isEntryPoint = (() => {
+  try {
+    const entry = process.argv[1];
+    if (!entry) return false;
+    return fileURLToPath(import.meta.url) === entry;
+  } catch {
+    return false;
+  }
+})();
+
+if (isEntryPoint) start();
 
 // @ts-ignore
-if (typeof(PhusionPassenger) !== 'undefined') exports.start();
+if (typeof(PhusionPassenger) !== 'undefined') start();
