@@ -1,0 +1,48 @@
+/* pad-editor.css GÇö loaded INSIDE the inner editor iframe by Etherpad.
+ * Defines theme tokens here too, since CSS from the parent document
+ * doesn't cascade into iframes. The data-theme attribute is propagated
+ * onto html/#innerdocbody by pad.js. */
+
+#innerdocbody {
+  background: transparent;
+  color: var(--text-color, #485365);
+}
+
+[data-theme="editorial"]  { --text-color:#1c1916; --bg-color:#fbf8f2; --m-bg:#f5f0e8; }
+[data-theme="brutalist"]  { --text-color:#000;    --bg-color:#fff;    --m-bg:#f3f3f0; }
+[data-theme="paper"]      { --text-color:#2a2520; --bg-color:#fbf6ec; --m-bg:#f6f1e8; }
+[data-theme="crt"]        { --text-color:#7fffae; --bg-color:#08200f; --m-bg:#04140a; }
+[data-theme="industrial"] { --text-color:#e6e8eb; --bg-color:#14171c; --m-bg:#0d0f12; }
+
+[data-theme] #innerdocbody,
+[data-theme] body { background: var(--m-bg) !important; color: var(--text-color) !important; }
+[data-theme] #innerdocbody a { color: var(--text-color); }
+
+[data-theme="crt"] #innerdocbody { text-shadow: 0 0 6px rgba(127,255,174,.45); font-family: "IBM Plex Mono", ui-monospace, monospace; }
+
+/* Comment highlights in the editor GÇö upstream forces #fffacc + dark text,
+ * which looks like a white slab on dark themes. Replace with a tinted
+ * underline-ish highlight that adapts to the current theme. */
+[data-theme] #innerdocbody .ace-line .comment {
+  background-color: color-mix(in srgb, var(--accent, #f5d76e) 22%, transparent) !important;
+  color: inherit !important;
+  box-shadow: inset 0 -2px 0 0 var(--accent, #f5d76e);
+  border-radius: 1px;
+}
+[data-theme="editorial"]  { --accent:#b8451f; }
+[data-theme="brutalist"]  { --accent:#ff3b00; }
+[data-theme="paper"]      { --accent:#7a5a2f; }
+[data-theme="crt"]        { --accent:#f5d76e; }
+[data-theme="industrial"] { --accent:#ff8a3d; }
+
+/* CRT drop-cap on the very first line of the pad. Etherpad wraps each line
+ * in a <div>, so target the first child block of #innerdocbody. */
+[data-theme="crt"] #innerdocbody > div:first-child::first-letter {
+  font-family: "VT323", "IBM Plex Mono", monospace;
+  font-size: 3.2em;
+  line-height: 0.85;
+  float: left;
+  padding: 0.05em 0.12em 0 0;
+  color: #f5d76e;
+  text-shadow: 0 0 10px rgba(245,215,110,.7), 0 0 22px rgba(245,215,110,.35);
+}
