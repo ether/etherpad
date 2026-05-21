@@ -1250,6 +1250,13 @@ export const reloadSettings = () => {
     logger.warn("logLayoutType: " + settings.logLayoutType);
     initLogging(settings.logconfig);
 
+    if (settings.loadTest) {
+      logger.warn(
+        'settings.loadTest is true: SecurityManager.checkAccess() will bypass ' +
+        'authentication and authorization for both HTTP and socket.io requests. ' +
+        'Do NOT enable this in production.');
+    }
+
     if (!settings.skinName) {
         logger.warn('No "skinName" parameter found. Please check out settings.json.template and ' +
             'update your settings.json. Falling back to the default "colibris".');
