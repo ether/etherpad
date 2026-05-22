@@ -19,6 +19,8 @@ import supertest from 'supertest';
 import type {Express} from 'express';
 import type {UpdateState} from '../../../../../node/updater/types';
 import {EMPTY_STATE} from '../../../../../node/updater/types';
+import {getEpVersion} from '../../../../../node/utils/Settings';
+import {parseSemver} from '../../../../../node/updater/versionCompare';
 
 // ---------------------------------------------------------------------------
 // Module mocks — must appear before any import that transitively imports them.
@@ -83,34 +85,41 @@ const makeState = (latest: UpdateState['latest']): UpdateState => ({
   latest,
 });
 
-/** A fake ReleaseInfo for a version that is a minor-version ahead of 3.1.0. */
+// Build fixtures relative to the actual current version so the test stays
+// stable across release bumps. Hard-coded versions break every time the
+// codebase rolls forward past the fixture (e.g. once 3.2.0 shipped, a
+// MINOR_AHEAD pinned at "3.2.0" no longer counted as minor-behind).
+const CUR = parseSemver(getEpVersion())!;
+const v = (major: number, minor: number, patch: number) => `${major}.${minor}.${patch}`;
+
+/** A fake ReleaseInfo for a version that is one minor ahead of current. */
 const MINOR_AHEAD: UpdateState['latest'] = {
-  version: '3.2.0',
-  tag: 'v3.2.0',
+  version: v(CUR.major, CUR.minor + 1, 0),
+  tag: `v${v(CUR.major, CUR.minor + 1, 0)}`,
   body: '',
   publishedAt: '2026-05-01T00:00:00Z',
   prerelease: false,
-  htmlUrl: 'https://github.com/ether/etherpad/releases/tag/v3.2.0',
+  htmlUrl: `https://github.com/ether/etherpad/releases/tag/v${v(CUR.major, CUR.minor + 1, 0)}`,
 };
 
-/** A fake ReleaseInfo that is only a patch ahead of 3.1.0 (no minor/major delta). */
+/** A fake ReleaseInfo that is only a patch ahead of current (no minor/major delta). */
 const PATCH_AHEAD: UpdateState['latest'] = {
-  version: '3.1.1',
-  tag: 'v3.1.1',
+  version: v(CUR.major, CUR.minor, CUR.patch + 1),
+  tag: `v${v(CUR.major, CUR.minor, CUR.patch + 1)}`,
   body: '',
   publishedAt: '2026-05-01T00:00:00Z',
   prerelease: false,
-  htmlUrl: 'https://github.com/ether/etherpad/releases/tag/v3.1.1',
+  htmlUrl: `https://github.com/ether/etherpad/releases/tag/v${v(CUR.major, CUR.minor, CUR.patch + 1)}`,
 };
 
-/** A fake ReleaseInfo that is behind or equal to 3.1.0 (current >= latest). */
+/** A fake ReleaseInfo that is behind current (current >= latest). */
 const SAME_OR_BEHIND: UpdateState['latest'] = {
-  version: '3.0.0',
-  tag: 'v3.0.0',
+  version: v(Math.max(0, CUR.major - 1), 0, 0),
+  tag: `v${v(Math.max(0, CUR.major - 1), 0, 0)}`,
   body: '',
   publishedAt: '2026-01-01T00:00:00Z',
   prerelease: false,
-  htmlUrl: 'https://github.com/ether/etherpad/releases/tag/v3.0.0',
+  htmlUrl: `https://github.com/ether/etherpad/releases/tag/v${v(Math.max(0, CUR.major - 1), 0, 0)}`,
 };
 
 // ---------------------------------------------------------------------------
