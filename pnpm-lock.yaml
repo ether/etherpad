@@ -356,8 +356,8 @@ importers:
         specifier: 4.22.3
         version: 4.22.3
       ueberdb2:
-        specifier: ^6.0.3
-        version: 6.0.3(@elastic/elasticsearch@9.4.0)(async@3.2.6)(cassandra-driver@4.8.0)(dirty-ts@1.1.8)(mongodb@7.2.0)(mssql@12.5.3(@azure/core-client@1.10.1))(mysql2@3.22.3(@types/node@25.9.1))(nano@11.0.5)(pg@8.21.0)(redis@5.12.1(@opentelemetry/api@1.9.1))(rethinkdb@2.4.2)(rusty-store-kv@1.3.1)(surrealdb@2.0.3(tslib@2.8.1)(typescript@6.0.3))
+        specifier: ^6.1.0
+        version: 6.1.2(@elastic/elasticsearch@9.4.0)(async@3.2.6)(cassandra-driver@4.8.0)(dirty-ts@1.1.8)(mongodb@7.2.0)(mssql@12.5.3(@azure/core-client@1.10.1))(mysql2@3.22.3(@types/node@25.9.1))(nano@11.0.5)(pg@8.21.0)(redis@5.12.1(@opentelemetry/api@1.9.1))(rethinkdb@2.4.2)(rusty-store-kv@1.3.1)(surrealdb@2.0.3(tslib@2.8.1)(typescript@6.0.3))
       underscore:
         specifier: 1.13.8
         version: 1.13.8
@@ -5515,6 +5515,54 @@ packages:
   ueberdb2@6.0.3:
     resolution: {integrity: sha512-ae+c26khcpP+zLve8Muv4VyR3gwxH3RaEPfHvWVAq9sdpXnUAB+bEQr0S2JE42SXuyRq9mfsQ6H0OaTuH3divg==}
     engines: {node: '>=22.0.0'}
+    peerDependencies:
+      '@elastic/elasticsearch': ^9.0.0
+      async: ^3.0.0
+      cassandra-driver: ^4.0.0
+      dirty-ts: ^1.0.0
+      mongodb: ^7.0.0
+      mssql: ^12.0.0
+      mysql2: ^3.0.0
+      nano: ^11.0.0
+      pg: ^8.0.0
+      redis: ^5.0.0
+      rethinkdb: ^2.0.0
+      rusty-store-kv: ^1.0.0
+      simple-git: ^3.0.0
+      surrealdb: ^2.0.0
+    peerDependenciesMeta:
+      '@elastic/elasticsearch':
+        optional: true
+      async:
+        optional: true
+      cassandra-driver:
+        optional: true
+      dirty-ts:
+        optional: true
+      mongodb:
+        optional: true
+      mssql:
+        optional: true
+      mysql2:
+        optional: true
+      nano:
+        optional: true
+      pg:
+        optional: true
+      redis:
+        optional: true
+      rethinkdb:
+        optional: true
+      rusty-store-kv:
+        optional: true
+      simple-git:
+        optional: true
+      surrealdb:
+        optional: true
+
+  ueberdb2@6.1.2:
+    resolution: {integrity: sha512-GjrMEbmOk0z9H3HoaTTdb+ZoA6ggnpj99Lx61u52LSgMxUI5KO+4AkuZoa7Vi6im6LfTI0aKQacUBr8V080vhg==}
+    engines: {node: '>=24.0.0'}
     peerDependencies:
       '@elastic/elasticsearch': ^9.0.0
       async: ^3.0.0
@@ -11345,6 +11393,22 @@ snapshots:
   typescript@6.0.3: {}
 
   ueberdb2@6.0.3(@elastic/elasticsearch@9.4.0)(async@3.2.6)(cassandra-driver@4.8.0)(dirty-ts@1.1.8)(mongodb@7.2.0)(mssql@12.5.3(@azure/core-client@1.10.1))(mysql2@3.22.3(@types/node@25.9.1))(nano@11.0.5)(pg@8.21.0)(redis@5.12.1(@opentelemetry/api@1.9.1))(rethinkdb@2.4.2)(rusty-store-kv@1.3.1)(surrealdb@2.0.3(tslib@2.8.1)(typescript@6.0.3)):
+    optionalDependencies:
+      '@elastic/elasticsearch': 9.4.0
+      async: 3.2.6
+      cassandra-driver: 4.8.0
+      dirty-ts: 1.1.8
+      mongodb: 7.2.0
+      mssql: 12.5.3(@azure/core-client@1.10.1)
+      mysql2: 3.22.3(@types/node@25.9.1)
+      nano: 11.0.5
+      pg: 8.21.0
+      redis: 5.12.1(@opentelemetry/api@1.9.1)
+      rethinkdb: 2.4.2
+      rusty-store-kv: 1.3.1
+      surrealdb: 2.0.3(tslib@2.8.1)(typescript@6.0.3)
+
+  ueberdb2@6.1.2(@elastic/elasticsearch@9.4.0)(async@3.2.6)(cassandra-driver@4.8.0)(dirty-ts@1.1.8)(mongodb@7.2.0)(mssql@12.5.3(@azure/core-client@1.10.1))(mysql2@3.22.3(@types/node@25.9.1))(nano@11.0.5)(pg@8.21.0)(redis@5.12.1(@opentelemetry/api@1.9.1))(rethinkdb@2.4.2)(rusty-store-kv@1.3.1)(surrealdb@2.0.3(tslib@2.8.1)(typescript@6.0.3)):
     optionalDependencies:
       '@elastic/elasticsearch': 9.4.0
       async: 3.2.6
