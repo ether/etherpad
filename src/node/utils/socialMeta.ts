@@ -139,21 +139,27 @@ const sanitizePublicURL = (raw: string | null | undefined): string | null => {
 // Builds an absolute URL. Prefers settings.publicURL when configured (operator-
 // trusted); otherwise falls back to the request's protocol+Host with strict
 // host validation so a crafted Host header can't appear in og:url / og:image.
+// proxyPath is prepended to pathname in the fallback path — it recovers the
+// public URL prefix that the reverse proxy stripped before forwarding the
+// request. Ignored when publicURL is set (publicURL encodes the canonical
+// origin and any path component the operator wants).
 const buildAbsoluteUrl = (
   req: Request, pathname: string, publicURL: string | null | undefined,
+  proxyPath: string,
 ): string => {
   const trusted = sanitizePublicURL(publicURL);
   if (trusted) return `${trusted}${pathname}`;
   const proto = req.protocol === 'https' ? 'https' : 'http';
   const host = sanitizeHost(req.get && req.get('host')) || 'localhost';
-  return `${proto}://${host}${pathname}`;
+  return `${proto}://${host}${proxyPath}${pathname}`;
 };
 
 const resolveImageUrl = (
   req: Request, faviconSetting: string | null | undefined, publicURL: string | null | undefined,
+  proxyPath: string,
 ): string => {
   if (faviconSetting && /^https?:\/\//i.test(faviconSetting)) return faviconSetting;
-  return buildAbsoluteUrl(req, '/favicon.ico', publicURL);
+  return buildAbsoluteUrl(req, '/favicon.ico', publicURL, proxyPath);
 };
 
 export type RenderOpts = {
@@ -163,6 +169,11 @@ export type RenderOpts = {
   locales: {[lang: string]: {[key: string]: string}},
   kind: 'pad' | 'timeslider' | 'home',
   padName?: string,
+  // URL-path prefix Etherpad is being served under (`''` when running at root).
+  // When set, used as a path prefix for from-request fallback URLs. Ignored
+  // when settings.publicURL is configured (publicURL encodes the canonical
+  // origin and any path component the operator wants).
+  proxyPath?: string,
 };
 
 // Operator override wins when set. Settings.ts coerces env-var strings to
@@ -189,7 +200,8 @@ export const renderSocialMeta = (o: RenderOpts): string => {
   const description = resolveDescriptionWithOverride(
       o.settings.socialMeta && o.settings.socialMeta.description,
       o.locales, renderLang);
-  const imageUrl = resolveImageUrl(o.req, o.settings.favicon, o.settings.publicURL);
+  const proxyPath = o.proxyPath || '';
+  const imageUrl = resolveImageUrl(o.req, o.settings.favicon, o.settings.publicURL, proxyPath);
   const imageAlt = `${siteName} logo`;
 
   let title = siteName;
@@ -203,7 +215,7 @@ export const renderSocialMeta = (o: RenderOpts): string => {
   if (qIdx >= 0) pathname = pathname.slice(0, qIdx);
 
   return buildSocialMetaHtml({
-    url: buildAbsoluteUrl(o.req, pathname, o.settings.publicURL),
+    url: buildAbsoluteUrl(o.req, pathname, o.settings.publicURL, proxyPath),
     siteName,
     title,
     description,

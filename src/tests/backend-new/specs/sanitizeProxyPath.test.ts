@@ -121,4 +121,88 @@ describe('sanitizeProxyPath', () => {
       expect(sanitizeProxyPath('//pad')).toBe('/pad');
     });
   });
+
+  describe('X-Forwarded-Prefix and X-Ingress-Path', () => {
+    const mockReqMulti = (headers: Record<string, string|undefined>) => ({
+      header: (name: string) => headers[name.toLowerCase()],
+    });
+
+    it('reads X-Forwarded-Prefix when trustProxy is true', () => {
+      expect(sanitizeProxyPath(
+          mockReqMulti({'x-forwarded-prefix': '/foo'}),
+          {trustProxy: true})).toBe('/foo');
+    });
+
+    it('reads X-Ingress-Path when trustProxy is true', () => {
+      expect(sanitizeProxyPath(
+          mockReqMulti({'x-ingress-path': '/api/hassio_ingress/abc'}),
+          {trustProxy: true})).toBe('/api/hassio_ingress/abc');
+    });
+
+    it('ignores X-Forwarded-Prefix when trustProxy is false', () => {
+      expect(sanitizeProxyPath(
+          mockReqMulti({'x-forwarded-prefix': '/foo'}),
+          {trustProxy: false})).toBe('');
+    });
+
+    it('ignores X-Ingress-Path when trustProxy is false', () => {
+      expect(sanitizeProxyPath(
+          mockReqMulti({'x-ingress-path': '/foo'}),
+          {trustProxy: false})).toBe('');
+    });
+
+    it('x-proxy-path still works without trustProxy (legacy Etherpad convention)', () => {
+      expect(sanitizeProxyPath(
+          mockReqMulti({'x-proxy-path': '/legacy'}),
+          {trustProxy: false})).toBe('/legacy');
+    });
+
+    it('x-proxy-path wins over standard headers when all are present', () => {
+      expect(sanitizeProxyPath(
+          mockReqMulti({
+            'x-proxy-path': '/legacy',
+            'x-forwarded-prefix': '/forwarded',
+            'x-ingress-path': '/ingress',
+          }),
+          {trustProxy: true})).toBe('/legacy');
+    });
+
+    it('x-forwarded-prefix beats x-ingress-path when both are present', () => {
+      expect(sanitizeProxyPath(
+          mockReqMulti({
+            'x-forwarded-prefix': '/forwarded',
+            'x-ingress-path': '/ingress',
+          }),
+          {trustProxy: true})).toBe('/forwarded');
+    });
+
+    it('sanitises standard headers the same as x-proxy-path', () => {
+      expect(sanitizeProxyPath(
+          mockReqMulti({'x-forwarded-prefix': '//evil.example/pwn'}),
+          {trustProxy: true})).toBe('/evil.example/pwn');
+      expect(sanitizeProxyPath(
+          mockReqMulti({'x-ingress-path': '/a/../b'}),
+          {trustProxy: true})).toBe('');
+      expect(sanitizeProxyPath(
+          mockReqMulti({'x-forwarded-prefix': 'pad'}),
+          {trustProxy: true})).toBe('/pad');
+    });
+
+    it('defaults trustProxy from settings when opts not provided', async () => {
+      const settings = (await import('../../../node/utils/Settings')).default;
+      const original = settings.trustProxy;
+      try {
+        settings.trustProxy = true;
+        expect(sanitizeProxyPath(
+            mockReqMulti({'x-forwarded-prefix': '/x'})))
+            .toBe('/x');
+        settings.trustProxy = false;
+        expect(sanitizeProxyPath(
+            mockReqMulti({'x-forwarded-prefix': '/x'})))
+            .toBe('');
+      } finally {
+        settings.trustProxy = original;
+      }
+    });
+  });
 });

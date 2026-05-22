@@ -532,6 +532,7 @@ exports.getPadHTMLDocument = async (padId: string, revNum: string, readOnlyId: n
     body: html,
     padId: Security.escapeHTML(readOnlyId || padId),
     extraCSS: stylesForExportCSS,
+    proxyPath: '',
   });
 };
 

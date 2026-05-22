@@ -9,6 +9,7 @@ import { NumberInput } from './widgets/NumberInput';
 import { BooleanToggle } from './widgets/BooleanToggle';
 import { NullChip } from './widgets/NullChip';
 import { EnvPill } from './widgets/EnvPill';
+import { useResolvedAt } from '../../store/store';
 
 type Props = {
   /** The value node (not the property node). */
@@ -36,6 +37,7 @@ const renderLeaf = (
   path: JSONPath,
   text: string,
   onEdit: (path: JSONPath, value: unknown) => void,
+  resolvedValue: unknown,
 ) => {
   if (node.type === 'string') {
     const raw = text.slice(node.offset, node.offset + node.length);
@@ -46,6 +48,7 @@ const renderLeaf = (
           placeholder={env}
           path={path}
           onChange={(d) => onEdit(path, `\${${env.variable}:${d}}`)}
+          resolvedValue={resolvedValue}
         />
       );
     }
@@ -84,6 +87,11 @@ const renderLeaf = (
 export const JsoncNode = ({ node, property, text, onEdit, suppressOwnHeader }: Props) => {
   const path = getNodePath(node);
   const key = propertyKey(property);
+  // useResolvedAt must be called unconditionally for every JsoncNode
+  // render (React hook rules). It's cheap: a shallow zustand selector +
+  // an object-walk that returns undefined when the resolved payload is
+  // absent (old server) — in which case EnvPill simply omits the chip.
+  const resolvedValue = useResolvedAt(path);
 
   const anchor = property ?? node;
   const fileComments = extractAdjacentComments(text, anchor.offset, node.offset, node.length);
@@ -163,7 +171,7 @@ export const JsoncNode = ({ node, property, text, onEdit, suppressOwnHeader }: P
         {label}
       </label>
       <div className="settings-row-control">
-        {renderLeaf(node, path, text, onEdit)}
+        {renderLeaf(node, path, text, onEdit, resolvedValue)}
       </div>
       {help && (
         <p className="settings-row-help" id={helpId}>{help}</p>

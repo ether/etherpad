@@ -175,8 +175,9 @@ const handleLiveReload = async (args: ArgsExpressType, padString: string, timeSl
         const proxyPath = sanitizeProxyPath(req);
         const socialMetaHtml = renderSocialMeta({
           req, settings, availableLangs: i18n.availableLangs, locales: i18n.locales, kind: 'home',
+          proxyPath,
         });
-        res.send(eejs.require('ep_etherpad-lite/templates/index.html', {req, entrypoint: proxyPath + '/watch/index?hash=' + hash, settings, socialMetaHtml}));
+        res.send(eejs.require('ep_etherpad-lite/templates/index.html', {req, entrypoint: proxyPath + '/watch/index?hash=' + hash, settings, socialMetaHtml, proxyPath}));
       })
     })
 
@@ -203,6 +204,7 @@ const handleLiveReload = async (args: ArgsExpressType, padString: string, timeSl
         const proxyPath = sanitizeProxyPath(req);
         const socialMetaHtml = renderSocialMeta({
           req, settings, availableLangs: i18n.availableLangs, locales: i18n.locales, kind: 'pad', padName: req.params.pad,
+          proxyPath,
         });
         const content = eejs.require('ep_etherpad-lite/templates/pad.html', {
           req,
@@ -211,6 +213,7 @@ const handleLiveReload = async (args: ArgsExpressType, padString: string, timeSl
           entrypoint: proxyPath + '/watch/pad?hash=' + hash,
           settings: settings.getPublicSettings(),
           socialMetaHtml,
+          proxyPath,
         })
         res.send(content);
       })
@@ -245,6 +248,7 @@ const handleLiveReload = async (args: ArgsExpressType, padString: string, timeSl
         const proxyPath = sanitizeProxyPath(req);
         const socialMetaHtml = renderSocialMeta({
           req, settings, availableLangs: i18n.availableLangs, locales: i18n.locales, kind: 'timeslider', padName: req.params.pad,
+          proxyPath,
         });
         const content = eejs.require('ep_etherpad-lite/templates/timeslider.html', {
           req,
@@ -254,6 +258,7 @@ const handleLiveReload = async (args: ArgsExpressType, padString: string, timeSl
           entrypoint: proxyPath + '/watch/timeslider?hash=' + hash,
           settings: settings.getPublicSettings(),
           socialMetaHtml,
+          proxyPath,
         })
         res.send(content);
       })
@@ -363,10 +368,12 @@ exports.expressCreateServer = async (_hookName: string, args: ArgsExpressType, c
 
     // serve index.html under /
     args.app.get('/', (req: any, res: any) => {
+      const proxyPath = sanitizeProxyPath(req);
       const socialMetaHtml = renderSocialMeta({
         req, settings, availableLangs: i18n.availableLangs, locales: i18n.locales, kind: 'home',
+        proxyPath,
       });
-      res.send(eejs.require('ep_etherpad-lite/templates/index.html', {req, settings, entrypoint: "./"+fileNameIndex, socialMetaHtml}));
+      res.send(eejs.require('ep_etherpad-lite/templates/index.html', {req, settings, entrypoint: "./"+fileNameIndex, socialMetaHtml, proxyPath}));
     });
 
 
@@ -381,8 +388,10 @@ exports.expressCreateServer = async (_hookName: string, args: ArgsExpressType, c
         isReadOnly
       });
 
+      const proxyPath = sanitizeProxyPath(req);
       const socialMetaHtml = renderSocialMeta({
         req, settings, availableLangs: i18n.availableLangs, locales: i18n.locales, kind: 'pad', padName: req.params.pad,
+        proxyPath,
       });
       const content = eejs.require('ep_etherpad-lite/templates/pad.html', {
         req,
@@ -391,6 +400,7 @@ exports.expressCreateServer = async (_hookName: string, args: ArgsExpressType, c
         entrypoint: "../"+fileNamePad,
         settings: settings.getPublicSettings(),
         socialMetaHtml,
+        proxyPath,
       })
       res.send(content);
     });
@@ -414,8 +424,10 @@ exports.expressCreateServer = async (_hookName: string, args: ArgsExpressType, c
         toolbar,
       });
 
+      const proxyPath = sanitizeProxyPath(req);
       const socialMetaHtml = renderSocialMeta({
         req, settings, availableLangs: i18n.availableLangs, locales: i18n.locales, kind: 'timeslider', padName: req.params.pad,
+        proxyPath,
       });
       res.send(eejs.require('ep_etherpad-lite/templates/timeslider.html', {
         req,
@@ -424,6 +436,7 @@ exports.expressCreateServer = async (_hookName: string, args: ArgsExpressType, c
         entrypoint: "../../"+fileNameTimeSlider,
         settings: settings.getPublicSettings(),
         socialMetaHtml,
+        proxyPath,
       }));
     });
   } else {

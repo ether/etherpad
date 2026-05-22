@@ -13,9 +13,6 @@ export interface MaintenanceWindow {
   tz: 'local' | 'utc';
 }
 
-/** null = up-to-date (or not yet checked); 'severe' = at least one major version behind; 'vulnerable' = matched a vulnerable-below directive. */
-export type OutdatedLevel = null | 'severe' | 'vulnerable';
-
 export interface ReleaseInfo {
   /** semver string without leading 'v', e.g. "2.7.2". */
   version: string;
@@ -31,13 +28,6 @@ export interface ReleaseInfo {
   htmlUrl: string;
 }
 
-export interface VulnerableBelowDirective {
-  /** The release that *announced* the vulnerability (latest release wins on conflict). */
-  announcedBy: string;
-  /** Versions strictly below this string are considered vulnerable. */
-  threshold: string;
-}
-
 export interface PolicyResult {
   canNotify: boolean;
   canManual: boolean;
@@ -50,10 +40,6 @@ export interface PolicyResult {
 export interface EmailSendLog {
   /** Last time we emailed about being severely-outdated, ISO-8601. */
   severeAt: string | null;
-  /** Last time we emailed about being vulnerable, ISO-8601. */
-  vulnerableAt: string | null;
-  /** Tag of the release the last "new release while vulnerable" email referenced. */
-  vulnerableNewReleaseTag: string | null;
   /** Tag of the most recent release for which we sent a Tier 3 `grace-start` email. */
   graceStartTag: string | null;
   /**
@@ -114,8 +100,6 @@ export interface UpdateState {
   lastEtag: string | null;
   /** Cached release info, or null if we've never successfully fetched. */
   latest: ReleaseInfo | null;
-  /** Vulnerable-below directives parsed from the most recent N releases. */
-  vulnerableBelow: VulnerableBelowDirective[];
   /** Email send dedupe state. */
   email: EmailSendLog;
   /** Current in-flight execution state. Persisted so a restart mid-update reaches RollbackHandler. */
@@ -135,11 +119,8 @@ export const EMPTY_STATE: UpdateState = {
   lastCheckAt: null,
   lastEtag: null,
   latest: null,
-  vulnerableBelow: [],
   email: {
     severeAt: null,
-    vulnerableAt: null,
-    vulnerableNewReleaseTag: null,
     graceStartTag: null,
     lastFailureKey: null,
   },

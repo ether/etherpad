@@ -535,6 +535,15 @@
    *
    * The other effect will be that the logs will contain the real client's IP,
    * instead of the reverse proxy's IP.
+   *
+   * Setting this to `true` also makes Etherpad honor two standard URL-path-
+   * prefix headers from upstream proxies:
+   *   - `X-Forwarded-Prefix` (HAProxy / Traefik convention)
+   *   - `X-Ingress-Path` (Home Assistant supervisor ingress)
+   *
+   * Both are sanitised before use. Etherpad's own `x-proxy-path` header is
+   * honored regardless of this setting; the operator is presumed to have
+   * configured their proxy intentionally when sending the custom header.
    */
   "trustProxy": false,
 
@@ -625,6 +634,12 @@
     /*
      * Whether to periodically clean up expired and stale sessions from the
      * database. Set to false to disable. Default: true.
+     *
+     * Cleanup runs hourly and walks the sessionstorage:* keyspace in 500-key
+     * pages so very large session tables don't pin the keys in memory all at
+     * once (see https://github.com/ether/etherpad/issues/7830). A single run
+     * is capped at 10 minutes; if your DB is so large the budget is reached,
+     * a warning is logged and the next scheduled run continues.
      */
     "sessionCleanup": true
   },

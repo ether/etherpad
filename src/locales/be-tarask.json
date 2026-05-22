@@ -9,6 +9,7 @@
 		]
 	},
 	"admin.page-title": "Адміністрацыйная панэль — Etherpad",
+	"admin.loading": "Ладаваньне...",
 	"admin_plugins": "Кіраўнік плагінаў",
 	"admin_plugins.available": "Даступныя плагіны",
 	"admin_plugins.available_not-found": "Плагіны ня знойдзеныя.",

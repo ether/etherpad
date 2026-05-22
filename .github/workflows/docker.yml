@@ -66,7 +66,13 @@ jobs:
         name: Test
         working-directory: etherpad
         run: |
-          docker run --rm -d -p 9001:9001 --name test ${{ env.TEST_TAG }}
+          # ADMIN_PASSWORD provisions settings.json.docker's admin user so
+          # the adminSettings_7819 container spec can authenticate against
+          # /admin and the /settings socket. pad.js doesn't touch /admin
+          # so the existing API specs are unaffected.
+          docker run --rm -d -p 9001:9001 \
+            -e ADMIN_PASSWORD=changeme1 \
+            --name test ${{ env.TEST_TAG }}
           ./bin/installDeps.sh
           docker logs -f test &
           while true; do
@@ -79,6 +85,34 @@ jobs:
             esac
           done
           (cd src && pnpm run test-container)
+          # Regression for #7819. adminSettings_7819.ts saves a marker via
+          # the admin /settings socket and intentionally leaves it on
+          # disk. We assert here that the save actually hit the file
+          # (mocha only sees the next `load` reply — this catches a
+          # scenario where the load is served from cache and the file
+          # never actually changed).
+          docker exec test grep -q persist-marker-7819 /opt/etherpad-lite/settings.json || {
+            echo "[#7819] socket-driven save did NOT reach /opt/etherpad-lite/settings.json on disk"
+            docker exec test cat /opt/etherpad-lite/settings.json | head -50
+            exit 1
+          }
+          # Now prove the on-disk file survives an in-place container
+          # restart. This is the scenario a docker-compose user with
+          # `restart: always` hits on every host reboot.
+          docker restart test >/dev/null
+          for i in $(seq 1 60); do
+            status=$(docker container inspect -f '{{.State.Health.Status}}' test 2>/dev/null) || { docker logs test; exit 1; }
+            case ${status} in
+              healthy) break;;
+              starting) sleep 2;;
+              *) docker logs test; exit 1;;
+            esac
+          done
+          docker exec test grep -q persist-marker-7819 /opt/etherpad-lite/settings.json || {
+            echo "[#7819 REGRESSION] settings.json was reset on docker restart — ep_oauth block vanished"
+            docker logs test
+            exit 1
+          }
           docker rm -f test
           git clean -dxf .
       -

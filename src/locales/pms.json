@@ -6,6 +6,8 @@
 		]
 	},
 	"admin.page-title": "Cruscòt d'aministrator - Etherpad",
+	"admin.loading": "Antramentre ch'as caria…",
+	"admin.shout": "Comunicassion",
 	"admin_plugins": "Mansé dj'anstalassion",
 	"admin_plugins.available": "Anstalassion disponìbij",
 	"admin_plugins.available_not-found": "Gnun-e anstalassion trovà.",
