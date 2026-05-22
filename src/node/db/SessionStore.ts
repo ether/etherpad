@@ -18,6 +18,13 @@ const CLEANUP_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
 // memory at once. Tuned for ~50 KB per page assuming ~100-char keys.
 const CLEANUP_PAGE_SIZE = 500;
 
+// Upper bound on a single cleanup run. Under sustained session creation the
+// keyspace can grow faster than cleanup processes it; without a budget the
+// loop would never reach an empty page and the next scheduled run would never
+// fire. When the budget hits, the next scheduled run picks up where this one
+// left off (the database state advances each iteration regardless).
+const CLEANUP_MAX_RUNTIME_MS = 10 * 60 * 1000; // 10 minutes
+
 class SessionStore extends expressSession.Store {
   /**
    * @param {?number} [refresh] - How often (in milliseconds) `touch()` will update a session's
@@ -86,9 +93,11 @@ class SessionStore extends expressSession.Store {
    */
   async _cleanup() {
     const now = Date.now();
+    const startMs = Date.now();
     let removed = 0;
     let scanned = 0;
     let after: string | undefined;
+    let budgetExhausted = false;
     // eslint-disable-next-line no-constant-condition
     while (true) {
       const page = await DB.findKeysPaged('sessionstorage:*', null, {
@@ -98,8 +107,14 @@ class SessionStore extends expressSession.Store {
       if (!page || page.length === 0) break;
       // Defensive: a buggy backend that returns the cursor key would loop
       // forever. `after` is exclusive, so the first key of the next page must
-      // be strictly greater than the previous cursor.
-      if (after != null && page[0] <= after) break;
+      // be strictly greater than the previous cursor. Log so an operator can
+      // notice partial cleanup caused by a pagination regression.
+      if (after != null && page[0] <= after) {
+        logger.error(
+          `Session cleanup: paged cursor did not advance (after=${after}, ` +
+          `page[0]=${page[0]}); aborting this run to prevent an infinite loop`);
+        break;
+      }
       for (const key of page) {
         scanned++;
         const sess = await DB.get(key);
@@ -123,11 +138,19 @@ class SessionStore extends expressSession.Store {
         }
       }
       after = page[page.length - 1];
+      if (Date.now() - startMs > CLEANUP_MAX_RUNTIME_MS) {
+        budgetExhausted = true;
+        break;
+      }
       // Yield to the event loop between pages so request handlers can run and
       // the DB driver can release the previous page's buffered rows.
       await new Promise((resolve) => setImmediate(resolve));
     }
-    if (removed > 0) {
+    if (budgetExhausted) {
+      logger.warn(
+        `Session cleanup: hit ${CLEANUP_MAX_RUNTIME_MS}ms budget after scanning ` +
+        `${scanned} keys (${removed} removed); next scheduled run will continue`);
+    } else if (removed > 0) {
       logger.info(`Session cleanup: removed ${removed} expired/stale sessions out of ${scanned}`);
     }
   }

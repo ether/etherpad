@@ -358,7 +358,12 @@ describe(__filename, function () {
         assert(pageCalls >= 12, `expected paged iteration (got ${pageCalls} calls)`);
       } finally {
         db.findKeysPaged = real;
-        for (const sid of validSids) await db.remove(`sessionstorage:${sid}`);
+        // Symmetric cleanup — if an assertion threw earlier, expiredSids may
+        // still be present in the DB. Remove both groups so the test leaves
+        // no rows behind even on failure.
+        for (const sid of [...expiredSids, ...validSids]) {
+          await db.remove(`sessionstorage:${sid}`);
+        }
       }
     });
   });

@@ -49,7 +49,11 @@ exports.init = async () => {
   }
   for (const fn of ['get', 'set', 'findKeys', 'findKeysPaged', 'getSub', 'setSub', 'remove']) {
     const f = exports.db[fn];
-    if (typeof f !== 'function') continue;
+    if (typeof f !== 'function') {
+      throw new Error(
+        `ueberdb2 ${exports.db.constructor.name} is missing required method ${fn}; ` +
+          'check that ueberdb2 is at the minimum version pinned in package.json');
+    }
     exports[fn] = async (...args:string[]) => await f.call(exports.db, ...args);
     Object.setPrototypeOf(exports[fn], Object.getPrototypeOf(f));
     Object.defineProperties(exports[fn], Object.getOwnPropertyDescriptors(f));
