@@ -309,5 +309,57 @@ describe(__filename, function () {
       // After shutdown, the timer should be cleared.
       assert(ss!._cleanupTimer == null);
     });
+
+    // Regression for https://github.com/ether/etherpad/issues/7830 — cleanup
+    // used to load every sessionstorage key into a single array; on huge DBs
+    // this OOMed. Verifies the paged iteration still hits every key when the
+    // count exceeds CLEANUP_PAGE_SIZE — we seed a few-row spread and force a
+    // small page size to keep the test fast.
+    it('pages across a large sessionstorage keyspace', async function () {
+      // Tag rows so the assertion ignores anything other tests left behind.
+      const tag = common.randomString();
+      const expiredSids: string[] = [];
+      const validSids: string[] = [];
+      // Seed 25 expired + 25 valid rows. The default CLEANUP_PAGE_SIZE (500)
+      // would cover this in one call, so we monkey-patch the constant for
+      // this test by stubbing DB.findKeysPaged to enforce a small page.
+      const real = db.findKeysPaged;
+      let pageCalls = 0;
+      db.findKeysPaged = async (key: string, notKey: any, opts: any) => {
+        pageCalls++;
+        return await real.call(db, key, notKey, {...opts, limit: 4});
+      };
+      try {
+        for (let i = 0; i < 25; i++) {
+          const sid = `cleanup_paged_exp_${tag}_${String(i).padStart(2, '0')}`;
+          expiredSids.push(sid);
+          await db.set(`sessionstorage:${sid}`, {
+            cookie: {path: '/', expires: new Date(1).toJSON(), httpOnly: true},
+          });
+        }
+        for (let i = 0; i < 25; i++) {
+          const sid = `cleanup_paged_val_${tag}_${String(i).padStart(2, '0')}`;
+          validSids.push(sid);
+          await db.set(`sessionstorage:${sid}`, {
+            cookie: {
+              path: '/', expires: new Date(Date.now() + 60000).toJSON(), httpOnly: true,
+            },
+          });
+        }
+        await ss!._cleanup();
+        for (const sid of expiredSids) {
+          assert(await db.get(`sessionstorage:${sid}`) == null, `expired ${sid} not removed`);
+        }
+        for (const sid of validSids) {
+          assert(await db.get(`sessionstorage:${sid}`) != null, `valid ${sid} was wrongly removed`);
+        }
+        // page size 4 over 50 rows -> at least 12 paged calls (final page may
+        // be short). Confirms we actually iterated.
+        assert(pageCalls >= 12, `expected paged iteration (got ${pageCalls} calls)`);
+      } finally {
+        db.findKeysPaged = real;
+        for (const sid of validSids) await db.remove(`sessionstorage:${sid}`);
+      }
+    });
   });
 });

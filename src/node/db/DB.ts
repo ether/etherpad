@@ -47,8 +47,9 @@ exports.init = async () => {
       stats.gauge(`ueberdb_${metric}`, () => exports.db.metrics[metric]);
     }
   }
-  for (const fn of ['get', 'set', 'findKeys', 'getSub', 'setSub', 'remove']) {
+  for (const fn of ['get', 'set', 'findKeys', 'findKeysPaged', 'getSub', 'setSub', 'remove']) {
     const f = exports.db[fn];
+    if (typeof f !== 'function') continue;
     exports[fn] = async (...args:string[]) => await f.call(exports.db, ...args);
     Object.setPrototypeOf(exports[fn], Object.getPrototypeOf(f));
     Object.defineProperties(exports[fn], Object.getOwnPropertyDescriptors(f));

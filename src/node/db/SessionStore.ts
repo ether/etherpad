@@ -12,6 +12,12 @@ const logger = log4js.getLogger('SessionStore');
 // How often to run the cleanup of expired/stale sessions.
 const CLEANUP_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
 
+// Maximum number of session keys fetched from the database per cleanup
+// iteration. Bounded so that instances with very large session keyspaces (see
+// https://github.com/ether/etherpad/issues/7830) don't load every key into
+// memory at once. Tuned for ~50 KB per page assuming ~100-char keys.
+const CLEANUP_PAGE_SIZE = 500;
+
 class SessionStore extends expressSession.Store {
   /**
    * @param {?number} [refresh] - How often (in milliseconds) `touch()` will update a session's
@@ -74,37 +80,55 @@ class SessionStore extends expressSession.Store {
    * - Sessions with no expiry that contain no data beyond the default cookie are removed.
    *   These are the empty sessions that accumulate indefinitely (bug #5010) — they have
    *   `{cookie: {path: "/", _expires: null, ...}}` and nothing else.
+   *
+   * Iterates the keyspace in fixed-size pages (CLEANUP_PAGE_SIZE) so a large
+   * sessionstorage table (#7830) doesn't load every key into memory at once.
    */
   async _cleanup() {
-    const keys = await DB.findKeys('sessionstorage:*', null);
-    if (!keys || keys.length === 0) return;
     const now = Date.now();
     let removed = 0;
-    for (const key of keys) {
-      const sess = await DB.get(key);
-      if (!sess) {
-        await DB.remove(key);
-        removed++;
-        continue;
-      }
-      const expires = sess.cookie?.expires;
-      if (expires) {
-        // Session has an expiry — remove if expired.
-        if (new Date(expires).getTime() <= now) {
+    let scanned = 0;
+    let after: string | undefined;
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      const page = await DB.findKeysPaged('sessionstorage:*', null, {
+        limit: CLEANUP_PAGE_SIZE,
+        ...(after != null ? {after} : {}),
+      });
+      if (!page || page.length === 0) break;
+      // Defensive: a buggy backend that returns the cursor key would loop
+      // forever. `after` is exclusive, so the first key of the next page must
+      // be strictly greater than the previous cursor.
+      if (after != null && page[0] <= after) break;
+      for (const key of page) {
+        scanned++;
+        const sess = await DB.get(key);
+        if (!sess) {
           await DB.remove(key);
           removed++;
+          continue;
         }
-      } else {
-        // Session has no expiry and no user data beyond the cookie — remove as empty/stale.
-        const hasData = Object.keys(sess).some((k) => k !== 'cookie');
-        if (!hasData) {
-          await DB.remove(key);
-          removed++;
+        const expires = sess.cookie?.expires;
+        if (expires) {
+          if (new Date(expires).getTime() <= now) {
+            await DB.remove(key);
+            removed++;
+          }
+        } else {
+          const hasData = Object.keys(sess).some((k) => k !== 'cookie');
+          if (!hasData) {
+            await DB.remove(key);
+            removed++;
+          }
         }
       }
+      after = page[page.length - 1];
+      // Yield to the event loop between pages so request handlers can run and
+      // the DB driver can release the previous page's buffered rows.
+      await new Promise((resolve) => setImmediate(resolve));
     }
     if (removed > 0) {
-      logger.info(`Session cleanup: removed ${removed} expired/stale sessions out of ${keys.length}`);
+      logger.info(`Session cleanup: removed ${removed} expired/stale sessions out of ${scanned}`);
     }
   }
 
