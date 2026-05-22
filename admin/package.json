@@ -45,7 +45,7 @@
     "socket.io-client": "^4.8.3",
     "tsx": "^4.22.3",
     "typescript": "^6.0.3",
-    "vite": "^8.0.13",
+    "vite": "^8.0.14",
     "vite-plugin-babel": "^1.7.3",
     "zustand": "^5.0.13"
   }
