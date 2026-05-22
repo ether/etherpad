@@ -634,6 +634,12 @@
     /*
      * Whether to periodically clean up expired and stale sessions from the
      * database. Set to false to disable. Default: true.
+     *
+     * Cleanup runs hourly and walks the sessionstorage:* keyspace in 500-key
+     * pages so very large session tables don't pin the keys in memory all at
+     * once (see https://github.com/ether/etherpad/issues/7830). A single run
+     * is capped at 10 minutes; if your DB is so large the budget is reached,
+     * a warning is logged and the next scheduled run continues.
      */
     "sessionCleanup": true
   },
