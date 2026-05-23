@@ -172,6 +172,23 @@ exports.handle = async function (apiVersion: string, functionName: string, field
 
   // say goodbye if this is an unknown function
   if (!(functionName in version[apiVersion])) {
+    const compareVersions = (v1: string, v2: string): number => {
+      const parts1 = v1.split('.').map(Number);
+      const parts2 = v2.split('.').map(Number);
+      const len = Math.max(parts1.length, parts2.length);
+      for (let i = 0; i < len; i++) {
+        const p1 = parts1[i] || 0;
+        const p2 = parts2[i] || 0;
+        if (p1 !== p2) return p1 - p2;
+      }
+      return 0;
+    };
+    const sortedVersions = Object.keys(version).sort(compareVersions);
+    const oldestVersion = sortedVersions.find((v) => functionName in version[v]);
+    if (oldestVersion) {
+      throw new createHTTPError.NotFound(
+          `'${functionName}' is available from API v${oldestVersion} onwards.`);
+    }
     throw new createHTTPError.NotFound('no such function');
   }
 

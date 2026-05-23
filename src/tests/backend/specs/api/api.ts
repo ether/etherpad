@@ -217,4 +217,19 @@ describe(__filename, function () {
       assertResolved('GET /rest pad/checkToken', r.body);
     });
   });
+
+  describe('helpful error when calling a function with too-old an API version (Issue #6849)', function () {
+    it('returns helpful error when calling copyPad with API version 1', async function () {
+      await agent.get('/api/1/copyPad')
+          .expect(404)
+          .expect((res: any) => {
+            if (res.body.code !== 3) {
+              throw new Error(`Expected code 3 (not found), got ${res.body.code}`);
+            }
+            if (res.body.message !== "'copyPad' is available from API v1.2.9 onwards.") {
+              throw new Error(`Expected helpful error message, got: ${res.body.message}`);
+            }
+          });
+    });
+  });
 });

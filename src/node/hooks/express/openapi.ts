@@ -718,7 +718,17 @@ exports.expressPreSession = async (hookName:string, {app}:any) => {
 
       // register default handlers
       api.register({
-        notFound: () => {
+        notFound: (c: any, req: any) => {
+          const path = req.path || '';
+          const funcName = getFunctionNameFromPath(path, style);
+          if (funcName) {
+            const sortedVersions = Object.keys(apiHandler.version).sort(compareVersions);
+            const oldestVersion = sortedVersions.find((v) => funcName in apiHandler.version[v]);
+            if (oldestVersion) {
+              throw new createHTTPError.NotFound(
+                  `'${funcName}' is available from API v${oldestVersion} onwards.`);
+            }
+          }
           throw new createHTTPError.NotFound('no such function');
         },
         notImplemented: () => {
@@ -849,6 +859,41 @@ exports.expressPreSession = async (hookName:string, {app}:any) => {
       });
     }
   }
+};
+
+const compareVersions = (v1: string, v2: string): number => {
+  const parts1 = v1.split('.').map(Number);
+  const parts2 = v2.split('.').map(Number);
+  const len = Math.max(parts1.length, parts2.length);
+  for (let i = 0; i < len; i++) {
+    const p1 = parts1[i] || 0;
+    const p2 = parts2[i] || 0;
+    if (p1 !== p2) return p1 - p2;
+  }
+  return 0;
+};
+
+const getFunctionNameFromPath = (path: string, style: string): string | null => {
+  const normalizedPath = path.replace(/\/$/, '');
+  if (style === APIPathStyle.FLAT) {
+    const funcName = normalizedPath.slice(1);
+    for (const v of Object.keys(apiHandler.version)) {
+      if (funcName in apiHandler.version[v]) {
+        return funcName;
+      }
+    }
+  } else if (style === APIPathStyle.REST) {
+    for (const [funcName, op] of Object.entries(operations)) {
+      if ((op as any)._restPath === normalizedPath) {
+        for (const v of Object.keys(apiHandler.version)) {
+          if (funcName in apiHandler.version[v]) {
+            return funcName;
+          }
+        }
+      }
+    }
+  }
+  return null;
 };
 
 /**
