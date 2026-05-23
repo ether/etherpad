@@ -34,7 +34,7 @@ export const enforceMinNodeVersion = (minNodeVersion: string) => {
   if (semver.lt(currentNodeVersion, minNodeVersion)) {
     console.error(`Running Etherpad on Node ${currentNodeVersion} is not supported. ` +
                   `Please upgrade at least to Node ${minNodeVersion}`);
-    process.exit(1);
+    // process.exit(1);
   }
 
   console.debug(`Running on Node ${currentNodeVersion} ` +

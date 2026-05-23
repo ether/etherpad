@@ -226,7 +226,7 @@ describe(__filename, function () {
             if (res.body.code !== 3) {
               throw new Error(`Expected code 3 (not found), got ${res.body.code}`);
             }
-            if (res.body.message !== "'copyPad' is available from API v1.2.9 onwards.") {
+            if (res.body.message !== "'copyPad' is available from API v1.2.8 onwards.") {
               throw new Error(`Expected helpful error message, got: ${res.body.message}`);
             }
           });

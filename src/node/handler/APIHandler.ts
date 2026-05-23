@@ -90,12 +90,12 @@ version['1.2.8'] = {
   ...version['1.2.7'],
   getAttributePool: ['padID'],
   getRevisionChangeset: ['padID', 'rev'],
+  copyPad: ['sourceID', 'destinationID', 'force'],
+  movePad: ['sourceID', 'destinationID', 'force'],
 };
 
 version['1.2.9'] = {
   ...version['1.2.8'],
-  copyPad: ['sourceID', 'destinationID', 'force'],
-  movePad: ['sourceID', 'destinationID', 'force'],
 };
 
 version['1.2.10'] = {
