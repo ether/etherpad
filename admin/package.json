@@ -24,6 +24,7 @@
   "devDependencies": {
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-toast": "^1.2.15",
+    "@radix-ui/react-visually-hidden": "^1.2.3",
     "@types/react": "^19.2.15",
     "@types/react-dom": "^19.2.3",
     "@typescript-eslint/eslint-plugin": "^8.59.4",

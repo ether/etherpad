@@ -4,6 +4,7 @@ import {useStore} from "../store/store.ts";
 import {PadFilter, PadSearchQuery, PadSearchResult} from "../utils/PadSearch.ts";
 import {useDebounce} from "../utils/useDebounce.ts";
 import * as Dialog from "@radix-ui/react-dialog";
+import {VisuallyHidden} from "@radix-ui/react-visually-hidden";
 import {ChevronLeft, ChevronRight, Eye, Trash2, FileStack, PlusIcon, Search, X, RefreshCw, History} from "lucide-react";
 import {useForm} from "react-hook-form";
 import type {TFunction} from "i18next";
@@ -165,7 +166,10 @@ export const PadPage = () => {
         <Dialog.Portal>
           <Dialog.Overlay className="dialog-confirm-overlay"/>
           <Dialog.Content className="dialog-confirm-content">
-            <div>{t('ep_admin_pads:ep_adminpads2_confirm', {padID: padToDelete})}</div>
+            <VisuallyHidden asChild><Dialog.Title>{t('admin_pads.delete_pad_dialog_title')}</Dialog.Title></VisuallyHidden>
+            <Dialog.Description asChild>
+              <div>{t('ep_admin_pads:ep_adminpads2_confirm', {padID: padToDelete})}</div>
+            </Dialog.Description>
             <div className="settings-button-bar">
               <button onClick={() => setDeleteDialog(false)}><Trans i18nKey="admin_pads.cancel"/></button>
               <button onClick={() => { deletePad(padToDelete); setDeleteDialog(false) }}>{t('admin_pads.confirm_button')}</button>
@@ -178,7 +182,10 @@ export const PadPage = () => {
         <Dialog.Portal>
           <Dialog.Overlay className="dialog-confirm-overlay"/>
           <Dialog.Content className="dialog-confirm-content">
-            <div>{t('admin_pads.error_prefix')}: {errorText}</div>
+            <VisuallyHidden asChild><Dialog.Title>{t('admin_pads.error_prefix')}</Dialog.Title></VisuallyHidden>
+            <Dialog.Description asChild>
+              <div>{t('admin_pads.error_prefix')}: {errorText}</div>
+            </Dialog.Description>
             <div className="settings-button-bar">
               <button onClick={() => setErrorText(null)}>{t('admin_pads.confirm_button')}</button>
             </div>
@@ -191,6 +198,7 @@ export const PadPage = () => {
           <Dialog.Overlay className="dialog-confirm-overlay"/>
           <Dialog.Content className="dialog-confirm-content">
             <Dialog.Title className="dialog-confirm-title"><Trans i18nKey="index.newPad"/></Dialog.Title>
+            <VisuallyHidden asChild><Dialog.Description>{t('admin_pads.create_pad_dialog_description')}</Dialog.Description></VisuallyHidden>
             <form onSubmit={handleSubmit(onPadCreate)}>
               <button className="dialog-close-button" type="button" onClick={() => setCreatePadDialogOpen(false)}>×</button>
               <div style={{display: 'grid', gap: '10px', gridTemplateColumns: 'auto auto', marginBottom: '1rem'}}>
