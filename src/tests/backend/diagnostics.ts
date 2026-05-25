@@ -253,10 +253,32 @@ export const mochaHooks = {
       }
     }
   },
-  afterEach(this: any) {
+  async afterEach(this: any) {
     if (this.currentTest) {
       lastFinishedTest = this.currentTest.fullTitle();
       currentTest = '<no test running>';
     }
+    // Mitigation experiment for the Windows-backend silent ELIFECYCLE
+    // flake. PR #7842 captured nine deaths showing a consistent shape:
+    // 200-400 ms after a test starts, the event loop stops servicing
+    // timers (heartbeat goes silent) and the process is terminated
+    // shortly after — with no JS-handler trace, no native abort report,
+    // and no obvious anomaly in the pre-kill libuv state. The pattern
+    // suggests cumulative event-loop pressure: rapid sequential
+    // supertest TCP roundtrips + socket.io connections + DOCX export
+    // I/O queue up enough work that something in libuv's IOCP path
+    // (Windows-specific) eventually triggers an external kill.
+    //
+    // Insert a single setImmediate yield after every test so the event
+    // loop drains queued I/O callbacks at a deterministic boundary
+    // rather than letting them stack across tests. If the kill rate
+    // drops materially on Windows backend matrices after this lands
+    // we have strong evidence the trigger is cumulative; if it
+    // doesn't, we rule out cumulative pressure and look elsewhere
+    // (specific test paths, native module bugs, etc.).
+    //
+    // Cost: ~600 tests × 1 setImmediate = ~600 µs total wall-clock,
+    // negligible compared to the multi-minute backend test phase.
+    await new Promise((r) => setImmediate(r));
   },
 };
