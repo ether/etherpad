@@ -1,9 +1,11 @@
-'use strict';
-
 import {strict as assert} from 'assert';
-const validateOpenAPI = require('openapi-schema-validation').validate;
-
-const openapiAdmin = require('../../../node/hooks/express/openapi-admin');
+import openapiValidation from 'openapi-schema-validation';
+const validateOpenAPI = openapiValidation.validate;
+import * as openapiAdmin from '../../../node/hooks/express/openapi-admin.js';
+import * as apiHandler from '../../../node/handler/APIHandler.js';
+import * as openapi from '../../../node/hooks/express/openapi.js';
+import * as common from '../common.js';
+import settings from '../../../node/utils/Settings.js';
 
 describe('admin OpenAPI document', function () {
   let doc: any;
@@ -127,8 +129,6 @@ describe('admin OpenAPI document', function () {
   describe('cross-collision with public spec', function () {
     let publicDoc: any;
     before(function () {
-      const apiHandler = require('../../../node/handler/APIHandler');
-      const openapi = require('../../../node/hooks/express/openapi');
       publicDoc = openapi.generateDefinitionForVersion(
         apiHandler.latestApiVersion,
         openapi.APIPathStyle.FLAT,
@@ -173,9 +173,8 @@ describe('admin OpenAPI document', function () {
     let settingsModule: any;
 
     before(async function () {
-      const common = require('../common');
       agent = await common.init();
-      settingsModule = require('../../../node/utils/Settings').default;
+      settingsModule = settings;
     });
 
     after(function () {

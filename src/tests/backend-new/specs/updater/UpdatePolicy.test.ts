@@ -1,6 +1,6 @@
 import {describe, it, expect} from 'vitest';
-import {evaluatePolicy} from '../../../../node/updater/UpdatePolicy';
-import {InstallMethod, Tier} from '../../../../node/updater/types';
+import {evaluatePolicy} from '../../../../node/updater/UpdatePolicy.js';
+import {InstallMethod, Tier} from '../../../../node/updater/types.js';
 
 const baseInput = {
   installMethod: 'git' as Exclude<InstallMethod, 'auto'>,

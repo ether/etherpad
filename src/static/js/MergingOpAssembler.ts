@@ -1,6 +1,6 @@
-import {OpAssembler} from "./OpAssembler";
-import Op from "./Op";
-import {clearOp, copyOp} from "./Changeset";
+import {OpAssembler} from "./OpAssembler.js";
+import Op from "./Op.js";
+import {clearOp, copyOp} from "./Changeset.js";
 
 export class MergingOpAssembler {
   private assem: OpAssembler;

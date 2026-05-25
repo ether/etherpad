@@ -1,7 +1,5 @@
-'use strict';
-
-const assert = require('assert').strict;
-const runCmd = require('../../../node/utils/run_cmd');
+import * as assert from 'node:assert/strict';
+import runCmd from '../../../node/utils/run_cmd.js';
 
 describe(__filename, function () {
   it('rejects with ENOENT when the binary does not exist', async function () {

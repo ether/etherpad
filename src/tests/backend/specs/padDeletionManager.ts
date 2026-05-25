@@ -1,9 +1,6 @@
-'use strict';
-
 import {strict as assert} from 'assert';
-
-const common = require('../common');
-const padDeletionManager = require('../../../node/db/PadDeletionManager');
+import * as common from '../common.js';
+import * as padDeletionManager from '../../../node/db/PadDeletionManager.js';
 
 describe(__filename, function () {
   before(async function () { await common.init(); });
@@ -15,7 +12,7 @@ describe(__filename, function () {
       const padId = uniqueId();
       const token = await padDeletionManager.createDeletionTokenIfAbsent(padId);
       assert.equal(typeof token, 'string');
-      assert.ok(token.length >= 32);
+      assert.ok(token!.length >= 32);
       await padDeletionManager.removeDeletionToken(padId);
     });
 

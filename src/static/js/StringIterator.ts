@@ -1,4 +1,4 @@
-import {assert} from "./Changeset";
+import {assert} from "./Changeset.js";
 
 /**
  * A custom made String Iterator

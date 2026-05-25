@@ -1,6 +1,6 @@
 'use strict';
 import {expect, test} from "@playwright/test";
-import {getPadBody, goToNewPad, writeToPad} from "../helper/padHelper";
+import {getPadBody, goToNewPad, writeToPad} from "../helper/padHelper.js";
 
 test.beforeEach(async ({ page })=>{
   await goToNewPad(page);

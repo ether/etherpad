@@ -1,4 +1,4 @@
-import {EmailSendLog} from './types';
+import {EmailSendLog} from './types.js';
 
 export interface NotifierInput {
   adminEmail: string | null;

@@ -1,5 +1,3 @@
-'use strict';
-
 // Regression test for the admin /settings socket's `padLoad` filter chip.
 // Before commit fb…, `filter` (active|empty|recent|stale) lived only on
 // the client and ran AFTER pagination, so clicking "empty pads" on a
@@ -10,11 +8,10 @@
 
 import {strict as assert} from 'assert';
 import setCookieParser from 'set-cookie-parser';
-
-const io = require('socket.io-client');
-const common = require('../../common');
-const settings = require('../../../../node/utils/Settings');
-const padManager = require('../../../../node/db/PadManager');
+import {io} from 'socket.io-client';
+import * as common from '../../common.js';
+import settings from '../../../../node/utils/Settings.js';
+import * as padManager from '../../../../node/db/PadManager.js';
 
 const adminSocket = async () => {
   settings.users = settings.users || {};
@@ -86,19 +83,19 @@ const adminSocketWithProbe = async (budgetMs: number): Promise<{
   return {ok: true, socket};
 };
 
-describe(__filename, function () {
+describe(__filename, () => {
   let socket: any;
   let savedUsers: any;
   let savedRequireAuthentication: boolean;
   let setupCompleted = false;
+  let skipReason: string | null = null;
   // Distinct per-suite tag so concurrent test runs / leftover pads from
   // earlier suites don't pollute the filter assertions.
   const tag = `padLoadFilter-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
   const emptyPadIds: string[] = [];
   const editedPadIds: string[] = [];
 
-  before(async function () {
-    this.timeout(120000);
+  before(async () => {
     await common.init();
 
     savedUsers = settings.users;
@@ -111,7 +108,7 @@ describe(__filename, function () {
           `[padLoadFilter] admin socket probe failed (${probe.reason}); ` +
           "skipping suite — likely an authenticate-hook plugin rejecting the test's " +
           'admin credentials.');
-      this.skip();
+      skipReason = probe.reason;
       return;
     }
     socket = probe.socket;
@@ -130,9 +127,9 @@ describe(__filename, function () {
       await pad.setText(`seed-${i}\n`, `m-${tag}-${i}`);
       editedPadIds.push(id);
     }
-  });
+  }, 120000);
 
-  after(async function () {
+  after(async () => {
     if (socket) socket.disconnect();
     if (!setupCompleted) return;
     // `savedUsers` may point at the same object that adminSocket mutated,
@@ -150,7 +147,8 @@ describe(__filename, function () {
     }
   });
 
-  it('filter:"empty" returns only revisionNumber===0 pads from the full set', async function () {
+  it('filter:"empty" returns only revisionNumber===0 pads from the full set', async (ctx) => {
+    if (skipReason) return ctx.skip();
     const res = await ask(socket, 'padLoad', {
       pattern: tag, offset: 0, limit: 12, sortBy: 'padName',
       ascending: true, filter: 'empty',
@@ -162,7 +160,8 @@ describe(__filename, function () {
     }
   });
 
-  it('filter:"empty" with limit=2 still reports the correct total (regression: thm)', async function () {
+  it('filter:"empty" with limit=2 still reports the correct total (regression: thm)', async (ctx) => {
+    if (skipReason) return ctx.skip();
     // The bug thm hit: clicking "empty" showed at most `limit` empties
     // because filtering happened on the client AFTER pagination. The
     // server now applies filter first, so total reflects the filtered
@@ -175,7 +174,8 @@ describe(__filename, function () {
     assert.equal(res.results.length, 2, `expected limit=2 page, got ${res.results.length} rows`);
   });
 
-  it('filter omitted (older client) falls back to "all"', async function () {
+  it('filter omitted (older client) falls back to "all"', async (ctx) => {
+    if (skipReason) return ctx.skip();
     const res = await ask(socket, 'padLoad', {
       pattern: tag, offset: 0, limit: 12, sortBy: 'padName',
       ascending: true,
@@ -184,7 +184,8 @@ describe(__filename, function () {
         `expected total=8 (5 empty + 3 edited), got ${JSON.stringify(res)}`);
   });
 
-  it('filter:"all" matches the no-filter behaviour', async function () {
+  it('filter:"all" matches the no-filter behaviour', async (ctx) => {
+    if (skipReason) return ctx.skip();
     const res = await ask(socket, 'padLoad', {
       pattern: tag, offset: 0, limit: 12, sortBy: 'padName',
       ascending: true, filter: 'all',
@@ -192,7 +193,8 @@ describe(__filename, function () {
     assert.equal(res.total, 8);
   });
 
-  it('filter:"active" excludes pads with no active users', async function () {
+  it('filter:"active" excludes pads with no active users', async (ctx) => {
+    if (skipReason) return ctx.skip();
     // No connected clients in this test, so every test pad has
     // userCount === 0 → filter:"active" must return zero.
     const res = await ask(socket, 'padLoad', {

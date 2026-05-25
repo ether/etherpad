@@ -1,5 +1,5 @@
 import {expect, test} from '@playwright/test';
-import {loginToAdmin} from '../helper/adminhelper';
+import {loginToAdmin} from '../helper/adminhelper.js';
 
 const scheduledStatus = (msFromNow: number) => ({
   currentVersion: '2.7.1',

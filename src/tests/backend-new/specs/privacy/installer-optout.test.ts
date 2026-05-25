@@ -1,6 +1,6 @@
 import {describe, it, expect, beforeEach} from 'vitest';
-import settings from '../../../../node/utils/Settings';
-import {assertPluginCatalogEnabled} from '../../../../static/js/pluginfw/pluginCatalogGuard';
+import settings from '../../../../node/utils/Settings.js';
+import {assertPluginCatalogEnabled} from '../../../../static/js/pluginfw/pluginCatalogGuard.js';
 
 describe('Plugin catalog opt-out guard', () => {
   beforeEach(() => {

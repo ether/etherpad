@@ -1,6 +1,6 @@
-import {ArgsExpressType} from "../../types/ArgsExpressType";
-import settings from '../../utils/Settings';
-import {sanitizeProxyPath} from '../../utils/sanitizeProxyPath';
+import {ArgsExpressType} from "../../types/ArgsExpressType.js";
+import settings from '../../utils/Settings.js';
+import {sanitizeProxyPath} from '../../utils/sanitizeProxyPath.js';
 
 const buildManifest = (proxyPath: string) => ({
   name: settings.title || "Etherpad",
@@ -24,7 +24,7 @@ const buildManifest = (proxyPath: string) => ({
   background_color: "#0f775b",
 });
 
-exports.expressCreateServer = (hookName:string, args:ArgsExpressType, cb:Function) => {
+export const expressCreateServer = (hookName:string, args:ArgsExpressType, cb:Function) => {
   args.app.get('/manifest.json', (req:any, res:any) => {
     const proxyPath = sanitizeProxyPath(req);
     if (proxyPath) {

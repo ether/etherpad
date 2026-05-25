@@ -1,10 +1,10 @@
-import {MergingOpAssembler} from "./MergingOpAssembler";
-import {StringAssembler} from "./StringAssembler";
-import padutils from "./pad_utils";
-import Op from "./Op";
-import { Attribute } from "./types/Attribute";
-import AttributePool from "./AttributePool";
-import {opsFromText} from "./Changeset";
+import {MergingOpAssembler} from "./MergingOpAssembler.js";
+import {StringAssembler} from "./StringAssembler.js";
+import padutils from "./pad_utils.js";
+import Op from "./Op.js";
+import { Attribute } from "./types/Attribute.js";
+import AttributePool from "./AttributePool.js";
+import {opsFromText} from "./Changeset.js";
 
 /**
  * Creates an object that allows you to append operations (type Op) and also compresses them if

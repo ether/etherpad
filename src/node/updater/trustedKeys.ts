@@ -1,6 +1,6 @@
 import {spawn as realSpawn, SpawnOptions} from 'node:child_process';
 import log4js from 'log4js';
-import {isValidTag} from './refSafety';
+import {isValidTag} from './refSafety.js';
 
 const logger = log4js.getLogger('updater');
 

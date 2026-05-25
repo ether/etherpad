@@ -1,5 +1,5 @@
 import {expect, Page, test} from "@playwright/test";
-import {clearPadContent, goToNewPad, writeToPad} from "../helper/padHelper";
+import {clearPadContent, goToNewPad, writeToPad} from "../helper/padHelper.js";
 
 test.describe('timeslider playback speed', function () {
   test.describe.configure({mode: 'serial'});

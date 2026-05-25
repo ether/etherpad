@@ -1,9 +1,9 @@
-import {MapArrayType} from "../../../node/types/MapType";
-import {AText} from "./AText";
-import AttributePool from "../AttributePool";
-import attributePool from "../AttributePool";
-import ChatMessage from "../ChatMessage";
-import {PadRevision} from "./PadRevision";
+import {MapArrayType} from "../../../node/types/MapType.js";
+import {AText} from "./AText.js";
+import AttributePool from "../AttributePool.js";
+import attributePool from "../AttributePool.js";
+import ChatMessage from "../ChatMessage.js";
+import {PadRevision} from "./PadRevision.js";
 
 export type Part = {
   name: string,

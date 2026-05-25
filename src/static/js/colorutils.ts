@@ -191,4 +191,4 @@ colorutils.ensureReadableBackground = (cssColor, skinName, minContrast) => {
   return colorutils.triple2css(blendTarget);
 };
 
-exports.colorutils = colorutils;
+export {colorutils};

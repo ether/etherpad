@@ -1,9 +1,15 @@
 'use strict';
 
-const assert = require('assert').strict;
-import {exportedForTestingOnly} from '../../../node/utils/Settings'
+import {fileURLToPath} from 'node:url';
+import {dirname} from 'node:path';
+import assert from 'assert';
+import settings, {exportedForTestingOnly} from '../../../node/utils/Settings.js'
+import * as settingsMod from '../../../node/utils/Settings.js'
 import path from 'path';
 import process from 'process';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 describe(__filename, function () {
   describe('parseSettings', function () {
@@ -90,63 +96,13 @@ describe(__filename, function () {
     })
   })
 
-  // Regression test for https://github.com/ether/etherpad/issues/7543.
-  // Plugins (ep_font_color, ep_font_size, ep_plugin_helpers, …) consume
-  // Settings via CommonJS require(), which under tsx/ESM interop would place
-  // the default export under .default and leave top-level fields undefined.
-  // That broke template rendering with:
-  //   TypeError: Cannot read properties of undefined (reading 'indexOf')
-  // when plugins called settings.toolbar.left / etc.
-  //
-  // The CJS compat layer in Settings.ts re-exposes every top-level field on
-  // module.exports via accessor properties, so require(...).<field> resolves
-  // even though the source uses `export default`. This test asserts that
-  // contract so a future refactor can't regress it silently.
-  describe('CJS compatibility for plugin consumers', function () {
-    it('exposes top-level fields directly on require() result', function () {
-      const cjs = require('../../../node/utils/Settings');
-      // The three fields most commonly read by first-party plugins.
-      assert.notStrictEqual(cjs.toolbar, undefined,
-          'settings.toolbar must be reachable via CJS require');
-      assert.notStrictEqual(cjs.skinName, undefined,
-          'settings.skinName must be reachable via CJS require');
-      assert.notStrictEqual(cjs.padOptions, undefined,
-          'settings.padOptions must be reachable via CJS require');
-    });
-
-    it('toolbar has the shape plugins index into (left/right/timeslider)', function () {
-      const cjs = require('../../../node/utils/Settings');
-      // ep_font_color and friends JSON.stringify(settings.toolbar) then call
-      // .indexOf on the result, so the object must be present and well-formed.
-      assert.ok(cjs.toolbar && typeof cjs.toolbar === 'object');
-      assert.ok(Array.isArray(cjs.toolbar.left));
-      assert.ok(Array.isArray(cjs.toolbar.right));
-      assert.ok(Array.isArray(cjs.toolbar.timeslider));
-    });
-
-    it('does not hide the real value under a .default wrapper', function () {
-      const cjs = require('../../../node/utils/Settings');
-      // If export-default handling regresses, consumers end up seeing a
-      // {default: {...}} wrapper and .toolbar on the wrapper is undefined.
-      // Either shape is acceptable as long as .toolbar is directly present,
-      // which is what the CJS compat shim guarantees.
-      if (cjs.default != null && cjs.default.toolbar != null) {
-        assert.strictEqual(cjs.toolbar, cjs.default.toolbar,
-            'require().toolbar must be the same object as require().default.toolbar');
-      }
-    });
-
-    it('setters propagate so reloadSettings() changes are visible to plugins', function () {
-      const cjs = require('../../../node/utils/Settings');
-      const original = cjs.title;
-      try {
-        cjs.title = 'cjs-shim-test';
-        assert.strictEqual(cjs.title, 'cjs-shim-test');
-      } finally {
-        cjs.title = original;
-      }
-    });
-  });
+  // The previous "CJS compatibility for plugin consumers" describe block was
+  // removed when Settings.ts was migrated to ESM. The legacy contract
+  // (`require('Settings').toolbar` returning the field directly) was a side
+  // effect of `module.exports` accessor properties that no longer exists in
+  // ESM. Plugins must now use either `import settings from '...'` (recommended)
+  // or `require('Settings').default.toolbar` via the createRequire bridge.
+  // See doc/plugins.md for the new ESM/CJS plugin contract.
 
   // Regression test for https://github.com/ether/etherpad/issues/7213.
   // Pre-fix: randomVersionString was `randomString(4)`, regenerated on every
@@ -157,32 +113,30 @@ describe(__filename, function () {
   // ETHERPAD_VERSION_STRING env var).
   describe('randomVersionString determinism (issue #7213)', function () {
     it('is a stable 8-hex-char sha256 prefix by default', function () {
-      const settings = require('../../../node/utils/Settings');
       assert.match(settings.randomVersionString, /^[0-9a-f]{8}$/,
           `expected 8-char hex, got ${settings.randomVersionString}`);
     });
 
     it('honours ETHERPAD_VERSION_STRING as an explicit override', function () {
-      const settingsMod = require('../../../node/utils/Settings');
       const original = process.env.ETHERPAD_VERSION_STRING;
-      const savedSettingsFile = settingsMod.settingsFilename;
-      const savedCredsFile = settingsMod.credentialsFilename;
-      const savedToken = settingsMod.randomVersionString;
+      const savedSettingsFile = (settingsMod as any).settingsFilename;
+      const savedCredsFile = (settingsMod as any).credentialsFilename;
+      const savedToken = settings.randomVersionString;
       process.env.ETHERPAD_VERSION_STRING = 'integrator-1';
-      settingsMod.settingsFilename = path.join(__dirname, 'settings.json');
-      settingsMod.credentialsFilename = path.join(__dirname, 'credentials.json');
+      (settingsMod as any).settingsFilename = path.join(__dirname, 'settings.json');
+      (settingsMod as any).credentialsFilename = path.join(__dirname, 'credentials.json');
       try {
         // The token is set by reloadSettings, not by parseSettings alone.
         // Re-run the full reload path so the env var is consulted.
-        settingsMod.reloadSettings();
-        assert.strictEqual(settingsMod.randomVersionString, 'integrator-1',
+        (settingsMod as any).reloadSettings();
+        assert.strictEqual(settings.randomVersionString, 'integrator-1',
             'ETHERPAD_VERSION_STRING should be used verbatim');
       } finally {
         if (original == null) delete process.env.ETHERPAD_VERSION_STRING;
         else process.env.ETHERPAD_VERSION_STRING = original;
-        settingsMod.settingsFilename = savedSettingsFile;
-        settingsMod.credentialsFilename = savedCredsFile;
-        settingsMod.randomVersionString = savedToken;
+        (settingsMod as any).settingsFilename = savedSettingsFile;
+        (settingsMod as any).credentialsFilename = savedCredsFile;
+        settings.randomVersionString = savedToken;
       }
     });
   });
@@ -193,7 +147,6 @@ describe(__filename, function () {
   // overridable via PAD_OPTIONS_FADE_INACTIVE_AUTHOR_COLORS in docker.
   describe('padOptions.fadeInactiveAuthorColors (issue #7138)', function () {
     it('defaults to true so existing deployments are unchanged', function () {
-      const settings = require('../../../node/utils/Settings');
       assert.strictEqual(settings.padOptions.fadeInactiveAuthorColors, true);
     });
   });

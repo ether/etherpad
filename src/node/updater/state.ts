@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import {EMPTY_STATE, EXECUTION_STATUSES, UpdateState} from './types';
+import {EMPTY_STATE, EXECUTION_STATUSES, UpdateState} from './types.js';
 
 const isPlainObject = (v: unknown): v is Record<string, unknown> =>
   v !== null && typeof v === 'object' && !Array.isArray(v);

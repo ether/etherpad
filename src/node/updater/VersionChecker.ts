@@ -1,5 +1,5 @@
-import {ReleaseInfo} from './types';
-import {isValidTag} from './refSafety';
+import {ReleaseInfo} from './types.js';
+import {isValidTag} from './refSafety.js';
 
 export interface FetchResult {
   status: number;

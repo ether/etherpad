@@ -1,28 +1,24 @@
-'use strict';
-
-import {MapArrayType} from '../../../node/types/MapType';
-import settings from '../../../node/utils/Settings';
-
-const assert = require('assert').strict;
-const common = require('../common');
+import {MapArrayType} from '../../../node/types/MapType.js';
+import settings from '../../../node/utils/Settings.js';
+import * as assert from 'node:assert/strict';
+import * as common from '../common.js';
 
 // Regression coverage for the settings modal title. With
 // `enablePadWideSettings: false` the template used to render
 // `data-l10n-id="pad.settings.padSettings"` ("Pad-wide Settings") for every
 // user, even though no pad-wide controls were rendered in that mode. The fix
 // removes the conditional and always uses `pad.settings.title` ("Settings").
-describe(__filename, function () {
-  this.timeout(30000);
+describe(__filename, () => {
   let agent: any;
   const backup: MapArrayType<any> = {};
 
-  before(async function () { agent = await common.init(); });
+  before(async () => { agent = await common.init(); });
 
-  beforeEach(async function () {
+  beforeEach(async () => {
     backup.enablePadWideSettings = settings.enablePadWideSettings;
   });
 
-  afterEach(async function () {
+  afterEach(async () => {
     settings.enablePadWideSettings = backup.enablePadWideSettings;
   });
 
@@ -31,7 +27,7 @@ describe(__filename, function () {
     return m ? m[1] : null;
   };
 
-  it('uses pad.settings.title with the feature enabled', async function () {
+  it('uses pad.settings.title with the feature enabled', async () => {
     settings.enablePadWideSettings = true;
     const res = await agent.get('/p/headingTest').expect(200);
     assert.equal(titleH1(res.text), 'pad.settings.title');

@@ -1,7 +1,15 @@
 'use strict';
 
-const mammoth = require('mammoth');
-const JSZip = require('jszip');
+import {createRequire} from 'node:module';
+import mammoth from 'mammoth';
+
+// JSZip is a transitive dependency (via mammoth / html-to-docx) and is not
+// listed as a direct dep in package.json. The CJS bridge lets Node resolve it
+// through the CJS module graph even though the package is not symlinked into
+// node_modules for ESM resolution.
+const require = createRequire(import.meta.url);
+// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+const JSZip: {loadAsync: (data: Buffer) => Promise<{file: (name: string) => {async: (t: string) => Promise<string>} | null}>} = require('jszip');
 
 // mammoth strips paragraph alignment (<w:jc>) when it converts a docx to
 // HTML; it has no equivalent style-mapping for justification. To keep

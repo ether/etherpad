@@ -1,6 +1,6 @@
 import {describe, it, expect} from 'vitest';
-import {decideSchedule, createSchedulerRunner, decideTriggerApply} from '../../../../node/updater/Scheduler';
-import {EMPTY_STATE, UpdateState, ReleaseInfo, PolicyResult} from '../../../../node/updater/types';
+import {decideSchedule, createSchedulerRunner, decideTriggerApply} from '../../../../node/updater/Scheduler.js';
+import {EMPTY_STATE, UpdateState, ReleaseInfo, PolicyResult} from '../../../../node/updater/types.js';
 
 const fakeRelease = (tag: string, version = tag.replace(/^v/, '')): ReleaseInfo => ({
   tag,

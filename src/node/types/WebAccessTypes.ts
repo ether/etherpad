@@ -1,4 +1,4 @@
-import {SettingsUser} from "./SettingsUser";
+import {SettingsUser} from "./SettingsUser.js";
 
 export type WebAccessTypes = {
   username?: string|null;

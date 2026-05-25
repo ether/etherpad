@@ -1,5 +1,5 @@
 import {describe, it, expect, vi} from 'vitest';
-import {verifyReleaseTag} from '../../../../node/updater/trustedKeys';
+import {verifyReleaseTag} from '../../../../node/updater/trustedKeys.js';
 
 const fakeChild = (exitCode: number) => ({
   on: (e: string, cb: any) => { if (e === 'close') setImmediate(() => cb(exitCode)); },

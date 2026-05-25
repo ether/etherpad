@@ -1,6 +1,6 @@
 'use strict';
 
-import padutils from '../../static/js/pad_utils';
+import padutils from '../../static/js/pad_utils.js';
 
 const isCrossSiteEmbed = (req: any): boolean => {
   const fetchSite = req.headers?.['sec-fetch-site'];

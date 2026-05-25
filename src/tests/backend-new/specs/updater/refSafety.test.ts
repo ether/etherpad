@@ -1,5 +1,5 @@
 import {describe, it, expect} from 'vitest';
-import {isValidTag, assertValidTag, refsTagsForm} from '../../../../node/updater/refSafety';
+import {isValidTag, assertValidTag, refsTagsForm} from '../../../../node/updater/refSafety.js';
 
 describe('isValidTag', () => {
   it('accepts plain semver tags', () => {

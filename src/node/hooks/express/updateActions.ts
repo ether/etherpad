@@ -4,23 +4,25 @@ import path from 'node:path';
 import fs from 'node:fs/promises';
 import {spawn} from 'node:child_process';
 import log4js from 'log4js';
-import {ArgsExpressType} from '../../types/ArgsExpressType';
-import settings, {getEpVersion} from '../../utils/Settings';
-import {getDetectedInstallMethod, stateFilePath, getRollbackDeps, notifyApplyFailure} from '../../updater';
-import {evaluatePolicy} from '../../updater/UpdatePolicy';
-import {loadState, saveState} from '../../updater/state';
-import {acquireLock, releaseLock} from '../../updater/lock';
-import {executeUpdate, SpawnFn} from '../../updater/UpdateExecutor';
-import {createDrainer, DrainBroadcastKey, Drainer} from '../../updater/SessionDrainer';
-import {runPreflight} from '../../updater/preflight';
-import {verifyReleaseTag} from '../../updater/trustedKeys';
-import {tailLines, appendLine} from '../../updater/updateLog';
-import {performRollback} from '../../updater/RollbackHandler';
-import {UpdateState} from '../../updater/types';
-import {isValidTag} from '../../updater/refSafety';
-import {applyUpdate} from '../../updater/applyPipeline';
-import {cancelScheduler} from '../../updater';
-import {getIo} from './socketio';
+import {ArgsExpressType} from '../../types/ArgsExpressType.js';
+import settings, {getEpVersion} from '../../utils/Settings.js';
+import {
+  getDetectedInstallMethod, stateFilePath, getRollbackDeps,
+  notifyApplyFailure, cancelScheduler,
+} from '../../updater/index.js';
+import {evaluatePolicy} from '../../updater/UpdatePolicy.js';
+import {loadState, saveState} from '../../updater/state.js';
+import {acquireLock, releaseLock} from '../../updater/lock.js';
+import {executeUpdate, SpawnFn} from '../../updater/UpdateExecutor.js';
+import {createDrainer, DrainBroadcastKey, Drainer} from '../../updater/SessionDrainer.js';
+import {runPreflight} from '../../updater/preflight.js';
+import {verifyReleaseTag} from '../../updater/trustedKeys.js';
+import {tailLines, appendLine} from '../../updater/updateLog.js';
+import {performRollback} from '../../updater/RollbackHandler.js';
+import {UpdateState} from '../../updater/types.js';
+import {isValidTag} from '../../updater/refSafety.js';
+import {applyUpdate} from '../../updater/applyPipeline.js';
+import {getIo} from './socketio.js';
 
 const logger = log4js.getLogger('updater');
 

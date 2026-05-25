@@ -10711,3 +10711,5 @@
   }
   return jQuery;
 } );
+
+export default (typeof window !== "undefined" && typeof window.$ === "object" ? window.$ : null);

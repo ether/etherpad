@@ -4,17 +4,22 @@
  * Import and Export tests for the /p/whateverPadId/import and /p/whateverPadId/export endpoints.
  */
 
-import {MapArrayType} from "../../../../node/types/MapType";
+import {MapArrayType} from "../../../../node/types/MapType.js";
 import {SuperTestStatic} from "supertest";
-import TestAgent from "supertest/lib/agent";
+import TestAgent from "supertest/lib/agent.js";
 
-const assert = require('assert').strict;
-const common = require('../../common');
-const fs = require('fs');
-import settings from '../../../../node/utils/Settings';
-const superagent = require('superagent');
-const padManager = require('../../../../node/db/PadManager');
-const plugins = require('../../../../static/js/pluginfw/plugin_defs');
+import {strict as assert} from 'assert';
+import * as common from '../../common.js';
+import fs from 'fs';
+import settings from '../../../../node/utils/Settings.js';
+import superagent from 'superagent';
+import * as padManager from '../../../../node/db/PadManager.js';
+import plugins from '../../../../static/js/pluginfw/plugin_defs.js';
+import {fileURLToPath} from 'node:url';
+import {dirname} from 'node:path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const padText = fs.readFileSync(`${__dirname}/test.txt`);
 const etherpadDoc = fs.readFileSync(`${__dirname}/test.etherpad`);
@@ -36,7 +41,6 @@ const deleteTestPad = async () => {
 };
 
 describe(__filename, function () {
-  this.timeout(45000);
   before(async function () { agent = await common.init(); });
 
   describe('Connectivity', function () {
@@ -199,12 +203,9 @@ describe(__filename, function () {
       }
     });
 
-    describe('Import/Export tests requiring LibreOffice', function () {
-      before(async function () {
-        if (!settings.soffice || settings.soffice.indexOf('/') === -1) {
-          this.skip();
-        }
-      });
+    const sofficeAvailable = settings.soffice && settings.soffice.indexOf('/') !== -1;
+    const describeSoffice = sofficeAvailable ? describe : describe.skip;
+    describeSoffice('Import/Export tests requiring LibreOffice', function () {
 
       // For some reason word import does not work in testing..
       // TODO: fix support for .doc files..
@@ -314,7 +315,6 @@ describe(__filename, function () {
     }); // End of LibreOffice tests.
 
     it('Tries to import .etherpad', async function () {
-      this.timeout(3000);
       await agent.post(`/p/${testPadId}/import`)
           .set("authorization", await common.generateJWTToken())
           .attach('file', etherpadDoc, {
@@ -331,7 +331,6 @@ describe(__filename, function () {
     });
 
     it('exports Etherpad', async function () {
-      this.timeout(3000);
       await agent.get(`/p/${testPadId}/export/etherpad`)
           .set("authorization", await common.generateJWTToken())
           .buffer(true).parse(superagent.parse.text)
@@ -340,7 +339,6 @@ describe(__filename, function () {
     });
 
     it('exports HTML for this Etherpad file', async function () {
-      this.timeout(3000);
       await agent.get(`/p/${testPadId}/export/html`)
           .set("authorization", await common.generateJWTToken())
           .expect(200)
@@ -349,7 +347,6 @@ describe(__filename, function () {
     });
 
     it('Tries to import unsupported file type', async function () {
-      this.timeout(3000);
       settings.allowUnknownFileEnds = false;
       await agent.post(`/p/${testPadId}/import`)
           .set("authorization", await common.generateJWTToken())
@@ -680,7 +677,6 @@ describe(__filename, function () {
         return pad;
       };
 
-      this.timeout(1000);
 
       beforeEach(async function () {
         await deleteTestPad();

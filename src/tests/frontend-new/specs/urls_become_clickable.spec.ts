@@ -1,5 +1,5 @@
 import {expect, test} from "@playwright/test";
-import {clearPadContent, getPadBody, goToNewPad, writeToPad} from "../helper/padHelper";
+import {clearPadContent, getPadBody, goToNewPad, writeToPad} from "../helper/padHelper.js";
 
 // File-level skip (covers all three describe blocks) so the global
 // beforeEach pad-creation timeout is also bypassed under with-plugins,

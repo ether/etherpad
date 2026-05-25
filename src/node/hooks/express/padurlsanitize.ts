@@ -1,10 +1,10 @@
 'use strict';
 
-import {ArgsExpressType} from "../../types/ArgsExpressType";
+import {ArgsExpressType} from "../../types/ArgsExpressType.js";
 
-const padManager = require('../../db/PadManager');
+import * as padManager from '../../db/PadManager.js';
 
-exports.expressCreateServer = (hookName:string, args:ArgsExpressType, cb:Function) => {
+export const expressCreateServer = (hookName:string, args:ArgsExpressType, cb:Function) => {
   // redirects browser to the pad's sanitized url if needed. otherwise, renders the html
   args.app.param('pad', (req:any, res:any, next:Function, padId:string) => {
     (async () => {

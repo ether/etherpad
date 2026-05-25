@@ -1,9 +1,6 @@
-'use strict';
-
 import {strict as assert} from 'assert';
-
-const common = require('../../common');
-const settings = require('../../../../node/utils/Settings');
+import * as common from '../../common.js';
+import settings from '../../../../node/utils/Settings.js';
 
 let agent: any;
 let apiVersion = 1;
@@ -18,11 +15,10 @@ const callApi = async (point: string, query: Record<string, string> = {}) => {
       .expect('Content-Type', /json/);
 };
 
-describe(__filename, function () {
+describe(__filename, () => {
   let originalErasureFlag: boolean | undefined;
 
-  before(async function () {
-    this.timeout(60000);
+  before(async () => {
     agent = await common.init();
     const res = await agent.get('/api/').expect(200);
     apiVersion = res.body.currentVersion;
@@ -31,11 +27,11 @@ describe(__filename, function () {
     settings.gdprAuthorErasure.enabled = true;
   });
 
-  after(function () {
-    settings.gdprAuthorErasure.enabled = originalErasureFlag;
+  after(() => {
+    settings.gdprAuthorErasure.enabled = originalErasureFlag ?? false;
   });
 
-  it('anonymizeAuthor zeroes the author and returns counters', async function () {
+  it('anonymizeAuthor zeroes the author and returns counters', async () => {
     const create = await callApi('createAuthor', {name: 'Alice'});
     assert.equal(create.body.code, 0);
     const authorID = create.body.data.authorID;
@@ -50,7 +46,7 @@ describe(__filename, function () {
     assert.equal(name.body.data, null);
   });
 
-  it('anonymizeAuthor with missing authorID returns an error', async function () {
+  it('anonymizeAuthor with missing authorID returns an error', async () => {
     const res = await agent.get(`${endPoint('anonymizeAuthor')}?authorID=`)
         .set('authorization', await common.generateJWTToken())
         .expect(200)

@@ -1,13 +1,13 @@
 'use strict'
 
-import {AChangeSet} from "../types/PadType";
-import {Revision} from "../types/Revision";
+import {AChangeSet} from "../types/PadType.js";
+import {Revision} from "../types/Revision.js";
 
-import {timesLimit, firstSatisfies} from './promises';
-const padManager = require('ep_etherpad-lite/node/db/PadManager');
-const db = require('ep_etherpad-lite/node/db/DB');
-const Changeset = require('ep_etherpad-lite/static/js/Changeset');
-const padMessageHandler = require('ep_etherpad-lite/node/handler/PadMessageHandler');
+import {timesLimit, firstSatisfies} from './promises.js';
+import * as padManager from 'ep_etherpad-lite/node/db/PadManager.js';
+import db from 'ep_etherpad-lite/node/db/DB.js';
+import * as Changeset from 'ep_etherpad-lite/static/js/Changeset.js';
+import padMessageHandler from 'ep_etherpad-lite/node/handler/PadMessageHandler.js';
 import log4js from 'log4js';
 const logger = log4js.getLogger('cleanup');
 
@@ -91,7 +91,7 @@ export const deleteRevisions = async (padId: string, keepRevisions: number): Pro
   let newAText = Changeset.makeAText('\n');
   let pool = pad.apool()
 
-  newAText = Changeset.applyToAText(changeset, newAText, pool);
+  newAText = Changeset.applyToAText(changeset as any, newAText, pool);
 
   const revision = await createRevision(
     changeset,
@@ -110,7 +110,7 @@ export const deleteRevisions = async (padId: string, keepRevisions: number): Pro
     const rev = i + cleanupUntilRevision + 1
     const newRev = rev - cleanupUntilRevision;
 
-    newAText = Changeset.applyToAText(revisions[rev].changeset, newAText, pool);
+    newAText = Changeset.applyToAText(revisions[rev].changeset as any, newAText, pool);
 
     const revision = await createRevision(
       revisions[rev].changeset,
@@ -152,7 +152,7 @@ export const checkTodos = async () => {
 
     const revisionDate = await pad.getRevisionDate(pad.getHeadRevisionNumber())
 
-    if (pad.head < settings.minHead || padMessageHandler.padUsersCount(padId) > 0 || Date.now() < revisionDate + settings.minAge) {
+    if (pad.head < settings.minHead || padMessageHandler.padUsersCount(padId).padUsersCount > 0 || Date.now() < revisionDate + settings.minAge) {
       return
     }
 

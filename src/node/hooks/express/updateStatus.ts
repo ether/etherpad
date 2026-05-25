@@ -2,14 +2,14 @@
 
 import path from 'node:path';
 import {LRUCache} from 'lru-cache';
-import {ArgsExpressType} from '../../types/ArgsExpressType';
-import settings, {getEpVersion} from '../../utils/Settings';
-import {getDetectedInstallMethod, stateFilePath} from '../../updater';
-import {evaluatePolicy} from '../../updater/UpdatePolicy';
-import {isMinorOrMoreBehind} from '../../updater/versionCompare';
-import {loadState} from '../../updater/state';
-import {isHeld} from '../../updater/lock';
-import {nextWindowStart, parseWindow} from '../../updater/MaintenanceWindow';
+import {ArgsExpressType} from '../../types/ArgsExpressType.js';
+import settings, {getEpVersion} from '../../utils/Settings.js';
+import {getDetectedInstallMethod, stateFilePath} from '../../updater/index.js';
+import {evaluatePolicy} from '../../updater/UpdatePolicy.js';
+import {isMinorOrMoreBehind} from '../../updater/versionCompare.js';
+import {loadState} from '../../updater/state.js';
+import {isHeld} from '../../updater/lock.js';
+import {nextWindowStart, parseWindow} from '../../updater/MaintenanceWindow.js';
 
 
 /**
@@ -49,7 +49,7 @@ export const resolveRequestAuthor = async (req: any): Promise<string | null> => 
     const cookiePrefix = (settings as any).cookie?.prefix ?? '';
     const token = req?.cookies?.[`${cookiePrefix}token`];
     if (typeof token !== 'string' || token === '') return null;
-    const authorManagerMod: any = await import('../../db/AuthorManager');
+    const authorManagerMod: any = await import('../../db/AuthorManager.js');
     const authorManager = authorManagerMod.default ?? authorManagerMod;
     if (typeof authorManager.getAuthorId !== 'function') return null;
     const authorId = await authorManager.getAuthorId(token, req?.session?.user);
@@ -91,7 +91,7 @@ const computeOutdated = async (
   if (!isMinorOrMoreBehind(current, state.latest.version)) return EMPTY;
   if (!padId || !authorId) return EMPTY;
   // padManager is loaded via dynamic import to avoid circular-init w/ updater.
-  const padManagerMod: any = await import('../../db/PadManager');
+  const padManagerMod: any = await import('../../db/PadManager.js');
   const padManager = padManagerMod.default ?? padManagerMod;
   if (typeof padManager.isValidPadId !== 'function' || !padManager.isValidPadId(padId)) return EMPTY;
   if (!(await padManager.doesPadExist(padId))) return EMPTY;

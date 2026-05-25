@@ -1,7 +1,7 @@
 import path from 'node:path';
 import {describe, it, expect, vi, beforeEach} from 'vitest';
-import {executeUpdate, ExecutorDeps} from '../../../../node/updater/UpdateExecutor';
-import {EMPTY_STATE, UpdateState} from '../../../../node/updater/types';
+import {executeUpdate, ExecutorDeps} from '../../../../node/updater/UpdateExecutor.js';
+import {EMPTY_STATE, UpdateState} from '../../../../node/updater/types.js';
 
 interface ScriptStep {cmd: string; exit: number; stderr?: string}
 

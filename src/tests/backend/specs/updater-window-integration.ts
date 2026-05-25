@@ -4,9 +4,9 @@ import path from 'node:path';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import {strict as assert} from 'assert';
-import {EMPTY_STATE, MaintenanceWindow, PolicyResult, ReleaseInfo} from '../../../node/updater/types';
-import {loadState, saveState} from '../../../node/updater/state';
-import {decideSchedule, decideTriggerApply} from '../../../node/updater/Scheduler';
+import {EMPTY_STATE, MaintenanceWindow, PolicyResult, ReleaseInfo} from '../../../node/updater/types.js';
+import {loadState, saveState} from '../../../node/updater/state.js';
+import {decideSchedule, decideTriggerApply} from '../../../node/updater/Scheduler.js';
 
 const release: ReleaseInfo = {
   tag: 'v9.9.9',
@@ -24,7 +24,6 @@ const policyAutonomous: PolicyResult = {
 const window: MaintenanceWindow = {start: '03:00', end: '05:00', tz: 'utc'};
 
 describe('Tier 4 scheduler — maintenance-window boundary integration', function () {
-  this.timeout(15000);
 
   let root: string;
   let stateFile: string;

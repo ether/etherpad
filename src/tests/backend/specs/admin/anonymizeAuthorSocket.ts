@@ -1,12 +1,9 @@
-'use strict';
-
 import {strict as assert} from 'assert';
 import setCookieParser from 'set-cookie-parser';
-
-const io = require('socket.io-client');
-const common = require('../../common');
-const settings = require('../../../../node/utils/Settings');
-const authorManager = require('../../../../node/db/AuthorManager');
+import {io} from 'socket.io-client';
+import * as common from '../../common.js';
+import settings from '../../../../node/utils/Settings.js';
+import * as authorManager from '../../../../node/db/AuthorManager.js';
 
 /**
  * Connects to the /settings admin namespace using cookie-based auth.
@@ -75,7 +72,7 @@ const ask = (socket: any, evt: string, payload: any, replyEvt: string) =>
 // session is missing, so the probe has to run at the application layer:
 // emit a known `/settings` event (`authorLoad`) and wait for the matching
 // reply (`results:authorLoad`). If it doesn't arrive within the budget,
-// skip — much cheaper than letting mocha's 120s per-test timeout absorb
+// skip — much cheaper than letting vitest's 120s per-test timeout absorb
 // 7 stalled tests.
 const PROBE_BUDGET_MS = 15000;
 const adminSocketWithProbe = async (budgetMs: number): Promise<{
@@ -114,15 +111,19 @@ const adminSocketWithProbe = async (budgetMs: number): Promise<{
   return {ok: true, socket};
 };
 
-describe(__filename, function () {
+describe(__filename, () => {
   let socket: any;
   let originalFlag: boolean;
   let savedUsers: any;
   let savedRequireAuthentication: boolean;
   let setupCompleted = false;
+  // Set when the admin-socket probe fails: every it() in this suite checks
+  // this flag and calls ctx.skip() to bail out (mocha's this.skip() in the
+  // hook isn't available under vitest's beforeAll, so we drive the skip
+  // from inside each test via the test-context parameter).
+  let skipReason: string | null = null;
 
-  before(async function () {
-    this.timeout(60000);
+  before(async () => {
     await common.init();
 
     // Capture backups BEFORE any mutation so after() can restore cleanly
@@ -137,20 +138,20 @@ describe(__filename, function () {
 
     const probe = await adminSocketWithProbe(PROBE_BUDGET_MS);
     if (!probe.ok) {
+      skipReason = probe.reason;
       console.warn(
           `[anonymizeAuthorSocket] admin socket probe failed (${probe.reason}); ` +
           'skipping suite — an authenticate-hook plugin (e.g. ep_readonly_guest, ' +
           'or an ep_hash_auth-style plugin requiring hashed credentials) is ' +
           'rejecting the test\'s plain-text admin credentials.');
-      this.skip();
       return;
     }
     socket = probe.socket;
   });
 
-  after(function () {
+  after(() => {
     if (socket) socket.disconnect();
-    // before() may have called this.skip() before capturing backups (e.g.
+    // before() may have set skipReason before capturing backups (e.g.
     // a common.init() failure), so guard against writing undefined into
     // settings. Once setupCompleted flips true the backup variables are
     // safe to read.
@@ -164,7 +165,8 @@ describe(__filename, function () {
     settings.requireAuthentication = savedRequireAuthentication;
   });
 
-  it('authorLoad returns paginated rows', async function () {
+  it('authorLoad returns paginated rows', async (ctx) => {
+    if (skipReason) return ctx.skip();
     const tag = `sock-${Date.now()}`;
     await authorManager.createAuthorIfNotExistsFor(`m-${tag}`, `Sock ${tag}`);
     const res = await ask(socket, 'authorLoad',
@@ -176,7 +178,8 @@ describe(__filename, function () {
   });
 
   it('anonymizeAuthorPreview returns counters without flipping erased',
-      async function () {
+      async (ctx) => {
+        if (skipReason) return ctx.skip();
         const tag = `prev-${Date.now()}`;
         const {authorID} = await authorManager.createAuthorIfNotExistsFor(
             `m-${tag}`, `Prev ${tag}`);
@@ -189,7 +192,8 @@ describe(__filename, function () {
             'preview must not flip erased');
       });
 
-  it('anonymizeAuthor commits when the flag is enabled', async function () {
+  it('anonymizeAuthor commits when the flag is enabled', async (ctx) => {
+    if (skipReason) return ctx.skip();
     const tag = `live-${Date.now()}`;
     const {authorID} = await authorManager.createAuthorIfNotExistsFor(
         `m-${tag}`, `Live ${tag}`);
@@ -202,7 +206,8 @@ describe(__filename, function () {
   });
 
   it('anonymizeAuthor returns {error: "disabled"} when flag is off',
-      async function () {
+      async (ctx) => {
+        if (skipReason) return ctx.skip();
         settings.gdprAuthorErasure.enabled = false;
         try {
           const tag = `disabled-${Date.now()}`;
@@ -220,7 +225,8 @@ describe(__filename, function () {
       });
 
   it('anonymizeAuthorPreview returns {error: "disabled"} when flag is off',
-      async function () {
+      async (ctx) => {
+        if (skipReason) return ctx.skip();
         // Per Qodo Compliance ID 6 ('new features behind a feature flag,
         // disabled by default') the preview event is also gated, not just
         // the live anonymizeAuthor. The page renders its disabled banner
@@ -241,7 +247,8 @@ describe(__filename, function () {
       });
 
   it('authorLoad returns {error: "disabled"} when flag is off',
-      async function () {
+      async (ctx) => {
+        if (skipReason) return ctx.skip();
         settings.gdprAuthorErasure.enabled = false;
         try {
           const res = await ask(socket, 'authorLoad',
@@ -256,7 +263,8 @@ describe(__filename, function () {
       });
 
   it('handlers do not crash on payload-less emits',
-      async function () {
+      async (ctx) => {
+        if (skipReason) return ctx.skip();
         // Pre-Qodo-fix the destructure `({authorID}: ...)` threw before
         // try/catch when client emitted with no payload. Both gated
         // handlers now accept `payload: any` and read defensively.

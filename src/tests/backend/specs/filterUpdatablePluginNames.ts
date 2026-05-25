@@ -1,7 +1,7 @@
 'use strict';
 
 import {strict as assert} from 'assert';
-import {filterUpdatablePluginNames} from '../../../../bin/commonPlugins';
+import {filterUpdatablePluginNames} from '../../../../bin/commonPlugins.js';
 
 // Regression test for #6670: the bug fix in `pnpm run plugins update` reads
 // var/installed_plugins.json and re-invokes the installer per entry. The

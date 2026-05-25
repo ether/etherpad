@@ -2,6 +2,7 @@
 
 
 import {strict as assert} from "assert";
+// @ts-ignore - cross-package import resolved at runtime
 import {cleanComments, minify} from "admin/src/utils/utils";
 import {describe, it, expect, beforeAll} from "vitest";
 import fs from 'fs';

@@ -22,10 +22,10 @@
  * limitations under the License.
  */
 
-import padutils from "./pad_utils";
-const Ace2Editor = require('./ace').Ace2Editor;
-import html10n from '../js/vendors/html10n'
-const skinVariants = require('./skin_variants');
+import padutils from "./pad_utils.js";
+import {Ace2Editor} from './ace.js';
+import html10n from '../js/vendors/html10n.js'
+import skinVariants from './skin_variants.js';
 
 const padeditor = (() => {
   let pad = undefined;
@@ -47,7 +47,7 @@ const padeditor = (() => {
         const targetLineNumber = $(this).index() + 1;
         window.location.hash = `L${targetLineNumber}`;
       });
-      exports.focusOnLine(self.ace);
+      focusOnLine(self.ace);
       self.ace.setProperty('wraps', true);
       self.initViewOptions();
       self.setViewOptions(initialViewOptions);
@@ -297,7 +297,7 @@ const padeditor = (() => {
   return self;
 })();
 
-exports.padeditor = padeditor;
+export {padeditor};
 
 const getHashedLineNumber = () => {
   const lineNumber = window.location.hash.substr(1);
@@ -345,7 +345,7 @@ const focusOnHashedLine = (ace, lineNumberInt) => {
   return true;
 };
 
-exports.focusOnLine = (ace) => {
+export const focusOnLine = (ace) => {
   const lineNumberInt = getHashedLineNumber();
   if (lineNumberInt == null) return;
   const $aceOuter = $('iframe[name="ace_outer"]');

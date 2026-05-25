@@ -1,5 +1,5 @@
 import {expect, test} from '@playwright/test';
-import {loginToAdmin} from '../helper/adminhelper';
+import {loginToAdmin} from '../helper/adminhelper.js';
 
 const baseStatus = {
   currentVersion: '2.7.1',

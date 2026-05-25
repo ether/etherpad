@@ -1,5 +1,6 @@
 {
   "name": "ep_etherpad-lite",
+  "type": "module",
   "description": "A free and open source realtime collaborative editor",
   "homepage": "https://etherpad.org",
   "keywords": [
@@ -8,6 +9,39 @@
     "collaborative",
     "editor"
   ],
+  "module": "./dist/node/server.mjs",
+  "exports": {
+    ".": {
+      "import": "./dist/node/server.mjs"
+    },
+    "./node/eejs": {
+      "import": "./dist/node/eejs/index.mjs",
+      "require": "./dist-cjs/node/eejs/index.cjs"
+    },
+    "./node/*": {
+      "import": "./dist/node/*.mjs",
+      "require": "./dist-cjs/node/*.cjs"
+    },
+    "./node/*.js": {
+      "import": "./dist/node/*.mjs",
+      "require": "./dist-cjs/node/*.cjs"
+    },
+    "./static/js/*": {
+      "import": "./dist/static/js/*.mjs",
+      "require": "./dist-cjs/static/js/*.cjs"
+    },
+    "./static/js/*.js": {
+      "import": "./dist/static/js/*.mjs",
+      "require": "./dist-cjs/static/js/*.cjs"
+    },
+    "./tests/backend/*": {
+      "import": "./dist/tests/backend/*.mjs"
+    },
+    "./tests/backend/*.js": {
+      "import": "./dist/tests/backend/*.mjs"
+    },
+    "./package.json": "./package.json"
+  },
   "author": "Etherpad Foundation",
   "contributors": [
     {
@@ -113,28 +147,28 @@
     "@types/jsonminify": "^0.4.3",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/mime-types": "^3.0.1",
-    "@types/mocha": "^10.0.9",
     "@types/node": "^25.9.1",
     "@types/nodemailer": "^8.0.0",
     "@types/oidc-provider": "^9.5.0",
     "@types/pdfkit": "^0.17.6",
     "@types/semver": "^7.7.1",
     "@types/sinon": "^21.0.1",
+    "@types/superagent": "^8.1.9",
     "@types/supertest": "^7.2.0",
     "@types/underscore": "^1.13.0",
     "@types/whatwg-mimetype": "^5.0.0",
     "chokidar": "^5.0.0",
+    "concurrently": "^9.2.1",
     "eslint": "^10.4.0",
     "eslint-config-etherpad": "^4.0.5",
     "etherpad-cli-client": "^4.0.3",
-    "mocha": "^11.7.6",
-    "mocha-froth": "^0.2.10",
     "nodeify": "^1.0.1",
     "openapi-schema-validation": "^0.4.2",
     "set-cookie-parser": "^3.1.0",
     "sinon": "^22.0.0",
     "split-grid": "^1.0.11",
     "supertest": "^7.2.2",
+    "tsdown": "^0.22.0",
     "typescript": "^6.0.3",
     "vitest": "^4.1.7"
   },
@@ -148,20 +182,27 @@
     "url": "https://github.com/ether/etherpad.git"
   },
   "scripts": {
+    "build": "tsdown",
+    "build:watch": "tsdown --watch",
+    "clean:dist": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true});require('fs').rmSync('dist-cjs',{recursive:true,force:true})\"",
     "lint": "eslint .",
-    "test": "cross-env NODE_ENV=production mocha --import=tsx --require ./tests/backend/diagnostics.ts --timeout 120000 --extension ts --recursive tests/backend/specs ../node_modules/ep_*/static/tests/backend/specs",
-    "test-utils": "cross-env NODE_ENV=production mocha --import=tsx --timeout 5000 --recursive tests/backend/specs/*utils.ts",
-    "test-container": "mocha --import=tsx --timeout 30000 --extension ts,js tests/container/specs/api",
-    "dev": "cross-env NODE_ENV=development  node --require tsx/cjs node/server.ts",
-    "prod": "cross-env NODE_ENV=production node --require tsx/cjs node/server.ts",
+    "pretest": "tsdown",
+    "test": "cross-env NODE_ENV=production vitest run",
+    "test-utils": "cross-env NODE_ENV=production vitest run tests/backend/specs --testTimeout 5000",
+    "test-container": "cross-env NODE_ENV=production vitest run --include 'tests/container/specs/**/*.ts'",
+    "dev": "cross-env NODE_ENV=development  node --import tsx node/server.ts",
+    "predev": "tsdown",
+    "dev:watch": "concurrently \"pnpm build:watch\" \"cross-env NODE_ENV=development node --import tsx node/server.ts\"",
+    "prod": "cross-env NODE_ENV=production node --import tsx node/server.ts",
     "ts-check": "tsc --noEmit",
     "ts-check:watch": "tsc --noEmit --watch",
-    "test-ui": "cross-env NODE_ENV=production npx playwright test",
-    "test-ui:ui": "cross-env NODE_ENV=production npx playwright test --ui",
-    "test-admin": "cross-env NODE_ENV=production npx playwright test --workers 1 --project=chromium-admin",
-    "test-admin:ui": "cross-env NODE_ENV=production npx playwright test --ui --workers 1 --project=chromium-admin",
-    "debug:socketio": "cross-env DEBUG=socket.io* node --require tsx/cjs node/server.ts",
-    "test:vitest": "vitest"
+    "test-ui": "cross-env NODE_ENV=production npx playwright test tests/frontend-new/specs",
+    "test-ui:ui": "cross-env NODE_ENV=production npx playwright test tests/frontend-new/specs --ui",
+    "test-admin": "cross-env NODE_ENV=production npx playwright test tests/frontend-new/admin-spec --workers 1 --project=chromium",
+    "test-admin:ui": "cross-env NODE_ENV=production npx playwright test tests/frontend-new/admin-spec --ui --workers 1",
+    "debug:socketio": "cross-env DEBUG=socket.io* node --import tsx node/server.ts",
+    "test:watch": "cross-env NODE_ENV=production vitest",
+    "check:exports": "node --import tsx tools/check-exports.ts"
   },
   "version": "3.2.0",
   "license": "Apache-2.0"

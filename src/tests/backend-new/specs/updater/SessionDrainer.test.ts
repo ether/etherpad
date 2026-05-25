@@ -1,5 +1,5 @@
 import {describe, it, expect, vi, beforeEach, afterEach} from 'vitest';
-import {createDrainer, isAcceptingConnections, _resetForTests} from '../../../../node/updater/SessionDrainer';
+import {createDrainer, isAcceptingConnections, _resetForTests} from '../../../../node/updater/SessionDrainer.js';
 
 describe('SessionDrainer', () => {
   beforeEach(() => { vi.useFakeTimers(); _resetForTests(); });

@@ -16,12 +16,12 @@
  */
 
 import log4js from 'log4js';
-import AttributeMap from '../../static/js/AttributeMap';
-import {deserializeOps} from '../../static/js/Changeset';
-const contentcollector = require('../../static/js/contentcollector');
+import AttributeMap from '../../static/js/AttributeMap.js';
+import {deserializeOps} from '../../static/js/Changeset.js';
+import * as contentcollector from '../../static/js/contentcollector.js';
 import jsdom from 'jsdom';
-import {PadType} from "../types/PadType";
-import {Builder} from "../../static/js/Builder";
+import {PadType} from "../types/PadType.js";
+import {Builder} from "../../static/js/Builder.js";
 
 // Mirror of `Pad.SYSTEM_AUTHOR_ID`. Imported as a literal to avoid a
 // circular require between Pad and ImportHtml during module init.
@@ -30,7 +30,7 @@ const SYSTEM_AUTHOR_ID = 'a.etherpad-system';
 const apiLogger = log4js.getLogger('ImportHtml');
 let processor:any;
 
-exports.setPadHTML = async (pad: PadType, html:string, authorId = '') => {
+export const setPadHTML = async (pad: PadType, html:string|null|undefined, authorId = '') => {
   if (processor == null) {
     const [{rehype}, {default: minifyWhitespace}] =
         await Promise.all([import('rehype'), import('rehype-minify-whitespace')]);

@@ -1,5 +1,3 @@
-'use strict';
-
 /**
  * Coverage for the "every insert op must carry an `author` attribute"
  * invariant enforced in Pad.appendRevision. The same invariant exists
@@ -8,11 +6,15 @@
  * plugin paths that call appendRevision directly).
  */
 
-import {PadType} from '../../../node/types/PadType';
+import {PadType} from '../../../node/types/PadType.js';
 
 import {strict as assert} from 'assert';
-const common = require('../common');
-const padManager = require('../../../node/db/PadManager');
+import * as common from '../common.js';
+import * as padManager from '../../../node/db/PadManager.js';
+import * as importEtherpad from '../../../node/utils/ImportEtherpad.js';
+import DB from '../../../node/db/DB.js';
+import * as api from '../../../node/db/API.js';
+import AttributePoolMod from '../../../static/js/AttributePool.js';
 
 describe(__filename, function () {
   let pad: PadType | null;
@@ -84,8 +86,7 @@ describe(__filename, function () {
     // deep-equals.
     it('imports a legacy payload, persists it, and the head atext carries an author marker',
         async function () {
-          const importEtherpad = require('../../../node/utils/ImportEtherpad');
-          const db = require('../../../node/db/DB');
+          const db: any = DB;
 
           // Source pad id used inside the payload — pre-import shape
           // keys records by the *source* id; the import rewrites them
@@ -145,17 +146,15 @@ describe(__filename, function () {
           }
 
           // Cleanup so afterEach doesn't double-remove.
-          const padMgr = require('../../../node/db/PadManager');
-          if (await padMgr.doesPadExist(destId)) {
-            const destPad = await padMgr.getPad(destId);
+          if (await padManager.doesPadExist(destId)) {
+            const destPad = await padManager.getPad(destId);
             await destPad.remove();
           }
         });
 
     it('leaves an already-conforming payload untouched (no log noise on good imports)',
         async function () {
-          const importEtherpad = require('../../../node/utils/ImportEtherpad');
-          const db = require('../../../node/db/DB');
+          const db = DB;
 
           // Build a well-formed payload by going through the normal
           // setText path on a temporary source pad, then export-shape it.
@@ -183,9 +182,8 @@ describe(__filename, function () {
             throw new Error('destination pad was not persisted');
           }
 
-          const padMgr = require('../../../node/db/PadManager');
-          if (await padMgr.doesPadExist(destId)) {
-            const destPad = await padMgr.getPad(destId);
+          if (await padManager.doesPadExist(destId)) {
+            const destPad = await padManager.getPad(destId);
             await destPad.remove();
           }
         });
@@ -203,7 +201,7 @@ describe(__filename, function () {
     // a bare `+N` insert (no `*K` markers), pool emptied. Bypass
     // spliceText/setText, which would substitute SYSTEM_AUTHOR_ID.
     const installLegacyAText = async (p: any, text: string) => {
-      const AttributePool = require('../../../static/js/AttributePool').default;
+      const AttributePool = AttributePoolMod;
       p.pool = new AttributePool();
       p.atext = {
         text: text + '\n',
@@ -224,7 +222,6 @@ describe(__filename, function () {
 
     it('copyPadWithoutHistory merges in an author when the source atext lacks one',
         async function () {
-          const api = require('../../../node/db/API');
           const destId = common.randomString();
           await installLegacyAText(pad, 'legacy source');
           // Should not throw on the destination's appendRevision.

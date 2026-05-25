@@ -1,6 +1,6 @@
 export type RunCMDOptions = {
   cwd?: string,
-  stdio?: string[],
+  stdio?: string | (string | null | Function)[],
   env?: NodeJS.ProcessEnv
 }
 

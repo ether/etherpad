@@ -19,15 +19,15 @@
  * limitations under the License.
  */
 
-import {AText, PadType} from "../types/PadType";
-import {MapType} from "../types/MapType";
+import {AText, PadType} from "../types/PadType.js";
+import {MapType} from "../types/MapType.js";
 
-import {deserializeOps, splitAttributionLines, subattribution} from '../../static/js/Changeset';
-import {StringIterator} from "../../static/js/StringIterator";
-import {StringAssembler} from "../../static/js/StringAssembler";
-const attributes = require('../../static/js/attributes');
-const padManager = require('../db/PadManager');
-const _analyzeLine = require('./ExportHelper')._analyzeLine;
+import {deserializeOps, splitAttributionLines, subattribution} from '../../static/js/Changeset.js';
+import {StringIterator} from "../../static/js/StringIterator.js";
+import {StringAssembler} from "../../static/js/StringAssembler.js";
+import * as attributes from '../../static/js/attributes.js';
+import * as padManager from '../db/PadManager.js';
+import { _analyzeLine } from './ExportHelper.js';
 
 // This is slightly different than the HTML method as it passes the output to getTXTFromAText
 const getPadTXT = async (pad: PadType, revNum: string) => {
@@ -199,7 +199,7 @@ const getTXTFromAtext = (pad: PadType, atext: AText, authorColors?:string) => {
 
   for (let i = 0; i < textLines.length; i++) {
     const line = _analyzeLine(textLines[i], attribLines[i], apool);
-    let lineContent = getLineTXT(line.text, line.aline);
+    let lineContent = getLineTXT(line.text as string, line.aline as string);
 
     if (line.listTypeName === 'bullet') {
       lineContent = `* ${lineContent}`; // add a bullet
@@ -262,9 +262,9 @@ const getTXTFromAtext = (pad: PadType, atext: AText, authorColors?:string) => {
   return pieces.join('');
 };
 
-exports.getTXTFromAtext = getTXTFromAtext;
+export { getTXTFromAtext };
 
-exports.getPadTXTDocument = async (padId:string, revNum:string) => {
+export const getPadTXTDocument = async (padId:string, revNum:string) => {
   const pad = await padManager.getPad(padId);
   return getPadTXT(pad, revNum);
 };

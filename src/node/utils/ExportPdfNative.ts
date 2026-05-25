@@ -1,9 +1,8 @@
 'use strict';
 
+import PDFDocument from 'pdfkit';
 import {Parser} from 'htmlparser2';
 import {PassThrough} from 'stream';
-
-const PDFDocument = require('pdfkit');
 
 interface InlineState {
   bold: boolean;

@@ -1,5 +1,3 @@
-'use strict';
-
 /**
  * Coverage for the `/p/:pad/timeslider` redirect when the request
  * carries a hostile `x-proxy-path` header. The Location header must
@@ -7,7 +5,7 @@
  * absolute URL — regardless of what value the proxy header supplied.
  */
 
-const common = require('../common');
+import * as common from '../common.js';
 
 let agent: any;
 

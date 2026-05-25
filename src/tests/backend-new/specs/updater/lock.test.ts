@@ -2,7 +2,7 @@ import {describe, it, expect, beforeEach, afterEach} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
-import {acquireLock, releaseLock, isHeld} from '../../../../node/updater/lock';
+import {acquireLock, releaseLock, isHeld} from '../../../../node/updater/lock.js';
 
 describe('update lock', () => {
   let dir: string;

@@ -1,6 +1,6 @@
-import {compareSemver} from './versionCompare';
-import {parseWindow} from './MaintenanceWindow';
-import {InstallMethod, MaintenanceWindow, PolicyResult, Tier} from './types';
+import {compareSemver} from './versionCompare.js';
+import {parseWindow} from './MaintenanceWindow.js';
+import {InstallMethod, MaintenanceWindow, PolicyResult, Tier} from './types.js';
 
 // For PR 1 (notify only) the writable list contains only 'git'.
 // PR 2+ may add 'npm' here as the executor learns to handle that path.

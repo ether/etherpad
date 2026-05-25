@@ -20,3 +20,63 @@ reference (filename for require() plus function name)
 ?
 
 === ...
+
+== Importing from `ep_etherpad-lite`
+
+Etherpad ships dual entry points so plugins authored in either CommonJS
+or ECMAScript Modules can consume core APIs.
+
+=== CJS plugins (default — most existing plugins)
+
+Use `require()` against extensionless or `.js` subpaths:
+
+[source,js]
+----
+const eejs        = require('ep_etherpad-lite/node/eejs');
+const PadManager  = require('ep_etherpad-lite/node/db/PadManager');
+const API         = require('ep_etherpad-lite/node/db/API.js');
+const padUtils    = require('ep_etherpad-lite/static/js/pad_utils');
+----
+
+These resolve through the package's `exports` map under the `require`
+condition and load CJS twins from `dist-cjs/`.
+
+NOTE: `require('ep_etherpad-lite/node/eejs/')` with a trailing slash is
+**not** supported. Drop the slash: `require('ep_etherpad-lite/node/eejs')`.
+
+NOTE: Some core modules (database modules under `node/db/*`) transitively
+depend on `ueberdb2` which is ESM-only. They can be resolved by
+`require.resolve` but cannot be synchronously loaded from CJS contexts.
+Plugins that actually use these modules at runtime must migrate to ESM
+(see below) or stop depending on them.
+
+=== ESM plugins (opt-in)
+
+Set `"type": "module"` in your plugin's `package.json`. Use `import` with
+explicit `.js` extensions:
+
+[source,js]
+----
+import * as eejs       from 'ep_etherpad-lite/node/eejs/index.js';
+import { getPad }      from 'ep_etherpad-lite/node/db/PadManager.js';
+import { randomString } from 'ep_etherpad-lite/static/js/pad_utils.js';
+----
+
+These resolve through the `import` condition and load ESM modules from
+`dist/`.
+
+=== Supported subpaths
+
+* `ep_etherpad-lite/node/*`         — server-side modules
+* `ep_etherpad-lite/node/eejs`      — template engine (no trailing slash)
+* `ep_etherpad-lite/static/js/*`    — code shared with the browser
+* `ep_etherpad-lite/tests/backend/*` — test helpers (only useful in plugin
+  tests; ESM only)
+
+=== What is NOT supported
+
+* Reaching into `src/...` or `dist/...` paths directly — only the subpaths
+  above are stable API.
+* Mixing `require()` and `import` inside the same plugin file. Pick one.
+* `require('ep_etherpad-lite/node/eejs/')` with trailing slash.
+* `require()` of database modules from CJS (use ESM imports instead).

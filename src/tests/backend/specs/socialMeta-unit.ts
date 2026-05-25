@@ -1,12 +1,10 @@
-'use strict';
-
 // Unit tests for the pure helpers in src/node/utils/socialMeta.ts. These
 // don't touch HTTP/DB — they exercise the helper directly so every branch
 // (locale negotiation, fallbacks, escaping, URL building) is covered without
 // the cost of an integration test.
 
-const assert = require('assert').strict;
-import {buildSocialMetaHtml, renderSocialMeta} from '../../../node/utils/socialMeta';
+import * as assert from 'node:assert/strict';
+import {buildSocialMetaHtml, renderSocialMeta} from '../../../node/utils/socialMeta.js';
 
 const ogTag = (html: string, prop: string): string | null => {
   const re = new RegExp(

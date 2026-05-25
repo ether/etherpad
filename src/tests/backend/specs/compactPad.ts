@@ -1,12 +1,11 @@
-'use strict';
-
-import {generateJWTToken} from "../common";
-
-const assert = require('assert').strict;
-const common = require('../common');
-const padManager = require('../../../node/db/PadManager');
-const api = require('../../../node/db/API');
-const settings = require('../../../node/utils/Settings');
+import {generateJWTToken} from '../common.js';
+import assert from 'node:assert/strict';
+import * as common from '../common.js';
+import * as padManager from '../../../node/db/PadManager.js';
+import * as api from '../../../node/db/API.js';
+import settings from '../../../node/utils/Settings.js';
+import * as compactAllPads from '../../../../bin/compactAllPads.js';
+import * as compactStalePads from '../../../../bin/compactStalePads.js';
 
 // Coverage for the compactPad API endpoint added in #6194.
 // The underlying Cleanup logic is tested where it lives; these tests just
@@ -167,10 +166,7 @@ describe(__filename, function () {
   // tolerance, dry-run, keep-last, tally — is what regresses, and that
   // is what this exercises.
   describe('runCompactAll (bin/compactAllPads loop)', function () {
-    // Imported lazily so module-load-time side effects in compactAllPads
-    // (require.main check) don't trip on the mocha runner.
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const {runCompactAll, parseArgs} = require('../../../../bin/compactAllPads');
+    const {runCompactAll, parseArgs} = compactAllPads;
 
     const silent = {info: () => {}, error: () => {}};
 
@@ -352,9 +348,7 @@ describe(__filename, function () {
   // real /api/1.3.1/getLastEdited + compactPad endpoints to prove the
   // CLI's adapter shape doesn't lie.
   describe('runCompactStale (bin/compactStalePads loop)', function () {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const {runCompactStale, parseArgs} =
-        require('../../../../bin/compactStalePads');
+    const {runCompactStale, parseArgs} = compactStalePads;
 
     const silent = {info: () => {}, error: () => {}};
     const NOW = 1_700_000_000_000;

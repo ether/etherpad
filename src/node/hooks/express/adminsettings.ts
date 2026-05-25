@@ -1,18 +1,19 @@
 'use strict';
 
 
-import {PAD_FILTERS, PadFilter, PadQueryResult, PadSearchQuery} from "../../types/PadSearchQuery";
+import {PAD_FILTERS, PadFilter, PadQueryResult, PadSearchQuery} from "../../types/PadSearchQuery.js";
 import log4js from 'log4js';
 
-const fsp = require('fs').promises;
-const hooks = require('../../../static/js/pluginfw/hooks');
-const plugins = require('../../../static/js/pluginfw/plugins');
-import settings, {getEpVersion, getGitCommit, reloadSettings} from '../../utils/Settings';
-import {getLatestVersion} from '../../utils/UpdateCheck';
-import {redactSettings} from '../../utils/AdminSettingsRedact';
-const padManager = require('../../db/PadManager');
-const api = require('../../db/API');
-import {deleteRevisions} from '../../utils/Cleanup';
+import { promises as fsp } from 'fs';
+import hooks from '../../../static/js/pluginfw/hooks.js';
+import plugins from '../../../static/js/pluginfw/plugins.js';
+import settings, {getEpVersion, getGitCommit, reloadSettings} from '../../utils/Settings.js';
+import {getLatestVersion} from '../../utils/UpdateCheck.js';
+import {redactSettings} from '../../utils/AdminSettingsRedact.js';
+import * as padManager from '../../db/PadManager.js';
+import * as api from '../../db/API.js';
+import * as authorManager from '../../db/AuthorManager.js';
+import {deleteRevisions} from '../../utils/Cleanup.js';
 
 
 const queryPadLimit = 12;
@@ -46,7 +47,7 @@ async function mapWithConcurrency<T, R>(
 }
 
 
-exports.socketio = (hookName: string, {io}: any) => {
+export const socketio = (hookName: string, {io}: any) => {
   io.of('/settings').on('connection', (socket: any) => {
     // @ts-ignore
     const {session: {user: {is_admin: isAdmin} = {}} = {}} = socket.conn.request;
@@ -321,8 +322,6 @@ exports.socketio = (hookName: string, {io}: any) => {
       }
      }
     })
-
-    const authorManager = require('../../db/AuthorManager');
 
     // The admin author-erasure UI (PR #7667) is gated as a single
     // feature: when gdprAuthorErasure.enabled is false, all three

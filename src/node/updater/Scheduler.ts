@@ -1,6 +1,6 @@
-import {EmailSendLog, ExecutionStatus, MaintenanceWindow, PolicyResult, ReleaseInfo, UpdateState} from './types';
-import {PlannedEmail} from './Notifier';
-import {inWindow, nextWindowStart} from './MaintenanceWindow';
+import {EmailSendLog, ExecutionStatus, MaintenanceWindow, PolicyResult, ReleaseInfo, UpdateState} from './types.js';
+import {PlannedEmail} from './Notifier.js';
+import {inWindow, nextWindowStart} from './MaintenanceWindow.js';
 
 export interface DecideScheduleInput {
   state: UpdateState;

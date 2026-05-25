@@ -1,5 +1,5 @@
 import {describe, it, expect} from 'vitest';
-import settings from '../../../../node/utils/Settings';
+import settings from '../../../../node/utils/Settings.js';
 
 describe('privacy settings defaults', () => {
   it('privacy.updateCheck defaults to true', () => {

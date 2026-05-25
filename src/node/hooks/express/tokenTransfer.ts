@@ -1,7 +1,7 @@
-import {ArgsExpressType} from "../../types/ArgsExpressType";
-const db = require('../../db/DB');
+import {ArgsExpressType} from "../../types/ArgsExpressType.js";
+import db from '../../db/DB.js';
 import crypto from 'crypto'
-import settings from '../../utils/Settings';
+import settings from '../../utils/Settings.js';
 
 
 type TokenTransferRequest = {

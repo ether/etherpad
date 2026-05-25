@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest';
-import {compareSemver, isMinorOrMoreBehind, parseSemver} from '../../../../node/updater/versionCompare';
+import {compareSemver, isMinorOrMoreBehind, parseSemver} from '../../../../node/updater/versionCompare.js';
 
 describe('parseSemver', () => {
   it('parses standard semver', () => {

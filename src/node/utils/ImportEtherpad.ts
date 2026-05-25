@@ -1,6 +1,6 @@
 'use strict';
 
-import {APool} from "../types/PadType";
+import {APool} from "../types/PadType.js";
 
 /**
  * 2014 John McLear (Etherpad Foundation / McLear Ltd)
@@ -18,17 +18,18 @@ import {APool} from "../types/PadType";
  * limitations under the License.
  */
 
-import AttributeMap from '../../static/js/AttributeMap';
-import AttributePool from '../../static/js/AttributePool';
-import {applyToAText, cloneAText, deserializeOps, makeAText, pack, unpack} from '../../static/js/Changeset';
-import {SmartOpAssembler} from '../../static/js/SmartOpAssembler';
-const {Pad} = require('../db/Pad');
-const Stream = require('./Stream');
-const authorManager = require('../db/AuthorManager');
-const db = require('../db/DB');
-const hooks = require('../../static/js/pluginfw/hooks');
+import AttributeMap from '../../static/js/AttributeMap.js';
+import AttributePool from '../../static/js/AttributePool.js';
+import {applyToAText, cloneAText, deserializeOps, makeAText, pack, unpack} from '../../static/js/Changeset.js';
+import {SmartOpAssembler} from '../../static/js/SmartOpAssembler.js';
+import { Pad } from '../db/Pad.js';
+import Stream from './Stream.js';
+import * as authorManager from '../db/AuthorManager.js';
+import db from '../db/DB.js';
+import hooks from '../../static/js/pluginfw/hooks.js';
 import log4js from 'log4js';
-const supportedElems = require('../../static/js/contentcollector').supportedElems;
+import { supportedElems } from '../../static/js/contentcollector.js';
+import {Database} from 'ueberdb2';
 
 const logger = log4js.getLogger('ImportEtherpad');
 
@@ -179,9 +180,7 @@ const sanitiseImportedRecords = (
   return totalRewrites;
 };
 
-exports.setPadRaw = async (padId: string, r: string, authorId = '') => {
-  // ueberdb2 v6 is ESM-only; load via dynamic import so CJS consumers work.
-  const {Database} = await import('ueberdb2');
+export const setPadRaw = async (padId: string, r: string, authorId = '') => {
   const records = JSON.parse(r);
 
   // Sanitiser pre-pass: legacy .etherpad files (and exports from older

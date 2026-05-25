@@ -1,6 +1,6 @@
 import {describe, it, expect} from 'vitest';
-import {decideEmails, decideOutcomeEmail, NotifierInput} from '../../../../node/updater/Notifier';
-import {EMPTY_STATE} from '../../../../node/updater/types';
+import {decideEmails, decideOutcomeEmail, NotifierInput} from '../../../../node/updater/Notifier.js';
+import {EMPTY_STATE} from '../../../../node/updater/types.js';
 
 const base: NotifierInput = {
   adminEmail: 'admin@example.com',

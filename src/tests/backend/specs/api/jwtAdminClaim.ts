@@ -1,5 +1,3 @@
-'use strict';
-
 /**
  * Coverage for the JWT admin-claim check on the OAuth-authenticated API.
  *
@@ -9,8 +7,8 @@
  * tampered/unsigned token must also be rejected.
  */
 
-const common = require('../../common');
-import settings from '../../../../node/utils/Settings';
+import * as common from '../../common.js';
+import settings from '../../../../node/utils/Settings.js';
 
 let agent: any;
 
