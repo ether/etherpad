@@ -39,12 +39,10 @@ import jsonminify from 'jsonminify';
 import log4js from 'log4js';
 import randomString from './randomstring.js';
 import {createHash} from 'node:crypto';
-import { createRequire } from 'node:module';
 const suppressDisableMsg = ' -- To suppress these warning messages change ' +
     'suppressErrorsInPadText to true in your settings.json\n';
 import _ from 'underscore';
-
-const requireFromHere = createRequire(import.meta.url);
+import pkg from '../../package.json' with { type: 'json' };
 
 const logger = log4js.getLogger('settings');
 
@@ -926,7 +924,7 @@ export const exportAvailable = () => sofficeAvailable();
 
 
 // Return etherpad version from package.json
-export const getEpVersion = () => requireFromHere('../../package.json').version;
+export const getEpVersion = () => pkg.version;
 
 
 

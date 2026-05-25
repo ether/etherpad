@@ -9,6 +9,41 @@
     "collaborative",
     "editor"
   ],
+  "main": "./dist-cjs/node/server.cjs",
+  "module": "./dist/node/server.mjs",
+  "exports": {
+    ".": {
+      "import": "./dist/node/server.mjs",
+      "require": "./dist-cjs/node/server.cjs"
+    },
+    "./node/eejs": {
+      "import": "./dist/node/eejs/index.mjs",
+      "require": "./dist-cjs/node/eejs/index.cjs"
+    },
+    "./node/*": {
+      "import": "./dist/node/*.mjs",
+      "require": "./dist-cjs/node/*.cjs"
+    },
+    "./node/*.js": {
+      "import": "./dist/node/*.mjs",
+      "require": "./dist-cjs/node/*.cjs"
+    },
+    "./static/js/*": {
+      "import": "./dist/static/js/*.mjs",
+      "require": "./dist-cjs/static/js/*.cjs"
+    },
+    "./static/js/*.js": {
+      "import": "./dist/static/js/*.mjs",
+      "require": "./dist-cjs/static/js/*.cjs"
+    },
+    "./tests/backend/*": {
+      "import": "./dist/tests/backend/*.mjs"
+    },
+    "./tests/backend/*.js": {
+      "import": "./dist/tests/backend/*.mjs"
+    },
+    "./package.json": "./package.json"
+  },
   "author": "Etherpad Foundation",
   "contributors": [
     {

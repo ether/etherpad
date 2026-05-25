@@ -3,13 +3,21 @@ import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
 
-const cjsSubpaths = [
+// All CJS subpaths must resolve to a .cjs file.
+const cjsResolvableSubpaths = [
   'ep_etherpad-lite/node/eejs',
   'ep_etherpad-lite/node/db/PadManager',
   'ep_etherpad-lite/node/db/API.js',
   'ep_etherpad-lite/node/db/AuthorManager',
   'ep_etherpad-lite/static/js/pad_utils',
-  'ep_etherpad-lite/tests/backend/common',
+];
+
+// Only these subpaths can be synchronously require()-loaded: their transitive
+// dependency graph is CJS-compatible. DB modules (PadManager, API, AuthorManager)
+// transitively import ueberdb2 which is ESM-only (no "require" export condition).
+const cjsLoadableSubpaths = [
+  'ep_etherpad-lite/node/eejs',
+  'ep_etherpad-lite/static/js/pad_utils',
 ];
 
 const esmSubpaths = [
@@ -21,12 +29,14 @@ const esmSubpaths = [
 
 describe('ep_etherpad-lite exports map', () => {
   describe('require() condition (CJS plugins)', () => {
-    for (const spec of cjsSubpaths) {
+    for (const spec of cjsResolvableSubpaths) {
       test(`require('${spec}') resolves`, () => {
         const resolved = require.resolve(spec);
         expect(resolved).toMatch(/\.cjs$/);
       });
+    }
 
+    for (const spec of cjsLoadableSubpaths) {
       test(`require('${spec}') loads a module`, () => {
         const mod = require(spec);
         expect(mod).toBeTruthy();
