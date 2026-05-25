@@ -9,6 +9,7 @@
 // offset/limit slice, so `total` reflects the filtered universe.
 
 import {strict as assert} from 'assert';
+import {vi} from 'vitest';
 import setCookieParser from 'set-cookie-parser';
 
 const io = require('socket.io-client');
@@ -86,19 +87,20 @@ const adminSocketWithProbe = async (budgetMs: number): Promise<{
   return {ok: true, socket};
 };
 
-describe(__filename, function () {
+describe(__filename, () => {
   let socket: any;
   let savedUsers: any;
   let savedRequireAuthentication: boolean;
   let setupCompleted = false;
+  let skipReason: string | null = null;
   // Distinct per-suite tag so concurrent test runs / leftover pads from
   // earlier suites don't pollute the filter assertions.
   const tag = `padLoadFilter-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
   const emptyPadIds: string[] = [];
   const editedPadIds: string[] = [];
 
-  before(async function () {
-    this.timeout(120000);
+  before(async () => {
+    vi.setConfig({hookTimeout: 120000});
     await common.init();
 
     savedUsers = settings.users;
@@ -111,7 +113,7 @@ describe(__filename, function () {
           `[padLoadFilter] admin socket probe failed (${probe.reason}); ` +
           "skipping suite — likely an authenticate-hook plugin rejecting the test's " +
           'admin credentials.');
-      this.skip();
+      skipReason = probe.reason;
       return;
     }
     socket = probe.socket;
@@ -132,7 +134,7 @@ describe(__filename, function () {
     }
   });
 
-  after(async function () {
+  after(async () => {
     if (socket) socket.disconnect();
     if (!setupCompleted) return;
     // `savedUsers` may point at the same object that adminSocket mutated,
@@ -150,7 +152,8 @@ describe(__filename, function () {
     }
   });
 
-  it('filter:"empty" returns only revisionNumber===0 pads from the full set', async function () {
+  it('filter:"empty" returns only revisionNumber===0 pads from the full set', async (ctx) => {
+    if (skipReason) return ctx.skip();
     const res = await ask(socket, 'padLoad', {
       pattern: tag, offset: 0, limit: 12, sortBy: 'padName',
       ascending: true, filter: 'empty',
@@ -162,7 +165,8 @@ describe(__filename, function () {
     }
   });
 
-  it('filter:"empty" with limit=2 still reports the correct total (regression: thm)', async function () {
+  it('filter:"empty" with limit=2 still reports the correct total (regression: thm)', async (ctx) => {
+    if (skipReason) return ctx.skip();
     // The bug thm hit: clicking "empty" showed at most `limit` empties
     // because filtering happened on the client AFTER pagination. The
     // server now applies filter first, so total reflects the filtered
@@ -175,7 +179,8 @@ describe(__filename, function () {
     assert.equal(res.results.length, 2, `expected limit=2 page, got ${res.results.length} rows`);
   });
 
-  it('filter omitted (older client) falls back to "all"', async function () {
+  it('filter omitted (older client) falls back to "all"', async (ctx) => {
+    if (skipReason) return ctx.skip();
     const res = await ask(socket, 'padLoad', {
       pattern: tag, offset: 0, limit: 12, sortBy: 'padName',
       ascending: true,
@@ -184,7 +189,8 @@ describe(__filename, function () {
         `expected total=8 (5 empty + 3 edited), got ${JSON.stringify(res)}`);
   });
 
-  it('filter:"all" matches the no-filter behaviour', async function () {
+  it('filter:"all" matches the no-filter behaviour', async (ctx) => {
+    if (skipReason) return ctx.skip();
     const res = await ask(socket, 'padLoad', {
       pattern: tag, offset: 0, limit: 12, sortBy: 'padName',
       ascending: true, filter: 'all',
@@ -192,7 +198,8 @@ describe(__filename, function () {
     assert.equal(res.total, 8);
   });
 
-  it('filter:"active" excludes pads with no active users', async function () {
+  it('filter:"active" excludes pads with no active users', async (ctx) => {
+    if (skipReason) return ctx.skip();
     // No connected clients in this test, so every test pad has
     // userCount === 0 → filter:"active" must return zero.
     const res = await ask(socket, 'padLoad', {

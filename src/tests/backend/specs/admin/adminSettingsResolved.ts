@@ -1,6 +1,7 @@
 'use strict';
 
 import {strict as assert} from 'assert';
+import {vi} from 'vitest';
 import setCookieParser from 'set-cookie-parser';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -81,7 +82,7 @@ const ask = (socket: any, evt: string, payload: any, replyEvt: string) =>
       socket.emit(evt, payload);
     });
 
-describe(__filename, function () {
+describe(__filename, () => {
   let socket: any;
   let savedUsers: any;
   let savedRequireAuthentication: boolean;
@@ -92,9 +93,10 @@ describe(__filename, function () {
   let savedSettingsFilename: any;
   let tmpSettingsPath: string | null = null;
   let setupCompleted = false;
+  let skipReason: string | null = null;
 
-  before(async function () {
-    this.timeout(60000);
+  before(async () => {
+    vi.setConfig({hookTimeout: 60000});
     await common.init();
 
     // The load handler bails with logger.error + early return if the
@@ -125,13 +127,13 @@ describe(__filename, function () {
       console.warn(
           `[adminSettingsResolved] admin socket probe failed (${probe.reason}); ` +
           'skipping suite — likely an authenticate-hook plugin rejecting test creds.');
-      this.skip();
+      skipReason = probe.reason;
       return;
     }
     socket = probe.socket;
   });
 
-  after(function () {
+  after(() => {
     if (socket) socket.disconnect();
     if (!setupCompleted) return;
     if (savedDbPwd === undefined) delete settings.dbSettings.password;
@@ -148,7 +150,8 @@ describe(__filename, function () {
     settings.requireAuthentication = savedRequireAuthentication;
   });
 
-  it('emits {results, resolved, flags}', async function () {
+  it('emits {results, resolved, flags}', async (ctx) => {
+    if (skipReason) return ctx.skip();
     const reply: any = await ask(socket, 'load', null, 'settings');
     assert.ok(reply, 'reply present');
     assert.equal(typeof reply.results, 'string', 'raw file string');
@@ -156,19 +159,22 @@ describe(__filename, function () {
     assert.ok(reply.flags, 'flags present');
   });
 
-  it('resolved reflects live in-memory values, not the file on disk', async function () {
+  it('resolved reflects live in-memory values, not the file on disk', async (ctx) => {
+    if (skipReason) return ctx.skip();
     const reply: any = await ask(socket, 'load', null, 'settings');
     assert.equal(reply.resolved.trustProxy, true,
         'resolved should show the in-memory trustProxy');
   });
 
-  it('resolved redacts secrets', async function () {
+  it('resolved redacts secrets', async (ctx) => {
+    if (skipReason) return ctx.skip();
     const reply: any = await ask(socket, 'load', null, 'settings');
     assert.equal(reply.resolved.dbSettings.password, '[REDACTED]');
     assert.equal(reply.resolved.sessionKey, '[REDACTED]');
   });
 
-  it('resolved is omitted when showSettingsInAdminPage is false', async function () {
+  it('resolved is omitted when showSettingsInAdminPage is false', async (ctx) => {
+    if (skipReason) return ctx.skip();
     settings.showSettingsInAdminPage = false;
     try {
       const reply: any = await ask(socket, 'load', null, 'settings');

@@ -1,6 +1,7 @@
 'use strict';
 
 import {strict as assert} from 'assert';
+import {vi} from 'vitest';
 import setCookieParser from 'set-cookie-parser';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -97,7 +98,7 @@ const save = (socket: any, payload: string) =>
 // disk byte-for-byte at settings.settingsFilename, and the subsequent
 // `load` reply reflects the new file contents. We do NOT exercise
 // runtime reload — that's reloadSettings()' job and is covered elsewhere.
-describe(__filename, function () {
+describe(__filename, () => {
   let socket: any;
   let savedUsers: any;
   let savedRequireAuthentication: boolean;
@@ -105,9 +106,10 @@ describe(__filename, function () {
   let tmpSettingsPath: string | null = null;
   let baselineContents: string;
   let setupCompleted = false;
+  let skipReason: string | null = null;
 
-  before(async function () {
-    this.timeout(60000);
+  before(async () => {
+    vi.setConfig({hookTimeout: 60000});
     await common.init();
 
     savedSettingsFilename = settings.settingsFilename;
@@ -134,13 +136,13 @@ describe(__filename, function () {
       console.warn(
           `[adminSettingsSave] admin socket probe failed (${probe.reason}); ` +
           'skipping suite — likely an authenticate-hook plugin rejecting test creds.');
-      this.skip();
+      skipReason = probe.reason;
       return;
     }
     socket = probe.socket;
   });
 
-  after(function () {
+  after(() => {
     if (socket) socket.disconnect();
     if (!setupCompleted) return;
     settings.settingsFilename = savedSettingsFilename;
@@ -153,14 +155,15 @@ describe(__filename, function () {
   });
 
   // Reset to baseline between tests so each it() is independent — earlier
-  // suites in the same mocha run can leave behind state via shared sockets.
-  beforeEach(function () {
-    if (!tmpSettingsPath) this.skip();
+  // suites in the same run can leave behind state via shared sockets.
+  beforeEach((ctx) => {
+    if (!tmpSettingsPath) return ctx.skip();
     fs.writeFileSync(tmpSettingsPath!, baselineContents);
   });
 
   it('saveSettings writes the payload byte-for-byte to settings.settingsFilename',
-      async function () {
+      async (ctx) => {
+        if (skipReason) return ctx.skip();
         const payload = JSON.stringify({title: 'EtherpadWrittenViaSocket'}, null, 2);
         const ack = await save(socket, payload);
         assert.equal(ack.status, 'saved', 'saveprogress should be "saved"');
@@ -173,7 +176,8 @@ describe(__filename, function () {
   // one new top-level block (a plugin config). The block must persist on
   // disk verbatim and reappear in the next `load` reply.
   it('augmenting existing JSON with a new top-level plugin block round-trips',
-      async function () {
+      async (ctx) => {
+        if (skipReason) return ctx.skip();
         const augmented = JSON.stringify({
           title: 'Etherpad',
           ip: '0.0.0.0',
@@ -207,7 +211,8 @@ describe(__filename, function () {
   // path must not normalize or strip them — the SPA test
   // 'preserves /* */ comments after save round-trip' covers the UI side;
   // this one covers the socket-level guarantee.
-  it('preserves /* */ comments in the written file', async function () {
+  it('preserves /* */ comments in the written file', async (ctx) => {
+    if (skipReason) return ctx.skip();
     const withComment =
         '/* persisted-marker-7819 */\n' +
         JSON.stringify({title: 'Etherpad'}, null, 2);
