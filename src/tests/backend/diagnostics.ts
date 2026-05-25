@@ -99,6 +99,26 @@ const canWriteReport =
   && !!((process as any).report?.directory
     || (process.env.NODE_OPTIONS || '').includes('--report-directory='));
 let reportCounter = 0;
+let lastReportT = 0;
+
+// Shared writer used by both the heartbeat tick and the beforeEach hook.
+// Throttled by minGapMs so a burst of fast tests doesn't produce hundreds of
+// reports — we just need dense enough coverage to bracket the kill.
+const tryWriteReport = (prefix: string, minGapMs: number): void => {
+  if (!canWriteReport) return;
+  const now = Date.now();
+  if (now - lastReportT < minGapMs) return;
+  lastReportT = now;
+  reportCounter += 1;
+  const safeTest = currentTest
+    .replace(/[^a-zA-Z0-9._-]+/g, '_')
+    .slice(0, 80);
+  const name = `${prefix}-${String(reportCounter).padStart(4, '0')}-${safeTest}.json`;
+  try {
+    // Bare filename only — see comment at canWriteReport definition above.
+    (process as any).report.writeReport(name);
+  } catch { /* swallow — diagnostics must not throw */ }
+};
 const heartbeat = setInterval(() => {
   const mem = process.memoryUsage();
   // _getActiveHandles / _getActiveRequests are undocumented Node internals.
@@ -114,21 +134,8 @@ const heartbeat = setInterval(() => {
     `rss=${Math.round(mem.rss / 1024 / 1024)}M ` +
     `heap=${Math.round(mem.heapUsed / 1024 / 1024)}M ` +
     `handles=${handles} requests=${requests}`);
-  if (canWriteReport) {
-    reportCounter += 1;
-    // Keep filenames sortable by timestamp + counter so the workflow upload
-    // arrives ordered. Include the running test in the name (sanitised to
-    // valid filename chars) so the matching diag log line and report file
-    // are trivially correlatable.
-    const safeTest = currentTest
-      .replace(/[^a-zA-Z0-9._-]+/g, '_')
-      .slice(0, 80);
-    const name = `hb-${String(reportCounter).padStart(4, '0')}-${safeTest}.json`;
-    try {
-      // Bare filename only — see comment at canWriteReport definition above.
-      (process as any).report.writeReport(name);
-    } catch { /* swallow — diagnostics must not throw */ }
-  }
+  // Heartbeat always writes — its 1Hz cadence is the floor.
+  tryWriteReport('hb', 0);
 }, 1000);
 heartbeat.unref();
 
@@ -187,6 +194,13 @@ export const mochaHooks = {
     if (this.currentTest) {
       currentTest = this.currentTest.fullTitle();
       diag(`test start: ${currentTest}`);
+      // Drop a node-report at test-boundary granularity when the inter-report
+      // gap is wide enough. Run 26398985832's last report (hb-0013) landed
+      // ~1.7 s before the kill — not close enough to capture the dying
+      // test's V8 stack. With a 250 ms throttle, the worst case shrinks to
+      // ≤250 ms while keeping the artifact size bounded (~50 reports max
+      // per backend run, ~2.5 MB compressed).
+      tryWriteReport('be', 250);
     }
   },
   afterEach(this: any) {
