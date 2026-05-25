@@ -1,5 +1,5 @@
 import './style.css'
-import {MapArrayType} from "ep_etherpad-lite/node/types/MapType.ts";
+import {MapArrayType} from "ep_etherpad-lite/node/types/MapType.js";
 
 const searchParams = new URLSearchParams(window.location.search);
 

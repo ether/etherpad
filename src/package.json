@@ -12,49 +12,59 @@
   "module": "./dist/node/server.mjs",
   "exports": {
     ".": {
+      "types": "./node/server.ts",
       "import": "./dist/node/server.mjs",
       "default": "./dist/node/server.mjs"
     },
     "./node/eejs": {
+      "types": "./node/eejs/index.ts",
       "import": "./dist/node/eejs/index.mjs",
       "require": "./dist-cjs/node/eejs/index.cjs",
       "default": "./dist/node/eejs/index.mjs"
     },
     "./node/db/*": {
+      "types": "./node/db/*.ts",
       "import": "./dist/node/db/*.mjs",
       "require": "./dist-cjs/node/db/*.cjs",
       "default": "./dist/node/db/*.mjs"
     },
     "./node/db/*.js": {
+      "types": "./node/db/*.ts",
       "import": "./dist/node/db/*.mjs",
       "require": "./dist-cjs/node/db/*.cjs",
       "default": "./dist/node/db/*.mjs"
     },
     "./node/*": {
+      "types": "./node/*.ts",
       "import": "./dist/node/*.mjs",
       "require": "./dist-cjs/node/*.cjs",
       "default": "./dist/node/*.mjs"
     },
     "./node/*.js": {
+      "types": "./node/*.ts",
       "import": "./dist/node/*.mjs",
       "require": "./dist-cjs/node/*.cjs",
       "default": "./dist/node/*.mjs"
     },
     "./static/js/*": {
+      "types": "./static/js/*.ts",
       "import": "./dist/static/js/*.mjs",
       "require": "./dist-cjs/static/js/*.cjs",
       "default": "./dist/static/js/*.mjs"
     },
     "./static/js/*.js": {
+      "types": "./static/js/*.ts",
       "import": "./dist/static/js/*.mjs",
       "require": "./dist-cjs/static/js/*.cjs",
       "default": "./dist/static/js/*.mjs"
     },
     "./tests/backend/*": {
+      "types": "./tests/backend/*.ts",
       "import": "./dist/tests/backend/*.mjs",
       "default": "./dist/tests/backend/*.mjs"
     },
     "./tests/backend/*.js": {
+      "types": "./tests/backend/*.ts",
       "import": "./dist/tests/backend/*.mjs",
       "default": "./dist/tests/backend/*.mjs"
     },
