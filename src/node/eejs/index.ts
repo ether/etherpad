@@ -102,8 +102,17 @@ eejs.require = (
   if (eejs.info.file_stack.length) {
     basedir = path.dirname(getCurrentFile().path);
   }
-  if (mod) {
+  if (mod && typeof mod.filename === 'string') {
+    // Some module-loader shims (e.g. vite-node, the .ts CJS-extension
+    // handler in pluginfw/plugins.ts) provide a `module` object whose
+    // `.filename` hasn't been populated. Falling through to
+    // `path.dirname(undefined)` here throws TypeError and crashes the
+    // template render — surfaces as a 500 on every pad page that
+    // touches an affected plugin (e.g. ep_markdown's eejsBlock_*).
+    // When filename is missing, keep the basedir we computed above.
     basedir = path.dirname(mod.filename);
+    paths = Array.isArray(mod.paths) ? mod.paths : paths;
+  } else if (mod && Array.isArray(mod.paths)) {
     paths = mod.paths;
   }
 
