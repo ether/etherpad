@@ -1,5 +1,3 @@
-'use strict';
-
 // Regression test for the admin /settings socket's `padLoad` filter chip.
 // Before commit fb…, `filter` (active|empty|recent|stale) lived only on
 // the client and ran AFTER pagination, so clicking "empty pads" on a
@@ -10,11 +8,10 @@
 
 import {strict as assert} from 'assert';
 import setCookieParser from 'set-cookie-parser';
-
-const io = require('socket.io-client');
-const common = require('../../common');
-const settings = require('../../../../node/utils/Settings');
-const padManager = require('../../../../node/db/PadManager');
+import {io} from 'socket.io-client';
+import * as common from '../../common.js';
+import settings from '../../../../node/utils/Settings.js';
+import * as padManager from '../../../../node/db/PadManager.js';
 
 const adminSocket = async () => {
   settings.users = settings.users || {};

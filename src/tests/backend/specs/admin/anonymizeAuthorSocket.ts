@@ -1,12 +1,9 @@
-'use strict';
-
 import {strict as assert} from 'assert';
 import setCookieParser from 'set-cookie-parser';
-
-const io = require('socket.io-client');
-const common = require('../../common');
-const settings = require('../../../../node/utils/Settings');
-const authorManager = require('../../../../node/db/AuthorManager');
+import {io} from 'socket.io-client';
+import * as common from '../../common.js';
+import settings from '../../../../node/utils/Settings.js';
+import * as authorManager from '../../../../node/db/AuthorManager.js';
 
 /**
  * Connects to the /settings admin namespace using cookie-based auth.

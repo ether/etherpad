@@ -1,14 +1,11 @@
-'use strict';
-
 import {strict as assert} from 'assert';
 import setCookieParser from 'set-cookie-parser';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-
-const io = require('socket.io-client');
-const common = require('../../common');
-const settings = require('../../../../node/utils/Settings');
+import {io} from 'socket.io-client';
+import * as common from '../../common.js';
+import settings from '../../../../node/utils/Settings.js';
 
 const adminSocket = async () => {
   settings.users = settings.users || {};
