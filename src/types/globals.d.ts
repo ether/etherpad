@@ -3,6 +3,7 @@
 // than authoring full typings — they're small surfaces that change rarely.
 declare module 'find-root';
 declare module 'html-to-docx';
+declare module 'jszip';
 declare module 'languages4translatewiki';
 declare module 'lodash.clonedeep';
 declare module 'measured-core';

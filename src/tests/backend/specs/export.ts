@@ -2,7 +2,6 @@
 
 import {fileURLToPath} from 'node:url';
 import {dirname} from 'node:path';
-import {createRequire} from 'node:module';
 import {strict as assert} from 'node:assert';
 import {MapArrayType} from "../../../node/types/MapType.js";
 
@@ -13,11 +12,6 @@ import plugins from '../../../static/js/pluginfw/plugin_defs.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-// Keep the inline `require()` / `require.resolve()` calls in the test body
-// working under ESM — used for optional native-export modules
-// (html-to-docx, pdfkit, htmlparser2, jszip) that are skipped via
-// require.resolve() probing.
-const require = createRequire(import.meta.url);
 
 // Probe optional native-export dependencies once at module load. The
 // upgrade-from-latest-release CI job installs deps from the PREVIOUS
@@ -27,11 +21,11 @@ const require = createRequire(import.meta.url);
 // vitest's describe.skipIf / it.skipIf will skip the blocks that need
 // them. Regular backend tests (which install against this branch's
 // lockfile) still exercise them.
-const canResolve = (mod: string): boolean => {
-  try { require.resolve(mod); return true; } catch { return false; }
+const canResolve = async (mod: string): Promise<boolean> => {
+  try { await import(mod); return true; } catch { return false; }
 };
-const hasHtmlToDocx = canResolve('html-to-docx');
-const hasPdfkitDeps = canResolve('pdfkit') && canResolve('htmlparser2');
+const hasHtmlToDocx = await canResolve('html-to-docx');
+const hasPdfkitDeps = await canResolve('pdfkit') && await canResolve('htmlparser2');
 
 describe(__filename, () => {
   let agent:any;
@@ -135,8 +129,8 @@ describe(__filename, () => {
     });
   });
 
-  describe('stripRemoteImages', () => {
-    const {stripRemoteImages} = require('../../../node/utils/ExportSanitizeHtml');
+  describe('stripRemoteImages', async () => {
+    const {stripRemoteImages} = await import('../../../node/utils/ExportSanitizeHtml.js');
 
     it('keeps data: URIs', () => {
       const out = stripRemoteImages(
@@ -169,8 +163,8 @@ describe(__filename, () => {
     });
   });
 
-  describe('extractBody', () => {
-    const {extractBody} = require('../../../node/utils/ExportSanitizeHtml');
+  describe('extractBody', async () => {
+    const {extractBody} = await import('../../../node/utils/ExportSanitizeHtml.js');
 
     it('returns trimmed body content from a full document', () => {
       const html = `<!doctype html><html><head><style>.x{color:red}</style></head><body>
@@ -193,8 +187,8 @@ hello<br>world
     });
   });
 
-  describe('wrapLooseLines', () => {
-    const {wrapLooseLines} = require('../../../node/utils/ExportSanitizeHtml');
+  describe('wrapLooseLines', async () => {
+    const {wrapLooseLines} = await import('../../../node/utils/ExportSanitizeHtml.js');
 
     it('wraps loose text in <p>', () => {
       assert.strictEqual(wrapLooseLines('Hello'), '<p>Hello</p>');
@@ -238,8 +232,8 @@ hello<br>world
     });
   });
 
-  describe('dropEmptyBlocks', () => {
-    const {dropEmptyBlocks} = require('../../../node/utils/ExportSanitizeHtml');
+  describe('dropEmptyBlocks', async () => {
+    const {dropEmptyBlocks} = await import('../../../node/utils/ExportSanitizeHtml.js');
 
     it('drops empty heading blocks', () => {
       const out = dropEmptyBlocks(
@@ -272,9 +266,9 @@ hello<br>world
     });
   });
 
-  describe('collapseRedundantBrAfterBlocks', () => {
+  describe('collapseRedundantBrAfterBlocks', async () => {
     const {collapseRedundantBrAfterBlocks} =
-        require('../../../node/utils/ExportSanitizeHtml');
+        await import('../../../node/utils/ExportSanitizeHtml.js');
 
     it('drops <br> immediately after a closing <p>', () => {
       assert.strictEqual(
@@ -312,9 +306,9 @@ hello<br>world
     });
   });
 
-  describe('separateAdjacentHeadingBlocks', () => {
+  describe('separateAdjacentHeadingBlocks', async () => {
     const {separateAdjacentHeadingBlocks} =
-        require('../../../node/utils/ExportSanitizeHtml');
+        await import('../../../node/utils/ExportSanitizeHtml.js');
 
     it('inserts <br> between adjacent <h1> and <h2>', () => {
       assert.strictEqual(
@@ -348,9 +342,9 @@ hello<br>world
     });
   });
 
-  describe('applyMonospaceToCode', () => {
+  describe('applyMonospaceToCode', async () => {
     const {applyMonospaceToCode} =
-        require('../../../node/utils/ExportSanitizeHtml');
+        await import('../../../node/utils/ExportSanitizeHtml.js');
 
     it('emits a Courier span for inline <code>', () => {
       // The <code> tag itself is dropped (html-to-docx ignores it and
@@ -411,8 +405,8 @@ hello<br>world
     });
 
     it.skipIf(!hasHtmlToDocx)('preserves <a> through html-to-docx round-trip', async () => {
-      const htmlToDocx = require('html-to-docx');
-      const JSZip = require('jszip');
+      const {default: htmlToDocx} = await import('html-to-docx');
+      const {default: JSZip} = await import('jszip');
       const buf: Buffer = await htmlToDocx(applyMonospaceToCode(
           '<p><code>Github: <a href="https://github.com/ether/etherpad">site</a></code></p>'));
       const z = await JSZip.loadAsync(buf);
@@ -430,8 +424,8 @@ hello<br>world
   describe.skipIf(!hasPdfkitDeps)('htmlToPdfBuffer', () => {
     let htmlToPdfBuffer: (html: string) => Promise<Buffer>;
 
-    before(() => {
-      htmlToPdfBuffer = require('../../../node/utils/ExportPdfNative').htmlToPdfBuffer;
+    before(async () => {
+      htmlToPdfBuffer = (await import('../../../node/utils/ExportPdfNative.js')).htmlToPdfBuffer;
     });
 
     it('produces a buffer starting with %PDF-', async () => {

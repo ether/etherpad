@@ -2,7 +2,6 @@
 
 import {fileURLToPath} from 'node:url';
 import {dirname} from 'node:path';
-import {createRequire} from 'node:module';
 import {strict as assert} from 'node:assert';
 import {MapArrayType} from '../../../node/types/MapType.js';
 import path from 'path';
@@ -15,16 +14,12 @@ import settings from '../../../node/utils/Settings.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-// Inline CJS bridge for the optional native-import modules (mammoth,
-// html-to-docx) — the test body uses `require.resolve()` to skip
-// gracefully on installs that don't ship them.
-const require = createRequire(import.meta.url);
 
-const canResolve = (mod: string): boolean => {
-  try { require.resolve(mod); return true; } catch { return false; }
+const canResolve = async (mod: string): Promise<boolean> => {
+  try { await import(mod); return true; } catch { return false; }
 };
-const hasMammoth = canResolve('mammoth');
-const hasHtmlToDocx = canResolve('html-to-docx');
+const hasMammoth = await canResolve('mammoth');
+const hasHtmlToDocx = await canResolve('html-to-docx');
 const hasDocxRoundTrip = hasMammoth && hasHtmlToDocx;
 
 describe(__filename, () => {
@@ -43,8 +38,8 @@ describe(__filename, () => {
   describe.skipIf(!hasMammoth)('docxBufferToHtml (#7538)', () => {
     let docxBufferToHtml: (b: Buffer) => Promise<string>;
 
-    before(() => {
-      docxBufferToHtml = require('../../../node/utils/ImportDocxNative').docxBufferToHtml;
+    before(async () => {
+      docxBufferToHtml = (await import('../../../node/utils/ImportDocxNative.js')).docxBufferToHtml;
     });
 
     it('converts the sample.docx fixture to HTML', async () => {
@@ -68,7 +63,7 @@ describe(__filename, () => {
     it.skipIf(!hasHtmlToDocx)('preserves paragraph alignment from <w:jc>', async () => {
       // Round through html-to-docx so the input docx has <w:jc> entries
       // we can verify mammoth + our workaround surface as text-align.
-      const htmlToDocx = require('html-to-docx');
+      const {default: htmlToDocx} = await import('html-to-docx');
       const docx: Buffer = await htmlToDocx(
           '<h1 style="text-align:right">Right heading</h1>' +
           '<p style="text-align:center">Center paragraph</p>' +
@@ -300,7 +295,7 @@ describe(__filename, () => {
   describe('HTML import — adjacent headings (#7538)', () => {
     let headingsAreBlocks = false;
     before(async () => {
-      const hooks = require('../../../static/js/pluginfw/hooks');
+      const hooks = await import('../../../static/js/pluginfw/hooks.js');
       const ccBlockElems: string[] = ([] as string[]).concat(
           ...(hooks.callAll('ccRegisterBlockElements') || []));
       headingsAreBlocks = ccBlockElems.map((t: string) => t.toLowerCase())
@@ -405,7 +400,7 @@ describe(__filename, () => {
       // content is just three adjacent block elements; this is what
       // mammoth produces from the round-trip output of ep_headings2's
       // pad HTML.
-      const htmlToDocx = require('html-to-docx');
+      const {default: htmlToDocx} = await import('html-to-docx');
       const buf: Buffer = await htmlToDocx(
           '<h1>Welcome</h1><h2>This pad</h2><p>Code line</p>');
       await fs.writeFile(tmpFile, buf);
