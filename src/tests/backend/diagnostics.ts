@@ -71,8 +71,15 @@ diag('diagnostics loaded');
 // tightly we can bracket the kill timestamp.
 const heartbeat = setInterval(() => {
   const mem = process.memoryUsage();
-  const handles = (process as any)._getActiveHandles?.().length ?? -1;
-  const requests = (process as any)._getActiveRequests?.().length ?? -1;
+  // _getActiveHandles / _getActiveRequests are undocumented Node internals.
+  // The earlier shape `_getActiveHandles?.().length ?? -1` was a bug: `?.()`
+  // only guards the call, so a missing method returns `undefined` and then
+  // `.length` throws TypeError — which would take down the whole test run.
+  // Capture the array first, then read .length only when it actually exists.
+  const handlesArr = (process as any)._getActiveHandles?.();
+  const handles = handlesArr ? handlesArr.length : -1;
+  const requestsArr = (process as any)._getActiveRequests?.();
+  const requests = requestsArr ? requestsArr.length : -1;
   diag(`hb running="${currentTest}" lastFinished="${lastFinishedTest}" ` +
     `rss=${Math.round(mem.rss / 1024 / 1024)}M ` +
     `heap=${Math.round(mem.heapUsed / 1024 / 1024)}M ` +
