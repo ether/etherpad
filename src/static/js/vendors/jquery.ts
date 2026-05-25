@@ -10712,4 +10712,20 @@
   return jQuery;
 } );
 
-export default (typeof window !== "undefined" && typeof window.$ === "object" ? window.$ : null);
+// Defensive global assignment: under esbuild's runtime bundling
+// (specialpages.ts builds /watch/pad on each request), the IIFE
+// wrapper above sees a truthy `module` shim and takes the CJS branch,
+// which sets module.exports but skips
+// `window.jQuery = window.$ = jQuery`. Every consumer (rjquery.ts and
+// friends) then throws "Failed to initialize jQuery". If jQuery
+// landed in module.exports, promote it onto window.
+if (typeof window !== "undefined" && !(window as any).jQuery) {
+  // @ts-ignore — `module` may be a runtime shim TS can't see in ESM context.
+  const mod: any = (typeof module === "object" && module && (module as any).exports) || null;
+  if (typeof mod === "function") {
+    (window as any).jQuery = mod;
+    (window as any).$ = mod;
+  }
+}
+
+export default typeof window !== "undefined" ? ((window as any).$ ?? null) : null;
