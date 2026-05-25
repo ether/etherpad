@@ -1,9 +1,6 @@
-'use strict';
-
 import {strict as assert} from 'assert';
-
-const common = require('../common');
-const setCookieParser = require('set-cookie-parser');
+import * as common from '../common.js';
+import setCookieParser from 'set-cookie-parser';
 
 describe(__filename, () => {
   let agent: any;

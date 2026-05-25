@@ -1,5 +1,3 @@
-'use strict';
-
 /**
  * End-to-end coverage for X-Forwarded-Prefix / X-Ingress-Path support (#7802).
  *
@@ -16,8 +14,8 @@
  * (regression guard).
  */
 
-const common = require('../common');
-import settings from 'ep_etherpad-lite/node/utils/Settings.js';
+import * as common from '../common.js';
+import settings from '../../../node/utils/Settings.js';
 
 let agent: any;
 

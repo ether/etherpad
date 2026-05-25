@@ -1,12 +1,10 @@
-'use strict';
-
 // Issue #7659 — direct visits to /p/:pad/timeslider should now 302-redirect
 // to the pad page; the pad's PadModeController handles entering history mode
 // from the URL hash. Iframe consumers pass ?embed=1 and still receive the
 // timeslider HTML for embedded use.
 
-const assert = require('assert').strict;
-const common = require('../common');
+import * as assert from 'node:assert/strict';
+import * as common from '../common.js';
 
 describe(__filename, function () {
   let agent: any;

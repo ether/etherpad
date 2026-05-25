@@ -1,12 +1,11 @@
-'use strict';
-
-const assert = require('assert').strict;
-const common = require('../common');
-const plugins = require('../../../static/js/pluginfw/plugin_defs');
+import * as assert from 'node:assert/strict';
+import * as common from '../common.js';
+import plugins from '../../../static/js/pluginfw/plugin_defs.js';
 import settings from '../../../node/utils/Settings.js';
 import {saveState} from '../../../node/updater/state.js';
 import {EMPTY_STATE} from '../../../node/updater/types.js';
 import path from 'node:path';
+import * as fs from 'node:fs';
 
 const statePath = () => path.join(settings.root, 'var', 'update-state.json');
 const lockPath = () => path.join(settings.root, 'var', 'update.lock');
@@ -60,7 +59,7 @@ describe(__filename, function () {
       },
     });
     // Ensure no stale lock from an earlier test.
-    try { require('node:fs').unlinkSync(lockPath()); } catch {/* noop */}
+    try { fs.unlinkSync(lockPath()); } catch {/* noop */}
   });
 
   afterEach(() => {

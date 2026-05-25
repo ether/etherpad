@@ -1,7 +1,7 @@
-'use strict';
-
-const assert = require('assert').strict;
-const {colorutils} = require('../../../static/js/colorutils');
+import * as assert from 'node:assert/strict';
+// colorutils source uses @ts-nocheck and declares the object as `{}` — cast to any for tests.
+import {colorutils as _colorutils} from '../../../static/js/colorutils.js';
+const colorutils = _colorutils as any;
 
 // Unit coverage for the WCAG helpers added in #7377.
 // Kept backend-side so it runs in plain mocha without a browser; colorutils

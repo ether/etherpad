@@ -1,9 +1,6 @@
-'use strict';
-
-import {MapArrayType} from "../../../node/types/MapType.js";
-
-const assert = require('assert').strict;
-const common = require('../common');
+import {MapArrayType} from '../../../node/types/MapType.js';
+import * as assert from 'node:assert/strict';
+import * as common from '../common.js';
 import settings from '../../../node/utils/Settings.js';
 
 const ogTag = (html: string, prop: string): string | null => {

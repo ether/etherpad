@@ -1,12 +1,11 @@
-'use strict';
-
-const assert = require('assert').strict;
-const common = require('../common');
-const plugins = require('../../../static/js/pluginfw/plugin_defs');
+import * as assert from 'node:assert/strict';
+import * as common from '../common.js';
+import plugins from '../../../static/js/pluginfw/plugin_defs.js';
 import settings from '../../../node/utils/Settings.js';
 import {saveState} from '../../../node/updater/state.js';
 import {EMPTY_STATE} from '../../../node/updater/types.js';
 import path from 'node:path';
+import * as updateStatusMod from '../../../node/hooks/express/updateStatus.js';
 
 const statePath = () => path.join(settings.root, 'var', 'update-state.json');
 
@@ -24,9 +23,8 @@ describe(__filename, function () {
 
   beforeEach(async function () {
     // Reset the route module's badge cache so each test sees fresh state.
-    const mod = require('../../../node/hooks/express/updateStatus');
-    if (typeof mod._resetBadgeCacheForTests === 'function') {
-      mod._resetBadgeCacheForTests();
+    if (typeof (updateStatusMod as any)._resetBadgeCacheForTests === 'function') {
+      (updateStatusMod as any)._resetBadgeCacheForTests();
     }
     // Save auth settings and hooks so we can restore after each test.
     backups.hooks = {};

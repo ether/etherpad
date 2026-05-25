@@ -1,10 +1,7 @@
-'use strict';
-
 import {MapArrayType} from '../../../node/types/MapType.js';
 import settings from '../../../node/utils/Settings.js';
-
-const assert = require('assert').strict;
-const common = require('../common');
+import * as assert from 'node:assert/strict';
+import * as common from '../common.js';
 
 // Regression coverage for the settings modal title. With
 // `enablePadWideSettings: false` the template used to render

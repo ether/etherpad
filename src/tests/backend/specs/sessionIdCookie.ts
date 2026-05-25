@@ -1,5 +1,3 @@
-'use strict';
-
 /**
  * Regression test for https://github.com/ether/etherpad/issues/7045.
  *
@@ -16,12 +14,12 @@
  * fallback, with a one-time warning per socket.
  */
 
-const assert = require('assert').strict;
-const common = require('../common');
-const padManager = require('../../../node/db/PadManager');
-const {sessioninfos} = require('../../../node/handler/PadMessageHandler');
+import assert from 'node:assert/strict';
+import * as common from '../common.js';
+import * as padManager from '../../../node/db/PadManager.js';
+import {sessioninfos} from '../../../node/handler/PadMessageHandler.js';
 import settings from '../../../node/utils/Settings.js';
-const io = require('socket.io-client');
+import {io} from 'socket.io-client';
 
 const cookiePrefix = () => settings.cookie?.prefix || '';
 

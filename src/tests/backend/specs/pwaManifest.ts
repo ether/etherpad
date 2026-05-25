@@ -1,5 +1,3 @@
-'use strict';
-
 /**
  * Coverage for /manifest.json prefix-awareness.
  *
@@ -11,7 +9,7 @@
  * proxied under a subpath.
  */
 
-const common = require('../common');
+import * as common from '../common.js';
 import settings from '../../../node/utils/Settings.js';
 
 let agent: any;

@@ -1,6 +1,4 @@
-'use strict';
-
-const assert = require('assert').strict;
+import * as assert from 'node:assert/strict';
 import {execSync, spawn} from 'node:child_process';
 import fs from 'node:fs/promises';
 import os from 'node:os';

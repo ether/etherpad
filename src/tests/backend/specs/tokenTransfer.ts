@@ -1,14 +1,11 @@
-'use strict';
-
 /**
  * Coverage for /tokenTransfer/:token: TTL, single-use, and the
  * response-body shape (cookie-only — no `token` field in JSON).
  */
 
-const common = require('../common');
+import * as common from '../common.js';
 import settings from '../../../node/utils/Settings.js';
-
-const db = require('../../../node/db/DB');
+import DB from '../../../node/db/DB.js';
 
 let agent: any;
 
@@ -102,13 +99,13 @@ describe(__filename, function () {
       // production code path reads createdAt off the DB record — so it's
       // sufficient to put an expired createdAt in place.
       const key = `tokenTransfer::${id}`;
-      const record = await db.get(key);
+      const record = await (DB as any).get(key);
       if (!record) {
         throw new Error(
             `expected a DB record at ${key}; got ${JSON.stringify(record)}`);
       }
       record.createdAt = Date.now() - (TRANSFER_TTL_MS + 1000);
-      await db.set(key, record);
+      await (DB as any).set(key, record);
 
       const res = await agent.get(`/tokenTransfer/${id}`).expect(410);
       if (!/expired/i.test(res.body.error || '')) {
@@ -118,7 +115,7 @@ describe(__filename, function () {
       // After an expired GET the record should also be gone (the new code
       // removes the row before checking the TTL so an expired id cannot
       // be tried again).
-      const after = await db.get(key);
+      const after = await (DB as any).get(key);
       if (after != null) {
         throw new Error(
             `expected the DB record to be removed after an expired GET; ` +
@@ -131,7 +128,7 @@ describe(__filename, function () {
       // handler made createdAt optional and inserted it inconsistently).
       const id = 'legacy-record-' + Date.now();
       const key = `tokenTransfer::${id}`;
-      await db.set(key, {token: 't.legacy', prefsHttp: ''});
+      await (DB as any).set(key, {token: 't.legacy', prefsHttp: ''});
       await agent.get(`/tokenTransfer/${id}`).expect(410);
     });
   });

@@ -1,10 +1,7 @@
-'use strict';
-
 import {strict as assert} from 'assert';
-
-const common = require('../common');
-const authorManager = require('../../../node/db/AuthorManager');
-const DB = require('../../../node/db/DB');
+import * as common from '../common.js';
+import * as authorManager from '../../../node/db/AuthorManager.js';
+import DB from '../../../node/db/DB.js';
 
 describe(__filename, () => {
   before(async () => {
