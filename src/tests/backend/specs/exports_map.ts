@@ -6,7 +6,6 @@ const require = createRequire(import.meta.url);
 // All CJS subpaths must resolve to a .cjs file.
 const cjsResolvableSubpaths = [
   'ep_etherpad-lite/node/eejs',
-  'ep_etherpad-lite/node/eejs/',
   'ep_etherpad-lite/node/db/PadManager',
   'ep_etherpad-lite/node/db/API.js',
   'ep_etherpad-lite/node/db/AuthorManager',
