@@ -103,17 +103,36 @@ eejs.require = (
     basedir = path.dirname(getCurrentFile().path);
   }
   if (mod && typeof mod.filename === 'string') {
-    // Some module-loader shims (e.g. vite-node, the .ts CJS-extension
-    // handler in pluginfw/plugins.ts) provide a `module` object whose
-    // `.filename` hasn't been populated. Falling through to
-    // `path.dirname(undefined)` here throws TypeError and crashes the
-    // template render — surfaces as a 500 on every pad page that
-    // touches an affected plugin (e.g. ep_markdown's eejsBlock_*).
-    // When filename is missing, keep the basedir we computed above.
     basedir = path.dirname(mod.filename);
     paths = Array.isArray(mod.paths) ? mod.paths : paths;
   } else if (mod && Array.isArray(mod.paths)) {
     paths = mod.paths;
+  }
+
+  // Some module-loader shims (e.g. vite-node's CJS-in-ESM bridge, the
+  // .ts handler in pluginfw/plugins.ts) hand the plugin a `module`
+  // whose `.filename` was never populated. The plugin then calls
+  // `eejs.require('./templates/x.html', {}, module)` and we end up
+  // with basedir = eejs's own dir, resolving `./templates/x.html`
+  // against the wrong root and crashing the template render with
+  // "Cannot find module './templates/x.html'".
+  //
+  // When the relative basedir is unusable (no module info AND no
+  // outer template on the file_stack), walk the JS stack to find the
+  // first frame outside this file — that's the plugin source — and
+  // use its directory.
+  const basedirUnusable = !mod?.filename && eejs.info.file_stack.length === 0;
+  if (basedirUnusable && name.startsWith('./')) {
+    const stack = new Error().stack || '';
+    for (const line of stack.split('\n')) {
+      const m = /\((.+?):\d+:\d+\)/.exec(line) || /at\s+(.+?):\d+:\d+\s*$/.exec(line);
+      if (!m) continue;
+      const file = m[1].replace(/^file:\/\/\/?/, '').replace(/\\/g, '/');
+      if (file.includes('/node/eejs/') || file.includes('/ejs/')) continue;
+      // file is now the first non-eejs frame's source file URL/path.
+      basedir = path.dirname(file);
+      break;
+    }
   }
 
   /**
