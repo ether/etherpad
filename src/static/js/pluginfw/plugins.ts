@@ -2,6 +2,8 @@
 'use strict';
 import {pathToFileURL} from 'node:url';
 import {promises as fs} from 'fs';
+import {Module} from 'node:module';
+import {readFileSync} from 'node:fs';
 import log4js from 'log4js';
 import path from 'path';
 import runCmd from '../../../node/utils/run_cmd.js';
@@ -12,6 +14,34 @@ import hooks from './hooks.js';
 import settings, {
   getEpVersion,
 } from '../../../node/utils/Settings.js';
+
+// Register a .ts loader for CJS require() calls inside plugins.
+// Some plugins (e.g. ep_markdown) ship TypeScript source files and load
+// them via require('./someFile') without a .js extension. Node's CJS resolver
+// does not understand .ts by default. We lazily compile .ts → CJS on first
+// access using esbuild's synchronous transformSync API (esbuild is already a
+// production dependency of ep_etherpad-lite).
+//
+// Vite-node / tsx handle this automatically in the test runner, but live plugin
+// code goes through plain Node CJS resolution and needs this shim.
+if (!(Module as any)._extensions['.ts']) {
+  (Module as any)._extensions['.ts'] = (mod: any, filename: string) => {
+    // Use a dynamic require for esbuild to avoid a hard circular-dependency
+    // at module-load time (esbuild is large). The call-time cost is negligible
+    // because Node caches require() results.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const {transformSync} = require('esbuild');
+    const source = readFileSync(filename, 'utf8');
+    const {code} = transformSync(source, {
+      loader: 'ts',
+      format: 'cjs',
+      target: 'node24',
+      sourcemap: 'inline',
+      sourcefile: filename,
+    });
+    mod._compile(code, filename);
+  };
+}
 
 const logger = log4js.getLogger('plugins');
 
