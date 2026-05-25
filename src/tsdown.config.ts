@@ -14,11 +14,18 @@ const commonEntries = [
 // The CJS twin excludes server.ts (top-level await) and the test helpers
 // (common.ts transitively imports server.ts). CJS consumers of
 // ep_etherpad-lite only need the library surface; test helpers are ESM-only.
+//
+// node/db/**/*.ts and node/utils/ImportEtherpad.ts are also excluded from CJS
+// because they transitively import ueberdb2, which is ESM-only (no "require"
+// export condition in its package.json). Plugins that need db access must use
+// ESM `await import('ep_etherpad-lite/node/db/...')`.
 const cjsEntries = [
   'node/**/*.ts',
   'static/js/**/*.ts',
   '!**/*.d.ts',
   '!node/server.ts',
+  '!node/db/**/*.ts',
+  '!node/utils/ImportEtherpad.ts',
 ];
 
 const common = {

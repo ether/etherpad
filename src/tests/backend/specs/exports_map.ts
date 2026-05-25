@@ -3,12 +3,11 @@ import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
 
-// All CJS subpaths must resolve to a .cjs file.
+// CJS subpaths that must resolve to a .cjs file (have a "require" condition).
+// Note: node/db/* is intentionally excluded — those modules import ueberdb2
+// which is ESM-only, so their exports entry has only an "import" condition.
 const cjsResolvableSubpaths = [
   'ep_etherpad-lite/node/eejs',
-  'ep_etherpad-lite/node/db/PadManager',
-  'ep_etherpad-lite/node/db/API.js',
-  'ep_etherpad-lite/node/db/AuthorManager',
   'ep_etherpad-lite/static/js/pad_utils',
 ];
 
@@ -18,6 +17,14 @@ const cjsResolvableSubpaths = [
 const cjsLoadableSubpaths = [
   'ep_etherpad-lite/node/eejs',
   'ep_etherpad-lite/static/js/pad_utils',
+];
+
+// These subpaths are ESM-only (no "require" condition). Trying to
+// require.resolve() them should throw.
+const esmOnlySubpaths = [
+  'ep_etherpad-lite/node/db/PadManager',
+  'ep_etherpad-lite/node/db/API.js',
+  'ep_etherpad-lite/node/db/AuthorManager',
 ];
 
 const esmSubpaths = [
@@ -41,6 +48,14 @@ describe('ep_etherpad-lite exports map', () => {
         const mod = require(spec);
         expect(mod).toBeTruthy();
         expect(typeof mod).toBe('object');
+      });
+    }
+  });
+
+  describe('ESM-only subpaths (no require condition)', () => {
+    for (const spec of esmOnlySubpaths) {
+      test(`require.resolve('${spec}') throws (no "require" condition)`, () => {
+        expect(() => require.resolve(spec)).toThrow();
       });
     }
   });

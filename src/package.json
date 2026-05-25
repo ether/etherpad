@@ -18,6 +18,12 @@
       "import": "./dist/node/eejs/index.mjs",
       "require": "./dist-cjs/node/eejs/index.cjs"
     },
+    "./node/db/*": {
+      "import": "./dist/node/db/*.mjs"
+    },
+    "./node/db/*.js": {
+      "import": "./dist/node/db/*.mjs"
+    },
     "./node/*": {
       "import": "./dist/node/*.mjs",
       "require": "./dist-cjs/node/*.cjs"
@@ -182,11 +188,11 @@
     "url": "https://github.com/ether/etherpad.git"
   },
   "scripts": {
-    "build": "tsdown",
+    "build": "tsdown && node scripts/postbuild.mjs",
     "build:watch": "tsdown --watch",
     "clean:dist": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true});require('fs').rmSync('dist-cjs',{recursive:true,force:true})\"",
     "lint": "eslint .",
-    "pretest": "tsdown",
+    "pretest": "tsdown && node scripts/postbuild.mjs",
     "test": "cross-env NODE_ENV=production vitest run",
     "test-utils": "cross-env NODE_ENV=production vitest run tests/backend/specs --testTimeout 5000",
     "test-container": "cross-env NODE_ENV=production vitest run --include 'tests/container/specs/**/*.ts'",
