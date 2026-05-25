@@ -59,8 +59,7 @@ import socketio from './socketio.js';
 
 import hooks from './pluginfw/hooks.js';
 import {showPrivacyBannerIfEnabled} from './privacy_banner.js';
-
-import './pad_version_badge.js';
+import {maybeShowOutdatedNotice} from './pad_outdated_notice.js';
 
 // This array represents all GET-parameters which can be used to change a setting.
 //   name:     the parameter-name, eg  `?noColors=true`  =>  `noColors`
@@ -751,6 +750,7 @@ const pad = {
 
       showDeletionTokenModalIfPresent();
       showPrivacyBannerIfEnabled((clientVars as any).privacyBanner);
+      void maybeShowOutdatedNotice();
 
       hooks.aCallAll('postAceInit', {ace: padeditor.ace, clientVars, pad});
     };

@@ -71,7 +71,24 @@ export const expressCreateServer = (hookName:string, args:ArgsExpressType, cb:Fu
         console.log(`Exporting pad "${req.params.pad}" in ${req.params.type} format`);
         await exportHandler.doExport(req, res, padId, readOnlyId, req.params.type);
       }
-    })().catch((err) => next(err || new Error(err)));
+    })().catch((err) => {
+      // Send a deterministic plain-text body for every export failure.
+      // checkValidRev throws CustomError('...', 'apierror') for a bad :rev,
+      // but conversion / fs / soffice errors also reach this handler — and
+      // without an explicit response, all of them would fall through to
+      // Express's default HTML error renderer, which is hostile to API
+      // callers (and would be saved as a file by the browser because of
+      // the attachment header set in doExport for non-apierror cases).
+      if (res.headersSent) return next(err || new Error(err));
+      // Clear the download header so the error body renders inline instead
+      // of being saved as the requested filename.
+      res.removeHeader('Content-Disposition');
+      // Log the full error server-side for operators. apierrors are
+      // user-facing validation errors and not worth a server-side log line.
+      if (!err || err.name !== 'apierror') console.error('Export error:', err);
+      const msg = (err && err.message) || 'Internal Server Error';
+      return res.status(500).type('text/plain').send(msg);
+    });
   });
 
   // handle import requests

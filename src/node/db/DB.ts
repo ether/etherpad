@@ -46,18 +46,23 @@ const dbModule: any = {
         });
       }
     }
-    for (const fn of ['get', 'set', 'findKeys', 'getSub', 'setSub', 'remove']) {
+    for (const fn of ['get', 'set', 'findKeys', 'findKeysPaged', 'getSub', 'setSub', 'remove']) {
+      const f = (dbModule.db as any)[fn];
+      if (typeof f !== 'function') {
+        throw new Error(
+          `ueberdb2 ${dbModule.db!.constructor.name} is missing required method ${fn}; ` +
+            'check that ueberdb2 is at the minimum version pinned in package.json');
+      }
       dbModule[fn] = async (...args: string[]) => {
         // During shutdown, background timers (for example session cleanup) can still
         // attempt DB access for a short period. Avoid crashing the process in that
         // window if the DB has already been closed.
         if (dbModule.db == null) {
           if (fn === 'get' || fn === 'getSub') return null;
-          if (fn === 'findKeys') return [];
+          if (fn === 'findKeys' || fn === 'findKeysPaged') return [];
           return;
         }
-        const f = dbModule.db[fn];
-        return await f.call(dbModule.db, ...args);
+        return await (dbModule.db as any)[fn].call(dbModule.db, ...args);
       };
     }
   },

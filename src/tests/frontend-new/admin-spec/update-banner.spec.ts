@@ -26,7 +26,7 @@ test.describe('admin update page', () => {
           installMethod: 'git',
           tier: 'notify',
           policy: null,
-          vulnerableBelow: [],
+
         }),
       });
     });
@@ -59,7 +59,7 @@ test.describe('admin update page', () => {
           installMethod: 'git',
           tier: 'notify',
           policy: {canNotify: true, canManual: false, canAuto: false, canAutonomous: false, reason: 'install-method-not-writable'},
-          vulnerableBelow: [],
+
         }),
       });
     });

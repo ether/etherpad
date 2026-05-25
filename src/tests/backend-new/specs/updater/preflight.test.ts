@@ -10,6 +10,7 @@ const baseDeps = (): PreflightDeps => ({
   lockHeld: vi.fn(async () => false),
   remoteHasTag: vi.fn(async () => true),
   verifyTag: vi.fn(async (): Promise<VerifyResult> => ({ok: true, reason: 'signature-not-required'})),
+  readTargetEnginesNode: vi.fn(async () => null),
 });
 
 const baseInput = {
@@ -17,6 +18,7 @@ const baseInput = {
   diskSpaceMinMB: 500,
   requireSignature: false,
   trustedKeysPath: null as string | null,
+  currentNodeVersion: '25.0.0',
 };
 
 describe('runPreflight', () => {
@@ -74,5 +76,59 @@ describe('runPreflight', () => {
     const r = await runPreflight(baseInput, deps);
     expect(r.ok).toBe(false);
     expect(deps.remoteHasTag).not.toHaveBeenCalled();
+  });
+
+  describe('Node engine check', () => {
+    it('passes when target has no engines.node', async () => {
+      const r = await runPreflight(baseInput, {
+        ...baseDeps(), readTargetEnginesNode: vi.fn(async () => null),
+      });
+      expect(r).toEqual({ok: true});
+    });
+
+    it('passes when current Node satisfies the range', async () => {
+      const r = await runPreflight(baseInput, {
+        ...baseDeps(), readTargetEnginesNode: vi.fn(async () => '>=25.0.0'),
+      });
+      expect(r).toEqual({ok: true});
+    });
+
+    it('fails when current Node is below a future floor (e.g. node 25 vs >=26)', async () => {
+      const r = await runPreflight(baseInput, {
+        ...baseDeps(), readTargetEnginesNode: vi.fn(async () => '>=26.0.0'),
+      });
+      expect(r.ok).toBe(false);
+      if (!r.ok) {
+        expect(r.reason).toBe('node-engine-mismatch');
+        expect(r.detail).toContain('Node >=26.0.0');
+        expect(r.detail).toContain('25.0.0');
+      }
+    });
+
+    it('handles caret ranges', async () => {
+      const r = await runPreflight({...baseInput, currentNodeVersion: '24.5.0'}, {
+        ...baseDeps(), readTargetEnginesNode: vi.fn(async () => '^25.0.0'),
+      });
+      expect(r.ok).toBe(false);
+      if (!r.ok) expect(r.reason).toBe('node-engine-mismatch');
+    });
+
+    it('handles loose ranges with spaces', async () => {
+      const r = await runPreflight(baseInput, {
+        ...baseDeps(), readTargetEnginesNode: vi.fn(async () => '>= 25.0.0'),
+      });
+      expect(r).toEqual({ok: true});
+    });
+
+    it('runs after signature verification (engine check should not gate trust)', async () => {
+      const readEngines = vi.fn(async () => '>=99.0.0');
+      const r = await runPreflight(baseInput, {
+        ...baseDeps(),
+        verifyTag: vi.fn(async (): Promise<VerifyResult> => ({ok: false, reason: 'signature-verification-failed'})),
+        readTargetEnginesNode: readEngines,
+      });
+      expect(r).toEqual({ok: false, reason: 'signature-verification-failed'});
+      expect(readEngines).not.toHaveBeenCalled();
+    });
   });
 });

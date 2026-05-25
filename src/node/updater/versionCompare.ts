@@ -1,5 +1,3 @@
-import type {VulnerableBelowDirective} from './types.js';
-
 export interface ParsedSemver {
   major: number;
   minor: number;
@@ -26,28 +24,14 @@ export const compareSemver = (a: string, b: string): -1 | 0 | 1 => {
   return 0;
 };
 
-export const isMajorBehind = (current: string, latest: string): boolean => {
+// True iff `current` is at least one minor version behind `latest`.
+// Equivalent to: latest.major > current.major, OR same major and
+// latest.minor > current.minor. Patch-only deltas return false, equal
+// versions return false, current newer than latest returns false.
+export const isMinorOrMoreBehind = (current: string, latest: string): boolean => {
   const c = parseSemver(current);
   const l = parseSemver(latest);
   if (!c || !l) return false;
-  return l.major - c.major >= 1;
-};
-
-const VULN_RE = /<!--\s*updater\s*:\s*vulnerable-below\s+([^\s-][^\s]*)\s*-->/i;
-
-export const parseVulnerableBelow = (body: string): string | null => {
-  const m = VULN_RE.exec(body);
-  if (!m) return null;
-  if (!parseSemver(m[1])) return null;
-  return m[1];
-};
-
-export const isVulnerable = (
-  current: string,
-  directives: readonly VulnerableBelowDirective[],
-): boolean => {
-  for (const d of directives) {
-    if (compareSemver(current, d.threshold) < 0) return true;
-  }
-  return false;
+  if (l.major !== c.major) return l.major > c.major;
+  return l.minor > c.minor;
 };

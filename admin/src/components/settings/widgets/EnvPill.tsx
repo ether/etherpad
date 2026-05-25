@@ -3,28 +3,42 @@ import { useTranslation } from 'react-i18next';
 import type { JSONPath } from 'jsonc-parser';
 import type { EnvPlaceholder } from '../envPill';
 
+const REDACTED = '[REDACTED]';
+
 type Props = {
   placeholder: EnvPlaceholder;
   path: JSONPath;
   onChange: (newDefault: string) => void;
+  resolvedValue?: unknown;
 };
 
 const sanitize = (s: string) => s.replace(/[}]/g, '');
 
-export const EnvPill = ({ placeholder, path, onChange }: Props) => {
+const formatDisplay = (v: unknown): string => {
+  if (v === null) return 'null';
+  if (typeof v === 'string') return v;
+  return String(v);
+};
+
+export const EnvPill = ({ placeholder, path, onChange, resolvedValue }: Props) => {
   const { t } = useTranslation();
   const initial = placeholder.defaultValue ?? '';
   const [draft, setDraft] = useState(initial);
   const focused = useRef(false);
 
-  // Sync local draft from upstream (server canonicalisation, raw-mode edit)
-  // only while the input isn't focused so we don't trample mid-typing.
   useEffect(() => {
     if (!focused.current) setDraft(initial);
   }, [initial]);
 
   const id = `field-${path.join('.')}`;
   const testid = `env-${path.join('.')}`;
+
+  // Three runtime states:
+  //   undefined → server didn't send resolved (old server, or path absent)
+  //   '[REDACTED]' → secret hidden
+  //   anything else → live runtime value
+  const hasResolved = resolvedValue !== undefined;
+  const isRedacted = resolvedValue === REDACTED;
 
   return (
     <span
@@ -52,6 +66,31 @@ export const EnvPill = ({ placeholder, path, onChange }: Props) => {
           onChange(v);
         }}
       />
+      {hasResolved && !isRedacted && (
+        <span
+          className="settings-widget-env-runtime"
+          data-testid={`env-runtime-${path.join('.')}`}
+          title={t('admin_settings.env_pill.runtime_tooltip', { variable: placeholder.variable })}
+        >
+          <span className="settings-widget-env-runtime-arrow" aria-hidden>→</span>
+          <span className="settings-widget-env-runtime-label" aria-hidden>
+            {t('admin_settings.env_pill.runtime_label')}
+          </span>
+          <span className="settings-widget-env-runtime-value">
+            {formatDisplay(resolvedValue)}
+          </span>
+        </span>
+      )}
+      {isRedacted && (
+        <span
+          className="settings-widget-env-runtime settings-widget-env-runtime-redacted"
+          data-testid={`env-runtime-redacted-${path.join('.')}`}
+          title={t('admin_settings.env_pill.redacted_tooltip', { variable: placeholder.variable })}
+          aria-label={t('admin_settings.env_pill.redacted_tooltip', { variable: placeholder.variable })}
+        >
+          <span aria-hidden>→ ••••••</span>
+        </span>
+      )}
     </span>
   );
 };

@@ -469,7 +469,10 @@ const getHTMLFromAtext = async (pad:PadType, atext: AText, authorColors?: string
           // preserve counters so numbering can continue after interruptions.
           // Use 0 as sentinel (not delete) so the ol-opening logic knows this
           // level was explicitly reset and won't fall back to line.start.
-          if (diff + 1 > actualNextLevel) {
+          // Only reset when closing an ordered list — closing an unordered list
+          // at the same level must not poison the ol counter for a future
+          // unrelated ol at this level (which would still want line.start).
+          if (line.listTypeName === 'number' && diff + 1 > actualNextLevel) {
             olItemCounts[diff + 1] = 0;
           }
 
@@ -528,6 +531,7 @@ export const getPadHTMLDocument = async (padId: string, revNum: string|number|un
     body: html,
     padId: Security.escapeHTML(readOnlyId || padId),
     extraCSS: stylesForExportCSS,
+    proxyPath: '',
   });
 };
 

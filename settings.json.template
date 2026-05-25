@@ -239,13 +239,18 @@
      * - diskSpaceMinMB: pre-flight refuses to start an update without this much free.
      * - requireSignature: refuse updates whose tag isn't signed by a trusted key.
      * - trustedKeysPath: override the keyring location passed to git verify-tag (GNUPGHOME).
+     * - maintenanceWindow: tier 4 only — nightly window during which the scheduler
+     *     may fire. Null = tier 4 disabled (with tier="autonomous", the policy
+     *     downgrades to canAuto). Shape: {"start":"HH:MM","end":"HH:MM","tz":"local"|"utc"}.
+     *     `end` is exclusive; `end < start` denotes a cross-midnight window.
      */
     "preApplyGraceMinutes": 0,
     "drainSeconds": 60,
     "rollbackHealthCheckSeconds": 60,
     "diskSpaceMinMB": 500,
     "requireSignature": false,
-    "trustedKeysPath": null
+    "trustedKeysPath": null,
+    "maintenanceWindow": null
   },
 
   /*
@@ -266,6 +271,29 @@
    * Set to null to disable outbound mail from the updater.
    */
   "adminEmail": null,
+
+  /*
+   * SMTP transport for outbound admin notifications. host=null keeps the
+   * legacy log-only behaviour (Notifier still dedupes; nothing leaves the
+   * box). Set host+from (and optionally auth) to deliver via nodemailer.
+   * The dependency is lazy-loaded so installs without mail.host pay no
+   * runtime cost.
+   *
+   *   "mail": {
+   *     "host": "smtp.example.com",
+   *     "port": 587,
+   *     "secure": false,
+   *     "from": "etherpad@example.com",
+   *     "auth": { "user": "smtp-user", "pass": "smtp-pass" }
+   *   }
+   */
+  "mail": {
+    "host": null,
+    "port": 587,
+    "secure": false,
+    "from": null,
+    "auth": null
+  },
 
   /*
    * Settings for cleanup of pads
@@ -507,6 +535,15 @@
    *
    * The other effect will be that the logs will contain the real client's IP,
    * instead of the reverse proxy's IP.
+   *
+   * Setting this to `true` also makes Etherpad honor two standard URL-path-
+   * prefix headers from upstream proxies:
+   *   - `X-Forwarded-Prefix` (HAProxy / Traefik convention)
+   *   - `X-Ingress-Path` (Home Assistant supervisor ingress)
+   *
+   * Both are sanitised before use. Etherpad's own `x-proxy-path` header is
+   * honored regardless of this setting; the operator is presumed to have
+   * configured their proxy intentionally when sending the custom header.
    */
   "trustProxy": false,
 
@@ -597,6 +634,12 @@
     /*
      * Whether to periodically clean up expired and stale sessions from the
      * database. Set to false to disable. Default: true.
+     *
+     * Cleanup runs hourly and walks the sessionstorage:* keyspace in 500-key
+     * pages so very large session tables don't pin the keys in memory all at
+     * once (see https://github.com/ether/etherpad/issues/7830). A single run
+     * is capped at 10 minutes; if your DB is so large the budget is reached,
+     * a warning is logged and the next scheduled run continues.
      */
     "sessionCleanup": true
   },

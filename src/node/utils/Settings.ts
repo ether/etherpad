@@ -348,11 +348,30 @@ export type SettingsType = {
     requireSignature: boolean,
     /** Override the OS keyring location (passed to git verify-tag via $GNUPGHOME). */
     trustedKeysPath: string | null,
+    /**
+     * Tier 4: nightly window during which the scheduler is allowed to fire.
+     * Null = tier 4 disabled (canAutonomous is denied with reason
+     * `maintenance-window-missing`). Shape validated at boot by `parseWindow`.
+     */
+    maintenanceWindow: {start: string; end: string; tz: 'local' | 'utc'} | null,
   },
   adminOpenAPI: {
     enabled: boolean,
   },
   adminEmail: string | null,
+  /**
+   * SMTP transport for outbound admin notifications (updater + future
+   * features). Null `host` disables outbound mail — the Notifier still runs
+   * and dedupe state is updated, but messages only log `(would send email)`.
+   * `auth` is optional; omit for unauthenticated relays.
+   */
+  mail: {
+    host: string | null;
+    port: number;
+    secure: boolean;
+    from: string | null;
+    auth: {user: string; pass: string} | null;
+  },
   getPublicSettings: () => Pick<SettingsType, "title" | "skinVariants"|"randomVersionString"|"skinName"|"toolbar"| "exposeVersion"| "gitVersion" | "enablePadWideSettings" | "enablePluginPadOptions" | "privacyBanner">,
 }
 
@@ -550,6 +569,9 @@ const settings: SettingsType = {
     diskSpaceMinMB: 500,
     requireSignature: false,
     trustedKeysPath: null,
+    // Tier 4: night-window during which the scheduler may fire. Null disables tier 4 only.
+    // Example: { start: "03:00", end: "05:00", tz: "local" } or tz: "utc".
+    maintenanceWindow: null,
   },
   /**
    * Admin OpenAPI document endpoint at /admin/openapi.json.
@@ -568,6 +590,19 @@ const settings: SettingsType = {
    * Null disables outbound mail from the updater.
    */
   adminEmail: null,
+  /**
+   * SMTP transport for outbound admin notifications. Null `host` keeps the
+   * legacy log-only behaviour. Set `host`+`from` (and optionally `auth`) to
+   * deliver via nodemailer. The dependency is lazy-loaded — installs without
+   * a mail.host pay no runtime cost.
+   */
+  mail: {
+    host: null,
+    port: 587,
+    secure: false,
+    from: null,
+    auth: null,
+  },
   /**
    * Whether certain shortcut keys are enabled for a user in the pad
    */
@@ -689,9 +724,19 @@ const settings: SettingsType = {
  * Deprecated cookie signing key.
  */
   sessionKey: null,
-  /*
- * Trust Proxy, whether or not trust the x-forwarded-for header.
- */
+  /**
+   * Trust Proxy, whether or not trust the x-forwarded-for header.
+   *
+   * Setting this to `true` also makes Etherpad honor two standard URL-path-
+   * prefix headers from upstream proxies:
+   *   - `X-Forwarded-Prefix` (HAProxy / Traefik convention)
+   *   - `X-Ingress-Path` (Home Assistant supervisor ingress)
+   *
+   * Both are sanitised before use (see src/node/utils/sanitizeProxyPath.ts).
+   * Etherpad's own `x-proxy-path` header is honored regardless of this
+   * setting; the operator is presumed to have configured their proxy
+   * intentionally when sending the custom header.
+   */
   trustProxy: false,
   /*
  * Settings controlling the session cookie issued by Etherpad.

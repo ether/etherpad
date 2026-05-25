@@ -40,6 +40,11 @@ import { cleanText } from './Pad.js';
 import PadDiff from '../utils/padDiff.js';
 import { checkValidRev, isInt } from '../utils/checkValidRev.js';
 
+// Mirror of `Pad.SYSTEM_AUTHOR_ID`. Inlined to avoid a circular load
+// (API <-> Pad) at module init time. Kept in sync with the constant in
+// `./Pad.ts`.
+const SYSTEM_AUTHOR_ID = 'a.etherpad-system';
+
 // Lazy require bridge for the optional `Cleanup` helper used by compactPad —
 // avoids loading the cleanup subsystem on every API import.
 const require = createRequire(import.meta.url);
@@ -625,9 +630,28 @@ export const restoreRevision = async (padID: string, rev: number, authorId = '')
   // create a new changeset with a helper builder object
   const builder = new Builder(oldText.length);
 
+  // The author to attribute inserts to. If the caller supplied an
+  // explicit authorId, that wins; otherwise fall back to the stable
+  // system author. The replayed atext was built from historical
+  // revisions that may legitimately have insert ops without an
+  // author attribute (legacy server-internal flows / .etherpad
+  // imports); appendRevision now requires every insert to carry
+  // one, so we merge the marker in below.
+  const replayAuthorId = authorId || SYSTEM_AUTHOR_ID;
+
   // assemble each line into the builder
-  eachAttribRun(atext.attribs, (start: number, end: number, attribs:Attribute[]) => {
-    builder.insert(atext.text.substring(start, end), attribs);
+  eachAttribRun(atext.attribs, (start: number, end: number, attribs:string) => {
+    // attribs here is the op.attribs *string* (the eachAttribRun
+    // callback receives it as the third arg). Use AttributeMap to
+    // merge in `author` while preserving canonical (sorted) order
+    // so checkRep doesn't reject the result. The `.set` call is a
+    // no-op when the existing attribs already contain an `author`
+    // attribute that matches; when they contain a *different*
+    // author it preserves the historical attribution (we only
+    // set author when it's missing).
+    const map = AttributeMap.fromString(attribs, pad.pool);
+    if (!map.get('author')) map.set('author', replayAuthorId);
+    builder.insert(atext.text.substring(start, end), map.toString());
   });
 
   const lastNewlinePos = oldText.lastIndexOf('\n');
@@ -836,7 +860,12 @@ Example returns:
 export const listAuthorsOfPad = async (padID: string) => {
   // get the pad
   const pad = await getPadSafe(padID, true);
-  const authorIDs = pad.getAllAuthors();
+  // SYSTEM_AUTHOR_ID is the synthetic author Etherpad attributes inserts to
+  // when no authorId is supplied (HTTP API setText/appendText/setHTML without
+  // authorId, server-side import flows, plugins like ep_post_data). It is an
+  // implementation detail of changeset bookkeeping, not a real contributor, so
+  // it should not surface through this public API.
+  const authorIDs = pad.getAllAuthors().filter((id: string) => id !== SYSTEM_AUTHOR_ID);
   return {authorIDs};
 };
 

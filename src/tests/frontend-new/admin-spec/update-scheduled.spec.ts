@@ -15,7 +15,6 @@ const scheduledStatus = (msFromNow: number) => ({
   installMethod: 'git',
   tier: 'auto',
   policy: {canNotify: true, canManual: true, canAuto: true, canAutonomous: false, reason: 'ok'},
-  vulnerableBelow: [],
   execution: {
     status: 'scheduled',
     targetTag: 'v2.7.2',

@@ -1,35 +1,103 @@
 'use strict';
 
 import path from 'node:path';
+import {LRUCache} from 'lru-cache';
 import {ArgsExpressType} from '../../types/ArgsExpressType.js';
 import settings, {getEpVersion} from '../../utils/Settings.js';
 import {getDetectedInstallMethod, stateFilePath} from '../../updater/index.js';
 import {evaluatePolicy} from '../../updater/UpdatePolicy.js';
-import {compareSemver, isMajorBehind, isVulnerable} from '../../updater/versionCompare.js';
+import {isMinorOrMoreBehind} from '../../updater/versionCompare.js';
 import {loadState} from '../../updater/state.js';
 import {isHeld} from '../../updater/lock.js';
+import {nextWindowStart, parseWindow} from '../../updater/MaintenanceWindow.js';
 
 
-let badgeCache: {value: 'severe' | 'vulnerable' | null; at: number} = {value: null, at: 0};
-// Coalesce concurrent computeOutdated() calls during a cache-miss so a burst of
-// requests at expiry doesn't fan out into N redundant disk reads.
-let badgeInFlight: Promise<'severe' | 'vulnerable' | null> | null = null;
-const BADGE_CACHE_MS = 60 * 1000;
-
-const computeOutdated = async (): Promise<'severe' | 'vulnerable' | null> => {
-  const state = await loadState(stateFilePath());
-  if (!state.latest) return null;
-  const current = getEpVersion();
-  if (compareSemver(current, state.latest.version) >= 0) return null;
-  if (isVulnerable(current, state.vulnerableBelow)) return 'vulnerable';
-  if (isMajorBehind(current, state.latest.version)) return 'severe';
+/**
+ * Returns the authorID of whoever first contributed to the pad — i.e. the
+ * `['author', X]` entry at the lowest numeric key in the pool, with empty-X
+ * placeholders skipped. Returns null for a pad with no real author attribs yet.
+ */
+export const firstAuthorOf = (pad: {pool?: {numToAttrib?: Record<number | string, unknown>}}): string | null => {
+  const num2attrib = pad?.pool?.numToAttrib;
+  if (!num2attrib) return null;
+  const keys = Object.keys(num2attrib).map(Number).sort((a, b) => a - b);
+  for (const k of keys) {
+    const a = num2attrib[k];
+    if (Array.isArray(a) && a[0] === 'author' && typeof a[1] === 'string' && a[1] !== '') {
+      return a[1];
+    }
+  }
   return null;
+};
+
+/**
+ * Resolve the pad-visitor's authorID from the HttpOnly token cookie. This
+ * mirrors how Etherpad's own socket.io handshake resolves pad-visitor identity:
+ * the browser sends the `token` cookie (or `<prefix>token`) with every
+ * same-origin request, and `authorManager.getAuthorId(token, user)` maps the
+ * token to a stable authorID via the `token2author` DB key.
+ *
+ * We do NOT use `req.session.user.author` because Etherpad does not populate
+ * an authorID into the express-session `user` object for pad visitors, so that
+ * field is always undefined in production.
+ *
+ * On any failure path we return null and the caller treats the request as
+ * anonymous, resulting in an EMPTY (no-badge) response.
+ */
+export const resolveRequestAuthor = async (req: any): Promise<string | null> => {
+  try {
+    const cookiePrefix = (settings as any).cookie?.prefix ?? '';
+    const token = req?.cookies?.[`${cookiePrefix}token`];
+    if (typeof token !== 'string' || token === '') return null;
+    const authorManagerMod: any = await import('../../db/AuthorManager');
+    const authorManager = authorManagerMod.default ?? authorManagerMod;
+    if (typeof authorManager.getAuthorId !== 'function') return null;
+    const authorId = await authorManager.getAuthorId(token, req?.session?.user);
+    return typeof authorId === 'string' && authorId !== '' ? authorId : null;
+  } catch {
+    return null;
+  }
+};
+
+interface OutdatedResponse {
+  outdated: 'minor' | null;
+  isFirstAuthor: boolean;
+}
+
+const EMPTY: OutdatedResponse = {outdated: null, isFirstAuthor: false};
+
+const TTL_MS = 60 * 1000;
+let cache = new LRUCache<string, {value: OutdatedResponse; at: number}>({max: 1000});
+const inFlight = new Map<string, Promise<OutdatedResponse>>();
+
+/** Test-only setter: rebuild the LRU with a smaller cap so eviction can be asserted. */
+export const _setBadgeCacheCapForTests = (max: number): void => {
+  cache = new LRUCache<string, {value: OutdatedResponse; at: number}>({max});
 };
 
 /** Test-only: clear the in-memory badge cache so integration tests see fresh state. */
 export const _resetBadgeCacheForTests = (): void => {
-  badgeCache = {value: null, at: 0};
-  badgeInFlight = null;
+  cache.clear();
+  inFlight.clear();
+};
+
+const computeOutdated = async (
+  padId: string | null,
+  authorId: string | null,
+): Promise<OutdatedResponse> => {
+  const state = await loadState(stateFilePath());
+  if (!state.latest) return EMPTY;
+  const current = getEpVersion();
+  if (!isMinorOrMoreBehind(current, state.latest.version)) return EMPTY;
+  if (!padId || !authorId) return EMPTY;
+  // padManager is loaded via dynamic import to avoid circular-init w/ updater.
+  const padManagerMod: any = await import('../../db/PadManager');
+  const padManager = padManagerMod.default ?? padManagerMod;
+  if (typeof padManager.isValidPadId !== 'function' || !padManager.isValidPadId(padId)) return EMPTY;
+  if (!(await padManager.doesPadExist(padId))) return EMPTY;
+  const pad = await padManager.getPad(padId);
+  if (firstAuthorOf(pad) !== authorId) return EMPTY;
+  return {outdated: 'minor', isFirstAuthor: true};
 };
 
 // Wrap an async Express handler so a rejected promise becomes next(err) rather than
@@ -64,22 +132,27 @@ export const expressCreateServer = (
   // Tier "off" disables the entire updater feature, including its HTTP surface.
   if (settings.updates.tier === 'off') return cb();
 
-  // Public endpoint. Cached for 60s. Returns only an enum — no version string.
-  app.get('/api/version-status', wrapAsync(async (_req, res) => {
+  // Public endpoint. Cached for 60s per (padId, authorId) key.
+  app.get('/api/version-status', wrapAsync(async (req, res) => {
+    const padId = typeof req.query.padId === 'string' ? req.query.padId : null;
+    const authorId = await resolveRequestAuthor(req);
+    const key = `${padId ?? ''}|${authorId ?? ''}`;
     const now = Date.now();
-    if (now - badgeCache.at > BADGE_CACHE_MS) {
-      // Single-flight: if another request is already computing, await its
-      // promise instead of starting a second one. The first to land seeds
-      // the cache; the rest read it.
-      if (!badgeInFlight) {
-        badgeInFlight = computeOutdated().finally(() => { badgeInFlight = null; });
-      }
-      const value = await badgeInFlight;
-      // Only the request that observed the original miss writes the cache;
-      // followers may race on the assignment but write the same value.
-      badgeCache = {value, at: now};
+
+    const hit = cache.get(key);
+    if (hit && now - hit.at <= TTL_MS) {
+      res.json(hit.value);
+      return;
     }
-    res.json({outdated: badgeCache.value});
+
+    let flight = inFlight.get(key);
+    if (!flight) {
+      flight = computeOutdated(padId, authorId).finally(() => { inFlight.delete(key); });
+      inFlight.set(key, flight);
+    }
+    const value = await flight;
+    cache.set(key, {value, at: now});
+    res.json(value);
   }));
 
   // Admin UI status endpoint. By default this is open: the running version is already
@@ -103,9 +176,19 @@ export const expressCreateServer = (
           current,
           latest: state.latest.version,
           executionStatus: state.execution.status,
+          maintenanceWindow: settings.updates.maintenanceWindow,
         })
       : null;
     const lockHeld = await isHeld(path.join(settings.root, 'var', 'update.lock'));
+    // Tier 4: surface the configured window + the next opening so the admin UI
+    // can render the picker and the "deferred until..." subtitle on the
+    // scheduled panel. Non-admin requests get null for both fields (the parsed
+    // window is operational config, not a public datum).
+    const parsedWindow = parseWindow(settings.updates.maintenanceWindow);
+    const maintenanceWindow = isAdmin ? parsedWindow : null;
+    const nextWindowOpensAt = isAdmin && parsedWindow && settings.updates.tier === 'autonomous'
+      ? nextWindowStart(new Date(), parsedWindow).toISOString()
+      : null;
 
     // The Tier 2 fields (execution, lastResult) carry diagnostic strings
     // built from git/pnpm stderr — environment-specific paths, error
@@ -127,11 +210,13 @@ export const expressCreateServer = (
       installMethod,
       tier: settings.updates.tier,
       policy,
-      vulnerableBelow: state.vulnerableBelow,
       // PR 2 additions:
       execution,
       lastResult,
       lockHeld,
+      // PR 4 additions:
+      maintenanceWindow,
+      nextWindowOpensAt,
     });
   }));
 

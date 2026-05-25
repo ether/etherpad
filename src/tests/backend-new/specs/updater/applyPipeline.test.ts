@@ -84,6 +84,26 @@ describe('applyUpdate (extracted pipeline)', () => {
     expect(final.lastResult?.reason).toBe('low-disk-space');
   });
 
+  it('preserves the preflight detail in the returned reason (HTTP + email use the return value)', async () => {
+    // Regression: applyUpdate built `reasonStr = reason: detail` for state +
+    // logs but returned only `pf.reason`, so /admin/update/apply 409 bodies
+    // and failure-notify emails lost the engine-mismatch detail.
+    const {deps, loadState} = baseDeps();
+    deps.runPreflight = async () => ({
+      ok: false,
+      reason: 'node-engine-mismatch',
+      detail: 'target requires Node >=26.0.0, running 25.0.0',
+    });
+    const r = await applyUpdate({targetTag: 'v2.0.1', deps});
+    expect(r).toEqual({
+      outcome: 'preflight-failed',
+      reason: 'node-engine-mismatch: target requires Node >=26.0.0, running 25.0.0',
+    });
+    const final = loadState();
+    expect(final.lastResult?.reason)
+        .toBe('node-engine-mismatch: target requires Node >=26.0.0, running 25.0.0');
+  });
+
   it('returns cancelled when the post-preflight state check shows state was reset (admin cancelled mid-preflight)', async () => {
     const {deps} = baseDeps();
     // First preflight pass mutates state to 'preflight'. Then the cancel handler

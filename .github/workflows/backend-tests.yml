@@ -143,7 +143,7 @@ jobs:
           ep_hash_auth
           ep_headings2
           ep_markdown
-          ep_readonly_guest
+          ep_guest
           ep_set_title_on_pad
           ep_spellcheck
           ep_subscript_and_superscript
@@ -276,7 +276,7 @@ jobs:
           ep_hash_auth
           ep_headings2
           ep_markdown
-          ep_readonly_guest
+          ep_guest
           ep_set_title_on_pad
           ep_spellcheck
           ep_subscript_and_superscript

@@ -698,6 +698,8 @@ return true of false
 
 returns an array of authors who contributed to this pad
 
+The synthetic `a.etherpad-system` author (used internally when content is inserted without an explicit `authorId` — HTTP API `setText`/`appendText`/`setHTML` calls without `authorId`, server-side imports, plugins like `ep_post_data`) is omitted from the returned list.
+
 *Example returns:*
 * `{code: 0, message:"ok", data: {authorIDs : ["a.s8oes9dhwrvt0zif", "a.akf8finncvomlqva"]}`
 * `{code: 1, message:"padID does not exist", data: null}`
@@ -761,4 +763,25 @@ get stats of the etherpad instance
 ```json
 {"code":0,"message":"ok","data":{"totalPads":3,"totalSessions": 2,"totalActivePads": 1}}
 ```
+
+#### `GET /api/version-status`
+
+Returns an outdated-version signal intended for the pad-side gritter.
+
+**Query parameters:**
+
+| name    | type   | required | description                                                                 |
+| ------- | ------ | -------- | --------------------------------------------------------------------------- |
+| `padId` | string | no       | Pad whose first-author membership is being checked.                         |
+
+**Response 200 (`application/json`):**
+
+```json
+{
+  "outdated": "minor",
+  "isFirstAuthor": true
+}
+```
+
+`outdated` is `"minor"` only when the running server is at least one minor version behind the latest published release AND the request resolves to the pad's first author. Otherwise it is `null`. Result is cached per `(padId, authorId)` for 60s. The endpoint is disabled entirely when `updates.tier = 'off'`.
 

@@ -29,6 +29,37 @@ Edit `<BASEDIR>/settings.json.docker` at your will. When rebuilding the image, t
 
 **Each configuration parameter can also be set via an environment variable**, using the syntax `"${ENV_VAR}"` or `"${ENV_VAR:default_value}"`. For details, refer to `settings.json.template`.
 
+### How `settings.json` and environment variables interact
+
+This trips people up often enough that it's worth calling out explicitly (see [#7819](https://github.com/ether/etherpad/issues/7819)):
+
+* `settings.json` inside the container is a **template** containing `${VAR:default}` placeholders.
+* Environment variable substitution happens at **load time, in memory only** — env vars never overwrite `settings.json` on disk.
+* `docker exec <container> cat /opt/etherpad-lite/settings.json` will therefore always show the *templated* file (e.g. `"port": "${PORT:9001}"`), regardless of what `PORT` is set to in your environment. The resolved value is what Etherpad uses at runtime; the file is unchanged.
+* The admin /settings page also reads this file directly, so the raw view shows placeholders too. The page now surfaces a banner and an "Effective" tab that displays the in-memory resolved values when placeholders are present.
+
+### Persisting admin /settings edits across container recreates
+
+`settings.json` lives in the container's writable layer by default. That means:
+
+| Operation                                | Effect on `settings.json`               |
+|------------------------------------------|------------------------------------------|
+| `docker restart`                         | Preserved (writable layer is reused)     |
+| `docker compose restart`                 | Preserved                                |
+| `docker compose down && docker compose up` | **Reset** to the image template          |
+| `docker compose pull && docker compose up` | **Reset** to the new image template      |
+| Watchtower / image auto-update           | **Reset** to the new image template      |
+| `docker rm` + `docker run`               | **Reset** to the image template          |
+
+If you intend to edit `settings.json` through the admin UI (rather than relying solely on env vars), mount the file from the host so edits survive container recreate:
+
+```yaml
+volumes:
+  - ./settings.json:/opt/etherpad-lite/settings.json
+```
+
+(Bootstrap by copying `settings.json.docker` to `./settings.json` on the host before the first `up`.) The default compose example below ships this line commented out — uncomment it if you need persistent on-disk edits.
+
 ### Rebuilding including some plugins
 If you want to install some plugins in your container, it is sufficient to list them in the ETHERPAD_PLUGINS build variable.
 The variable value has to be a space separated, double quoted list of plugin names (see examples).
@@ -282,6 +313,13 @@ services:
     volumes:
       - plugins:/opt/etherpad-lite/src/plugin_packages
       - etherpad-var:/opt/etherpad-lite/var
+      # OPTIONAL: persist admin /settings edits across container recreates.
+      # Without this mount, settings.json lives in the image's writable
+      # layer — `docker compose restart` preserves it, but `docker compose
+      # down && up`, `pull`, or watchtower reverts it to the image
+      # template. Uncomment if you intend to edit settings.json through
+      # the /admin UI. See https://github.com/ether/etherpad/issues/7819.
+      # - ./settings.json:/opt/etherpad-lite/settings.json
     depends_on:
       - postgres
     environment:

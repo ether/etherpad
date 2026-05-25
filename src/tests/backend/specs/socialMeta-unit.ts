@@ -427,4 +427,81 @@ describe(__filename, function () {
       assert.ok(html.includes('&quot;'), 'quote escaped');
     });
   });
+
+  describe('renderSocialMeta — proxyPath fallback (no publicURL)', function () {
+    const mkReq = (overrides: Record<string, any> = {}) => ({
+      protocol: 'https',
+      get: (n: string) => n.toLowerCase() === 'host' ? 'pad.example' : undefined,
+      acceptsLanguages: () => 'en',
+      originalUrl: '/p/scratch',
+      ...overrides,
+    });
+
+    it('prefixes og:url with proxyPath when publicURL is null', function () {
+      const out = renderSocialMeta({
+        req: mkReq() as any,
+        settings: {title: 'Etherpad', favicon: null, publicURL: null},
+        availableLangs: {en: {}},
+        locales: {en: {}},
+        kind: 'pad',
+        padName: 'scratch',
+        proxyPath: '/api/hassio_ingress/abc',
+      });
+      if (!out.includes('content="https://pad.example/api/hassio_ingress/abc/p/scratch"')) {
+        throw new Error(`og:url missing proxyPath prefix:\n${out}`);
+      }
+    });
+
+    it('prefixes og:image with proxyPath when publicURL is null and favicon is not an absolute URL', function () {
+      const out = renderSocialMeta({
+        req: mkReq() as any,
+        settings: {title: 'Etherpad', favicon: null, publicURL: null},
+        availableLangs: {en: {}},
+        locales: {en: {}},
+        kind: 'pad',
+        padName: 'scratch',
+        proxyPath: '/sub',
+      });
+      if (!out.includes('content="https://pad.example/sub/favicon.ico"')) {
+        throw new Error(`og:image missing proxyPath prefix:\n${out}`);
+      }
+    });
+
+    it('publicURL still wins over proxyPath when both are set', function () {
+      const out = renderSocialMeta({
+        req: mkReq() as any,
+        settings: {
+          title: 'Etherpad',
+          favicon: null,
+          publicURL: 'https://pad.canonical.example',
+        },
+        availableLangs: {en: {}},
+        locales: {en: {}},
+        kind: 'pad',
+        padName: 'scratch',
+        proxyPath: '/sub',
+      });
+      if (!out.includes('content="https://pad.canonical.example/p/scratch"')) {
+        throw new Error(`publicURL should win over proxyPath:\n${out}`);
+      }
+      if (out.includes('/sub/')) {
+        throw new Error(`proxyPath leaked into URL when publicURL was set:\n${out}`);
+      }
+    });
+
+    it('proxyPath default of "" produces today\'s URL shape', function () {
+      const out = renderSocialMeta({
+        req: mkReq() as any,
+        settings: {title: 'Etherpad', favicon: null, publicURL: null},
+        availableLangs: {en: {}},
+        locales: {en: {}},
+        kind: 'pad',
+        padName: 'scratch',
+        // proxyPath omitted
+      });
+      if (!out.includes('content="https://pad.example/p/scratch"')) {
+        throw new Error(`default URL shape regressed:\n${out}`);
+      }
+    });
+  });
 });

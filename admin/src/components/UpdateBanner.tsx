@@ -52,6 +52,23 @@ export const UpdateBanner = () => {
     );
   }
 
+  // Tier 4: tier is autonomous but the maintenance window isn't usable.
+  // Surface that before the generic "update available" banner so the admin
+  // knows the autonomous behavior is sitting idle.
+  const policyReason = updateStatus.policy?.reason;
+  if (updateStatus.tier === 'autonomous'
+      && (policyReason === 'maintenance-window-missing'
+          || policyReason === 'maintenance-window-invalid')) {
+    return (
+      <div className="update-banner update-banner-window" role="status">
+        <strong>
+          <Trans i18nKey={`update.banner.${policyReason}`}/>
+        </strong>{' '}
+        <Link to="/update">{t('update.banner.cta')}</Link>
+      </div>
+    );
+  }
+
   // Tier 3: scheduled update — show countdown banner instead of the plain
   // "update available" one.
   if (updateStatus.execution?.status === 'scheduled') {

@@ -35,7 +35,7 @@
     */
   </script>
   <meta charset="utf-8">
-  <link rel="manifest" href="../../../manifest.json" />
+  <link rel="manifest" href="../../manifest.json" />
   <meta name="robots" content="noindex, nofollow">
   <meta name="referrer" content="no-referrer">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
@@ -220,7 +220,7 @@
         <button id="forcereconnect" class="btn btn-primary" data-l10n-id="pad.modals.forcereconnect"></button>
         <% e.end_block(); %>
       </div>
-      <form id="reconnectform" method="post" action="/ep/pad/reconnect" accept-charset="UTF-8" style="display: none;">
+      <form id="reconnectform" method="post" action="<%= typeof proxyPath !== 'undefined' ? proxyPath : '' %>/ep/pad/reconnect" accept-charset="UTF-8" style="display: none;">
           <input type="hidden" class="padId" name="padId">
           <input type="hidden" class="diagnosticInfo" name="diagnosticInfo">
           <input type="hidden" class="missedChanges" name="missedChanges">
@@ -280,5 +280,5 @@
 <!-- Bootstrap -->
 <script src="<%=entrypoint%>"></script>
 <% e.end_block(); %>
-<div style="display:none"><a href="/javascript" data-jslicense="1">JavaScript license information</a></div>
+<div style="display:none"><a href="<%= typeof proxyPath !== 'undefined' ? proxyPath : '' %>/javascript" data-jslicense="1">JavaScript license information</a></div>
 </html>

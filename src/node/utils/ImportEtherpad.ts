@@ -18,7 +18,10 @@ import {APool} from "../types/PadType.js";
  * limitations under the License.
  */
 
+import AttributeMap from '../../static/js/AttributeMap.js';
 import AttributePool from '../../static/js/AttributePool.js';
+import {applyToAText, cloneAText, deserializeOps, makeAText, pack, unpack} from '../../static/js/Changeset.js';
+import {SmartOpAssembler} from '../../static/js/SmartOpAssembler.js';
 import { Pad } from '../db/Pad.js';
 import Stream from './Stream.js';
 import * as authorManager from '../db/AuthorManager.js';
@@ -30,8 +33,183 @@ import {Database} from 'ueberdb2';
 
 const logger = log4js.getLogger('ImportEtherpad');
 
+// Mirror of `Pad.SYSTEM_AUTHOR_ID`. Inlined to avoid a circular import
+// (ImportEtherpad -> Pad -> ImportEtherpad via padManager) at module
+// init time.
+const SYSTEM_AUTHOR_ID = 'a.etherpad-system';
+
+// A `+` op is "pure newline" (and therefore exempt from the author
+// requirement) iff every character in the op is a newline. The wire-
+// boundary guard in Pad._assertInsertOpsCarryAuthor whitelists the
+// same shape; mirror it here so the sanitiser doesn't touch ops the
+// downstream guard would have accepted anyway.
+const isPureNewlineInsert = (op: {lines: number, chars: number}) =>
+    op.lines > 0 && op.chars === op.lines;
+
+// Walk a serialized ops string (changeset ops *or* an atext.attribs
+// stream — both use the same encoding), inject the `author` attribute
+// on any `+` content op that lacks one, and return the rebuilt ops
+// string plus the number of ops that were rewritten.
+//
+// `pool` is the AttributePool that the ops reference, and is mutated
+// in-place to register the system author when needed. The caller is
+// responsible for persisting the (possibly mutated) pool back to the
+// record alongside the rewritten ops string.
+const sanitiseOpsString = (
+    opsStr: string, pool: AttributePool): {ops: string, rewrites: number} => {
+  const assem = new SmartOpAssembler();
+  let rewrites = 0;
+  let touched = false;
+  for (const op of deserializeOps(opsStr)) {
+    if (op.opcode === '+' && !isPureNewlineInsert(op)) {
+      const map = AttributeMap.fromString(op.attribs, pool);
+      if (!map.get('author')) {
+        map.set('author', SYSTEM_AUTHOR_ID);
+        op.attribs = map.toString();
+        rewrites++;
+        touched = true;
+      }
+    }
+    assem.append(op);
+  }
+  assem.endDocument();
+  // Even when nothing was rewritten, re-serializing through the
+  // assembler is safe (it produces canonical form). But to keep the
+  // diff minimal on clean inputs, return the original string when
+  // nothing actually changed.
+  if (!touched) return {ops: opsStr, rewrites: 0};
+  return {ops: assem.toString(), rewrites};
+};
+
+// Sanitise an entire changeset: unpack -> rewrite ops -> repack.
+// oldLen / newLen / charBank are preserved as-is because adding
+// author markers doesn't change op.chars or the character stream.
+const sanitiseChangeset = (
+    cs: string, pool: AttributePool): {cs: string, rewrites: number} => {
+  let unpacked;
+  try {
+    unpacked = unpack(cs);
+  } catch {
+    // Not a parseable changeset — leave it alone and let the
+    // downstream consumer surface the original error.
+    return {cs, rewrites: 0};
+  }
+  const {ops, rewrites} = sanitiseOpsString(unpacked.ops, pool);
+  if (rewrites === 0) return {cs, rewrites: 0};
+  return {cs: pack(unpacked.oldLen, unpacked.newLen, ops, unpacked.charBank), rewrites};
+};
+
+// Top-level pre-pass: walks the imported `records` dict, sanitises any
+// `+` content op (across all revisions) that lacks an `author`
+// attribute, and re-derives the cumulative head atext and any
+// key-revision meta.atext / meta.pool snapshots so they stay
+// consistent with the rewritten revs. Without re-derivation, the
+// `Pad.check()` deep-equal that runs at the end of `setPadRaw` would
+// see a sanitised head atext (or sanitised key-rev snapshot) whose
+// attribute numbers don't agree with the sanitised running atext
+// computed from the (separately-sanitised) revs.
+//
+// Returns the number of ops rewritten across the whole pad (0 means
+// the import was already conforming and nothing was touched).
+//
+// Mutates `records` in place. The caller passes the original-padId-
+// keyed records dict (i.e. the post-JSON.parse state, BEFORE the
+// destination padId rewrite happens in processRecord).
+const sanitiseImportedRecords = (
+    records: Record<string, any>, srcPadId: string): number => {
+  const padKey = `pad:${srcPadId}`;
+  const padRec = records[padKey];
+  if (!padRec || !padRec.pool) return 0;
+
+  // Collect rev records in numeric order. We process them
+  // sequentially so we can re-apply each (post-sanitisation)
+  // changeset to a running atext and refresh key-rev snapshots
+  // along the way.
+  const escPadId = srcPadId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const revKeyRe = new RegExp(`^pad:${escPadId}:revs:(\\d+)$`);
+  const revs: Array<{n: number, rec: any}> = [];
+  for (const [k, v] of Object.entries(records)) {
+    const m = k.match(revKeyRe);
+    if (m && v) revs.push({n: Number(m[1]), rec: v});
+  }
+  revs.sort((a, b) => a.n - b.n);
+  if (revs.length === 0) return 0;
+
+  // Start the running atext at the canonical empty pad and the
+  // cumulative pool at whatever the imported padRec.pool was — the
+  // latter already contains every attribute that the rev changesets
+  // reference, so deserialising rev ops against it always resolves.
+  // The pool grows in place when sanitiseOpsString needs to register
+  // SYSTEM_AUTHOR_ID; that's exactly what we want the final
+  // padRec.pool to look like.
+  const cumulativePool = new AttributePool().fromJsonable(padRec.pool);
+  let runningAText = makeAText('\n');
+  let totalRewrites = 0;
+
+  for (const {rec} of revs) {
+    if (typeof rec.changeset !== 'string') continue;
+    const {cs, rewrites} = sanitiseChangeset(rec.changeset, cumulativePool);
+    if (rewrites > 0) rec.changeset = cs;
+    totalRewrites += rewrites;
+
+    // Walk the (possibly rewritten) changeset against the running
+    // atext to keep it in lock-step. applyToAText also serves as
+    // an in-pass sanity check — if a sanitised changeset doesn't
+    // apply cleanly the import dies here instead of silently
+    // corrupting state.
+    runningAText = applyToAText(rec.changeset, runningAText, cumulativePool);
+
+    // If the imported rev carried a key-rev snapshot (meta.atext /
+    // meta.pool), replace it with the post-sanitisation running
+    // state. We *always* refresh when totalRewrites > 0 for this
+    // pad — and we always refresh the snapshot of *this* rev when
+    // the snapshot was present in the import (cheaper than figuring
+    // out exactly which key-revs were affected by the rewrite).
+    if (rec.meta && (rec.meta.pool || rec.meta.atext)) {
+      rec.meta.pool = cumulativePool.toJsonable();
+      rec.meta.atext = cloneAText(runningAText);
+    }
+  }
+
+  // Refresh the head atext and pad pool. Same rationale as the
+  // key-rev refresh above.
+  if (totalRewrites > 0) {
+    padRec.atext = cloneAText(runningAText);
+    padRec.pool = cumulativePool.toJsonable();
+  }
+  return totalRewrites;
+};
+
 export const setPadRaw = async (padId: string, r: string, authorId = '') => {
   const records = JSON.parse(r);
+
+  // Sanitiser pre-pass: legacy .etherpad files (and exports from older
+  // server-internal flows that didn't substitute SYSTEM_AUTHOR_ID)
+  // can contain `+` content ops without an `author` attribute. The
+  // wire boundary and Pad.appendRevision now reject that shape, so a
+  // post-import setText/setHTML/restoreRevision against an imported
+  // pad would throw. Rewrite the imported records up-front to inject
+  // the system author marker on any unattributed insert, mutating the
+  // pad pool (and any per-key-rev snapshot pool) to register the
+  // attribute. Discover the source pad id by scanning record keys:
+  // pre-rewrite they still use the original padId.
+  let srcPadId: string | null = null;
+  for (const k of Object.keys(records)) {
+    const parts = k.split(':');
+    if (parts[0] === 'pad' && parts.length >= 2) {
+      srcPadId = parts[1];
+      break;
+    }
+  }
+  if (srcPadId != null) {
+    const rewritten = sanitiseImportedRecords(records, srcPadId);
+    if (rewritten > 0) {
+      logger.warn(
+          `(pad ${padId}) import contained ${rewritten} unattributed insert ` +
+          `op(s); rewriting them with the system author to satisfy the ` +
+          `appendRevision invariant. Source pad id: ${srcPadId}.`);
+    }
+  }
 
   // get supported block Elements from plugins, we will use this later.
   hooks.callAll('ccRegisterBlockElements').forEach((element:any) => {

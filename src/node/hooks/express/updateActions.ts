@@ -6,7 +6,10 @@ import {spawn} from 'node:child_process';
 import log4js from 'log4js';
 import {ArgsExpressType} from '../../types/ArgsExpressType.js';
 import settings, {getEpVersion} from '../../utils/Settings.js';
-import {getDetectedInstallMethod, stateFilePath, getRollbackDeps} from '../../updater/index.js';
+import {
+  getDetectedInstallMethod, stateFilePath, getRollbackDeps,
+  notifyApplyFailure, cancelScheduler,
+} from '../../updater/index.js';
 import {evaluatePolicy} from '../../updater/UpdatePolicy.js';
 import {loadState, saveState} from '../../updater/state.js';
 import {acquireLock, releaseLock} from '../../updater/lock.js';
@@ -19,7 +22,6 @@ import {performRollback} from '../../updater/RollbackHandler.js';
 import {UpdateState} from '../../updater/types.js';
 import {isValidTag} from '../../updater/refSafety.js';
 import {applyUpdate} from '../../updater/applyPipeline.js';
-import {cancelScheduler} from '../../updater/index.js';
 import {getIo} from './socketio.js';
 
 const logger = log4js.getLogger('updater');
@@ -103,6 +105,20 @@ const buildPreflightDeps = (installMethod: ReturnType<typeof getDetectedInstallM
     repoDir: settings.root,
     requireSignature: settings.updates.requireSignature,
     trustedKeysPath: settings.updates.trustedKeysPath,
+  }),
+  readTargetEnginesNode: (tag: string) => new Promise<string | null>((resolve) => {
+    const c = spawn('git', ['show', `${tag}:package.json`],
+                    {cwd: settings.root, stdio: ['ignore', 'pipe', 'ignore']});
+    let out = '';
+    c.stdout.on('data', (b) => { out += b.toString(); });
+    c.on('close', () => {
+      try {
+        const pkg = JSON.parse(out);
+        const range = pkg?.engines?.node;
+        resolve(typeof range === 'string' && range.trim().length > 0 ? range : null);
+      } catch { resolve(null); }
+    });
+    c.on('error', () => resolve(null));
   }),
 });
 
@@ -193,6 +209,7 @@ export const expressCreateServer = (
                 diskSpaceMinMB: Number(settings.updates.diskSpaceMinMB) || 500,
                 requireSignature: settings.updates.requireSignature,
                 trustedKeysPath: settings.updates.trustedKeysPath,
+                currentNodeVersion: process.versions.node,
               },
               {
                 ...baseDeps,
@@ -255,6 +272,20 @@ export const expressCreateServer = (
         },
       });
       drainer = null;
+
+      // Fire the failure-notification email path for outcomes the admin needs
+      // to know about even on manual apply (an admin might click Apply and
+      // walk away; rolling back silently isn't enough). Errors here are
+      // swallowed by notifyApplyFailure — they must not block the response.
+      if (result.outcome === 'preflight-failed') {
+        void notifyApplyFailure({
+          outcome: 'preflight-failed', targetTag, reason: result.reason,
+        });
+      } else if (result.outcome === 'rolled-back') {
+        void notifyApplyFailure({
+          outcome: 'rolled-back', targetTag, reason: 'rolled-back',
+        });
+      }
 
       if (responded) return; // already 202'd in onAccepted; nothing more to send.
 

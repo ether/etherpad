@@ -5,6 +5,7 @@ import fs from "fs";
 import type {MapArrayType} from "../../types/MapType.js";
 
 import settings from '../../utils/Settings.js';
+import {sanitizeProxyPath} from '../../utils/sanitizeProxyPath.js';
 
 const ADMIN_PATH = path.join(settings.root, 'src', 'templates');
 const PROXY_HEADER = "x-proxy-path"
@@ -72,11 +73,19 @@ export const expressCreateServer = (hookName: string, args: ArgsExpressType, cb:
           // if the file is found, set Content-type and send data
           res.setHeader('Content-type', map[ext] || 'text/plain');
           if (ext === ".html" || ext === ".js" || ext === ".css") {
-            if (req.header(PROXY_HEADER)) {
+            // The proxy-path header is woven into the response body, so
+            // it must be sanitised before substitution and downstream
+            // caches must not collapse responses across different
+            // header values.
+            const proxyPath = sanitizeProxyPath(req);
+            if (proxyPath) {
               let string = data.toString()
-              dataToSend = string.replaceAll("/admin", req.header(PROXY_HEADER) + "/admin")
-              dataToSend = dataToSend.replaceAll("/socket.io", req.header(PROXY_HEADER) + "/socket.io")
+              dataToSend = string.replaceAll("/admin", proxyPath + "/admin")
+              dataToSend = dataToSend.replaceAll(
+                  "/socket.io", proxyPath + "/socket.io")
             }
+            res.setHeader('Vary', 'x-proxy-path');
+            res.setHeader('Cache-Control', 'private, no-store');
           }
           res.end(dataToSend);
         }

@@ -56,10 +56,14 @@ export const App = () => {
       }
       if (settings.results === 'NOT_ALLOWED') {
         console.log('Not allowed to view settings.json')
+        useStore.getState().setResolved(null);
         return;
       }
       if (isJSONClean(settings.results)) setSettings(settings.results);
       else alert(t('admin_settings.invalid_json'));
+      // The resolved field is optional — old servers won't send it,
+      // and the SPA degrades to today's behaviour when it's null.
+      useStore.getState().setResolved(settings.resolved ?? null);
       useStore.getState().setShowLoading(false);
     });
 
