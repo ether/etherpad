@@ -1,4 +1,4 @@
-import {expect, test} from '@playwright/test';
+import {expect, Page, test} from '@playwright/test';
 import {goToNewPad} from '../helper/padHelper';
 
 // Covers the URL-param view overrides that share the same _afterHandshake
@@ -10,7 +10,7 @@ test.beforeEach(async ({context}) => {
   await context.clearCookies();
 });
 
-const navigateWithParam = async (page, padId, param) => {
+const navigateWithParam = async (page: Page, padId: string, param: string) => {
   await page.goto(`http://localhost:9001/p/${padId}?${param}`);
   await page.waitForSelector('iframe[name="ace_outer"]');
   await page.waitForSelector('#editorcontainer.initialized');
