@@ -23,6 +23,10 @@ WORKDIR /opt/etherpad-lite
 COPY . .
 RUN pnpm install
 RUN pnpm run build:ui
+# tsdown lives in src/'s devDependencies, which the production stage
+# below strips via installDeps.sh. Run the build here (where devDeps
+# are intact) and COPY dist + dist-cjs into the production image.
+RUN cd src && pnpm run build
 
 
 FROM node:24-alpine AS build
@@ -187,6 +191,14 @@ RUN printf 'packages:\n  - src\n  - bin\nonlyBuiltDependencies:\n  - esbuild\nig
 COPY --chown=etherpad:etherpad ./src ./src
 COPY --chown=etherpad:etherpad --from=adminbuild /opt/etherpad-lite/src/templates/admin ./src/templates/admin
 COPY --chown=etherpad:etherpad --from=adminbuild /opt/etherpad-lite/src/static/oidc ./src/static/oidc
+# Reuse the dual ESM/CJS surface produced by the adminbuild stage. The
+# runtime esbuild-bundles the client JS at server startup and resolves
+# `ep_etherpad-lite/static/js/*` through the package's exports map,
+# which now points at dist/ + dist-cjs/. tsdown only exists in src/'s
+# devDependencies and installDeps.sh below strips those, so we can't
+# build here — instead pick up what adminbuild already built.
+COPY --chown=etherpad:etherpad --from=adminbuild /opt/etherpad-lite/src/dist ./src/dist
+COPY --chown=etherpad:etherpad --from=adminbuild /opt/etherpad-lite/src/dist-cjs ./src/dist-cjs
 
 COPY --chown=etherpad:etherpad ./local_plugin[s] ./local_plugins/
 
@@ -197,15 +209,6 @@ RUN bin/installDeps.sh && \
       pnpm run plugins i ${ETHERPAD_PLUGINS} ${ETHERPAD_GITHUB_PLUGINS:+--github ${ETHERPAD_GITHUB_PLUGINS}}; \
   fi && \
     pnpm store prune
-
-# Build the dual ESM/CJS surface that the exports map (src/package.json
-# "exports") points at. The runtime esbuild-bundles the client JS at
-# server startup and resolves `ep_etherpad-lite/static/js/*` through
-# that exports map; without dist/ + dist-cjs/ present every reference
-# fails to resolve and etherpad never finishes booting. Building once
-# at image-build time avoids paying tsdown's cost on every container
-# start and keeps PID 1 (the `exec node ...` CMD) clean.
-RUN cd src && pnpm run build
 
 # Copy the configuration file.
 COPY --chown=etherpad:etherpad ${SETTINGS} "${EP_DIR}"/settings.json
