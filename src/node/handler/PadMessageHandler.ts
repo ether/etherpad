@@ -629,15 +629,23 @@ const handleSaveRevisionMessage = async (socket:any, message: ClientSaveRevision
  * @param sessionID {string} the socketIO session to which we're sending this message
  */
 export const handleCustomObjectMessage = (msg: CustomMessage, sessionID: string) => {
-  if (msg.data.type === 'CUSTOM') {
-    if (sessionID) {
-      // a sessionID is targeted: directly to this sessionID
-      socketioServer.sockets.socket(sessionID).emit('message', msg);
-    } else {
-      // broadcast to all clients on this pad
-      socketioServer.sockets.in(msg.data.payload.padId).emit('message', msg);
-      recordSocketEmit(msg.data.type);
-    }
+  if (msg.data.type !== 'CUSTOM') return;
+  // Plugins sometimes schedule deferred custom-message emits via setTimeout
+  // (e.g. ep_set_title_on_pad fires this from a debounced timer). Those
+  // timers can outlive the server: in test shutdown — and during graceful
+  // restarts in production — socketioServer is unset before the queued
+  // timer fires, and reaching into its `.sockets` throws "Cannot read
+  // properties of null". That uncaughtException crashes the vitest worker
+  // even after every test in the file has passed. No-op silently when
+  // the server is gone; the recipients are gone too.
+  if (socketioServer == null || socketioServer.sockets == null) return;
+  if (sessionID) {
+    // a sessionID is targeted: directly to this sessionID
+    socketioServer.sockets.socket(sessionID).emit('message', msg);
+  } else {
+    // broadcast to all clients on this pad
+    socketioServer.sockets.in(msg.data.payload.padId).emit('message', msg);
+    recordSocketEmit(msg.data.type);
   }
 };
 
