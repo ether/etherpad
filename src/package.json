@@ -9,12 +9,10 @@
     "collaborative",
     "editor"
   ],
-  "main": "./dist-cjs/node/server.cjs",
   "module": "./dist/node/server.mjs",
   "exports": {
     ".": {
-      "import": "./dist/node/server.mjs",
-      "require": "./dist-cjs/node/server.cjs"
+      "import": "./dist/node/server.mjs"
     },
     "./node/eejs": {
       "import": "./dist/node/eejs/index.mjs",
@@ -200,7 +198,8 @@
     "test-admin": "cross-env NODE_ENV=production npx playwright test tests/frontend-new/admin-spec --workers 1 --project=chromium",
     "test-admin:ui": "cross-env NODE_ENV=production npx playwright test tests/frontend-new/admin-spec --ui --workers 1",
     "debug:socketio": "cross-env DEBUG=socket.io* node --import tsx node/server.ts",
-    "test:watch": "cross-env NODE_ENV=production vitest"
+    "test:watch": "cross-env NODE_ENV=production vitest",
+    "check:exports": "node --import tsx tools/check-exports.ts"
   },
   "version": "3.2.0",
   "license": "Apache-2.0"
