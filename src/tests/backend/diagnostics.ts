@@ -105,16 +105,28 @@ const canWriteReport =
   && !!((process as any).report?.directory
     || (process.env.NODE_OPTIONS || '').includes('--report-directory='));
 let reportCounter = 0;
-let lastReportT = 0;
+// Throttle state is scoped to boundary (`be`) writes only. Heartbeat (`hb`)
+// and mid-test (`mt`) writes use minGapMs=0 and pass `updateThrottle=false`,
+// so they never bump the boundary timestamp — otherwise a slow test's
+// `mt` write could land <100 ms before the next test's `beforeEach` and
+// suppress that test's own `be` snapshot, exactly the boundary coverage
+// the throttle is meant to preserve.
+let lastBoundaryT = 0;
 
-// Shared writer used by both the heartbeat tick and the beforeEach hook.
-// Throttled by minGapMs so a burst of fast tests doesn't produce hundreds of
-// reports — we just need dense enough coverage to bracket the kill.
-const tryWriteReport = (prefix: string, minGapMs: number): void => {
+// Shared writer used by the heartbeat tick, the beforeEach hook, and the
+// mid-test setTimeout. minGapMs throttles `be` writes against the previous
+// boundary write so a burst of fast tests doesn't produce hundreds of
+// reports; `hb` and `mt` writes pass 0 + updateThrottle=false to bypass
+// and not affect the throttle window.
+const tryWriteReport = (
+  prefix: string,
+  minGapMs: number,
+  updateThrottle = true,
+): void => {
   if (!canWriteReport) return;
   const now = Date.now();
-  if (now - lastReportT < minGapMs) return;
-  lastReportT = now;
+  if (now - lastBoundaryT < minGapMs) return;
+  if (updateThrottle) lastBoundaryT = now;
   reportCounter += 1;
   const safeTest = currentTest
     .replace(/[^a-zA-Z0-9._-]+/g, '_')
@@ -141,7 +153,9 @@ const heartbeat = setInterval(() => {
     `heap=${Math.round(mem.heapUsed / 1024 / 1024)}M ` +
     `handles=${handles} requests=${requests}`);
   // Heartbeat always writes — its cadence is the floor for snapshot density.
-  tryWriteReport('hb', 0);
+  // updateThrottle=false so the heartbeat tick doesn't suppress the next
+  // beforeEach `be` write.
+  tryWriteReport('hb', 0, false);
 }, 200);
 heartbeat.unref();
 
@@ -221,13 +235,22 @@ export const mochaHooks = {
       // traffic and socket.io activity that precedes the kill happens.
       // Fast tests (<150 ms) skip the write because currentTest will
       // have already been cleared in afterEach.
-      const enteredTest = currentTest;
-      const midSnapshot = setTimeout(() => {
-        if (currentTest === enteredTest) {
-          tryWriteReport('mt', 0);
-        }
-      }, 150);
-      midSnapshot.unref();
+      //
+      // Gated on canWriteReport: skipping the schedule entirely when
+      // node-report can't be written saves a setTimeout per test on
+      // runs without --report-directory (local mocha runs and the
+      // Linux backend matrix), which would otherwise churn timers for
+      // no possible diagnostic output.
+      if (canWriteReport) {
+        const enteredTest = currentTest;
+        const midSnapshot = setTimeout(() => {
+          // updateThrottle=false so this snapshot doesn't push out the
+          // next test's `be` write — the boundary report is still the
+          // primary record of which test the kill struck.
+          if (currentTest === enteredTest) tryWriteReport('mt', 0, false);
+        }, 150);
+        midSnapshot.unref();
+      }
     }
   },
   afterEach(this: any) {
