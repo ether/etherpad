@@ -1,8 +1,5 @@
-'use strict';
-
 import {strict as assert} from 'assert';
-
-const common = require('../../common');
+import * as common from '../../common.js';
 import settings from '../../../../node/utils/Settings.js';
 
 let agent: any;

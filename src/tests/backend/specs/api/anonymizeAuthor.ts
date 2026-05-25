@@ -1,9 +1,6 @@
-'use strict';
-
 import {strict as assert} from 'assert';
-
-const common = require('../../common');
-const settings = require('../../../../node/utils/Settings');
+import * as common from '../../common.js';
+import settings from '../../../../node/utils/Settings.js';
 
 let agent: any;
 let apiVersion = 1;
@@ -31,7 +28,7 @@ describe(__filename, () => {
   });
 
   after(() => {
-    settings.gdprAuthorErasure.enabled = originalErasureFlag;
+    settings.gdprAuthorErasure.enabled = originalErasureFlag ?? false;
   });
 
   it('anonymizeAuthor zeroes the author and returns counters', async () => {
