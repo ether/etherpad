@@ -19,7 +19,6 @@
  * limitations under the License.
  */
 
-import {createRequire} from 'node:module';
 import {deserializeOps} from '../../static/js/Changeset.js';
 import ChatMessage from '../../static/js/ChatMessage.js';
 import {Builder} from "../../static/js/Builder.js";
@@ -45,10 +44,6 @@ import { checkValidRev, isInt } from '../utils/checkValidRev.js';
 // (API <-> Pad) at module init time. Kept in sync with the constant in
 // `./Pad.ts`.
 const SYSTEM_AUTHOR_ID = 'a.etherpad-system';
-
-// Lazy require bridge for the optional `Cleanup` helper used by compactPad —
-// avoids loading the cleanup subsystem on every API import.
-const require = createRequire(import.meta.url);
 
 /* ********************
  * GROUP FUNCTIONS ****
@@ -737,7 +732,7 @@ export const compactPad = async (padID: string, keepRevisions: number | null = n
         'compactPad requires cleanup.enabled = true in settings.json', 'apierror');
   }
   const pad = await getPadSafe(padID, true);
-  const cleanup = require('../utils/Cleanup');
+  const cleanup = await import('../utils/Cleanup.js');
   if (keepRevisions == null) {
     await cleanup.deleteAllRevisions(pad.id);
     return {ok: true, mode: 'all'};

@@ -1,14 +1,8 @@
 'use strict';
 
-import {createRequire} from 'node:module';
+import PDFDocument from 'pdfkit';
 import {Parser} from 'htmlparser2';
 import {PassThrough} from 'stream';
-
-// CJS bridge for pdfkit — it publishes a CommonJS default export
-// (the PDFDocument constructor) which doesn't round-trip cleanly through
-// ESM default-import interop under tsx.
-const require = createRequire(import.meta.url);
-const PDFDocument = require('pdfkit');
 
 interface InlineState {
   bold: boolean;

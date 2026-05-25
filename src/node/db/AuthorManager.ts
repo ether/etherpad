@@ -19,15 +19,10 @@
  * limitations under the License.
  */
 
-import {createRequire} from 'node:module';
 import db from './DB.js';
 import CustomError from '../utils/customError.js';
 import hooks from '../../static/js/pluginfw/hooks.js';
 import padutils, {randomString} from "../../static/js/pad_utils.js";
-
-// Lazy require bridge used by `anonymizeAuthor` to dodge the
-// AuthorManager ↔ PadManager ↔ Pad import cycle.
-const require = createRequire(import.meta.url);
 
 export const getColorPalette = () => [
   '#ffc7c7',
@@ -348,7 +343,7 @@ export const anonymizeAuthor = async (
 }> => {
   const dryRun = opts.dryRun === true;
   // Lazy-require to dodge the AuthorManager ↔ PadManager ↔ Pad cycle.
-  const padManager = require('./PadManager');
+  const padManager = await import('./PadManager.js');
   const existing = await db.get(`globalAuthor:${authorID}`);
   if (existing == null || existing.erased) {
     return {

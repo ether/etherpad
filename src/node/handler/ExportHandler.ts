@@ -20,7 +20,6 @@
  * limitations under the License.
  */
 
-import {createRequire} from 'node:module';
 import * as exporthtml from '../utils/ExportHtml.js';
 import * as exporttxt from '../utils/ExportTxt.js';
 import * as exportEtherpad from '../utils/ExportEtherpad.js';
@@ -33,12 +32,6 @@ import hooks from '../../static/js/pluginfw/hooks.js';
 import util from 'util';
 import { checkValidRev } from '../utils/checkValidRev.js';
 import * as converterModule from '../utils/LibreOffice.js';
-
-// Lazy CJS bridge for optional native-export modules (html-to-docx,
-// ExportPdfNative). Loaded at call sites that are gated by sofficeAvailable
-// and require.resolve() probes — keeps the legacy convert path the default
-// and only pulls in the in-process renderers when soffice is unconfigured.
-const require = createRequire(import.meta.url);
 
 const fsp_writeFile = util.promisify(fs.writeFile);
 const fsp_unlink = util.promisify(fs.unlink);
@@ -141,7 +134,7 @@ export const doExport = async (req: any, res: any, padId: string, readOnlyId: st
           // outside `<p>` becomes a soft break, `<br><br>` becomes a
           // paragraph boundary plus blank-line markers.
           const docxHtml = wrapLooseLines(applyMonospaceToCode(bodyHtml));
-          const htmlToDocx = require('html-to-docx');
+          const {default: htmlToDocx} = await import('html-to-docx');
           const buf = await htmlToDocx(docxHtml);
           res.contentType(
               'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
@@ -149,7 +142,7 @@ export const doExport = async (req: any, res: any, padId: string, readOnlyId: st
           return;
         }
         if (type === 'pdf') {
-          const {htmlToPdfBuffer} = require('../utils/ExportPdfNative');
+          const {htmlToPdfBuffer} = await import('../utils/ExportPdfNative.js');
           const buf = await htmlToPdfBuffer(bodyHtml);
           res.contentType('application/pdf');
           res.send(buf);
