@@ -29,7 +29,9 @@ import db from '../db/DB.js';
 import hooks from '../../static/js/pluginfw/hooks.js';
 import log4js from 'log4js';
 import { supportedElems } from '../../static/js/contentcollector.js';
-import {Database} from 'ueberdb2';
+// Type-only — see DB.ts for the rationale. The Database class is
+// instantiated lazily below via a dynamic `import()`.
+import type {Database} from 'ueberdb2';
 
 const logger = log4js.getLogger('ImportEtherpad');
 
@@ -234,7 +236,8 @@ export const setPadRaw = async (padId: string, r: string, authorId = '') => {
 
   const data = new Map();
   const existingAuthors = new Set();
-  const padDb = new Database('memory', {data});
+  const {Database: UeberdbDatabase} = await import('ueberdb2');
+  const padDb = new UeberdbDatabase('memory', {data});
   await padDb.init();
   try {
     const processRecord = async (key:string, value: null|{

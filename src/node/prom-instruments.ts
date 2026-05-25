@@ -16,23 +16,41 @@ import settings from './utils/Settings.js';
 
 export const enabled = (): boolean => settings.scalingDiveMetrics === true;
 
-export const changesetApplyDuration = new client.Histogram({
-  name: 'etherpad_changeset_apply_duration_seconds',
-  help: 'Time spent applying an incoming USER_CHANGES message on the server (apply path only, excludes fan-out to other clients)',
-  buckets: [0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 5],
-});
+// prom-client's default Registry is process-global. This module is loaded
+// at least once as ESM (etherpad's own startup) and may also be loaded as
+// CJS via the dist-cjs twin (when a plugin require()s a module that
+// transitively pulls this in). Constructing the same metric a second time
+// throws "metric with the name X has already been registered", which
+// crashes the plugin's load. Look up the metric by name in the registry
+// first and reuse it if present; otherwise create.
+const orRegister = <T extends client.Metric>(name: string, build: () => T): T => {
+  const existing = client.register.getSingleMetric(name);
+  return (existing ?? build()) as T;
+};
 
-export const socketEmitsTotal = new client.Counter({
-  name: 'etherpad_socket_emits_total',
-  help: 'Number of socket.io broadcast emits, bucketed by message type',
-  labelNames: ['type'],
-});
+export const changesetApplyDuration = orRegister(
+    'etherpad_changeset_apply_duration_seconds',
+    () => new client.Histogram({
+      name: 'etherpad_changeset_apply_duration_seconds',
+      help: 'Time spent applying an incoming USER_CHANGES message on the server (apply path only, excludes fan-out to other clients)',
+      buckets: [0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 5],
+    }));
 
-export const padUsersGauge = new client.Gauge({
-  name: 'etherpad_pad_users',
-  help: 'Active users connected to a pad, keyed by padId',
-  labelNames: ['padId'],
-});
+export const socketEmitsTotal = orRegister(
+    'etherpad_socket_emits_total',
+    () => new client.Counter({
+      name: 'etherpad_socket_emits_total',
+      help: 'Number of socket.io broadcast emits, bucketed by message type',
+      labelNames: ['type'],
+    }));
+
+export const padUsersGauge = orRegister(
+    'etherpad_pad_users',
+    () => new client.Gauge({
+      name: 'etherpad_pad_users',
+      help: 'Active users connected to a pad, keyed by padId',
+      labelNames: ['padId'],
+    }));
 
 // Allowlist of message-type label values. Anything outside this set is rolled
 // into 'other' so a misbehaving plugin or HTTP-API caller passing a

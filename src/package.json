@@ -19,10 +19,12 @@
       "require": "./dist-cjs/node/eejs/index.cjs"
     },
     "./node/db/*": {
-      "import": "./dist/node/db/*.mjs"
+      "import": "./dist/node/db/*.mjs",
+      "require": "./dist-cjs/node/db/*.cjs"
     },
     "./node/db/*.js": {
-      "import": "./dist/node/db/*.mjs"
+      "import": "./dist/node/db/*.mjs",
+      "require": "./dist-cjs/node/db/*.cjs"
     },
     "./node/*": {
       "import": "./dist/node/*.mjs",

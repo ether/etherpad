@@ -4,27 +4,24 @@ import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 
 // CJS subpaths that must resolve to a .cjs file (have a "require" condition).
-// Note: node/db/* is intentionally excluded — those modules import ueberdb2
-// which is ESM-only, so their exports entry has only an "import" condition.
+// node/db/* is included now that DB.ts uses a lazy `await import('ueberdb2')`
+// instead of a top-level import: the CJS twin no longer requires ueberdb2 at
+// load time, so it can be require()-d safely from CJS plugin code.
 const cjsResolvableSubpaths = [
   'ep_etherpad-lite/node/eejs',
   'ep_etherpad-lite/static/js/pad_utils',
+  'ep_etherpad-lite/node/db/PadManager',
+  'ep_etherpad-lite/node/db/AuthorManager',
 ];
 
-// Only these subpaths can be synchronously require()-loaded: their transitive
-// dependency graph is CJS-compatible. DB modules (PadManager, API, AuthorManager)
-// transitively import ueberdb2 which is ESM-only (no "require" export condition).
+// These subpaths can be synchronously require()-loaded: their transitive
+// dependency graph is CJS-compatible. We don't include the db modules here
+// because LOADING them is fine, but they only become usable after etherpad's
+// init() has run — exercised by the integration tests elsewhere, not here.
 const cjsLoadableSubpaths = [
   'ep_etherpad-lite/node/eejs',
   'ep_etherpad-lite/static/js/pad_utils',
-];
-
-// These subpaths are ESM-only (no "require" condition). Trying to
-// require.resolve() them should throw.
-const esmOnlySubpaths = [
   'ep_etherpad-lite/node/db/PadManager',
-  'ep_etherpad-lite/node/db/API.js',
-  'ep_etherpad-lite/node/db/AuthorManager',
 ];
 
 const esmSubpaths = [
@@ -48,14 +45,6 @@ describe('ep_etherpad-lite exports map', () => {
         const mod = require(spec);
         expect(mod).toBeTruthy();
         expect(typeof mod).toBe('object');
-      });
-    }
-  });
-
-  describe('ESM-only subpaths (no require condition)', () => {
-    for (const spec of esmOnlySubpaths) {
-      test(`require.resolve('${spec}') throws (no "require" condition)`, () => {
-        expect(() => require.resolve(spec)).toThrow();
       });
     }
   });
