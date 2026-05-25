@@ -66,9 +66,15 @@ const diag = (msg: string): void => {
 diag('diagnostics loaded');
 
 // Heartbeat. unref()'d so it never holds the event loop open by itself —
-// it only fires if mocha is otherwise alive. The interval cadence (1Hz) is
-// the trade-off between log noise (~60-120 extra lines per run) and how
-// tightly we can bracket the kill timestamp.
+// it only fires if mocha is otherwise alive. Bumped from 1 Hz to 5 Hz
+// after run 26402211271 caught a death (messages.ts > USER_CHANGES >
+// retransmission, kill +425 ms post-test-start) where the setTimeout-based
+// mid-test snapshot didn't fire — likely Windows event-loop scheduling
+// delaying setTimeout under load. setInterval has been firing reliably
+// at 1 Hz throughout the investigation, so 200 ms (5 Hz) should land
+// inside any death window ≥200 ms. writeReport on the Windows runner
+// completed in <1 ms per the log timestamps, so the cadence cost is
+// negligible compared to the precision gain.
 //
 // When the backend-test workflow has `--report-directory` set (only the
 // Windows jobs do at time of writing), every heartbeat also writes a Node
@@ -134,9 +140,9 @@ const heartbeat = setInterval(() => {
     `rss=${Math.round(mem.rss / 1024 / 1024)}M ` +
     `heap=${Math.round(mem.heapUsed / 1024 / 1024)}M ` +
     `handles=${handles} requests=${requests}`);
-  // Heartbeat always writes — its 1Hz cadence is the floor.
+  // Heartbeat always writes — its cadence is the floor for snapshot density.
   tryWriteReport('hb', 0);
-}, 1000);
+}, 200);
 heartbeat.unref();
 
 process.on('unhandledRejection', (reason: any) => {
