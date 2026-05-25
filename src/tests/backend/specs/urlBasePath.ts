@@ -17,7 +17,7 @@
  */
 
 const common = require('../common');
-import settings from 'ep_etherpad-lite/node/utils/Settings';
+import settings from 'ep_etherpad-lite/node/utils/Settings.js';
 
 let agent: any;
 

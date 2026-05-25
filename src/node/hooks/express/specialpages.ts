@@ -24,7 +24,7 @@ let ioI: { sockets: { sockets: any[]; }; } | null = null
 // Shared sanitizer for the `x-proxy-path` header. See the helper for the
 // allowed character class and the protocol-relative / traversal rejection
 // rules. Reused by admin.ts so both call sites share one definition.
-import {sanitizeProxyPath} from '../../utils/sanitizeProxyPath';
+import {sanitizeProxyPath} from '../../utils/sanitizeProxyPath.js';
 
 
 export const socketio = (hookName: string, {io}: any) => {

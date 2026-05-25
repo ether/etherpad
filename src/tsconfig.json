@@ -15,7 +15,13 @@
     /* Completeness */
     "skipLibCheck": true                                 /* Skip type checking all .d.ts files. */,
     "resolveJsonModule": true,
-    "types": ["node", "jquery", "vitest/globals"]
+    "types": ["node", "jquery", "vitest/globals"],
+    "ignoreDeprecations": "6.0",
+    "baseUrl": ".",
+    "paths": {
+      "ep_etherpad-lite/*.js": ["./*.ts"],
+      "ep_etherpad-lite/*":    ["./*.ts", "./*"]
+    }
   },
   "include": ["./**/*.ts"],
   "exclude": ["plugin_packages", "node_modules", "../plugin_packages"]

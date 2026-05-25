@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest';
-import {firstAuthorOf} from '../../../../../node/hooks/express/updateStatus';
+import {firstAuthorOf} from '../../../../../node/hooks/express/updateStatus.js';
 
 const makePad = (entries: Record<number, [string, string]>): any => ({
   pool: {numToAttrib: entries},

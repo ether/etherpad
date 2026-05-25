@@ -1,5 +1,5 @@
 import {describe, it, expect} from 'vitest';
-import {smtpTransportKey} from '../../../../node/updater/index';
+import {smtpTransportKey} from '../../../../node/updater/index.js';
 
 describe('smtpTransportKey', () => {
   // Regression for Qodo PR #7753 review: the nodemailer transport cache was

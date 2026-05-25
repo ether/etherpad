@@ -8,7 +8,7 @@
  * plugin paths that call appendRevision directly).
  */
 
-import {PadType} from '../../../node/types/PadType';
+import {PadType} from '../../../node/types/PadType.js';
 
 import {strict as assert} from 'assert';
 const common = require('../common');

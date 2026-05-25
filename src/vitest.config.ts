@@ -1,6 +1,17 @@
 import {defineConfig} from 'vitest/config';
+import {fileURLToPath} from 'node:url';
+
+const srcRoot = fileURLToPath(new URL('.', import.meta.url));
 
 export default defineConfig({
+  resolve: {
+    alias: [
+      // Self-imports: route ep_etherpad-lite/<subpath>(.js)? → src/<subpath>.ts so we
+      // exercise the actual sources, not the dist/ twins. Plugins (outside src/)
+      // still hit the package.json exports map at runtime.
+      { find: /^ep_etherpad-lite\/(.+?)(?:\.js)?$/, replacement: `${srcRoot}$1.ts` },
+    ],
+  },
   test: {
     globals: true,
     setupFiles: ['./tests/backend/vitest.setup.ts'],

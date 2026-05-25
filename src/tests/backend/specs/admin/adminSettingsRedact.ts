@@ -1,7 +1,7 @@
 'use strict';
 
 import {strict as assert} from 'assert';
-import {redactSettings} from '../../../../node/utils/AdminSettingsRedact';
+import {redactSettings} from '../../../../node/utils/AdminSettingsRedact.js';
 
 describe('AdminSettingsRedact', function () {
   it('returns a deep clone, never mutates input', function () {

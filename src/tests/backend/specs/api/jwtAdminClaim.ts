@@ -10,7 +10,7 @@
  */
 
 const common = require('../../common');
-import settings from '../../../../node/utils/Settings';
+import settings from '../../../../node/utils/Settings.js';
 
 let agent: any;
 

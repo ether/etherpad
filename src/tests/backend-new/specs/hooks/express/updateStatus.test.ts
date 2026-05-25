@@ -17,10 +17,10 @@ import {describe, it, expect, vi, beforeAll, beforeEach, afterEach} from 'vitest
 import express from 'express';
 import supertest from 'supertest';
 import type {Express} from 'express';
-import type {UpdateState} from '../../../../../node/updater/types';
-import {EMPTY_STATE} from '../../../../../node/updater/types';
-import {getEpVersion} from '../../../../../node/utils/Settings';
-import {parseSemver} from '../../../../../node/updater/versionCompare';
+import type {UpdateState} from '../../../../../node/updater/types.js';
+import {EMPTY_STATE} from '../../../../../node/updater/types.js';
+import {getEpVersion} from '../../../../../node/utils/Settings.js';
+import {parseSemver} from '../../../../../node/updater/versionCompare.js';
 
 // ---------------------------------------------------------------------------
 // Module mocks — must appear before any import that transitively imports them.
@@ -67,13 +67,13 @@ vi.mock('../../../../../node/db/PadManager', () => {
 // Import the SUT *after* vi.mock declarations so the mocks take effect.
 // ---------------------------------------------------------------------------
 
-import * as stateModule from '../../../../../node/updater/state';
-import * as authorManagerModule from '../../../../../node/db/AuthorManager';
+import * as stateModule from '../../../../../node/updater/state.js';
+import * as authorManagerModule from '../../../../../node/db/AuthorManager.js';
 import {
   expressCreateServer,
   _resetBadgeCacheForTests,
   _setBadgeCacheCapForTests,
-} from '../../../../../node/hooks/express/updateStatus';
+} from '../../../../../node/hooks/express/updateStatus.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -181,7 +181,7 @@ afterEach(() => {
 
 const getPadMap = async (): Promise<Map<string, any>> => {
   // Dynamic import returns the mock factory's return value.
-  const mod: any = await import('../../../../../node/db/PadManager');
+  const mod: any = await import('../../../../../node/db/PadManager.js');
   return mod.__pads__ as Map<string, any>;
 };
 

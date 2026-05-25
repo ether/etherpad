@@ -3,7 +3,7 @@ import {
   parseWindow,
   inWindow,
   nextWindowStart,
-} from '../../../../node/updater/MaintenanceWindow';
+} from '../../../../node/updater/MaintenanceWindow.js';
 
 describe('parseWindow', () => {
   it('accepts a valid same-day window with tz=local', () => {

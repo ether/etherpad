@@ -85,7 +85,6 @@ const save = (socket: any, payload: string): Promise<{status: string; detail?: a
     });
 
 describe('admin /settings socket (Docker container) — #7819', function () {
-  this.timeout(20000);
   let socket: any;
 
   before(async function () {

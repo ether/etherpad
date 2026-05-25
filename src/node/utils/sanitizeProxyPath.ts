@@ -1,4 +1,4 @@
-import settings from './Settings';
+import settings from './Settings.js';
 
 /**
  * Sanitize the URL-path prefix Etherpad is being served under.

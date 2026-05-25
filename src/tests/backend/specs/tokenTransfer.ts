@@ -6,7 +6,7 @@
  */
 
 const common = require('../common');
-import settings from '../../../node/utils/Settings';
+import settings from '../../../node/utils/Settings.js';
 
 const db = require('../../../node/db/DB');
 

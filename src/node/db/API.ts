@@ -24,6 +24,7 @@ import {deserializeOps} from '../../static/js/Changeset.js';
 import ChatMessage from '../../static/js/ChatMessage.js';
 import {Builder} from "../../static/js/Builder.js";
 import {Attribute} from "../../static/js/types/Attribute.js";
+import AttributeMap from "../../static/js/AttributeMap.js";
 import settings from '../utils/Settings.js';
 import CustomError from '../utils/customError.js';
 import * as padManager from './PadManager.js';

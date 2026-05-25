@@ -9,7 +9,7 @@
  *   - rejects path-traversal segments.
  */
 import {describe, it, expect} from 'vitest';
-import {sanitizeProxyPath} from '../../../node/utils/sanitizeProxyPath';
+import {sanitizeProxyPath} from '../../../node/utils/sanitizeProxyPath.js';
 
 const mockReq = (val: string|undefined) => ({
   header: (name: string) => name.toLowerCase() === 'x-proxy-path' ? val : undefined,
@@ -27,7 +27,7 @@ describe('sanitizeProxyPath', () => {
 
     it('returns "" when the req object has no header()', () => {
       expect(sanitizeProxyPath(undefined)).toBe('');
-      // @ts-expect-error — exercising the defensive branch
+      // @ts-expect-error — exercising the defensive branch with an incompatible type
       expect(sanitizeProxyPath({})).toBe('');
     });
   });
@@ -189,7 +189,7 @@ describe('sanitizeProxyPath', () => {
     });
 
     it('defaults trustProxy from settings when opts not provided', async () => {
-      const settings = (await import('../../../node/utils/Settings')).default;
+      const settings = (await import('../../../node/utils/Settings.js')).default;
       const original = settings.trustProxy;
       try {
         settings.trustProxy = true;
