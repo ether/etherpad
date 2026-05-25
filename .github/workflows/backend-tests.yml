@@ -132,6 +132,14 @@ jobs:
         working-directory: admin
         run: pnpm build
       -
+        name: Build ep_etherpad-lite (dist + dist-cjs)
+        working-directory: src
+        run: pnpm run build
+      -
+        name: Verify exports map
+        working-directory: src
+        run: pnpm run check:exports
+      -
         name: Install Etherpad plugins
         run: >
           pnpm add -w
@@ -264,6 +272,14 @@ jobs:
       - name: Build admin ui
         working-directory: admin
         run: pnpm build
+      -
+        name: Build ep_etherpad-lite (dist + dist-cjs)
+        working-directory: src
+        run: pnpm run build
+      -
+        name: Verify exports map
+        working-directory: src
+        run: pnpm run check:exports
       -
         name: Install Etherpad plugins
         run: >
