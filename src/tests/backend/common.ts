@@ -16,7 +16,32 @@ import TestAgent from "supertest/lib/agent";
 import {Http2Server} from "node:http2";
 import {SignJWT} from "jose";
 import {privateKeyExported} from "../../node/security/OAuth2Provider";
+import * as http from 'node:http';
 const webaccess = require('../../node/hooks/express/webaccess');
+
+// Enable HTTP keep-alive on the global agent for the test process. Without
+// this, every supertest request opens a fresh TCP connection and the server
+// closes it on response — the server side then enters TIME_WAIT for the
+// default Windows TcpTimedWaitDelay (~120 s) before the ephemeral port is
+// freed.
+//
+// The Windows backend-test job's OS-level netstat sidecar (PR #7846)
+// captured the smoking gun for the silent-ELIFECYCLE flake in run
+// 26419467467: localhost server-side TIME_WAIT counts on the Etherpad
+// listening port climbed linearly at ~14/s, reaching 228 active TIME_WAIT
+// entries on `[::1]:50398` 37 ms before the kill — all server-active-close
+// half-dead sockets, all from rapid sequential supertest requests with no
+// connection reuse. The kill cluster on Windows + Node 24 + plugins
+// correlates tightly with this TIME_WAIT accumulation: it gives libuv a
+// large pool of half-dead handles to walk on every IOCP completion.
+//
+// Setting keepAlive=true on http.globalAgent makes supertest's underlying
+// http.request reuse a single TCP connection for sequential requests to
+// the same origin, collapsing TIME_WAIT churn from ~14/s to nearly zero.
+// Linux is unaffected; the flake was Windows-only because Linux's
+// TIME_WAIT recycling is much faster and the kernel can sustain higher
+// half-dead-socket counts without symptom.
+http.globalAgent.keepAlive = true;
 
 const backups:MapArrayType<any> = {};
 let agentPromise:Promise<any>|null = null;
