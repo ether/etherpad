@@ -434,5 +434,3 @@ export const focusOnLine = (ace) => {
   }
   // End of setSelection / set Y position of editor
 };
-
-export {padeditor, focusOnLine};
