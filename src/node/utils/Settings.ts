@@ -434,11 +434,11 @@ const settings: SettingsType = {
   updateServer: "https://static.etherpad.org",
   enableDarkMode: true,
   enablePadWideSettings: true,
-  // New plugin-padOption passthrough is opt-in per AGENTS.MD §52 ("New
-  // features should be placed behind feature flags and disabled by
-  // default"). Flip to true to let plugins (e.g. ep_plugin_helpers'
-  // padToggle) ride the existing padoptions broadcast/persist rail.
-  enablePluginPadOptions: false,
+  // Lets plugins (e.g. ep_plugin_helpers' padToggle / padSelect) ride the
+  // existing padoptions broadcast/persist rail to store pad-wide options
+  // under ep_* keys. Operators who want to lock plugin-driven pad-wide
+  // state out can set this to false in settings.json.
+  enablePluginPadOptions: true,
   allowPadDeletionByAllUsers: false,
   privacyBanner: {
     enabled: false,

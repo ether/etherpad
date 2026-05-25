@@ -214,7 +214,7 @@ describe(__filename, function () {
     });
     afterEach(function () { console.warn = warnSpy; });
 
-    describe('with enablePluginPadOptions = true', function () {
+    describe('with enablePluginPadOptions = true (default)', function () {
       before(function () { settings.enablePluginPadOptions = true; });
 
       it('preserves ep_* keys verbatim so plugins can ride padoptions', function () {
@@ -285,10 +285,10 @@ describe(__filename, function () {
       });
     });
 
-    describe('with enablePluginPadOptions = false (default)', function () {
+    describe('with enablePluginPadOptions = false (operator opt-out)', function () {
       before(function () { settings.enablePluginPadOptions = false; });
 
-      it('drops every ep_* key — feature flag is opt-in', function () {
+      it('drops every ep_* key — operator has opted out of plugin pad-wide state', function () {
         const ps: any = Pad.Pad.normalizePadSettings({
           ep_table_of_contents: {enabled: true},
           ep_font_color: 'red',
