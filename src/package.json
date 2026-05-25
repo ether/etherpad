@@ -20,6 +20,18 @@
       "import": "./dist/node/eejs/index.mjs",
       "require": "./dist-cjs/node/eejs/index.cjs"
     },
+    "./node/eejs/index.js": {
+      "import": "./dist/node/eejs/index.mjs",
+      "require": "./dist-cjs/node/eejs/index.cjs"
+    },
+    "./node/eejs/index": {
+      "import": "./dist/node/eejs/index.mjs",
+      "require": "./dist-cjs/node/eejs/index.cjs"
+    },
+    "./node/eejs/": {
+      "import": "./dist/node/eejs/index.mjs",
+      "require": "./dist-cjs/node/eejs/index.cjs"
+    },
     "./node/*": {
       "import": "./dist/node/*.mjs",
       "require": "./dist-cjs/node/*.cjs"
