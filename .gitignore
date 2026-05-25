@@ -46,3 +46,7 @@ prime/
 
 # Local git worktrees used by /release-review and similar workflows.
 /.worktrees/
+
+# tsdown dual-emit build outputs.
+src/dist/
+src/dist-cjs/
