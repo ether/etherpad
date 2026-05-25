@@ -131,10 +131,17 @@ for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP', 'SIGBREAK'] as const) {
 // Mocha root hooks — only registered if mocha picks up this file via --require.
 // beforeEach sets the running pointer so a mid-test kill is attributable to a
 // specific test, not just the previous one that successfully finished.
+//
+// We also emit a synchronous diag line on every test start. The 1Hz heartbeat
+// misses tests that take less than a second, and the silent backend-test
+// kills land ~300 ms after a test boundary — exactly the gap where heartbeat
+// resolution fails us. A `start` line per test gives sub-millisecond
+// resolution on which test was on the rails when the process died.
 export const mochaHooks = {
   beforeEach(this: any) {
     if (this.currentTest) {
       currentTest = this.currentTest.fullTitle();
+      diag(`test start: ${currentTest}`);
     }
   },
   afterEach(this: any) {

@@ -418,8 +418,6 @@ describe(__filename, function () {
         // that a buggy makeGoodExport() doesn't cause checks to accidentally pass.
         const records = makeGoodExport();
         await deleteTestPad();
-        const importedPads = await importEtherpad(records)
-        console.log(importedPads)
         await importEtherpad(records)
             .expect(200)
             .expect('Content-Type', /json/)
