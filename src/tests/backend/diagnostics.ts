@@ -84,16 +84,20 @@ diag('diagnostics loaded');
 // and the latest report before the kill bracket gives us 0-1s of pre-death
 // state — including, critically, whether the V8 stack is inside jose's
 // JWT signing path, supertest's TCP roundtrip, or somewhere else.
-const reportDir = process.env.NODE_REPORT_DIR
-  || (() => {
-    // Extract --report-directory=PATH from NODE_OPTIONS so the report calls
-    // below land in the same directory the workflow already uploads.
-    const opts = process.env.NODE_OPTIONS || '';
-    const m = opts.match(/--report-directory=(\S+)/);
-    return m ? m[1] : '';
-  })();
-const canWriteReport = !!reportDir
-  && typeof (process as any).report?.writeReport === 'function';
+// Honor NODE_REPORT_DIR as a local-repro override by pushing it into
+// process.report.directory, which is the documented config knob. We can NOT
+// pass an absolute path into writeReport(): on Windows the runner sets
+// `--report-directory=D:\a\etherpad\etherpad/node-report` (mixed slashes),
+// and Node's report writer rejects any subsequent absolute path with errno
+// 22 / EINVAL. Pass a bare filename and let Node concatenate it against the
+// configured directory using its own platform-correct separator.
+if (process.env.NODE_REPORT_DIR && (process as any).report) {
+  (process as any).report.directory = process.env.NODE_REPORT_DIR;
+}
+const canWriteReport =
+  typeof (process as any).report?.writeReport === 'function'
+  && !!((process as any).report?.directory
+    || (process.env.NODE_OPTIONS || '').includes('--report-directory='));
 let reportCounter = 0;
 const heartbeat = setInterval(() => {
   const mem = process.memoryUsage();
@@ -121,7 +125,8 @@ const heartbeat = setInterval(() => {
       .slice(0, 80);
     const name = `hb-${String(reportCounter).padStart(4, '0')}-${safeTest}.json`;
     try {
-      (process as any).report.writeReport(`${reportDir}/${name}`);
+      // Bare filename only — see comment at canWriteReport definition above.
+      (process as any).report.writeReport(name);
     } catch { /* swallow — diagnostics must not throw */ }
   }
 }, 1000);
