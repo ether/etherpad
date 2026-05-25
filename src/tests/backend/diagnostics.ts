@@ -204,6 +204,24 @@ export const mochaHooks = {
       // boundary writes for any test whose neighbour fired ≥100 ms ago,
       // including the socketio tests in the dying-test pattern.
       tryWriteReport('be', 100);
+      // Mid-test snapshot. Run 26401801404 captured the dying test's
+      // beforeEach write but no further state — the kill landed 321 ms
+      // into the test body, between the 1 Hz heartbeat ticks, and the
+      // 100 ms boundary-throttle prevented additional beforeEach writes
+      // inside a single test. Schedule an unref'd setTimeout that fires
+      // 150 ms after the test entered: if it's still the running test
+      // at that point (i.e. slow enough that the death window applies),
+      // capture a snapshot from INSIDE the test body — where the TCP
+      // traffic and socket.io activity that precedes the kill happens.
+      // Fast tests (<150 ms) skip the write because currentTest will
+      // have already been cleared in afterEach.
+      const enteredTest = currentTest;
+      const midSnapshot = setTimeout(() => {
+        if (currentTest === enteredTest) {
+          tryWriteReport('mt', 0);
+        }
+      }, 150);
+      midSnapshot.unref();
     }
   },
   afterEach(this: any) {
