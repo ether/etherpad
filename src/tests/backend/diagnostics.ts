@@ -69,6 +69,32 @@ diag('diagnostics loaded');
 // it only fires if mocha is otherwise alive. The interval cadence (1Hz) is
 // the trade-off between log noise (~60-120 extra lines per run) and how
 // tightly we can bracket the kill timestamp.
+//
+// When the backend-test workflow has `--report-directory` set (only the
+// Windows jobs do at time of writing), every heartbeat also writes a Node
+// diagnostic report into that directory. The previous two failing CI runs
+// proved the kill bypasses all JS handlers (uncaughtException, signal,
+// beforeExit — none fire), so we can't capture stack state at the moment
+// of death. The next-best thing is a rolling 1Hz snapshot of:
+//   - V8 / native call stacks (all threads)
+//   - libuv active handles (open TCP connections, timers, file handles)
+//   - JS heap statistics
+//   - System info (CPU, memory, environment)
+// On the next failure the workflow uploads node-report/ as an artifact,
+// and the latest report before the kill bracket gives us 0-1s of pre-death
+// state — including, critically, whether the V8 stack is inside jose's
+// JWT signing path, supertest's TCP roundtrip, or somewhere else.
+const reportDir = process.env.NODE_REPORT_DIR
+  || (() => {
+    // Extract --report-directory=PATH from NODE_OPTIONS so the report calls
+    // below land in the same directory the workflow already uploads.
+    const opts = process.env.NODE_OPTIONS || '';
+    const m = opts.match(/--report-directory=(\S+)/);
+    return m ? m[1] : '';
+  })();
+const canWriteReport = !!reportDir
+  && typeof (process as any).report?.writeReport === 'function';
+let reportCounter = 0;
 const heartbeat = setInterval(() => {
   const mem = process.memoryUsage();
   // _getActiveHandles / _getActiveRequests are undocumented Node internals.
@@ -84,6 +110,20 @@ const heartbeat = setInterval(() => {
     `rss=${Math.round(mem.rss / 1024 / 1024)}M ` +
     `heap=${Math.round(mem.heapUsed / 1024 / 1024)}M ` +
     `handles=${handles} requests=${requests}`);
+  if (canWriteReport) {
+    reportCounter += 1;
+    // Keep filenames sortable by timestamp + counter so the workflow upload
+    // arrives ordered. Include the running test in the name (sanitised to
+    // valid filename chars) so the matching diag log line and report file
+    // are trivially correlatable.
+    const safeTest = currentTest
+      .replace(/[^a-zA-Z0-9._-]+/g, '_')
+      .slice(0, 80);
+    const name = `hb-${String(reportCounter).padStart(4, '0')}-${safeTest}.json`;
+    try {
+      (process as any).report.writeReport(`${reportDir}/${name}`);
+    } catch { /* swallow — diagnostics must not throw */ }
+  }
 }, 1000);
 heartbeat.unref();
 
