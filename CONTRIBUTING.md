@@ -5,6 +5,8 @@
 
 ## Pull requests
 
+* PRs MUST include a non-empty description explaining what the change does and why
+* PRs without a description should be flagged as incomplete
 * the commit series in the PR should be _linear_ (it **should not contain merge commits**). This is necessary because we want to be able to [bisect](https://en.wikipedia.org/wiki/Bisection_(software_engineering)) bugs easily. Rewrite history/perform a rebase if necessary
 * PRs should be issued against the **develop** branch: we never pull directly into **master**
 * PRs **should not have conflicts** with develop. If there are, please resolve them rebasing and force-pushing
@@ -123,7 +125,7 @@ Documentation should be kept up-to-date. This means, whenever you add a new API 
 You can build the docs e.g. produce html, using `make docs`. At some point in the future we will provide an online documentation. The current documentation in the github wiki should always reflect the state of `master` (!), since there are no docs in master, yet.
 
 ## Testing
-Front-end tests are found in the `tests/frontend/` folder in the repository. Run them by pointing your browser to `<yourdomainhere>/tests/frontend`.
+Front-end tests are found in the `src/tests/frontend/` folder in the repository. Run them by pointing your browser to `<yourdomainhere>/tests/frontend`.
 
 Back-end tests can be run from the `src` directory, via `npm test`.
 You can use `npm test -- --inspect-brk` and navigate to `edge://inspect` or `chrome://inspect` to debug the tests.
