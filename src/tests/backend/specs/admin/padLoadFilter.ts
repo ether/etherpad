@@ -9,7 +9,6 @@
 // offset/limit slice, so `total` reflects the filtered universe.
 
 import {strict as assert} from 'assert';
-import {vi} from 'vitest';
 import setCookieParser from 'set-cookie-parser';
 
 const io = require('socket.io-client');
@@ -100,7 +99,6 @@ describe(__filename, () => {
   const editedPadIds: string[] = [];
 
   before(async () => {
-    vi.setConfig({hookTimeout: 120000});
     await common.init();
 
     savedUsers = settings.users;
@@ -132,7 +130,7 @@ describe(__filename, () => {
       await pad.setText(`seed-${i}\n`, `m-${tag}-${i}`);
       editedPadIds.push(id);
     }
-  });
+  }, 120000);
 
   after(async () => {
     if (socket) socket.disconnect();

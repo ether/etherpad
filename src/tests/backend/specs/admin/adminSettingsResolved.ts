@@ -1,7 +1,6 @@
 'use strict';
 
 import {strict as assert} from 'assert';
-import {vi} from 'vitest';
 import setCookieParser from 'set-cookie-parser';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -96,7 +95,6 @@ describe(__filename, () => {
   let skipReason: string | null = null;
 
   before(async () => {
-    vi.setConfig({hookTimeout: 60000});
     await common.init();
 
     // The load handler bails with logger.error + early return if the
