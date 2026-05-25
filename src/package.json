@@ -12,41 +12,51 @@
   "module": "./dist/node/server.mjs",
   "exports": {
     ".": {
-      "import": "./dist/node/server.mjs"
+      "import": "./dist/node/server.mjs",
+      "default": "./dist/node/server.mjs"
     },
     "./node/eejs": {
       "import": "./dist/node/eejs/index.mjs",
-      "require": "./dist-cjs/node/eejs/index.cjs"
+      "require": "./dist-cjs/node/eejs/index.cjs",
+      "default": "./dist/node/eejs/index.mjs"
     },
     "./node/db/*": {
       "import": "./dist/node/db/*.mjs",
-      "require": "./dist-cjs/node/db/*.cjs"
+      "require": "./dist-cjs/node/db/*.cjs",
+      "default": "./dist/node/db/*.mjs"
     },
     "./node/db/*.js": {
       "import": "./dist/node/db/*.mjs",
-      "require": "./dist-cjs/node/db/*.cjs"
+      "require": "./dist-cjs/node/db/*.cjs",
+      "default": "./dist/node/db/*.mjs"
     },
     "./node/*": {
       "import": "./dist/node/*.mjs",
-      "require": "./dist-cjs/node/*.cjs"
+      "require": "./dist-cjs/node/*.cjs",
+      "default": "./dist/node/*.mjs"
     },
     "./node/*.js": {
       "import": "./dist/node/*.mjs",
-      "require": "./dist-cjs/node/*.cjs"
+      "require": "./dist-cjs/node/*.cjs",
+      "default": "./dist/node/*.mjs"
     },
     "./static/js/*": {
       "import": "./dist/static/js/*.mjs",
-      "require": "./dist-cjs/static/js/*.cjs"
+      "require": "./dist-cjs/static/js/*.cjs",
+      "default": "./dist/static/js/*.mjs"
     },
     "./static/js/*.js": {
       "import": "./dist/static/js/*.mjs",
-      "require": "./dist-cjs/static/js/*.cjs"
+      "require": "./dist-cjs/static/js/*.cjs",
+      "default": "./dist/static/js/*.mjs"
     },
     "./tests/backend/*": {
-      "import": "./dist/tests/backend/*.mjs"
+      "import": "./dist/tests/backend/*.mjs",
+      "default": "./dist/tests/backend/*.mjs"
     },
     "./tests/backend/*.js": {
-      "import": "./dist/tests/backend/*.mjs"
+      "import": "./dist/tests/backend/*.mjs",
+      "default": "./dist/tests/backend/*.mjs"
     },
     "./package.json": "./package.json"
   },
