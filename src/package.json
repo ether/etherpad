@@ -212,6 +212,7 @@
     "dev": "cross-env NODE_ENV=development  node --import tsx node/server.ts",
     "predev": "tsdown",
     "dev:watch": "concurrently \"pnpm build:watch\" \"cross-env NODE_ENV=development node --import tsx node/server.ts\"",
+    "preprod": "tsdown && node scripts/postbuild.mjs",
     "prod": "cross-env NODE_ENV=production node --import tsx node/server.ts",
     "ts-check": "tsc --noEmit",
     "ts-check:watch": "tsc --noEmit --watch",
