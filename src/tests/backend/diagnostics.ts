@@ -66,9 +66,15 @@ const diag = (msg: string): void => {
 diag('diagnostics loaded');
 
 // Heartbeat. unref()'d so it never holds the event loop open by itself —
-// it only fires if mocha is otherwise alive. The interval cadence (1Hz) is
-// the trade-off between log noise (~60-120 extra lines per run) and how
-// tightly we can bracket the kill timestamp.
+// it only fires if mocha is otherwise alive. Bumped from 1 Hz to 5 Hz
+// after run 26402211271 caught a death (messages.ts > USER_CHANGES >
+// retransmission, kill +425 ms post-test-start) where the setTimeout-based
+// mid-test snapshot didn't fire — likely Windows event-loop scheduling
+// delaying setTimeout under load. setInterval has been firing reliably
+// at 1 Hz throughout the investigation, so 200 ms (5 Hz) should land
+// inside any death window ≥200 ms. writeReport on the Windows runner
+// completed in <1 ms per the log timestamps, so the cadence cost is
+// negligible compared to the precision gain.
 //
 // When the backend-test workflow has `--report-directory` set (only the
 // Windows jobs do at time of writing), every heartbeat also writes a Node
@@ -99,16 +105,28 @@ const canWriteReport =
   && !!((process as any).report?.directory
     || (process.env.NODE_OPTIONS || '').includes('--report-directory='));
 let reportCounter = 0;
-let lastReportT = 0;
+// Throttle state is scoped to boundary (`be`) writes only. Heartbeat (`hb`)
+// and mid-test (`mt`) writes use minGapMs=0 and pass `updateThrottle=false`,
+// so they never bump the boundary timestamp — otherwise a slow test's
+// `mt` write could land <100 ms before the next test's `beforeEach` and
+// suppress that test's own `be` snapshot, exactly the boundary coverage
+// the throttle is meant to preserve.
+let lastBoundaryT = 0;
 
-// Shared writer used by both the heartbeat tick and the beforeEach hook.
-// Throttled by minGapMs so a burst of fast tests doesn't produce hundreds of
-// reports — we just need dense enough coverage to bracket the kill.
-const tryWriteReport = (prefix: string, minGapMs: number): void => {
+// Shared writer used by the heartbeat tick, the beforeEach hook, and the
+// mid-test setTimeout. minGapMs throttles `be` writes against the previous
+// boundary write so a burst of fast tests doesn't produce hundreds of
+// reports; `hb` and `mt` writes pass 0 + updateThrottle=false to bypass
+// and not affect the throttle window.
+const tryWriteReport = (
+  prefix: string,
+  minGapMs: number,
+  updateThrottle = true,
+): void => {
   if (!canWriteReport) return;
   const now = Date.now();
-  if (now - lastReportT < minGapMs) return;
-  lastReportT = now;
+  if (now - lastBoundaryT < minGapMs) return;
+  if (updateThrottle) lastBoundaryT = now;
   reportCounter += 1;
   const safeTest = currentTest
     .replace(/[^a-zA-Z0-9._-]+/g, '_')
@@ -134,9 +152,11 @@ const heartbeat = setInterval(() => {
     `rss=${Math.round(mem.rss / 1024 / 1024)}M ` +
     `heap=${Math.round(mem.heapUsed / 1024 / 1024)}M ` +
     `handles=${handles} requests=${requests}`);
-  // Heartbeat always writes — its 1Hz cadence is the floor.
-  tryWriteReport('hb', 0);
-}, 1000);
+  // Heartbeat always writes — its cadence is the floor for snapshot density.
+  // updateThrottle=false so the heartbeat tick doesn't suppress the next
+  // beforeEach `be` write.
+  tryWriteReport('hb', 0, false);
+}, 200);
 heartbeat.unref();
 
 process.on('unhandledRejection', (reason: any) => {
@@ -204,6 +224,33 @@ export const mochaHooks = {
       // boundary writes for any test whose neighbour fired ≥100 ms ago,
       // including the socketio tests in the dying-test pattern.
       tryWriteReport('be', 100);
+      // Mid-test snapshot. Run 26401801404 captured the dying test's
+      // beforeEach write but no further state — the kill landed 321 ms
+      // into the test body, between the 1 Hz heartbeat ticks, and the
+      // 100 ms boundary-throttle prevented additional beforeEach writes
+      // inside a single test. Schedule an unref'd setTimeout that fires
+      // 150 ms after the test entered: if it's still the running test
+      // at that point (i.e. slow enough that the death window applies),
+      // capture a snapshot from INSIDE the test body — where the TCP
+      // traffic and socket.io activity that precedes the kill happens.
+      // Fast tests (<150 ms) skip the write because currentTest will
+      // have already been cleared in afterEach.
+      //
+      // Gated on canWriteReport: skipping the schedule entirely when
+      // node-report can't be written saves a setTimeout per test on
+      // runs without --report-directory (local mocha runs and the
+      // Linux backend matrix), which would otherwise churn timers for
+      // no possible diagnostic output.
+      if (canWriteReport) {
+        const enteredTest = currentTest;
+        const midSnapshot = setTimeout(() => {
+          // updateThrottle=false so this snapshot doesn't push out the
+          // next test's `be` write — the boundary report is still the
+          // primary record of which test the kill struck.
+          if (currentTest === enteredTest) tryWriteReport('mt', 0, false);
+        }, 150);
+        midSnapshot.unref();
+      }
     }
   },
   afterEach(this: any) {
