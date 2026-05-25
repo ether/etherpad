@@ -195,12 +195,15 @@ export const mochaHooks = {
       currentTest = this.currentTest.fullTitle();
       diag(`test start: ${currentTest}`);
       // Drop a node-report at test-boundary granularity when the inter-report
-      // gap is wide enough. Run 26398985832's last report (hb-0013) landed
-      // ~1.7 s before the kill — not close enough to capture the dying
-      // test's V8 stack. With a 250 ms throttle, the worst case shrinks to
-      // ≤250 ms while keeping the artifact size bounded (~50 reports max
-      // per backend run, ~2.5 MB compressed).
-      tryWriteReport('be', 250);
+      // gap is wide enough. Run 26399285213's rerun caught the kill on the
+      // socketio.ts duplicate-author test, but the previous boundary write
+      // had landed 128 ms earlier — inside our 250 ms throttle, so the
+      // dying test's own beforeEach was suppressed. 100 ms is tighter than
+      // the inter-test cadence of fast burst suites (~2-5 ms per test, so
+      // ~20-50× throttled = max ~10 writes/sec) yet still captures
+      // boundary writes for any test whose neighbour fired ≥100 ms ago,
+      // including the socketio tests in the dying-test pattern.
+      tryWriteReport('be', 100);
     }
   },
   afterEach(this: any) {
