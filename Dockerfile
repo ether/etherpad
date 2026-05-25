@@ -198,6 +198,15 @@ RUN bin/installDeps.sh && \
   fi && \
     pnpm store prune
 
+# Build the dual ESM/CJS surface that the exports map (src/package.json
+# "exports") points at. The runtime esbuild-bundles the client JS at
+# server startup and resolves `ep_etherpad-lite/static/js/*` through
+# that exports map; without dist/ + dist-cjs/ present every reference
+# fails to resolve and etherpad never finishes booting. Building once
+# at image-build time avoids paying tsdown's cost on every container
+# start and keeps PID 1 (the `exec node ...` CMD) clean.
+RUN cd src && pnpm run build
+
 # Copy the configuration file.
 COPY --chown=etherpad:etherpad ${SETTINGS} "${EP_DIR}"/settings.json
 
@@ -222,4 +231,9 @@ EXPOSE 9001
 # verified during build. See ether/etherpad#7718.
 # `exec` makes node PID 1 so it receives SIGTERM directly and shuts down
 # cleanly.
-CMD ["sh", "-c", "cd src && exec node --require tsx/cjs node/server.ts"]
+# server.ts is loaded as an ESM module (uses `import`/`export` syntax),
+# so the ESM-aware tsx hook (`--import tsx`) is required. `--require
+# tsx/cjs` only intercepts CJS resolution and would leave Node's native
+# ESM resolver to crash on the first `import './foo.js'` that lacks a
+# matching file on disk (sources are .ts).
+CMD ["sh", "-c", "cd src && exec node --import tsx node/server.ts"]
