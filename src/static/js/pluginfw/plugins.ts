@@ -130,7 +130,13 @@ const loadServerHook = async (hookFnName, hookName) => {
 
   functionName = functionName || hookName;
   const candidates = path.extname(modulePath) === ''
-    ? [`${modulePath}.ts`, `${modulePath}.js`, modulePath]
+    ? [
+        `${modulePath}.ts`,
+        `${modulePath}.js`,
+        `${modulePath}.cjs`,
+        `${modulePath}.mjs`,
+        modulePath,
+      ]
     : [modulePath];
 
   let mod;
