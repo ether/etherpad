@@ -267,15 +267,16 @@ below.
 ### Runtime flag
 
 The passthrough is gated by `settings.enablePluginPadOptions`, default
-`false`. Operators must opt in via `settings.json`:
+`true`. Operators who want to lock plugins out of pad-wide state can flip
+it in `settings.json`:
 
 ```json
 {
-  "enablePluginPadOptions": true
+  "enablePluginPadOptions": false
 }
 ```
 
-When enabled, the server reflects the value to every client via
+When enabled (the default), the server reflects the value to every client via
 `clientVars.enablePluginPadOptions` so plugins can detect both *capable*
 (static) and *active* (per-pad request) at the same point.
 
