@@ -461,6 +461,9 @@ importers:
       etherpad-cli-client:
         specifier: ^4.0.3
         version: 4.0.3
+      jszip:
+        specifier: ^3.10.1
+        version: 3.10.1
       nodeify:
         specifier: ^1.0.1
         version: 1.0.1

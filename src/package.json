@@ -168,6 +168,7 @@
     "eslint": "^10.4.0",
     "eslint-config-etherpad": "^4.0.5",
     "etherpad-cli-client": "^4.0.3",
+    "jszip": "^3.10.1",
     "nodeify": "^1.0.1",
     "openapi-schema-validation": "^0.4.2",
     "set-cookie-parser": "^3.1.0",
