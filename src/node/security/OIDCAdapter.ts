@@ -12,7 +12,7 @@ const options = {
 }
 
 const epochTime = (date = Date.now()) => Math.floor(date / 1000);
-const storage = new LRUCache<string, AdapterPayload | string[]>(options);
+const storage = new LRUCache<string, AdapterPayload | string[] | string>(options);
 
 function grantKeyFor(id: string) {
   return `grant:${id}`;
