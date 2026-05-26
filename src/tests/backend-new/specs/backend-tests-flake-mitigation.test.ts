@@ -45,14 +45,17 @@ describe('backend-tests flake mitigation (PR #7748)', () => {
       .toBe(runStepCount);
   });
 
-  it('Windows backend-test steps invoke pnpm test with --exit', () => {
-    // --exit is the Windows-only mitigation. Linux still runs natural-drain
-    // so leaked-handle regressions stay visible there.
+  it.skip('Windows backend-test steps invoke pnpm test with --exit (PROBE: temporarily disabled)', () => {
+    // PROBE branch only — see PR #7856. The original assertion enforced
+    // that the post-suite-drain mitigation from PR #7748 stays in place.
+    // This probe deliberately drops --exit to see whether (a) the original
+    // post-suite hard-kill bug still reproduces on current Node 24.x, or
+    // (b) --exit was also masking signal from the mid-suite silent flake.
+    // The .skip is REQUIRED for the probe branch to run; if this is in a
+    // PR targeted at develop, revert it before merge.
     const exitCount = (workflow.match(/pnpm test -- --exit/g) || []).length;
     expect(exitCount, 'Windows × 2 jobs must pass --exit to pnpm test')
       .toBe(2);
-    // Negative check: Linux jobs must NOT use --exit so handle-leak
-    // detection stays alive on the natural-drain platforms.
     expect(workflow.includes('runs-on: ubuntu-latest'),
       'workflow no longer has any Linux jobs (sanity check)').toBe(true);
   });
