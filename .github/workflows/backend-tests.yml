@@ -258,7 +258,7 @@ jobs:
           # Node 24 hard-kills the process. Scoped to Windows so Linux/local
           # runs still surface real handle leaks via natural drain.
           set +e
-          pnpm test -- --exit
+          pnpm test
           EXIT=$?
           set -e
           kill "$WATCHER_PID" 2>/dev/null || true
@@ -392,7 +392,7 @@ jobs:
           # Node 24 hard-kills the process. Scoped to Windows so Linux/local
           # runs still surface real handle leaks via natural drain.
           set +e
-          pnpm test -- --exit
+          pnpm test
           EXIT=$?
           set -e
           kill "$WATCHER_PID" 2>/dev/null || true
