@@ -210,10 +210,28 @@ for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP', 'SIGBREAK'] as const) {
 // resolution fails us. A `start` line per test gives sub-millisecond
 // resolution on which test was on the rails when the process died.
 export const mochaHooks = {
-  beforeEach(this: any) {
+  async beforeEach(this: any) {
     if (this.currentTest) {
       currentTest = this.currentTest.fullTitle();
       diag(`test start: ${currentTest}`);
+      // Per-test event-loop yield for ether/etherpad's own backend tests
+      // (not plugin tests). Mitigation against the Windows silent-ELIFECYCLE
+      // flake: 13 captures so far show V8 starvation 200-400 ms before each
+      // kill in test files that fire 50-100 short tests in sequence. The
+      // initial scoped fix in PR #7854 covered 6 known-dying files but the
+      // flake migrated to a 7th (sessionsAndGroups.ts) on the next run —
+      // so the trigger is the broader rapid-sequential-test pattern, not
+      // specific files. A root-level yield covers all our backend tests.
+      //
+      // Plugin tests (loaded from `../node_modules/ep_*/static/tests/
+      // backend/specs`) are SKIPPED via file-path check because PR #7844
+      // demonstrated the global variant breaks ep_subscript_and_superscript
+      // tests that share state across describe-block boundaries. The check
+      // is conservative: only ether/etherpad's own specs get the yield.
+      const file = this.currentTest.file as string | undefined;
+      if (file && !/node_modules[/\\]ep_/.test(file)) {
+        await new Promise((r) => setImmediate(r));
+      }
       // Drop a node-report at test-boundary granularity when the inter-report
       // gap is wide enough. Run 26399285213's rerun caught the kill on the
       // socketio.ts duplicate-author test, but the previous boundary write
