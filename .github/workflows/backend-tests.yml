@@ -311,6 +311,16 @@ jobs:
           path: node-report/
           if-no-files-found: ignore
           retention-days: 7
+      - name: Upload Defender + Event Log baseline (always)
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: defender-eventlog-${{ runner.os }}-node${{ matrix.node }}-${{ github.job }}-${{ github.run_attempt }}
+          path: |
+            node-report/defender-*.txt
+            node-report/event-*.txt
+          if-no-files-found: ignore
+          retention-days: 7
       - name: Run the new vitest tests
         working-directory: src
         run: pnpm run test:vitest
@@ -482,6 +492,16 @@ jobs:
         with:
           name: node-diagnostic-report-${{ runner.os }}-node${{ matrix.node }}-${{ github.job }}
           path: node-report/
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: Upload Defender + Event Log baseline (always)
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: defender-eventlog-${{ runner.os }}-node${{ matrix.node }}-${{ github.job }}-${{ github.run_attempt }}
+          path: |
+            node-report/defender-*.txt
+            node-report/event-*.txt
           if-no-files-found: ignore
           retention-days: 7
       - name: Run the new vitest tests
