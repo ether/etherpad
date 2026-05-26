@@ -223,21 +223,39 @@ jobs:
         run: |
           mkdir -p "${{ github.workspace }}/node-report"
           OUT="${{ github.workspace }}/node-report"
-          # Out-of-process OS-level watcher for the silent-ELIFECYCLE flake.
-          # In-process diagnostics (diagnostics.ts heartbeat + node-report
-          # snapshots) showed that during the death window the V8 main
-          # isolate is starved — heartbeat stops firing entirely, then the
-          # process is externally terminated, bypassing all JS handlers and
-          # Node's --report-on-fatalerror. To capture state during that
-          # starvation we need a process that doesn't depend on the dying
-          # process's event loop. A bash background loop polling Windows
-          # OS state every 500 ms gives us that:
-          #   - netstat.log: localhost TCP socket states over time
-          #     (TIME_WAIT/CLOSE_WAIT accumulation, handle exhaustion)
-          #   - tasklist.log: node.exe process handle count, working set,
-          #     CPU time — captured by the OS independent of V8.
-          # Both logs are appended to node-report/ which already gets
-          # uploaded as an artifact on failure.
+
+          # ============================================================
+          # PROBE A: disable Windows Defender real-time monitoring.
+          # ------------------------------------------------------------
+          # The Windows silent-ELIFECYCLE flake (12+ captures) shows
+          # external termination with no JS-handler trace and no native
+          # abort report. That fingerprint matches Defender's behavioural-
+          # monitoring terminating processes flagged by its heuristics
+          # (rapid TCP fanout to localhost is on the suspect list). The
+          # GHA runner has Defender RT enabled by default. Disable it
+          # for the duration of this step. If kills disappear → causal;
+          # if not → Defender ruled out (it's already ruled out for the
+          # rest of the matrix where this isn't disabled).
+          # ============================================================
+          powershell -Command "Set-MpPreference -DisableRealtimeMonitoring \$true -ErrorAction SilentlyContinue; Get-MpPreference | Select-Object -Property DisableRealtimeMonitoring,DisableBehaviorMonitoring,DisableIOAVProtection,IsTamperProtected | Format-List" \
+            > "$OUT/defender-state-before.txt" 2>&1 || true
+
+          # ============================================================
+          # PROBE H (pre): clear Application + System event logs so the
+          # post-test dump contains only test-phase signal.
+          # ============================================================
+          powershell -Command "wevtutil cl Application; wevtutil cl System; Write-Host 'event logs cleared'" \
+            > "$OUT/event-clear.txt" 2>&1 || true
+
+          # ============================================================
+          # OS sidecar from PR #7846 + tasklist fix (probe I).
+          # Previous tasklist.log was empty because git-bash on Windows
+          # invoked `tasklist` in a way that produced UTF-16-LE output
+          # with a BOM. Use PowerShell's Get-CimInstance instead — clean
+          # ASCII, full process columns including HandleCount and
+          # WorkingSetSize which are the OS-side equivalents of the
+          # libuv handle table.
+          # ============================================================
           (
             while true; do
               ts=$(date '+%H:%M:%S.%3N')
@@ -247,12 +265,13 @@ jobs:
               } >> "$OUT/netstat.log"
               {
                 echo "=== $ts ==="
-                tasklist /v /fi "imagename eq node.exe" /fo csv 2>/dev/null || true
+                powershell -NoProfile -Command "Get-CimInstance -Query \"SELECT ProcessId,Name,HandleCount,ThreadCount,WorkingSetSize,PageFileUsage,KernelModeTime,UserModeTime FROM Win32_Process WHERE Name='node.exe'\" | Format-Table -AutoSize ProcessId,HandleCount,ThreadCount,WorkingSetSize,PageFileUsage,KernelModeTime,UserModeTime" 2>/dev/null || true
               } >> "$OUT/tasklist.log"
               sleep 0.5
             done
           ) &
           WATCHER_PID=$!
+
           # --exit forces process.exit(failures) after the suite completes,
           # closing the post-suite event-loop drain window where Windows +
           # Node 24 hard-kills the process. Scoped to Windows so Linux/local
@@ -263,6 +282,26 @@ jobs:
           set -e
           kill "$WATCHER_PID" 2>/dev/null || true
           wait "$WATCHER_PID" 2>/dev/null || true
+
+          # ============================================================
+          # PROBE H (post): dump event logs to the artifact directory
+          # regardless of pass/fail. On a kill we want the OS-side view
+          # of who terminated the process. On a pass we want a baseline
+          # to compare against.
+          # ============================================================
+          powershell -NoProfile -Command "Get-WinEvent -LogName Application -MaxEvents 500 -ErrorAction SilentlyContinue | Sort-Object TimeCreated | Format-Table -Wrap -AutoSize TimeCreated,Id,LevelDisplayName,ProviderName,Message" \
+            > "$OUT/event-application.txt" 2>&1 || true
+          powershell -NoProfile -Command "Get-WinEvent -LogName System -MaxEvents 500 -ErrorAction SilentlyContinue | Sort-Object TimeCreated | Format-Table -Wrap -AutoSize TimeCreated,Id,LevelDisplayName,ProviderName,Message" \
+            > "$OUT/event-system.txt" 2>&1 || true
+          powershell -NoProfile -Command "Get-WinEvent -LogName 'Microsoft-Windows-Windows Defender/Operational' -MaxEvents 200 -ErrorAction SilentlyContinue | Sort-Object TimeCreated | Format-Table -Wrap -AutoSize TimeCreated,Id,LevelDisplayName,Message" \
+            > "$OUT/event-defender.txt" 2>&1 || true
+          # Specifically grab process-termination / WER events
+          powershell -NoProfile -Command "Get-WinEvent -FilterHashtable @{LogName='Application';ProviderName='Application Error','Application Hang','Windows Error Reporting'} -MaxEvents 100 -ErrorAction SilentlyContinue | Sort-Object TimeCreated | Format-List" \
+            > "$OUT/event-app-errors.txt" 2>&1 || true
+          # Confirm Defender state at end of run (sanity: did it stay disabled?)
+          powershell -NoProfile -Command "Get-MpPreference | Select-Object DisableRealtimeMonitoring,DisableBehaviorMonitoring,DisableIOAVProtection,IsTamperProtected | Format-List" \
+            > "$OUT/defender-state-after.txt" 2>&1 || true
+
           exit $EXIT
       - name: Upload Node diagnostic reports on failure
         if: ${{ failure() }}
@@ -357,21 +396,39 @@ jobs:
         run: |
           mkdir -p "${{ github.workspace }}/node-report"
           OUT="${{ github.workspace }}/node-report"
-          # Out-of-process OS-level watcher for the silent-ELIFECYCLE flake.
-          # In-process diagnostics (diagnostics.ts heartbeat + node-report
-          # snapshots) showed that during the death window the V8 main
-          # isolate is starved — heartbeat stops firing entirely, then the
-          # process is externally terminated, bypassing all JS handlers and
-          # Node's --report-on-fatalerror. To capture state during that
-          # starvation we need a process that doesn't depend on the dying
-          # process's event loop. A bash background loop polling Windows
-          # OS state every 500 ms gives us that:
-          #   - netstat.log: localhost TCP socket states over time
-          #     (TIME_WAIT/CLOSE_WAIT accumulation, handle exhaustion)
-          #   - tasklist.log: node.exe process handle count, working set,
-          #     CPU time — captured by the OS independent of V8.
-          # Both logs are appended to node-report/ which already gets
-          # uploaded as an artifact on failure.
+
+          # ============================================================
+          # PROBE A: disable Windows Defender real-time monitoring.
+          # ------------------------------------------------------------
+          # The Windows silent-ELIFECYCLE flake (12+ captures) shows
+          # external termination with no JS-handler trace and no native
+          # abort report. That fingerprint matches Defender's behavioural-
+          # monitoring terminating processes flagged by its heuristics
+          # (rapid TCP fanout to localhost is on the suspect list). The
+          # GHA runner has Defender RT enabled by default. Disable it
+          # for the duration of this step. If kills disappear → causal;
+          # if not → Defender ruled out (it's already ruled out for the
+          # rest of the matrix where this isn't disabled).
+          # ============================================================
+          powershell -Command "Set-MpPreference -DisableRealtimeMonitoring \$true -ErrorAction SilentlyContinue; Get-MpPreference | Select-Object -Property DisableRealtimeMonitoring,DisableBehaviorMonitoring,DisableIOAVProtection,IsTamperProtected | Format-List" \
+            > "$OUT/defender-state-before.txt" 2>&1 || true
+
+          # ============================================================
+          # PROBE H (pre): clear Application + System event logs so the
+          # post-test dump contains only test-phase signal.
+          # ============================================================
+          powershell -Command "wevtutil cl Application; wevtutil cl System; Write-Host 'event logs cleared'" \
+            > "$OUT/event-clear.txt" 2>&1 || true
+
+          # ============================================================
+          # OS sidecar from PR #7846 + tasklist fix (probe I).
+          # Previous tasklist.log was empty because git-bash on Windows
+          # invoked `tasklist` in a way that produced UTF-16-LE output
+          # with a BOM. Use PowerShell's Get-CimInstance instead — clean
+          # ASCII, full process columns including HandleCount and
+          # WorkingSetSize which are the OS-side equivalents of the
+          # libuv handle table.
+          # ============================================================
           (
             while true; do
               ts=$(date '+%H:%M:%S.%3N')
@@ -381,12 +438,13 @@ jobs:
               } >> "$OUT/netstat.log"
               {
                 echo "=== $ts ==="
-                tasklist /v /fi "imagename eq node.exe" /fo csv 2>/dev/null || true
+                powershell -NoProfile -Command "Get-CimInstance -Query \"SELECT ProcessId,Name,HandleCount,ThreadCount,WorkingSetSize,PageFileUsage,KernelModeTime,UserModeTime FROM Win32_Process WHERE Name='node.exe'\" | Format-Table -AutoSize ProcessId,HandleCount,ThreadCount,WorkingSetSize,PageFileUsage,KernelModeTime,UserModeTime" 2>/dev/null || true
               } >> "$OUT/tasklist.log"
               sleep 0.5
             done
           ) &
           WATCHER_PID=$!
+
           # --exit forces process.exit(failures) after the suite completes,
           # closing the post-suite event-loop drain window where Windows +
           # Node 24 hard-kills the process. Scoped to Windows so Linux/local
@@ -397,6 +455,26 @@ jobs:
           set -e
           kill "$WATCHER_PID" 2>/dev/null || true
           wait "$WATCHER_PID" 2>/dev/null || true
+
+          # ============================================================
+          # PROBE H (post): dump event logs to the artifact directory
+          # regardless of pass/fail. On a kill we want the OS-side view
+          # of who terminated the process. On a pass we want a baseline
+          # to compare against.
+          # ============================================================
+          powershell -NoProfile -Command "Get-WinEvent -LogName Application -MaxEvents 500 -ErrorAction SilentlyContinue | Sort-Object TimeCreated | Format-Table -Wrap -AutoSize TimeCreated,Id,LevelDisplayName,ProviderName,Message" \
+            > "$OUT/event-application.txt" 2>&1 || true
+          powershell -NoProfile -Command "Get-WinEvent -LogName System -MaxEvents 500 -ErrorAction SilentlyContinue | Sort-Object TimeCreated | Format-Table -Wrap -AutoSize TimeCreated,Id,LevelDisplayName,ProviderName,Message" \
+            > "$OUT/event-system.txt" 2>&1 || true
+          powershell -NoProfile -Command "Get-WinEvent -LogName 'Microsoft-Windows-Windows Defender/Operational' -MaxEvents 200 -ErrorAction SilentlyContinue | Sort-Object TimeCreated | Format-Table -Wrap -AutoSize TimeCreated,Id,LevelDisplayName,Message" \
+            > "$OUT/event-defender.txt" 2>&1 || true
+          # Specifically grab process-termination / WER events
+          powershell -NoProfile -Command "Get-WinEvent -FilterHashtable @{LogName='Application';ProviderName='Application Error','Application Hang','Windows Error Reporting'} -MaxEvents 100 -ErrorAction SilentlyContinue | Sort-Object TimeCreated | Format-List" \
+            > "$OUT/event-app-errors.txt" 2>&1 || true
+          # Confirm Defender state at end of run (sanity: did it stay disabled?)
+          powershell -NoProfile -Command "Get-MpPreference | Select-Object DisableRealtimeMonitoring,DisableBehaviorMonitoring,DisableIOAVProtection,IsTamperProtected | Format-List" \
+            > "$OUT/defender-state-after.txt" 2>&1 || true
+
           exit $EXIT
       - name: Upload Node diagnostic reports on failure
         if: ${{ failure() }}
