@@ -1010,6 +1010,122 @@ exports.updatePadClients = async (pad: PadType) => {
   // benefits of running this in parallel,
   // but benefit of reusing cached revision object is HUGE
   const revCache:MapArrayType<any> = {};
+  const forWireCache:MapArrayType<any> = {};
+
+  const getRevision = async (rev: any) => {
+    let revision = revCache[rev];
+    if (!revision) {
+      revision = await pad.getRevision(rev);
+      revCache[rev] = revision;
+    }
+    return revision;
+  };
+
+  const getForWire = (rev: number, revision: any) => {
+    let forWire = forWireCache[rev];
+    if (!forWire) {
+      forWire = prepareForWire(revision.changeset, pad.pool);
+      forWireCache[rev] = forWire;
+    }
+    return forWire;
+  };
+
+  if (settings.roomBroadcastNewChanges) {
+    const headRev = pad.getHeadRevisionNumber();
+    const syncedSocketIds: string[] = [];
+    const stragglerSockets: any[] = [];
+
+    for (const socket of roomSockets) {
+      const sessioninfo = sessioninfos[socket.id];
+      // The user might have disconnected since _getRoomSockets() was called.
+      if (sessioninfo == null) continue;
+      if (sessioninfo.rev === headRev - 1) {
+        syncedSocketIds.push(socket.id);
+      } else {
+        stragglerSockets.push(socket);
+      }
+    }
+
+    // Broadcast the latest revision once for all steady-state recipients (head-1).
+    if (syncedSocketIds.length > 0 && headRev >= 0) {
+      const revision = await getRevision(headRev);
+      const author = revision.meta.author;
+      const currentTime = revision.meta.timestamp;
+      const forWire = getForWire(headRev, revision);
+      const exemplarSession = sessioninfos[syncedSocketIds[0]];
+      const msg = {
+        type: 'COLLABROOM',
+        data: {
+          type: 'NEW_CHANGES',
+          newRev: headRev,
+          changeset: forWire.translated,
+          apool: forWire.pool,
+          author,
+          currentTime,
+          timeDelta: currentTime - exemplarSession.time,
+        },
+      };
+      const ns = socketio?.sockets;
+      if (ns != null) {
+        if (stragglerSockets.length > 0) {
+          ns.to(pad.id).except(stragglerSockets.map((s) => s.id)).emit('message', msg);
+        } else {
+          ns.to(pad.id).emit('message', msg);
+        }
+      } else {
+        // Fallback to direct socket emits if namespace is unavailable.
+        for (const socketId of syncedSocketIds) {
+          const socket = roomSockets.find((s) => s.id === socketId);
+          if (socket != null) socket.emit('message', msg);
+        }
+      }
+      recordSocketEmit('NEW_CHANGES');
+
+      for (const socketId of syncedSocketIds) {
+        const sessioninfo = sessioninfos[socketId];
+        if (sessioninfo == null || sessioninfo.rev !== headRev - 1) continue;
+        sessioninfo.time = currentTime;
+        sessioninfo.rev = headRev;
+      }
+    }
+
+    // Stragglers still need per-socket catch-up to preserve rev+1 semantics.
+    await Promise.all(stragglerSockets.map(async (socket) => {
+      const sessioninfo = sessioninfos[socket.id];
+      if (sessioninfo == null) return;
+
+      while (sessioninfo.rev < pad.getHeadRevisionNumber()) {
+        const r = sessioninfo.rev + 1;
+        const revision = await getRevision(r);
+        const author = revision.meta.author;
+        const currentTime = revision.meta.timestamp;
+        const forWire = getForWire(r, revision);
+
+        const msg = {
+          type: 'COLLABROOM',
+          data: {
+            type: 'NEW_CHANGES',
+            newRev: r,
+            changeset: forWire.translated,
+            apool: forWire.pool,
+            author,
+            currentTime,
+            timeDelta: currentTime - sessioninfo.time,
+          },
+        };
+        try {
+          socket.emit('message', msg);
+          recordSocketEmit('NEW_CHANGES');
+        } catch (err:any) {
+          messageLogger.error(`Failed to notify user of new revision: ${err.stack || err}`);
+          return;
+        }
+        sessioninfo.time = currentTime;
+        sessioninfo.rev = r;
+      }
+    }));
+    return;
+  }
 
   await Promise.all(roomSockets.map(async (socket) => {
     const sessioninfo = sessioninfos[socket.id];
@@ -1018,17 +1134,11 @@ exports.updatePadClients = async (pad: PadType) => {
 
     while (sessioninfo.rev < pad.getHeadRevisionNumber()) {
       const r = sessioninfo.rev + 1;
-      let revision = revCache[r];
-      if (!revision) {
-        revision = await pad.getRevision(r);
-        revCache[r] = revision;
-      }
+      const revision = await getRevision(r);
 
       const author = revision.meta.author;
-      const revChangeset = revision.changeset;
       const currentTime = revision.meta.timestamp;
-
-      const forWire = prepareForWire(revChangeset, pad.pool);
+      const forWire = getForWire(r, revision);
       const msg = {
         type: 'COLLABROOM',
         data: {

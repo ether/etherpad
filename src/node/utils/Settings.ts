@@ -275,6 +275,7 @@ export type SettingsType = {
   ipLogging: 'full' | 'truncated' | 'anonymous',
   automaticReconnectionTimeout: number,
   loadTest: boolean,
+  roomBroadcastNewChanges: boolean,
   scalingDiveMetrics: boolean,
   dumpOnUncleanExit: boolean,
   indentationOnNewLine: boolean,
@@ -698,6 +699,11 @@ const settings: SettingsType = {
    * Disable Load Testing
    */
   loadTest: false,
+  /**
+   * Use room-broadcast for steady-state NEW_CHANGES fan-out. Disabled by default so this
+   * optimization can be A/B tested safely.
+   */
+  roomBroadcastNewChanges: false,
   /**
    * Expose extra Prometheus metrics designed for the scaling-dive load-test harness
    * (ether/etherpad#7756): etherpad_pad_users{padId}, etherpad_changeset_apply_duration_seconds,
