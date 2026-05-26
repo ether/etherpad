@@ -1046,7 +1046,6 @@ exports.updatePadClients = async (pad: PadType) => {
       }
     }
 
-    // Broadcast the latest revision once for all steady-state recipients (head-1).
     if (syncedSocketIds.length > 0 && headRev >= 0) {
       const revision = await getRevision(headRev);
       const author = revision.meta.author;
@@ -1073,7 +1072,6 @@ exports.updatePadClients = async (pad: PadType) => {
           ns.to(pad.id).emit('message', msg);
         }
       } else {
-        // Fallback to direct socket emits if namespace is unavailable.
         for (const socketId of syncedSocketIds) {
           const socket = roomSockets.find((s) => s.id === socketId);
           if (socket != null) socket.emit('message', msg);
@@ -1089,7 +1087,6 @@ exports.updatePadClients = async (pad: PadType) => {
       }
     }
 
-    // Stragglers still need per-socket catch-up to preserve rev+1 semantics.
     await Promise.all(stragglerSockets.map(async (socket) => {
       const sessioninfo = sessioninfos[socket.id];
       if (sessioninfo == null) return;

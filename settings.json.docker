@@ -684,7 +684,7 @@
   "socketTransportProtocols" : ["websocket", "polling"],
 
   /*
-   * Performance experiment (#7780): room-broadcast NEW_CHANGES to steady-state
+   * room-broadcast NEW_CHANGES to steady-state
    * recipients, keep per-socket catch-up for stragglers.
    */
   "roomBroadcastNewChanges": "${ROOM_BROADCAST_NEW_CHANGES:false}",

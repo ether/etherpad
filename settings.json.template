@@ -766,7 +766,7 @@
   "socketTransportProtocols" : ["websocket", "polling"],
 
   /*
-   * Performance experiment (#7780): use room-broadcast NEW_CHANGES fan-out for
+   * use room-broadcast NEW_CHANGES fan-out for
    * steady-state recipients (clients at head-1), while stragglers still catch
    * up via per-socket emits.
    *
