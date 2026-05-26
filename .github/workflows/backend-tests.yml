@@ -222,11 +222,48 @@ jobs:
           NODE_OPTIONS: "--report-on-fatalerror --report-uncaught-exception --report-on-signal --report-compact --report-directory=${{ github.workspace }}/node-report"
         run: |
           mkdir -p "${{ github.workspace }}/node-report"
+          OUT="${{ github.workspace }}/node-report"
+          # Out-of-process OS-level watcher for the silent-ELIFECYCLE flake.
+          # In-process diagnostics (diagnostics.ts heartbeat + node-report
+          # snapshots) showed that during the death window the V8 main
+          # isolate is starved — heartbeat stops firing entirely, then the
+          # process is externally terminated, bypassing all JS handlers and
+          # Node's --report-on-fatalerror. To capture state during that
+          # starvation we need a process that doesn't depend on the dying
+          # process's event loop. A bash background loop polling Windows
+          # OS state every 500 ms gives us that:
+          #   - netstat.log: localhost TCP socket states over time
+          #     (TIME_WAIT/CLOSE_WAIT accumulation, handle exhaustion)
+          #   - tasklist.log: node.exe process handle count, working set,
+          #     CPU time — captured by the OS independent of V8.
+          # Both logs are appended to node-report/ which already gets
+          # uploaded as an artifact on failure.
+          (
+            while true; do
+              ts=$(date '+%H:%M:%S.%3N')
+              {
+                echo "=== $ts ==="
+                netstat -an 2>/dev/null | grep -E "TCP\s+(127\.0\.0\.1|\[::1\])" || true
+              } >> "$OUT/netstat.log"
+              {
+                echo "=== $ts ==="
+                tasklist /v /fi "imagename eq node.exe" /fo csv 2>/dev/null || true
+              } >> "$OUT/tasklist.log"
+              sleep 0.5
+            done
+          ) &
+          WATCHER_PID=$!
           # --exit forces process.exit(failures) after the suite completes,
           # closing the post-suite event-loop drain window where Windows +
           # Node 24 hard-kills the process. Scoped to Windows so Linux/local
           # runs still surface real handle leaks via natural drain.
+          set +e
           pnpm test -- --exit
+          EXIT=$?
+          set -e
+          kill "$WATCHER_PID" 2>/dev/null || true
+          wait "$WATCHER_PID" 2>/dev/null || true
+          exit $EXIT
       - name: Upload Node diagnostic reports on failure
         if: ${{ failure() }}
         uses: actions/upload-artifact@v7
@@ -319,11 +356,48 @@ jobs:
           NODE_OPTIONS: "--report-on-fatalerror --report-uncaught-exception --report-on-signal --report-compact --report-directory=${{ github.workspace }}/node-report"
         run: |
           mkdir -p "${{ github.workspace }}/node-report"
+          OUT="${{ github.workspace }}/node-report"
+          # Out-of-process OS-level watcher for the silent-ELIFECYCLE flake.
+          # In-process diagnostics (diagnostics.ts heartbeat + node-report
+          # snapshots) showed that during the death window the V8 main
+          # isolate is starved — heartbeat stops firing entirely, then the
+          # process is externally terminated, bypassing all JS handlers and
+          # Node's --report-on-fatalerror. To capture state during that
+          # starvation we need a process that doesn't depend on the dying
+          # process's event loop. A bash background loop polling Windows
+          # OS state every 500 ms gives us that:
+          #   - netstat.log: localhost TCP socket states over time
+          #     (TIME_WAIT/CLOSE_WAIT accumulation, handle exhaustion)
+          #   - tasklist.log: node.exe process handle count, working set,
+          #     CPU time — captured by the OS independent of V8.
+          # Both logs are appended to node-report/ which already gets
+          # uploaded as an artifact on failure.
+          (
+            while true; do
+              ts=$(date '+%H:%M:%S.%3N')
+              {
+                echo "=== $ts ==="
+                netstat -an 2>/dev/null | grep -E "TCP\s+(127\.0\.0\.1|\[::1\])" || true
+              } >> "$OUT/netstat.log"
+              {
+                echo "=== $ts ==="
+                tasklist /v /fi "imagename eq node.exe" /fo csv 2>/dev/null || true
+              } >> "$OUT/tasklist.log"
+              sleep 0.5
+            done
+          ) &
+          WATCHER_PID=$!
           # --exit forces process.exit(failures) after the suite completes,
           # closing the post-suite event-loop drain window where Windows +
           # Node 24 hard-kills the process. Scoped to Windows so Linux/local
           # runs still surface real handle leaks via natural drain.
+          set +e
           pnpm test -- --exit
+          EXIT=$?
+          set -e
+          kill "$WATCHER_PID" 2>/dev/null || true
+          wait "$WATCHER_PID" 2>/dev/null || true
+          exit $EXIT
       - name: Upload Node diagnostic reports on failure
         if: ${{ failure() }}
         uses: actions/upload-artifact@v7
