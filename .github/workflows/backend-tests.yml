@@ -215,6 +215,33 @@ jobs:
           powershell -Command "(gc settings.json.template) -replace '\"max\": 10', '\"max\": 10000' | Out-File -encoding ASCII settings.json.holder"
           powershell -Command "(gc settings.json.holder) -replace '\"points\": 10', '\"points\": 1000' | Out-File -encoding ASCII settings.json"
       -
+        # PROBE G — install Sysinternals ProcDump as the system Just-In-Time
+        # debugger. When ANY process on the runner crashes, fast-fails (via
+        # int 29h), or hits an unhandled SEH exception, the OS hands it to
+        # the JIT debugger, which writes a full memory dump to the configured
+        # directory. This catches the silent-ELIFECYCLE kill class even when
+        # it bypasses every event-log path: probe A+H (PR #7855) ruled out
+        # Defender AND showed the kill produces NO entry in Application,
+        # System, or Defender Operational logs. That fingerprint matches
+        # __fastfail (int 29h) — used internally by libuv on Windows for
+        # certain TCP/pipe state-corruption assertions. ProcDump as JIT
+        # debugger is the only standard tool that captures user + kernel
+        # state across __fastfail.
+        name: Install ProcDump as JIT debugger (probe G)
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Continue'
+          Invoke-WebRequest -Uri "https://download.sysinternals.com/files/Procdump.zip" -OutFile "$env:TEMP\Procdump.zip"
+          Expand-Archive -Path "$env:TEMP\Procdump.zip" -DestinationPath "C:\procdump" -Force
+          New-Item -ItemType Directory -Force -Path "${{ github.workspace }}\node-report\dumps" | Out-Null
+          # -i installs procdump as the system JIT debugger.
+          # -ma writes a full memory dump.
+          # The dump path argument tells procdump where to write the dumps.
+          & "C:\procdump\procdump64.exe" -accepteula -i -ma "${{ github.workspace }}\node-report\dumps"
+          # Sanity: confirm the AeDebug registry key now points at procdump.
+          Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\AeDebug" -ErrorAction SilentlyContinue | Format-List
+          Get-ItemProperty "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows NT\CurrentVersion\AeDebug" -ErrorAction SilentlyContinue | Format-List
+      -
         name: Run the backend tests
         shell: bash
         working-directory: src
@@ -397,6 +424,33 @@ jobs:
         run: |
           powershell -Command "(gc settings.json.template) -replace '\"max\": 10', '\"max\": 10000' | Out-File -encoding ASCII settings.json.holder"
           powershell -Command "(gc settings.json.holder) -replace '\"points\": 10', '\"points\": 1000' | Out-File -encoding ASCII settings.json"
+      -
+        # PROBE G — install Sysinternals ProcDump as the system Just-In-Time
+        # debugger. When ANY process on the runner crashes, fast-fails (via
+        # int 29h), or hits an unhandled SEH exception, the OS hands it to
+        # the JIT debugger, which writes a full memory dump to the configured
+        # directory. This catches the silent-ELIFECYCLE kill class even when
+        # it bypasses every event-log path: probe A+H (PR #7855) ruled out
+        # Defender AND showed the kill produces NO entry in Application,
+        # System, or Defender Operational logs. That fingerprint matches
+        # __fastfail (int 29h) — used internally by libuv on Windows for
+        # certain TCP/pipe state-corruption assertions. ProcDump as JIT
+        # debugger is the only standard tool that captures user + kernel
+        # state across __fastfail.
+        name: Install ProcDump as JIT debugger (probe G)
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Continue'
+          Invoke-WebRequest -Uri "https://download.sysinternals.com/files/Procdump.zip" -OutFile "$env:TEMP\Procdump.zip"
+          Expand-Archive -Path "$env:TEMP\Procdump.zip" -DestinationPath "C:\procdump" -Force
+          New-Item -ItemType Directory -Force -Path "${{ github.workspace }}\node-report\dumps" | Out-Null
+          # -i installs procdump as the system JIT debugger.
+          # -ma writes a full memory dump.
+          # The dump path argument tells procdump where to write the dumps.
+          & "C:\procdump\procdump64.exe" -accepteula -i -ma "${{ github.workspace }}\node-report\dumps"
+          # Sanity: confirm the AeDebug registry key now points at procdump.
+          Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\AeDebug" -ErrorAction SilentlyContinue | Format-List
+          Get-ItemProperty "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows NT\CurrentVersion\AeDebug" -ErrorAction SilentlyContinue | Format-List
       -
         name: Run the backend tests
         shell: bash
