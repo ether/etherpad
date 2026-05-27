@@ -215,7 +215,7 @@ jobs:
           powershell -Command "(gc settings.json.template) -replace '\"max\": 10', '\"max\": 10000' | Out-File -encoding ASCII settings.json.holder"
           powershell -Command "(gc settings.json.holder) -replace '\"points\": 10', '\"points\": 1000' | Out-File -encoding ASCII settings.json"
       -
-        # PROBE G — install Sysinternals ProcDump as the system Just-In-Time
+        # PROBE G (rev 2) — install Sysinternals ProcDump as the system Just-In-Time
         # debugger. When ANY process on the runner crashes, fast-fails (via
         # int 29h), or hits an unhandled SEH exception, the OS hands it to
         # the JIT debugger, which writes a full memory dump to the configured
@@ -425,7 +425,7 @@ jobs:
           powershell -Command "(gc settings.json.template) -replace '\"max\": 10', '\"max\": 10000' | Out-File -encoding ASCII settings.json.holder"
           powershell -Command "(gc settings.json.holder) -replace '\"points\": 10', '\"points\": 1000' | Out-File -encoding ASCII settings.json"
       -
-        # PROBE G — install Sysinternals ProcDump as the system Just-In-Time
+        # PROBE G (rev 2) — install Sysinternals ProcDump as the system Just-In-Time
         # debugger. When ANY process on the runner crashes, fast-fails (via
         # int 29h), or hits an unhandled SEH exception, the OS hands it to
         # the JIT debugger, which writes a full memory dump to the configured
