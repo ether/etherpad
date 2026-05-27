@@ -179,8 +179,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Etherpad requires Node >= 24 (see package.json engines.node).
-        node: ${{ fromJSON('[24]') }}
+        # PROBE K — Node 22 added as comparator vs 24. If 22 doesn't
+        # exhibit the silent ELIFECYCLE flake, we have a clear bisection
+        # target between the two; if it does, Node version isn't the
+        # cause. engines-strict relaxed for Node 22 via the per-step
+        # `.npmrc` override below.
+        node: ${{ fromJSON('[22, 24]') }}
     name: Windows without plugins
     runs-on: windows-latest
     steps:
@@ -203,6 +207,19 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
           cache: pnpm
+      -
+        # PROBE K — relax engines-strict for the Node 22 comparator matrix
+        # entry. Etherpad's src/package.json declares `engines.node: >=24`,
+        # which pnpm enforces. We want to compare flake rate on Node 22 vs
+        # Node 24 as a bisection probe; override on a per-job basis so the
+        # rest of the matrix stays strict.
+        name: Relax engines-strict for Node ${{ matrix.node }}
+        if: matrix.node != 24
+        shell: bash
+        run: |
+          echo "engine-strict=false" >> .npmrc
+          echo "engines-strict=false" >> .npmrc
+          cat .npmrc
       -
         name: Install all dependencies and symlink for ep_etherpad-lite
         run: pnpm install --frozen-lockfile
