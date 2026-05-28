@@ -180,7 +180,13 @@ jobs:
       fail-fast: false
       matrix:
         # Etherpad requires Node >= 24 (see package.json engines.node).
-        node: ${{ fromJSON('[24]') }}
+        # Windows runs on Node 25, not 24: Node 24.x's bundled libuv has a
+        # stack buffer overrun in the Windows TCP-connect path (uv__tcp_connect),
+        # proven by a /GS __fastfail dump under the backend suite's heavy localhost
+        # connection churn. It is the long-standing Windows backend silent-ELIFECYCLE
+        # flake (memory corruption -> no JS/Node observability, ~22% of runs). Node 25
+        # is clean (16/16 green vs ~39% fail on 24). Revisit when the fix lands in 24.x.
+        node: ${{ fromJSON('[25]') }}
     name: Windows without plugins
     runs-on: windows-latest
     steps:
@@ -285,7 +291,13 @@ jobs:
       fail-fast: false
       matrix:
         # Etherpad requires Node >= 24 (see package.json engines.node).
-        node: ${{ fromJSON('[24]') }}
+        # Windows runs on Node 25, not 24: Node 24.x's bundled libuv has a
+        # stack buffer overrun in the Windows TCP-connect path (uv__tcp_connect),
+        # proven by a /GS __fastfail dump under the backend suite's heavy localhost
+        # connection churn. It is the long-standing Windows backend silent-ELIFECYCLE
+        # flake (memory corruption -> no JS/Node observability, ~22% of runs). Node 25
+        # is clean (16/16 green vs ~39% fail on 24). Revisit when the fix lands in 24.x.
+        node: ${{ fromJSON('[25]') }}
     name: Windows with Plugins
     runs-on: windows-latest
 
