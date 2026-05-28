@@ -312,7 +312,7 @@ jobs:
           WATCHER_PID=$!
 
           # ============================================================
-          # PROBE G rev 3 — attach ProcDump to every node.exe as it
+          # PROBE G rev 3 (retrigger) — attach ProcDump to every node.exe as it
           # spawns. The JIT debugger registered above only fires for
           # AeDebug events (unhandled SEH / __fastfail / WER crashes);
           # the first rev-2 capture proved that fires NOTHING when the
@@ -571,7 +571,7 @@ jobs:
           WATCHER_PID=$!
 
           # ============================================================
-          # PROBE G rev 3 — attach ProcDump to every node.exe as it
+          # PROBE G rev 3 (retrigger) — attach ProcDump to every node.exe as it
           # spawns. The JIT debugger registered above only fires for
           # AeDebug events (unhandled SEH / __fastfail / WER crashes);
           # the first rev-2 capture proved that fires NOTHING when the
