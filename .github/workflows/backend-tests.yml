@@ -189,6 +189,8 @@ jobs:
         # (libuv 1.52.1) is clean (0/8). Stays on the 24 LTS line. Pin explicitly
         # because setup-node's default check-latest:false reuses the runner's
         # pre-cached 24.15.0 for a bare "24".
+        # Tracking: https://github.com/nodejs/node/issues/63620 — drop this pin
+        # back to plain "24" once the fix is across the supported 24.x baseline.
         node: ${{ fromJSON('["24.16.0"]') }}
     name: Windows without plugins
     runs-on: windows-latest
@@ -303,6 +305,8 @@ jobs:
         # (libuv 1.52.1) is clean (0/8). Stays on the 24 LTS line. Pin explicitly
         # because setup-node's default check-latest:false reuses the runner's
         # pre-cached 24.15.0 for a bare "24".
+        # Tracking: https://github.com/nodejs/node/issues/63620 — drop this pin
+        # back to plain "24" once the fix is across the supported 24.x baseline.
         node: ${{ fromJSON('["24.16.0"]') }}
     name: Windows with Plugins
     runs-on: windows-latest
