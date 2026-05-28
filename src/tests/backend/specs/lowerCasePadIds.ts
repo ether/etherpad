@@ -20,10 +20,9 @@ describe(__filename, function () {
   // Track every socket.io-client we open so afterEach can disconnect each
   // one. Without this, the client's 5s reconnect timer stays armed after
   // the test server tears down, keeping the event loop alive past mocha's
-  // "passing" output and tripping the unclean-exit force-quit (see the
-  // diagnostics.ts comment block about the Windows + Node 24 backend-test
-  // flake; this spec was responsible for 3 of the 3 leaked timers seen
-  // in the wtfnode dump).
+  // "passing" output and tripping the unclean-exit force-quit on Windows +
+  // Node 24. This spec accounted for 3 of the 3 leaked timers seen in a
+  // wtfnode dump.
   const openedSockets: any[] = [];
   const trackSocket = (s: any) => { openedSockets.push(s); return s; };
 
