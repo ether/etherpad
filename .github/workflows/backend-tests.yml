@@ -180,13 +180,16 @@ jobs:
       fail-fast: false
       matrix:
         # Etherpad requires Node >= 24 (see package.json engines.node).
-        # Windows runs on Node 25, not 24: Node 24.x's bundled libuv has a
-        # stack buffer overrun in the Windows TCP-connect path (uv__tcp_connect),
-        # proven by a /GS __fastfail dump under the backend suite's heavy localhost
-        # connection churn. It is the long-standing Windows backend silent-ELIFECYCLE
-        # flake (memory corruption -> no JS/Node observability, ~22% of runs). Node 25
-        # is clean (16/16 green vs ~39% fail on 24). Revisit when the fix lands in 24.x.
-        node: ${{ fromJSON('[25]') }}
+        # Windows pins Node 24.16.0, not the runner-default 24.15.0. Node 24.15.0's
+        # bundled libuv (1.51.0) has a stack buffer overrun in the Windows TCP-connect
+        # path (uv__tcp_connect), proven by a /GS __fastfail full-memory dump under the
+        # backend suite's heavy localhost connection churn -- the long-standing Windows
+        # backend silent-ELIFECYCLE flake (memory corruption, so no JS/Node
+        # observability). Bisect: 24.15.0 crashes (4/4 on 127.0.0.1), 24.16.0
+        # (libuv 1.52.1) is clean (0/8). Stays on the 24 LTS line. Pin explicitly
+        # because setup-node's default check-latest:false reuses the runner's
+        # pre-cached 24.15.0 for a bare "24".
+        node: ${{ fromJSON('["24.16.0"]') }}
     name: Windows without plugins
     runs-on: windows-latest
     steps:
@@ -291,13 +294,16 @@ jobs:
       fail-fast: false
       matrix:
         # Etherpad requires Node >= 24 (see package.json engines.node).
-        # Windows runs on Node 25, not 24: Node 24.x's bundled libuv has a
-        # stack buffer overrun in the Windows TCP-connect path (uv__tcp_connect),
-        # proven by a /GS __fastfail dump under the backend suite's heavy localhost
-        # connection churn. It is the long-standing Windows backend silent-ELIFECYCLE
-        # flake (memory corruption -> no JS/Node observability, ~22% of runs). Node 25
-        # is clean (16/16 green vs ~39% fail on 24). Revisit when the fix lands in 24.x.
-        node: ${{ fromJSON('[25]') }}
+        # Windows pins Node 24.16.0, not the runner-default 24.15.0. Node 24.15.0's
+        # bundled libuv (1.51.0) has a stack buffer overrun in the Windows TCP-connect
+        # path (uv__tcp_connect), proven by a /GS __fastfail full-memory dump under the
+        # backend suite's heavy localhost connection churn -- the long-standing Windows
+        # backend silent-ELIFECYCLE flake (memory corruption, so no JS/Node
+        # observability). Bisect: 24.15.0 crashes (4/4 on 127.0.0.1), 24.16.0
+        # (libuv 1.52.1) is clean (0/8). Stays on the 24 LTS line. Pin explicitly
+        # because setup-node's default check-latest:false reuses the runner's
+        # pre-cached 24.15.0 for a bare "24".
+        node: ${{ fromJSON('["24.16.0"]') }}
     name: Windows with Plugins
     runs-on: windows-latest
 
