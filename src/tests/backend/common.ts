@@ -28,28 +28,29 @@ export const logger = log4js.getLogger('test');
 
 const logLevel = logger.level;
 
-// Mocha doesn't monitor unhandled Promise rejections, so convert them to uncaught exceptions.
-// https://github.com/mochajs/mocha/issues/2640
+// Log unhandled Promise rejections; do NOT rethrow and do NOT process.exit().
 //
-// Log via process.stderr.write before throwing: when the rethrown rejection
-// kills mocha between specs, the runner exits with code 1 and no summary.
-// Without this, the rejection reason is lost (worst on Windows runners,
-// where stderr is not always flushed before abrupt exit) and CI shows a
-// silent ELIFECYCLE with no clue what rejected.
+// Root cause of the long-standing Windows backend "silent ELIFECYCLE" flake
+// (confirmed via a procdump full-memory capture showing node::ReallyExit
+// firing from a microtask): a timing-fragile test (e.g. SessionStore touch/
+// expiry specs) gets timed out and abandoned by mocha, but its async body
+// keeps running; when its trailing assertion later throws, it surfaces as an
+// *orphan* unhandled rejection — one that belongs to no currently-awaited
+// test. PR #7663 rethrew these (→ uncaughtException) and an earlier revision
+// even called process.exit(), and server.ts's production handler turned them
+// into a full Etherpad shutdown. Any one orphan rejection therefore killed
+// the whole suite mid-run with no mocha summary.
+//
+// Orphan rejections cannot be cleanly attributed to a test, so rethrowing
+// just produces an ERR_MOCHA_MULTIPLE_DONE mess and a non-deterministic
+// abort. Log them loudly instead. Real failures are unaffected: an assertion
+// inside a test's own awaited path rejects THAT test's promise and mocha
+// fails it normally — it never reaches this global handler. The companion
+// fix is in server.ts, where the production process-exit handlers are now
+// gated on `require.main === module` so they don't fire under the test runner.
 process.on('unhandledRejection', (reason: any) => {
-  process.stderr.write(`[backend tests] unhandledRejection: ${
+  process.stderr.write(`[backend tests] unhandledRejection (logged, non-fatal): ${
     reason && reason.stack ? reason.stack : String(reason)}\n`);
-  throw reason;
-});
-
-// Surface uncaught exceptions for the same reason. Node's default behavior
-// (exit non-zero) is preserved by the explicit process.exit below — without
-// the handler, Node would write to stderr and exit; with the handler we have
-// to do it ourselves.
-process.on('uncaughtException', (err: any) => {
-  process.stderr.write(`[backend tests] uncaughtException: ${
-    err && err.stack ? err.stack : String(err)}\n`);
-  process.exit(1);
 });
 
 before(async function () {

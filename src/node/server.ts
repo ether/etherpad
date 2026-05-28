@@ -118,38 +118,57 @@ exports.start = async () => {
     // @ts-ignore
     stats.gauge('memoryUsageHeap', () => process.memoryUsage().heapUsed);
 
-    process.on('uncaughtException', (err: ErrorCaused) => {
-      logger.debug(`uncaught exception: ${err.stack || err}`);
+    // These process-global handlers turn ANY uncaught exception / unhandled
+    // rejection / termination signal into a full Etherpad shutdown + exit.
+    // That is correct for a real Etherpad process, but catastrophic when
+    // server.start() is called in-process by a test runner (mocha): a single
+    // leaked promise rejection from any one test would call exports.exit()
+    // and tear down the whole suite mid-run — the long-standing Windows
+    // "silent ELIFECYCLE" flake (root-caused via a procdump capture showing
+    // node::ReallyExit firing from a microtask). Only install them when
+    // server.ts is the program entry point (production). Under a test runner
+    // require.main is the runner, not this module, and mocha's own per-test
+    // uncaughtException/unhandledRejection handling fails the offending test
+    // instead of killing the process. (This mirrors the existing
+    // `if (require.main === module) exports.start()` idiom at the bottom of
+    // this file — embedders that call start() programmatically are likewise
+    // responsible for their own process lifecycle.)
+    if (require.main === module) {
+      process.on('uncaughtException', (err: ErrorCaused) => {
+        logger.debug(`uncaught exception: ${err.stack || err}`);
 
-      // eslint-disable-next-line promise/no-promise-in-callback
-      exports.exit(err)
-          .catch((err: ErrorCaused) => {
-            logger.error('Error in process exit', err);
-            // eslint-disable-next-line n/no-process-exit
-            process.exit(1);
-          });
-    });
-    // As of v14, Node.js does not exit when there is an unhandled Promise rejection. Convert an
-    // unhandled rejection into an uncaught exception, which does cause Node.js to exit.
-    process.on('unhandledRejection', (err: ErrorCaused) => {
-      logger.debug(`unhandled rejection: ${err.stack || err}`);
-      throw err;
-    });
-
-    for (const signal of ['SIGINT', 'SIGTERM'] as NodeJS.Signals[]) {
-      // Forcibly remove other signal listeners to prevent them from terminating node before we are
-      // done cleaning up. See https://github.com/andywer/threads.js/pull/329 for an example of a
-      // problematic listener. This means that exports.exit is solely responsible for performing all
-      // necessary cleanup tasks.
-      for (const listener of process.listeners(signal)) {
-        removeSignalListener(signal, listener);
-      }
-      process.on(signal, exports.exit);
-      // Prevent signal listeners from being added in the future.
-      process.on('newListener', (event, listener) => {
-        if (event !== signal) return;
-        removeSignalListener(signal, listener);
+        // eslint-disable-next-line promise/no-promise-in-callback
+        exports.exit(err)
+            .catch((err: ErrorCaused) => {
+              logger.error('Error in process exit', err);
+              // eslint-disable-next-line n/no-process-exit
+              process.exit(1);
+            });
       });
+      // As of v14, Node.js does not exit when there is an unhandled Promise
+      // rejection. Convert an unhandled rejection into an uncaught exception,
+      // which does cause Node.js to exit.
+      process.on('unhandledRejection', (err: ErrorCaused) => {
+        logger.debug(`unhandled rejection: ${err.stack || err}`);
+        throw err;
+      });
+
+      for (const signal of ['SIGINT', 'SIGTERM'] as NodeJS.Signals[]) {
+        // Forcibly remove other signal listeners to prevent them from
+        // terminating node before we are done cleaning up. See
+        // https://github.com/andywer/threads.js/pull/329 for an example of a
+        // problematic listener. This means that exports.exit is solely
+        // responsible for performing all necessary cleanup tasks.
+        for (const listener of process.listeners(signal)) {
+          removeSignalListener(signal, listener);
+        }
+        process.on(signal, exports.exit);
+        // Prevent signal listeners from being added in the future.
+        process.on('newListener', (event, listener) => {
+          if (event !== signal) return;
+          removeSignalListener(signal, listener);
+        });
+      }
     }
 
     await db.init();
