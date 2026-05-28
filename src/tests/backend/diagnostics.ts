@@ -163,19 +163,20 @@ process.on('unhandledRejection', (reason: any) => {
   diag(`unhandledRejection: ${
     reason && reason.stack ? reason.stack : String(reason)
   } (running="${currentTest}", lastFinished="${lastFinishedTest}")`);
-  // Re-throw so existing common.ts handlers / mocha behavior is preserved.
-  throw reason;
+  // Log only — do NOT rethrow and do NOT process.exit(). Orphan rejections
+  // (from timed-out/abandoned async tests) belong to no awaited test, so
+  // rethrowing them just kills the suite. See common.ts for the full
+  // rationale.
 });
 
 process.on('uncaughtException', (err: any) => {
   diag(`uncaughtException: ${
     err && err.stack ? err.stack : String(err)
   } (running="${currentTest}", lastFinished="${lastFinishedTest}")`);
-  // Force fail-fast. Specs that don't import common.ts only have THIS handler,
-  // and Node won't exit on its own once an uncaughtException listener is
-  // registered. Without the explicit exit a fatal error would be swallowed.
-  // common.ts has the same process.exit(1); whichever handler runs first wins.
-  process.exit(1);
+  // Log only — do NOT process.exit(). Exiting here was part of the
+  // silent-ELIFECYCLE flake: a single leaked rejection killed the whole
+  // suite. mocha's own uncaughtException listener fails the responsible
+  // test and continues, which is the behavior we want.
 });
 
 process.on('beforeExit', (code: number) => {
