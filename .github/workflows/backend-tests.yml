@@ -215,7 +215,7 @@ jobs:
           powershell -Command "(gc settings.json.template) -replace '\"max\": 10', '\"max\": 10000' | Out-File -encoding ASCII settings.json.holder"
           powershell -Command "(gc settings.json.holder) -replace '\"points\": 10', '\"points\": 1000' | Out-File -encoding ASCII settings.json"
       -
-        # PROBE G (rev 3) (retrigger 1) — install Sysinternals ProcDump as the system
+        # PROBE G (rev 3) (retrigger 2) — install Sysinternals ProcDump as the system
         # Just-In-Time debugger AND additionally launch a long-running
         # procdump that monitors all node.exe processes specifically.
         #
@@ -474,7 +474,7 @@ jobs:
           powershell -Command "(gc settings.json.template) -replace '\"max\": 10', '\"max\": 10000' | Out-File -encoding ASCII settings.json.holder"
           powershell -Command "(gc settings.json.holder) -replace '\"points\": 10', '\"points\": 1000' | Out-File -encoding ASCII settings.json"
       -
-        # PROBE G (rev 3) (retrigger 1) — install Sysinternals ProcDump as the system
+        # PROBE G (rev 3) (retrigger 2) — install Sysinternals ProcDump as the system
         # Just-In-Time debugger AND additionally launch a long-running
         # procdump that monitors all node.exe processes specifically.
         #
