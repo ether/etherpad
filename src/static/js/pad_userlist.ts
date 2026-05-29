@@ -23,6 +23,14 @@ const chat = require('./chat').chat;
 import html10n from './vendors/html10n';
 let myUserInfo = {};
 
+const decodePadSegment = (segment: string): string => {
+  try {
+    return decodeURIComponent(segment);
+  } catch {
+    return segment;
+  }
+};
+
 let colorPickerOpen = false;
 let colorPickerSetup = false;
 
@@ -557,7 +565,7 @@ const paduserlist = (() => {
       if (localStorage.getItem('recentPads') != null) {
         const recentPadsList = JSON.parse(localStorage.getItem('recentPads'));
         const pathSegments = window.location.pathname.split('/');
-        const padName = pathSegments[pathSegments.length - 1];
+        const padName = decodePadSegment(pathSegments[pathSegments.length - 1]);
         const existingPad = recentPadsList.find((pad) => pad.name === padName);
         if (existingPad) {
           existingPad.members = online;

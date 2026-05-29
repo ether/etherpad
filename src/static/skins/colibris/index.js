@@ -1,5 +1,13 @@
 'use strict';
 
+const decodePadName = (name) => {
+  try {
+    return decodeURIComponent(name);
+  } catch {
+    return name;
+  }
+};
+
 window.addEventListener('pageshow', (event) => {
   if (event.persisted) {
     if (document.readyState === 'complete' || document.readyState === 'interactive') {
@@ -37,6 +45,13 @@ window.customStart = () => {
     recentPadListData = JSON.parse(recentPadsFromLocalStorage);
   }
 
+  // Normalize older entries that stored encoded names (e.g. Test%2F123).
+  recentPadListData = recentPadListData.map((pad) => ({
+    ...pad,
+    name: decodePadName(String(pad.name ?? '')),
+  }));
+  localStorage.setItem('recentPads', JSON.stringify(recentPadListData));
+
   // Remove duplicates based on pad name and sort by timestamp
   recentPadListData = recentPadListData.filter(
       (pad, index, self) => index === self.findIndex((p) => p.name === pad.name)
@@ -70,7 +85,7 @@ window.customStart = () => {
       li.style.cursor = 'pointer';
 
       li.className = 'recent-pad';
-      const padPath = `${window.location.href}p/${pad.name}`;
+      const padPath = `${window.location.href}p/${encodeURIComponent(pad.name)}`;
       const link = document.createElement('a');
       link.style.textDecoration = 'none';
 

@@ -1,6 +1,13 @@
 'use strict';
 
 const MAX_PADS_IN_HISTORY = 3;
+const decodePadSegment = (segment) => {
+  try {
+    return decodeURIComponent(segment);
+  } catch {
+    return segment;
+  }
+};
 
 window.customStart = () => {
   $('#pad_title').show();
@@ -8,7 +15,7 @@ window.customStart = () => {
   $('.buttonicon').on('mouseup', function () { $(this).parent().removeClass('pressed'); });
 
   const pathSegments = window.location.pathname.split('/');
-  const padName = pathSegments[pathSegments.length - 1];
+  const padName = decodePadSegment(pathSegments[pathSegments.length - 1]);
   const recentPads = localStorage.getItem('recentPads');
   if (recentPads == null) {
     localStorage.setItem('recentPads', JSON.stringify([]));
