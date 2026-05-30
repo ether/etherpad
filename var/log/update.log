@@ -1,3 +1,0 @@
-[2026-05-30T12:28:01.272Z] CANCEL by admin during status=scheduled
-[2026-05-30T12:28:01.289Z] ACKNOWLEDGE rollback-failed -> idle
-[2026-05-30T12:28:01.303Z] ACKNOWLEDGE preflight-failed -> idle
