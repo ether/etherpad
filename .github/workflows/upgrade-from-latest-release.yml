@@ -84,9 +84,6 @@ jobs:
       -
         name: Run the backend tests
         run: pnpm run test
-      -
-        name: Install all dependencies and symlink for ep_etherpad-lite
-        run: pnpm install --frozen-lockfile
       # The job starts from the latest release tag, so fetch the pull-request
       # ref explicitly before checking out ${GITHUB_SHA}. A plain "git fetch"
       # only brings "normal" references (refs/heads/* and refs/tags/*), and for
@@ -99,5 +96,8 @@ jobs:
         # For pull requests, ${GITHUB_SHA} is the automatically generated merge
         # commit that merges the PR's source branch to its destination branch.
         run: git checkout "${GITHUB_SHA}"
+      -
+        name: Install all dependencies and symlink for ep_etherpad-lite
+        run: pnpm install --frozen-lockfile
       - name: Run the backend tests
         run: pnpm run test
