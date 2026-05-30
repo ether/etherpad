@@ -70,13 +70,12 @@ window.customStart = () => {
       li.style.cursor = 'pointer';
 
       li.className = 'recent-pad';
-      const decodedName = decodeURIComponent(pad.name);
-      const padPath = `${window.location.href}p/${encodeURIComponent(decodedName)}`;
+      const padPath = `${window.location.href}p/${encodeURIComponent(pad.name)}`;
       const link = document.createElement('a');
       link.style.textDecoration = 'none';
 
       link.href = padPath;
-      link.innerText = decodedName;
+      link.innerText = pad.name;
       li.appendChild(link);
 
 
