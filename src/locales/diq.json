@@ -12,6 +12,7 @@
 		]
 	},
 	"admin.page-title": "Panoyê İdarekari - Etherpad",
+	"admin_pads.error_dialog_description": "Yew xeta biye.",
 	"admin_plugins": "Gıredayışê raverberi",
 	"admin_plugins.available": "Mewcud Dekerdeki",
 	"admin_plugins.available_not-found": "Dekerdek nevineya",
@@ -45,6 +46,7 @@
 	"admin_settings.current_save.value": "Eyaran qeyd ke",
 	"admin_settings.page-title": "Eyari - Etherpad",
 	"index.newPad": "Bloknoto newe",
+	"index.code": "Kod",
 	"index.createOpenPad": "ya zi be nê nameyi ra yew bloknot vıraze/ake:",
 	"index.openPad": "yew Padê biyayeyi be nê nameyi ra ake:",
 	"pad.toolbar.bold.title": "Qalınd (Ctrl-B)",
