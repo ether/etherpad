@@ -36,17 +36,23 @@ const wcagRatio = (rgb1: string, rgb2: string): number => {
 const renderedAuthorContrast = async (page: Page) => {
   const body = await getPadBody(page);
   await body.click();
-  await page.keyboard.type('contrast smoke');
+  const typed = 'contrast smoke';
+  await page.keyboard.type(typed);
   await page.waitForTimeout(300);
-  // The author span is the inner-frame <span class="author-..."> wrapping
-  // the typed text. Read its computed bg + the inherited text colour.
-  const result = await page.frame('ace_inner')!.evaluate(() => {
-    const span = document.querySelector(
-        '#innerdocbody span[class*="author-"]:not([class*="anonymous"])') as HTMLElement | null;
+  // The author span is the inner-frame <span class="author-..."> wrapping the
+  // text WE just typed. Match by text content rather than picking the first
+  // author span on the page: the default welcome text is owned by the system
+  // author (issue #7885) and renders with no background colour, so the first
+  // author span is no longer the current user's. Read the span's computed bg +
+  // the inherited text colour.
+  const result = await page.frame('ace_inner')!.evaluate((needle) => {
+    const spans = Array.from(
+        document.querySelectorAll('#innerdocbody span[class*="author-"]')) as HTMLElement[];
+    const span = spans.find((s) => (s.textContent || '').includes(needle));
     if (!span) return null;
     const cs = getComputedStyle(span);
     return {bg: cs.backgroundColor, color: cs.color};
-  });
+  }, typed);
   return result;
 };
 
