@@ -11,8 +11,11 @@ which is the authoritative reference.
 Etherpad reads its configuration from `settings.json` in the installation root.
 A new install copies `settings.json.template` to `settings.json` on first run.
 
-* **Override the file location** with the `--settings` (or `-s`) command-line
-  flag, e.g. `node src/node/server.js --settings /etc/etherpad/settings.json`.
+* **Override the file location** by passing the `-s` / `--settings` flag to
+  the launcher, e.g. `bin/run.sh -s /etc/etherpad/settings.json`. This lets
+  you run multiple instances from one installation. (`bin/run.sh` forwards the
+  flag to `pnpm run prod`, which is the supported entrypoint — there is no
+  `server.js`; the runtime is `src/node/server.ts`, loaded via `tsx`.)
 * **Environment-variable substitution** — any string value may reference an
   environment variable using the syntax `"${ENV_VAR}"` or
   `"${ENV_VAR:default}"`. The variable name **must** be quoted, even when the

@@ -4,9 +4,9 @@
  * Compact every pad on the instance to reclaim database space.
  *
  * Usage:
- *   node bin/compactAllPads.js              # collapse all history on every pad
- *   node bin/compactAllPads.js --keep N     # keep last N revisions per pad
- *   node bin/compactAllPads.js --dry-run    # list pads + rev counts, no writes
+ *   pnpm run --filter bin compactAllPads              # collapse all history on every pad
+ *   pnpm run --filter bin compactAllPads --keep N     # keep last N revisions per pad
+ *   pnpm run --filter bin compactAllPads --dry-run    # list pads + rev counts, no writes
  *
  * Composes the existing `listAllPads` and `compactPad` HTTP APIs — there is
  * deliberately no instance-wide HTTP endpoint, because doing this over a
@@ -170,9 +170,9 @@ export const parseArgs = (argv: string[]): CompactAllOpts | null => {
 // so the test harness can use `runCompactAll` directly without network.
 const usage = () => {
   console.error('Usage:');
-  console.error('  node bin/compactAllPads.js');
-  console.error('  node bin/compactAllPads.js --keep <N>');
-  console.error('  node bin/compactAllPads.js --dry-run');
+  console.error('  pnpm run --filter bin compactAllPads');
+  console.error('  pnpm run --filter bin compactAllPads --keep <N>');
+  console.error('  pnpm run --filter bin compactAllPads --dry-run');
   process.exit(2);
 };
 
