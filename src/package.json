@@ -30,7 +30,7 @@
     }
   ],
   "dependencies": {
-    "@elastic/elasticsearch": "^9.4.1",
+    "@elastic/elasticsearch": "^9.4.2",
     "async": "^3.2.6",
     "cassandra-driver": "^4.8.0",
     "cookie-parser": "^1.4.7",
