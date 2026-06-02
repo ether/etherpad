@@ -590,20 +590,28 @@ class Pad {
       Object.assign(this, value);
       if ('pool' in value) this.pool = new AttributePool().fromJsonable(value.pool);
     } else {
-      if (text == null) {
+      // Auto-generated default content (settings.defaultPadText or whatever a
+      // padDefaultContent hook substitutes) is not written by the user who
+      // happens to open the pad first, so it must not carry their author
+      // attribute — otherwise the welcome text shows up in the creator's
+      // authorship colour (issue #7885). Track whether the text came from the
+      // default-content path so it can be attributed to the system author.
+      const usedDefaultContent = (text == null);
+      if (usedDefaultContent) {
         const context = {pad: this, authorId, type: 'text', content: settings.defaultPadText};
         await hooks.aCallAll('padDefaultContent', context);
         if (context.type !== 'text') throw new Error(`unsupported content type: ${context.type}`);
         text = exports.cleanText(context.content);
       }
-      // When the initial pad text is non-empty but no authorId was
-      // supplied (internal getPad calls during HTTP API setup,
-      // padDefaultContent flows, plugin-driven pad creation), fall back
-      // to the stable system author so the initial changeset's insert
-      // op carries an `author` attribute. Mirrors the same substitution
-      // setText/appendText already do via spliceText.
+      // Attribute the initial changeset to the stable system author when the
+      // content is auto-generated default text, or when non-empty text was
+      // supplied without an authorId (internal getPad calls during HTTP API
+      // setup, plugin-driven pad creation). The latter keeps the initial
+      // insert op carrying an `author` attribute, mirroring the same
+      // substitution setText/appendText already do via spliceText.
       const effectiveAuthorId =
-          (text.length > 0 && !authorId) ? Pad.SYSTEM_AUTHOR_ID : authorId;
+          (usedDefaultContent || (text.length > 0 && !authorId))
+            ? Pad.SYSTEM_AUTHOR_ID : authorId;
       const firstAttribs = effectiveAuthorId
           ? [['author', effectiveAuthorId] as [string, string]]
           : undefined;

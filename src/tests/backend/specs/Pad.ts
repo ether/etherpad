@@ -179,6 +179,35 @@ describe(__filename, function () {
       pad = await padManager.getPad(padId);
       assert.equal(pad!.text(), `${want}\n`);
     });
+
+    it('attributes default content to the system author, not the creating user (issue #7885)',
+        async function () {
+      // When a user opens a brand-new pad, CLIENT_READY calls
+      // getPad(padId, null, session.author). The default welcome text is
+      // not written by that user, so it must not carry their author
+      // attribute (which would colour it with the creator's colour).
+      const creator = await authorManager.getAuthorId(`t.${padId}`);
+      pad = await padManager.getPad(padId, null, creator);
+      // getAllAuthors is an existing runtime Pad method; cast avoids adding a
+      // type-only declaration to PadType in this PR (mirrors spliceText above).
+      const authors: string[] = (pad as any).getAllAuthors();
+      assert(!authors.includes(creator),
+          `default text must not be owned by the creating author ${creator}`);
+      assert(authors.includes('a.etherpad-system'),
+          'default text should be owned by the system author');
+    });
+
+    it('still attributes explicitly provided content to the creating author',
+        async function () {
+      // A real author providing real text (e.g. API createPad with text)
+      // keeps ownership — only the auto-generated default content is
+      // reassigned to the system author.
+      const creator = await authorManager.getAuthorId(`t.${padId}`);
+      pad = await padManager.getPad(padId, 'real user content', creator);
+      const authors: string[] = (pad as any).getAllAuthors();
+      assert(authors.includes(creator),
+          'explicitly provided text should remain owned by the creating author');
+    });
   });
 
   describe('normalizePadSettings lang (issue #7586)', function () {
