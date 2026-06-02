@@ -172,7 +172,7 @@ volumes:
 
 ### Docker container
 
-Find [here](doc/docker.adoc) information on running Etherpad in a container.
+Find [here](doc/docker.md) information on running Etherpad in a container.
 
 ## Plugins
 
@@ -247,8 +247,8 @@ git -P tag --list "v*" --merged
 ```
 4. Select the version
 ```sh
-git checkout v2.2.5
-git switch -c v2.2.5
+git checkout v3.2.0
+git switch -c v3.2.0
 ```
 5. Upgrade Etherpad
 ```sh

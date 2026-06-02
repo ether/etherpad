@@ -112,6 +112,8 @@ The `settings.json.docker` available by default allows to control almost every s
 | `DEFAULT_PAD_TEXT` | The default text of a pad                                                                  | `Welcome to Etherpad! This pad text is synchronized as you type, so that everyone viewing this page sees the same text. This allows you to collaborate seamlessly on documents! Get involved with Etherpad at https://etherpad.org` |
 | `IP`               | IP which etherpad should bind at. Change to `::` for IPv6                                  | `0.0.0.0`                                                                                                                                                                                                                           |
 | `PORT`             | port which etherpad should bind at                                                         | `9001`                                                                                                                                                                                                                              |
+| `PUBLIC_URL`       | Canonical public origin of this instance, e.g. `https://pad.example.com` (no trailing slash, must include scheme). Used to build absolute URLs in link-preview meta tags. When `null`, falls back to the incoming request's protocol+Host. | `null`                                                                                                                                                                                                          |
+| `ENABLE_DARK_MODE` | Respect the end user's browser dark-mode preference. When enabled this overrides the admin-configured skin variants and skin name for that user.                                              | `true`                                                                                                                                                                                                          |
 | `ADMIN_PASSWORD`   | the password for the `admin` user (leave unspecified if you do not want to create it)      |                                                                                                                                                                                                                                     |
 | `USER_PASSWORD`    | the password for the first user `user` (leave unspecified if you do not want to create it) |                                                                                                                                                                                                                                     |
 
@@ -210,6 +212,31 @@ For the editor container, you can also make it full width by adding `full-width-
 | `DISABLE_IP_LOGGING` | Privacy: disable IP logging                          | `false` |
 
 
+### Email (SMTP)
+
+SMTP transport used by the self-updater and admin notifications. When `MAIL_HOST` is `null` (the default) Etherpad keeps log-only behaviour and sends no real mail; set `MAIL_HOST` and `MAIL_FROM` to send via nodemailer.
+
+| Variable      | Description                                                                                  | Default |
+| ------------- | ------------------------------------------------------------------------------------------- | ------- |
+| `MAIL_HOST`   | SMTP server hostname. Leave `null` to keep log-only behaviour (no outbound mail).            | `null`  |
+| `MAIL_PORT`   | SMTP server port.                                                                           | `587`   |
+| `MAIL_SECURE` | Use a secure (TLS) connection to the SMTP server.                                            | `false` |
+| `MAIL_FROM`   | The `From` address used on outbound mail. Required (together with `MAIL_HOST`) to send mail. | `null`  |
+
+
+### Privacy banner
+
+Optional privacy banner shown to users. See `settings.json.template` for full field docs.
+
+| Variable                        | Description                                                                                          | Default                                                                                                                       |
+| ------------------------------- | --------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `PRIVACY_BANNER_ENABLED`        | Show the privacy banner.                                                                            | `false`                                                                                                                       |
+| `PRIVACY_BANNER_TITLE`          | Banner title.                                                                                       | `Privacy notice`                                                                                                              |
+| `PRIVACY_BANNER_BODY`           | Banner body text.                                                                                   | `This instance processes pad content on our servers. See the linked policy for retention and how to request erasure.`        |
+| `PRIVACY_BANNER_LEARN_MORE_URL` | Optional URL for a "learn more" link in the banner.                                                 | `null`                                                                                                                        |
+| `PRIVACY_BANNER_DISMISSAL`      | Banner dismissal behaviour, e.g. `dismissible`.                                                     | `dismissible`                                                                                                                 |
+
+
 ### Advanced
 
 | Variable                          | Description                                                                                                                                                                                            | Default               |
@@ -218,6 +245,10 @@ For the editor container, you can also make it full width by adding `full-width-
 | `COOKIE_SESSION_LIFETIME`         | How long (ms) a user can be away before they must log in again.                                                                                                                                        | `864000000` (10 days) |
 | `COOKIE_SESSION_REFRESH_INTERVAL` | How often (ms) to write the latest cookie expiration time.                                                                                                                                             | `86400000` (1 day)    |
 | `SHOW_SETTINGS_IN_ADMIN_PAGE`     | hide/show the settings.json in admin page                                                                                                                                                              | `true`                |
+| `AUTHENTICATION_METHOD`           | Authentication method used by the server. Use `sso` for the built-in OpenID Connect provider, or `apikey` for the legacy API-key authentication system.                                                | `sso`                 |
+| `ENABLE_METRICS`                  | Enable the Prometheus metrics endpoint used by monitoring plugins to collect metrics about Etherpad. Disable if you do not use any monitoring plugins.                                                  | `true`                |
+| `ENABLE_PAD_WIDE_SETTINGS`        | Enable creator-owned pad-wide settings and new-pad default seeding from My View. The pad creator gets a "Pad-wide Settings" section to set/enforce defaults; other users see only their own view options. Set to `false` for the legacy single-settings behavior. | `true`                |
+| `GDPR_AUTHOR_ERASURE_ENABLED`     | Enable the GDPR Art. 17 author anonymize/erasure REST endpoint and admin UI. Enable only when an operator process exists to authorise erasure requests.                                                 | `false`               |
 | `TRUST_PROXY`                     | set to `true` if you are using a reverse proxy in front of Etherpad (for example: Traefik for SSL termination via Let's Encrypt). This will affect security and correctness of the logs if not done    | `false`               |
 | `IMPORT_MAX_FILE_SIZE`            | maximum allowed file size when importing a pad, in bytes.                                                                                                                                              | `52428800` (50 MB)    |
 | `IMPORT_EXPORT_MAX_REQ_PER_IP`    | maximum number of import/export calls per IP.                                                                                                                                                          | `10`                  |
@@ -239,7 +270,7 @@ For the editor container, you can also make it full width by adding `full-width-
 | `FOCUS_LINE_PERCENTAGE_ARROW_UP`  | Percentage of viewport height to be additionally scrolled when user presses arrow up in the line of the top of the viewport. Set to 0 to let the scroll to be handled as default by Etherpad           | `0`                   |
 | `FOCUS_LINE_DURATION`             | Time (in milliseconds) used to animate the scroll transition. Set to 0 to disable animation                                                                                                            | `0`                   |
 | `FOCUS_LINE_CARET_SCROLL`         | Flag to control if it should scroll when user places the caret in the last line of the viewport                                                                                                        | `false`               |
-| `SOCKETIO_MAX_HTTP_BUFFER_SIZE`   | The maximum size (in bytes) of a single message accepted via Socket.IO. If a client sends a larger message, its connection gets closed to prevent DoS (memory exhaustion) attacks.                     | `50000`               |
+| `SOCKETIO_MAX_HTTP_BUFFER_SIZE`   | The maximum size (in bytes) of a single message accepted via Socket.IO. If a client sends a larger message, its connection gets closed to prevent DoS (memory exhaustion) attacks. Larger values allow bigger pastes.                     | `1000000` (1 MB)      |
 | `LOAD_TEST`                       | Allow Load Testing tools to hit the Etherpad Instance. WARNING: this will disable security on the instance.                                                                                            | `false`               |
 | `DUMP_ON_UNCLEAN_EXIT`            | Enable dumping objects preventing a clean exit of Node.js. WARNING: this has a significant performance impact.                                                                                         | `false`               |
 | `EXPOSE_VERSION`                  | Expose Etherpad version in the web interface and in the Server http header. Do not enable on production machines.                                                                                      | `false`               |

@@ -26,6 +26,7 @@ export default defineConfig({
             text: 'About',
             items: [
                 { text: 'Docker', link: '/docker.md' },
+                { text: 'Configuration', link: '/configuration.md' },
                 { text: 'Localization', link: '/localization.md' },
                 { text: 'Cookies', link: '/cookies.md' },
                 { text: 'Plugins', link: '/plugins.md' },

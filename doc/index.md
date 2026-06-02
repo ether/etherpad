@@ -14,6 +14,9 @@ hero:
       text: Install
       link: /docker
     - theme: alt
+      text: Configuration
+      link: /configuration
+    - theme: alt
       text: API documentation
       link: /api/
 features:

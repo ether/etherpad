@@ -306,6 +306,18 @@ Returns the Author Name of the author
 
 -> can't be deleted cause this would involve scanning all the pads where this author was
 
+#### anonymizeAuthor(authorID)
+* API >= 1.3.1
+
+Erases an author's identity across all pads they contributed to (GDPR Article 17, the "right to erasure"). The author's name and external/token mappings are removed and their chat messages are cleared, so the author can no longer be re-identified from pad data.
+
+This endpoint is **disabled by default** and is gated on `gdprAuthorErasure.enabled = true` in `settings.json`. If GDPR author erasure is not enabled, the call returns an error and performs no changes. See [doc/privacy.md](../privacy.md) for the privacy/data-retention context.
+
+*Example returns:*
+* `{code: 0, message:"ok", data: {affectedPads: 3, removedTokenMappings: 1, removedExternalMappings: 1, clearedChatMessages: 7}}`
+* `{code: 1, message:"anonymizeAuthor is disabled — set gdprAuthorErasure.enabled = true in settings.json to enable GDPR Art. 17 erasure", data: null}`
+* `{code: 1, message:"authorID is required", data: null}`
+
 ### Session
 Sessions can be created between a group and an author. This allows an author to access more than one group. The sessionID will be set as a cookie to the client and is valid until a certain date. The session cookie can also contain multiple comma-separated sessionIDs, allowing a user to edit pads in different groups at the same time. Only users with a valid session for this group, can access group pads. You can create a session after you authenticated the user at your web application, to give them access to the pads. You should save the sessionID of this session and delete it after the user logged out.
 
@@ -609,7 +621,7 @@ token is ignored.
 * `{code: 1, message:"invalid deletionToken", data: null}`
 
 #### copyPad(sourceID, destinationID[, force=false])
-* API >= 1.2.8
+* API >= 1.2.9
 
 copies a pad with full history and chat. If force is true and the destination pad exists, it will be overwritten.
 
@@ -629,7 +641,7 @@ Note that all the revisions will be lost! In most of the cases one should use `c
 * `{code: 1, message:"padID does not exist", data: null}`
 
 #### movePad(sourceID, destinationID[, force=false])
-* API >= 1.2.8
+* API >= 1.2.9
 
 moves a pad. If force is true and the destination pad exists, it will be overwritten.
 
@@ -646,7 +658,7 @@ collapses the pad's revision history to reclaim database space (issue #6194). Wr
 
 When `keepRevisions` is omitted (or null), all history is collapsed into a single base revision that reproduces the current pad text — equivalent to a freshly-imported pad. When set to a positive integer N, the pad keeps only its last N revisions.
 
-Pad text and chat are preserved in both modes. Saved-revision bookmarks are cleared. **This operation is destructive — export the pad first via `getEtherpad` if you need a backup.**
+Pad text and chat are preserved in both modes. Saved-revision bookmarks are cleared. **This operation is destructive — export the pad first (for example via the `/p/:padID/export/etherpad` export endpoint) if you need a full-history backup.**
 
 *Example returns:*
 * `{code: 0, message:"ok", data: {ok: true, mode: "all"}}`
@@ -664,10 +676,10 @@ returns the read only link of a pad
 * `{code: 0, message:"ok", data: {readOnlyID: "r.s8oes9dhwrvt0zif"}}`
 * `{code: 1, message:"padID does not exist", data: null}`
 
-#### getPadID(readOnlyID)
+#### getPadID(roID)
 * API >= 1.2.10
 
-returns the id of a pad which is assigned to the readOnlyID
+returns the id of the pad mapped to the given read-only id. The query parameter is named `roID` (the read-only id returned by `getReadOnlyID`).
 
 *Example returns:*
 * `{code: 0, message:"ok", data: {padID: "p.s8oes9dhwrvt0zif"}}`

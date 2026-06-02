@@ -20,7 +20,7 @@ and the URL to use if you embed the timeslider in your own page.
 
 You can choose a skin changing the parameter `skinName` in `settings.json`.
 
-Since Etherpad **1.7.5**, two skins are included:
+Two skins are included:
 
-* `no-skin`: an empty skin, leaving the default Etherpad appearance unchanged, that you can use as guidance to develop your own.
-* `colibris`: a new, experimental skin, that will become the default in Etherpad 2.0.
+* `colibris`: the current default skin, used by Etherpad out of the box. This is what you see in a standard installation.
+* `no-skin`: an unstyled base skin that leaves the default Etherpad appearance unchanged. Use it as a starting point and guidance to develop your own skin.

@@ -24,6 +24,7 @@
     "checkAllPads": "node --import tsx checkAllPads.ts",
     "compactPad": "node --import tsx compactPad.ts",
     "compactAllPads": "node --import tsx compactAllPads.ts",
+    "compactStalePads": "node --import tsx compactStalePads.ts",
     "createUserSession": "node --import tsx createUserSession.ts",
     "deletePad": "node --import tsx deletePad.ts",
     "repairPad": "node --import tsx repairPad.ts",

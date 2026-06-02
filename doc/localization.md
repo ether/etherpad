@@ -58,8 +58,22 @@ alert ('Chat');
 ```
 to:
 ```js
-alert(window._('pad.chat'));
+alert(window.html10n.get('pad.chat'));
 ```
+
+> **Note:** Etherpad core sets up a `window._` gettext-like shortcut as
+> `window._ = html10n.get`. Because this assignment does **not** bind `this`,
+> calling the shortcut bare as `window._('pad.chat')` loses its `this` context
+> and returns `undefined` (the `get` implementation reads `this.translations`).
+> Prefer one of the patterns that actually works:
+>
+> * Call the method on the object directly: `window.html10n.get('pad.chat')`.
+> * Bind it once, then reuse: `const _ = window.html10n.get.bind(window.html10n);`
+>   followed by `_('pad.chat')`.
+>
+> Wherever possible, prefer marking up your templates with `data-l10n-id`
+> attributes (see above) instead of translating strings in JavaScript at all —
+> html10n applies those automatically.
 ### 2. Create translate files in the locales directory of your plugin
 
 * The name of the file must be the language code of the language it contains translations for (see [supported lang codes](https://joker-x.github.com/languages4translatewiki/test/); e.g. en ? English, es ? Spanish...)

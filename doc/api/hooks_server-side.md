@@ -856,6 +856,39 @@ exports.exportHTMLAdditionalContent = async (hookName, {padId}) => {
 };
 ```
 
+## exportHTMLSend
+
+Called from: `src/node/handler/ExportHandler.ts`
+
+Things in context:
+
+1. html - the full HTML body of the pad that is about to be sent to the client
+   as an HTML export.
+
+This hook is invoked via `aCallFirst` for HTML exports, just before the HTML is
+sent in the response. It lets a plugin rewrite or replace the exported HTML
+body. Return the modified HTML string; if a non-empty value is returned, it
+replaces the HTML that would otherwise be sent.
+
+## exportConvert
+
+Called from: `src/node/handler/ExportHandler.ts`
+
+Things in context:
+
+1. srcFile - the path to the source file (the intermediate file Etherpad has
+   produced) that needs to be converted.
+2. destFile - the path to the destination file Etherpad expects the converted
+   output to be written to.
+3. req - the express request object.
+4. res - the express response object.
+
+This hook is invoked via `aCallAll` for non-HTML export formats. It lets a
+plugin handle the export format conversion itself instead of letting Etherpad
+fall back to its bundled LibreOffice converter. If any plugin returns a value
+(making the hook result non-empty), Etherpad assumes the conversion was handled
+by the plugin and skips the built-in converter.
+
 ## stylesForExport
 Called from: `src/node/utils/ExportHtml.js`
 
@@ -1101,3 +1134,66 @@ Context properties:
   value with the user's actual author ID before this hook runs).
 * `padId`: The pad's real (not read-only) identifier.
 * `pad`: The pad's Pad object.
+
+## ccRegisterBlockElements
+
+Called from: `src/node/handler/ImportHandler.ts`,
+`src/node/utils/ImportEtherpad.ts`, and `src/static/js/contentcollector.ts`
+
+Things in context: None
+
+This is the **server-side companion** to the client-only
+`aceRegisterBlockElements` hook (see the client-side hooks documentation), and
+it is the half that plugin authors commonly forget to implement. Registering a
+block element only on the client means imports and server-side content
+collection do not treat your element as block-level.
+
+The return value of this hook should be an array of tag names. Those tags are
+added to the set of block-level elements that the content collector and the
+import path (`.etherpad` and HTML/document imports) recognise, so the
+collected/imported content is segmented into the correct lines. Plugins that
+declare block elements via `aceRegisterBlockElements` should declare the same
+elements here too.
+
+```js
+exports.ccRegisterBlockElements = () => ['pre', 'blockquote'];
+```
+
+## createServer
+
+Called from: `src/node/server.ts`
+
+Things in context: None
+
+Invoked via `aCallAll` once during Etherpad startup, after the HTTP server has
+been created. Use it to run any plugin initialisation that needs to happen when
+the server comes up.
+
+## restartServer
+
+Called from: `src/node/hooks/express/adminsettings.ts` (and the plugin
+installer)
+
+Things in context: None
+
+Invoked via `aCallAll` when the server is restarted from the admin interface
+(for example after settings are saved or a plugin is installed/uninstalled). Use
+it to re-initialise plugin state that needs to survive an admin-triggered
+restart.
+
+## clientReady
+
+> **Deprecated:** use the `userJoin` hook instead. This hook is fired with an
+> awkward context (the raw `CLIENT_READY` message rather than a structured set
+> of context properties) and is kept only for backwards compatibility.
+
+Called from: `src/node/handler/PadMessageHandler.ts`
+
+Things in context:
+
+1. message - the raw `CLIENT_READY` message sent by the client as it joins a
+   pad.
+
+Invoked via `aCallAll` while a client is joining a pad, before the author and
+session are fully set up. Because the context is just the raw client message,
+new plugins should use `userJoin` instead.

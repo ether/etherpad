@@ -29,13 +29,22 @@ In `settings.json`:
     "requireSignature": false,
     "trustedKeysPath": null
   },
-  "adminEmail": null
+  "adminEmail": null,
+  // SMTP transport for the admin notification emails. host=null keeps
+  // log-only behaviour ("(would send email)"); set host+from to deliver.
+  "mail": {
+    "host": null,
+    "port": 587,
+    "secure": false,
+    "from": null,
+    "auth": null
+  }
 }
 ```
 
 | Setting | Default | Notes |
 | --- | --- | --- |
-| `updates.tier` | `"notify"` | One of `"off"`, `"notify"`, `"manual"`, `"auto"`, `"autonomous"`. Higher tiers are silently downgraded if the install method does not allow them. PR 1 only honors `"notify"` and `"off"`. |
+| `updates.tier` | `"notify"` | One of `"off"`, `"notify"`, `"manual"`, `"auto"`, `"autonomous"`. All tiers are implemented. Higher tiers are silently downgraded if the install method does not allow them (only `"git"` installs can run the write tiers `manual` / `auto` / `autonomous`). |
 | `updates.source` | `"github"` | Reserved for future alternative sources. Only `"github"` is implemented. |
 | `updates.channel` | `"stable"` | Reserved. Stable releases only. |
 | `updates.installMethod` | `"auto"` | One of `"auto"`, `"git"`, `"docker"`, `"npm"`, `"managed"`. Auto-detects via filesystem heuristics. Set explicitly to override. |
@@ -49,6 +58,11 @@ In `settings.json`:
 | `updates.requireSignature` | `false` | When `true`, refuse updates whose tag is not signed by a trusted key. Verification is done via `git verify-tag <tag>` against the user's GPG keyring. Default `false` because Etherpad's release process does not yet sign tags consistently — turning the check on by default would block every Tier 2 update. Set `true` if you run your own builds or have imported a fork's keys. |
 | `updates.trustedKeysPath` | `null` | Override the keyring location passed to `git verify-tag` via the `$GNUPGHOME` env var. Useful when the trusted keys live in a dedicated keyring outside the Etherpad user's home. Only meaningful when `requireSignature: true`. |
 | `adminEmail` | `null` | Top-level. Contact for admin notifications. Setting it enables the email nudges below. |
+| `mail.host` | `null` | Top-level SMTP host. **`null` keeps log-only behaviour** — notifications are logged as `(would send email)` and never delivered. Set a host (and `mail.from`) to deliver over SMTP via nodemailer. The `nodemailer` dependency is lazy-loaded, so installs that leave `mail.host` unset pay no runtime cost. |
+| `mail.port` | `587` | SMTP port. |
+| `mail.secure` | `false` | `true` for an implicit-TLS connection (typically port 465); `false` uses STARTTLS upgrade when offered. |
+| `mail.from` | `null` | Envelope/From address. **Required for delivery** — if `mail.from` is unset (even with a host) the updater falls back to log-only `(would send email)`. |
+| `mail.auth` | `null` | SMTP credentials object `{ "user": "...", "pass": "..." }`, passed through to nodemailer. Leave `null` for unauthenticated relays. |
 
 ## What "outdated" means
 
@@ -56,14 +70,26 @@ In `settings.json`:
 
 ## Email cadence (when `adminEmail` is set)
 
+These are the "nudge" emails sent by the periodic checker when the instance is behind:
+
 | Trigger | First send | Repeat |
 | --- | --- | --- |
-| Outdated (minor or more behind) detected | Immediate | Monthly while still outdated |
+| Outdated (minor or more behind) detected | Immediate | Every 30 days while still outdated (`SEVERE_INTERVAL`) |
 | Up to date | No email | — |
+
+The write tiers also email about **apply outcomes** so admins learn about failures without watching the UI:
+
+| Outcome | When | Dedupe |
+| --- | --- | --- |
+| `update-preflight-failed` | An auto/autonomous apply was blocked at preflight (e.g. `node-engine-mismatch`, dirty tree, low disk). Subject: *Auto-update to `<tag>` blocked at preflight*. | Deduped on `<outcome>:<targetTag>` — one email per outcome per target tag. |
+| `update-rolled-back` | An apply failed mid-flow and Etherpad auto-recovered to the previous version. Subject: *Auto-update to `<tag>` rolled back*. | Deduped on `<outcome>:<targetTag>`. |
+| `update-rollback-failed` | **Terminal.** The apply failed *and* the rollback failed — manual intervention required. Subject: *Auto-update FAILED and could not be rolled back — manual intervention required*. | **Always sends**, bypassing dedupe, because the admin must learn about it even if a transient failure shared the same key. |
+
+A different outcome or a different target tag resets the dedupe key and fires a fresh email. Manual (Tier 2) failures surface in the admin UI banner; the outcome emails are tied to the auto/autonomous flows.
 
 If `adminEmail` is unset, the updater never sends mail. The admin UI banner and the pad-side notice still work without it.
 
-PR 1 ships the cadence machinery but does not yet wire a real SMTP transport — emails are logged with `(would send email)` until a future PR adds the transport. The dedupe state still advances correctly so admins are not bombarded once SMTP is wired.
+SMTP delivery is wired via [nodemailer](https://nodemailer.com/) (lazy-loaded). When `mail.host` and `mail.from` are both set, emails are delivered over SMTP. When either is unset the updater falls back to logging each message as `(would send email)` — the dedupe state still advances correctly, so admins are not bombarded once SMTP is configured. An SMTP send failure is caught and logged (`email send failed: …`) and never disrupts the updater state machine.
 
 ## Pad-side notice
 
@@ -93,7 +119,7 @@ The version check sends no telemetry. Etherpad fetches the public GitHub Release
 
 Set the value explicitly if the heuristics get it wrong (e.g., a docker container that bind-mounts a writable git checkout).
 
-In PR 1 (notify only) the install method does not change behavior — every install method gets the banner. From PR 2 onward the install method gates whether the manual-click and automatic tiers can run; only `"git"` is initially supported for write tiers.
+Every install method gets the Tier 1 banner. The install method gates whether the write tiers (manual click, auto, autonomous) can run: only `"git"` installs are supported for the write tiers — other methods are silently downgraded to notify.
 
 ## Tier 2 — manual click
 
@@ -110,7 +136,7 @@ Etherpad applies an update by **exiting with code 75** so a process supervisor r
 ### What clicking "Apply update" does
 
 1. **Lock acquire** — `var/update.lock` (PID-based, stale locks reaped automatically).
-2. **Pre-flight checks** — install method writable, working tree clean, free disk ≥ `diskSpaceMinMB`, `pnpm` on `PATH`, target tag exists at the configured remote, signature verifies (if `requireSignature: true`). On failure, state goes to `preflight-failed` with a typed reason; the admin sees a banner and clicks **Acknowledge** to clear it. No filesystem mutation has happened — nothing to roll back.
+2. **Pre-flight checks** — install method writable, working tree clean, free disk ≥ `diskSpaceMinMB`, `pnpm` on `PATH`, no lock held, target tag exists at the configured remote, signature verifies (if `requireSignature: true`), and the target's Node engine matches the running Node. The Node-engine check runs *after* signature verification (so the `engines.node` range comes from a trusted tag): Etherpad reads `engines.node` from the target tag's `package.json` via `git show <tag>:package.json` and refuses the update via `semver.satisfies` if the running Node does not satisfy it. On failure, state goes to `preflight-failed` with a typed reason; the admin sees a banner and clicks **Acknowledge** to clear it. No filesystem mutation has happened — nothing to roll back.
 3. **Drain** — `drainSeconds` window during which T-60 / T-30 / T-10 announcements broadcast to every connected pad and new socket connections are refused. Click **Cancel** during this window to abort cleanly.
 4. **Execute** — `git fetch --tags origin`, `git checkout <tag>`, `pnpm install --frozen-lockfile`, `pnpm run build:ui`. Output streams to `var/log/update.log` (rotated 10 MB × 5).
 5. **Exit 75** — the supervisor restarts on the new version.
@@ -121,6 +147,7 @@ Etherpad applies an update by **exiting with code 75** so a process supervisor r
 | What went wrong | Resulting state | Admin action |
 | --- | --- | --- |
 | Pre-flight check fails | `preflight-failed` | Click **Acknowledge** after fixing the underlying issue (free up disk, clean working tree, etc.). |
+| Target tag requires a newer (or different) Node than the one running | `preflight-failed` (reason `node-engine-mismatch`) | Fails cleanly at preflight with a detail like *"target requires Node >=X, running Y"*. No drain, no `git checkout`, no restart, nothing to roll back — the install is untouched. Upgrade Node to a version that satisfies the target's `engines.node`, then **Acknowledge** and retry. |
 | `git fetch` / `git checkout` fails mid-flow | `rolled-back` | Informational. The working tree is back where it started; click **Acknowledge** to clear. |
 | `pnpm install` or `pnpm run build:ui` fails | `rolled-back` | Same as above. The lockfile and SHA are restored. |
 | `/health` doesn't come up within `rollbackHealthCheckSeconds` | `rolled-back` | Same — RollbackHandler restores the previous SHA + lockfile and exits 75 again. |
@@ -181,7 +208,7 @@ A single `grace-start` notification fires per scheduled tag:
 
 > [Etherpad] Auto-update scheduled for 2.7.2
 
-with the `scheduledFor` timestamp. Etherpad core does not yet wire SMTP; the message logs as `(would send email)` until a future PR adds a transport. Cadence and dedupe still update correctly.
+with the `scheduledFor` timestamp. Delivery follows the same SMTP path as every other notification: when `mail.host` and `mail.from` are set the message is sent via nodemailer, otherwise it logs as `(would send email)`. Cadence and dedupe update correctly either way.
 
 The right way to give docker admins an in-product Apply button is to delegate to the orchestrator rather than mutate the container. Two patterns to consider in a follow-up PR:
 
