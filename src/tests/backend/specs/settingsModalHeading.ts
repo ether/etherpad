@@ -10,7 +10,10 @@ const common = require('../common');
 // `enablePadWideSettings: false` the template used to render
 // `data-l10n-id="pad.settings.padSettings"` ("Pad-wide Settings") for every
 // user, even though no pad-wide controls were rendered in that mode. The fix
-// removes the conditional and always uses `pad.settings.title` ("Settings").
+// removes the conditional and always uses the neutral "Settings" title. We
+// reuse the existing, already-translated `pad.toolbar.settings.title` key
+// rather than a dedicated `pad.settings.title` duplicate, so the title is
+// localised in every locale without waiting for new TranslateWiki strings.
 describe(__filename, function () {
   this.timeout(30000);
   let agent: any;
@@ -31,15 +34,15 @@ describe(__filename, function () {
     return m ? m[1] : null;
   };
 
-  it('uses pad.settings.title with the feature enabled', async function () {
+  it('uses pad.toolbar.settings.title with the feature enabled', async function () {
     settings.enablePadWideSettings = true;
     const res = await agent.get('/p/headingTest').expect(200);
-    assert.equal(titleH1(res.text), 'pad.settings.title');
+    assert.equal(titleH1(res.text), 'pad.toolbar.settings.title');
   });
 
-  it('uses pad.settings.title with the feature disabled (no misleading "Pad-wide" label)', async function () {
+  it('uses pad.toolbar.settings.title with the feature disabled (no misleading "Pad-wide" label)', async function () {
     settings.enablePadWideSettings = false;
     const res = await agent.get('/p/headingTest').expect(200);
-    assert.equal(titleH1(res.text), 'pad.settings.title');
+    assert.equal(titleH1(res.text), 'pad.toolbar.settings.title');
   });
 });
