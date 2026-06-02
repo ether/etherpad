@@ -124,7 +124,7 @@
     "@types/underscore": "^1.13.0",
     "@types/whatwg-mimetype": "^5.0.0",
     "chokidar": "^5.0.0",
-    "eslint": "^10.4.0",
+    "eslint": "^10.4.1",
     "eslint-config-etherpad": "^4.0.5",
     "etherpad-cli-client": "^4.0.3",
     "mocha": "^11.7.6",
@@ -136,7 +136,7 @@
     "split-grid": "^1.0.11",
     "supertest": "^7.2.2",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.7"
+    "vitest": "^4.1.8"
   },
   "engines": {
     "node": ">=24.0.0",
