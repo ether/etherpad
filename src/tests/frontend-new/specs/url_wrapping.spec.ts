@@ -19,7 +19,8 @@ test.describe('long URL wrapping in pad editor', function () {
         'issue/7894/wrapping/behavior/long/urls/should/wrap/instead/of/overflowing/' +
         'to/the/right/and/causing/awkward/rendering';
 
-    await writeToPad(page, longUrl + ' ');
+    // Write a short word on line 1, then the long URL on line 2
+    await writeToPad(page, 'hello\n' + longUrl + ' ');
 
     // Verify the URL became a clickable link
     const link = padBody.locator('a');
@@ -40,9 +41,13 @@ test.describe('long URL wrapping in pad editor', function () {
     expect(cssProps.wordWrap).toBe('break-word');
     expect(cssProps.overflowWrap).toBe('break-word');
 
-    // Verify the link does not overflow the editor (actual wrapping behavior)
-    const linkWidth = await link.evaluate((el) => el.getBoundingClientRect().width);
-    const bodyWidth = await padBody.evaluate((el) => el.getBoundingClientRect().width);
-    expect(linkWidth).toBeLessThanOrEqual(bodyWidth);
+    // The short line should be one line tall, the wrapped URL line should
+    // be much taller — this is the observable behavior that wrapping works.
+    const lines = padBody.locator('> div');
+    await expect(lines).toHaveCount(2);
+
+    const shortLineHeight = await lines.nth(0).evaluate((el) => el.getBoundingClientRect().height);
+    const longLineHeight = await lines.nth(1).evaluate((el) => el.getBoundingClientRect().height);
+    expect(longLineHeight).toBeGreaterThan(shortLineHeight * 1.5);
   });
 });
