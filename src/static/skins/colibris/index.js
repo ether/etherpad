@@ -70,7 +70,7 @@ window.customStart = () => {
       li.style.cursor = 'pointer';
 
       li.className = 'recent-pad';
-      const padPath = `${window.location.href}p/${pad.name}`;
+      const padPath = `${window.location.href}p/${encodeURIComponent(pad.name)}`;
       const link = document.createElement('a');
       link.style.textDecoration = 'none';
 

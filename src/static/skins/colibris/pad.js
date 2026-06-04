@@ -8,7 +8,7 @@ window.customStart = () => {
   $('.buttonicon').on('mouseup', function () { $(this).parent().removeClass('pressed'); });
 
   const pathSegments = window.location.pathname.split('/');
-  const padName = pathSegments[pathSegments.length - 1];
+  const padName = decodeURIComponent(pathSegments[pathSegments.length - 1]);
   const recentPads = localStorage.getItem('recentPads');
   if (recentPads == null) {
     localStorage.setItem('recentPads', JSON.stringify([]));

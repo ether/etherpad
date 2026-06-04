@@ -418,7 +418,7 @@ export const PadPage = () => {
                           </button>
                           <button
                             className="pm-btn pm-btn-primary pm-btn--sm"
-                            onClick={() => window.open(`../../p/${pad.padName}`, '_blank')}
+                            onClick={() => window.open(`../../p/${encodeURIComponent(pad.padName)}`, '_blank')}
                           >
                             <Eye size={13}/> <Trans i18nKey="admin_pads.open"/>
                           </button>
