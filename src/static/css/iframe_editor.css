@@ -53,6 +53,9 @@ html.outer-editor, html.inner-editor {
 
 #innerdocbody a {
   color: #2e96f3;
+  white-space: normal;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 #innerdocbody.authorColors [class^='author-'] a {
   color: inherit;
