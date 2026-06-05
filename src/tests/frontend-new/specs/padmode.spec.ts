@@ -345,4 +345,55 @@ test.describe('in-pad history mode', () => {
     await expect(page.locator('body.history-mode')).toHaveCount(0);
     await expect(tbl.locator('.history-authors-row')).toHaveCount(0);
   });
+
+  test('history iframe occupies the editor flex slot so side panels sit beside it', async ({page}) => {
+    await goToNewPad(page);
+    await clearPadContent(page);
+    await writeToPad(page, 'one');
+    await page.waitForTimeout(300);
+    await writeToPad(page, ' two');
+    await page.waitForTimeout(500);
+
+    // Simulate a plugin side panel mounted in #editorcontainerbox (e.g.
+    // ep_webrtc's #rtcbox video column): an in-flow flex item pinned left.
+    await page.evaluate(() => {
+      const box = document.getElementById('editorcontainerbox')!;
+      const panel = document.createElement('div');
+      panel.id = 'test-side-panel';
+      panel.style.cssText = 'display:flex;order:-1;flex:0 1 auto;width:120px';
+      panel.innerHTML = '<div style="width:120px;height:120px"></div>';
+      box.appendChild(panel);
+    });
+    const editorRight = await page.locator('#editorcontainer').evaluate(
+        (el) => Math.round(el.getBoundingClientRect().right));
+
+    await page.locator('.buttonicon-history').click();
+    await expect(page.locator('body.history-mode')).toBeVisible();
+    await page.locator('#history-frame-mount iframe').waitFor({state: 'attached'});
+
+    // 1) The live editor is genuinely removed from flow — not merely painted
+    //    over. The two-id `#editorcontainerbox #editorcontainer { display:flex }`
+    //    layout rule outranks a plain `body.history-mode #editorcontainer`, so
+    //    the hide rule must match the same container path to win the cascade.
+    expect(await page.locator('#editorcontainer').evaluate(
+        (el) => getComputedStyle(el).display)).toBe('none');
+
+    // 2) The history iframe is in normal flow (not an absolute overlay)...
+    expect(await page.locator('#history-frame-mount').evaluate(
+        (el) => getComputedStyle(el).position)).not.toBe('absolute');
+
+    // 3) ...so it lays out beside the side panel instead of on top of it, and
+    //    still fills the rest of the editor's old width.
+    const r = (sel: string) => page.locator(sel).evaluate((el) => {
+      const b = el.getBoundingClientRect();
+      return {left: b.left, right: b.right, top: b.top, bottom: b.bottom};
+    });
+    const panel = await r('#test-side-panel');
+    const frame = await r('#history-frame-mount');
+    const overlaps = !(frame.right <= panel.left || panel.right <= frame.left ||
+                       frame.bottom <= panel.top || panel.bottom <= frame.top);
+    expect(overlaps).toBe(false);
+    expect(Math.round(frame.left)).toBeGreaterThanOrEqual(Math.round(panel.right) - 2);
+    expect(Math.round(frame.right)).toBeGreaterThanOrEqual(editorRight - 3);
+  });
 });

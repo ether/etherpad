@@ -139,16 +139,22 @@ input {
 .history-banner-date    { opacity: 0.85; }
 .history-banner #history-banner-return { margin-left: auto; }
 
-/* The history iframe takes the place of the live ACE editor. We use the    */
-/* same positioning model (absolute, fill the editor area) so the page      */
-/* layout is identical between modes.                                       */
+/* The history iframe takes the place of the live ACE editor by occupying the
+ * same in-flow flex slot that #editorcontainer fills in live mode (flex: 1 1
+ * auto inside the row-flex #editorcontainerbox). This keeps the layout
+ * identical between modes — crucially including any in-flow side panels in
+ * #editorcontainerbox, such as ep_webrtc's video column, which now sit beside
+ * the history iframe exactly as they sit beside the live editor.
+ *
+ * This used to be an absolute, inset:0 overlay: it filled the editor area but
+ * took the iframe out of flow, so an in-flow side panel ended up hidden
+ * beneath it (see ether/ep_webrtc rendering nothing in the timeslider). */
 .history-frame-mount {
   display: none;
-  position: absolute;
-  inset: 0;
+  flex: 1 1 auto;
+  min-width: 0; /* allow the iframe to shrink to make room for a side panel */
   border: 0;
   background: var(--bg-color, #f2f3f4);
-  z-index: 4;
 }
 .history-frame-mount[hidden] { display: none; }
 .history-frame-mount > iframe {
@@ -164,8 +170,14 @@ input {
 /* editor, so we swap it for the history controls (slider + play/step      */
 /* buttons) that drive the iframe. The right-side menu (Settings / Share / */
 /* Users / Chat / Home) stays fully interactive across modes.              */
-body.history-mode #editorcontainer { display: none; }
-body.history-mode #editorcontainerbox { position: relative; }
+/* The two-id `#editorcontainerbox #editorcontainer { display: flex }` layout
+ * rule (specificity 0-2-0) outranks a plain `body.history-mode #editorcontainer`
+ * (0-1-1), so match the same container path here to actually win the cascade
+ * and remove the live editor from flow. This was latent before: the old
+ * absolute, inset:0 iframe overlay painted over the still-in-flow editor, so
+ * nobody noticed it wasn't hidden. Now that the iframe sits in the normal
+ * flex flow, the editor must genuinely be gone or the two would split the row. */
+body.history-mode #editorcontainerbox #editorcontainer { display: none; }
 body.history-mode .history-frame-mount { display: block; }
 body.history-mode #editbar .menu_left { display: none; }
 body.history-mode #editbar .show-more-icon-btn { display: none; }
