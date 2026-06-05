@@ -557,7 +557,7 @@ const paduserlist = (() => {
       if (localStorage.getItem('recentPads') != null) {
         const recentPadsList = JSON.parse(localStorage.getItem('recentPads'));
         const pathSegments = window.location.pathname.split('/');
-        const padName = pathSegments[pathSegments.length - 1];
+        const padName = decodeURIComponent(pathSegments[pathSegments.length - 1]);
         const existingPad = recentPadsList.find((pad) => pad.name === padName);
         if (existingPad) {
           existingPad.members = online;
