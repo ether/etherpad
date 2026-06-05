@@ -876,6 +876,14 @@ const pad = {
           options,
           changedBy: pad.myUserInfo.name || 'unnamed',
         });
+    // The pad creator is never "enforced upon themselves", so their personal
+    // view overrides (cookies) are always merged on top of the pad-wide value
+    // in getEffectivePadOptions. A stale personal pref would therefore mask the
+    // pad-wide value they just set, making the control appear to do nothing
+    // (#7900). Sync the creator's personal pref to the value they chose so
+    // their own view adopts it immediately. They can still override it
+    // afterwards via the "My view" controls.
+    pad.setMyViewOption(key, value);
   },
   changeViewOption: (key, value) => {
     const effectiveOptions = pad.getEffectivePadOptions();
