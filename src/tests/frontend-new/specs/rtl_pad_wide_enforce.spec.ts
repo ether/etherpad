@@ -15,9 +15,10 @@ import {showSettings} from "../helper/settingsHelper";
 // Fix: changePadViewOption syncs the creator's personal pref to the value they
 // chose, so their own view adopts the pad-wide setting immediately (while still
 // allowing them to override it afterwards via the "My view" controls).
-test.beforeEach(async ({page, browser}) => {
-  const context = await browser.newContext();
-  await context.clearCookies();
+test.beforeEach(async ({page}) => {
+  // Clear cookies on the context of the page under test (not a throwaway
+  // context) so the test reliably starts without a stale rtlIsTrue pref.
+  await page.context().clearCookies();
   await goToNewPad(page);
 });
 
