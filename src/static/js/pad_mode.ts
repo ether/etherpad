@@ -62,12 +62,8 @@ class PadModeController {
   private usersSnapshot: string | null = null;
   private chatHeaderSnapshot: {parent: HTMLElement; sibling: Node | null} | null = null;
   private chatHeaderEl: HTMLElement | null = null;
-  private playbackChangeListener: ((e: Event) => void) | null = null;
-  private followChangeListener: ((e: Event) => void) | null = null;
-  private authorColorsListeners: Array<{el: HTMLElement; type: string; fn: EventListener}> = [];
-  private fontFamilyListeners: Array<{el: HTMLElement; type: string; fn: EventListener}> = [];
-  private lineNumbersListeners: Array<{el: HTMLElement; type: string; fn: EventListener}> = [];
-  // Outer history controls (#history-controls) — bridge listeners.
+  // Every listener we attach to an outer Settings / history control is
+  // tracked here so teardownBridges() can remove them all in one pass.
   private outerControlListeners: Array<{el: HTMLElement; type: string; fn: EventListener}> = [];
 
   constructor() {
@@ -218,26 +214,20 @@ class PadModeController {
       this.exportSnapshot.forEach((href, anchor) => { anchor.setAttribute('href', href); });
       this.exportSnapshot = null;
     }
-    if (this.playbackChangeListener) {
-      const sel = document.getElementById('history-playbackspeed');
-      if (sel) sel.removeEventListener('change', this.playbackChangeListener);
-      this.playbackChangeListener = null;
-    }
-    if (this.followChangeListener) {
-      const cb = document.getElementById('history-options-followContents');
-      if (cb) cb.removeEventListener('change', this.followChangeListener);
-      this.followChangeListener = null;
-    }
-    // Inner BroadcastSlider has no removeCallback API, but the whole iframe
-    // is destroyed on exit so any callbacks die with it.
+    // Every outer Settings/history control we bound is tracked in one list,
+    // so a single pass tears them all down. (The inner BroadcastSlider has no
+    // removeCallback API, but the whole iframe is destroyed on exit so any
+    // callbacks die with it.)
     this.outerControlListeners.forEach(({el, type, fn}) => el.removeEventListener(type, fn));
     this.outerControlListeners = [];
-    this.authorColorsListeners.forEach(({el, type, fn}) => el.removeEventListener(type, fn));
-    this.authorColorsListeners = [];
-    this.fontFamilyListeners.forEach(({el, type, fn}) => el.removeEventListener(type, fn));
-    this.fontFamilyListeners = [];
-    this.lineNumbersListeners.forEach(({el, type, fn}) => el.removeEventListener(type, fn));
-    this.lineNumbersListeners = [];
+  }
+
+  // Attach a listener to an outer control and register it for teardown on
+  // exit. No-ops if the element is missing so callers can stay terse.
+  private bindOuter(el: HTMLElement | null, type: string, fn: EventListener): void {
+    if (!el) return;
+    el.addEventListener(type, fn);
+    this.outerControlListeners.push({el, type, fn});
   }
 
   private mountIframe(rev: number | null): void {
@@ -344,27 +334,21 @@ class PadModeController {
     const rightStep = document.getElementById('history-rightstep') as HTMLButtonElement | null;
     const timer = document.getElementById('history-timer') as HTMLElement | null;
 
-    const bind = (el: HTMLElement | null, type: string, fn: EventListener) => {
-      if (!el) return;
-      el.addEventListener(type, fn);
-      this.outerControlListeners.push({el, type, fn});
-    };
-
-    bind(sliderInput, 'input', () => {
+    this.bindOuter(sliderInput, 'input', () => {
       if (!sliderInput) return;
       const target = Math.max(0, Math.floor(Number(sliderInput.value) || 0));
       try { inner.BroadcastSlider?.setSliderPosition?.(target); } catch (_e) {}
     });
-    bind(playBtn, 'click', () => {
+    this.bindOuter(playBtn, 'click', () => {
       try { inner.BroadcastSlider?.playpause?.(); } catch (_e) {}
     });
     // Inner #leftstep / #rightstep already wire all the step logic; just
     // forward the click so we share the same code path.
-    bind(leftStep, 'click', () => {
+    this.bindOuter(leftStep, 'click', () => {
       try { (innerWin.document.getElementById('leftstep') as HTMLElement | null)?.click(); }
       catch (_e) {}
     });
-    bind(rightStep, 'click', () => {
+    this.bindOuter(rightStep, 'click', () => {
       try { (innerWin.document.getElementById('rightstep') as HTMLElement | null)?.click(); }
       catch (_e) {}
     });
@@ -510,15 +494,15 @@ class PadModeController {
   // BroadcastSlider state from those controls so the user sees one set of
   // controls regardless of mode.
   private wireSettingsBridges(innerWin: Window): void {
+    const inner: any = innerWin as any;
     const speedSel = document.getElementById('history-playbackspeed') as HTMLSelectElement | null;
     const followCb = document.getElementById('history-options-followContents') as HTMLInputElement | null;
-    const inner: any = innerWin as any;
 
     if (speedSel) {
       // Initial sync: read existing inner cookie/setting if available.
       const innerSpeed = inner.document.getElementById('playbackspeed') as HTMLSelectElement | null;
       if (innerSpeed && innerSpeed.value) speedSel.value = innerSpeed.value;
-      this.playbackChangeListener = () => {
+      this.bindOuter(speedSel, 'change', () => {
         const v = speedSel.value || '100';
         try {
           inner.BroadcastSlider?.setPlaybackSpeed?.(v);
@@ -527,53 +511,34 @@ class PadModeController {
             innerSpeed.dispatchEvent(new Event('change'));
           }
         } catch (_e) {}
-      };
-      speedSel.addEventListener('change', this.playbackChangeListener);
+      });
     }
 
     if (followCb) {
       const innerFollow = inner.document.getElementById('options-followContents') as HTMLInputElement | null;
       if (innerFollow) followCb.checked = !!innerFollow.checked;
-      this.followChangeListener = () => {
+      this.bindOuter(followCb, 'change', () => {
         if (!innerFollow) return;
         innerFollow.checked = followCb.checked;
         innerFollow.dispatchEvent(new Event('change'));
-      };
-      followCb.addEventListener('change', this.followChangeListener);
+      });
     }
 
-    const bridgeAuthorColors = (cb: HTMLInputElement | null) => {
-      if (!cb) return;
-      const listener = () => {
-        try { inner.BroadcastSlider?.setShowAuthorColors?.(cb.checked); } catch (_e) {}
-      };
-      cb.addEventListener('change', listener);
-      this.authorColorsListeners.push({el: cb, type: 'change', fn: listener});
-    };
-    bridgeAuthorColors(document.getElementById('options-colorscheck') as HTMLInputElement | null);
-    bridgeAuthorColors(document.getElementById('padsettings-options-colorscheck') as HTMLInputElement | null);
-
-    const bridgePadFontFamily = (sel: HTMLSelectElement | null) => {
-      if (!sel) return;
-      const listener = () => {
-        try { inner.BroadcastSlider?.setPadFontFamily?.(sel.value); } catch (_e) {}
-      };
-      sel.addEventListener('change', listener);
-      this.fontFamilyListeners.push({el: sel, type: 'change', fn: listener});
-    };
-    bridgePadFontFamily(document.getElementById('viewfontmenu') as HTMLSelectElement | null);
-    bridgePadFontFamily(document.getElementById('padsettings-viewfontmenu') as HTMLSelectElement | null);
-
-    const bridgeLineNumbers = (cb: HTMLInputElement | null) => {
-      if (!cb) return;
-      const listener = () => {
-        try { inner.BroadcastSlider?.setShowLineNumbers?.(cb.checked); } catch (_e) {}
-      };
-      cb.addEventListener('change', listener);
-      this.lineNumbersListeners.push({el: cb, type: 'change', fn: listener});
-    };
-    bridgeLineNumbers(document.getElementById('options-linenoscheck') as HTMLInputElement | null);
-    bridgeLineNumbers(document.getElementById('padsettings-options-linenoscheck') as HTMLInputElement | null);
+    // Authorship colours, font family and line numbers each appear in two
+    // places in the outer Settings UI (the legacy popup ids and the
+    // `#padsettings-…` pane), so bridge every id to the embedded slider's
+    // matching view-setting method.
+    const bridgeView = <T extends HTMLElement>(ids: string[], apply: (el: T) => void) =>
+      ids.forEach((id) => {
+        const el = document.getElementById(id) as T | null;
+        this.bindOuter(el, 'change', () => { try { apply(el!); } catch (_e) {} });
+      });
+    bridgeView<HTMLInputElement>(['options-colorscheck', 'padsettings-options-colorscheck'],
+        (cb) => inner.BroadcastSlider?.setShowAuthorColors?.(cb.checked));
+    bridgeView<HTMLSelectElement>(['viewfontmenu', 'padsettings-viewfontmenu'],
+        (sel) => inner.BroadcastSlider?.setPadFontFamily?.(sel.value));
+    bridgeView<HTMLInputElement>(['options-linenoscheck', 'padsettings-options-linenoscheck'],
+        (cb) => inner.BroadcastSlider?.setShowLineNumbers?.(cb.checked));
   }
 
   private setInnerRevision(rev: number): void {

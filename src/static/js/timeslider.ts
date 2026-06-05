@@ -72,6 +72,12 @@ const applyShowAuthorColors = (showAuthorColors) => {
   $('#sidedivinner').toggleClass('authorColors', showAuthorColors);
 };
 
+// Pass '' (not null) to clear the rule — jQuery 3 ignores a null css value,
+// so the inline font-family would otherwise stick on reset.
+const applyPadFontFamily = (fontFamily) => {
+  $('#innerdocbody').css('font-family', fontFamily || '');
+};
+
 const init = () => {
   padutils.setupGlobalExceptionHandler();
   $(document).ready(() => {
@@ -198,14 +204,6 @@ const handleClientVars = (message) => {
   // load all script that doesn't work without the clientVars
   BroadcastSlider = require('./broadcast_slider')
       .loadBroadcastSliderJS(fireWhenAllScriptsAreLoaded);
-  BroadcastSlider.setShowAuthorColors = (showAuthorColors) => {
-    applyShowAuthorColors(showAuthorColors);
-    setPadPref('showAuthorshipColors', showAuthorColors);
-  };
-  BroadcastSlider.setShowLineNumbers = (showLineNumbers) => {
-    applyShowLineNumbers(showLineNumbers);
-    setPadPref('showLineNumbers', showLineNumbers);
-  };
   // Exposed on window so the outer pad shell (issue #7659 in-place history
   // mode) can subscribe to slider movement without postMessage round-trips.
   (window as any).BroadcastSlider = BroadcastSlider;
@@ -253,17 +251,9 @@ const handleClientVars = (message) => {
   });
   applyShowLineNumbers(readPadPrefs().showLineNumbers !== false);
 
-  // Read authorship colors preference from cookie (set by pad editor)
+  // Honour the view preferences the pad editor saved to the cookie so the
+  // first paint matches the user's pad settings.
   applyShowAuthorColors(readPadPrefs().showAuthorshipColors !== false);
-
-  // font family
-  const applyPadFontFamily = (fontFamily) => {
-    if (fontFamily) {
-      $('#innerdocbody').css('font-family', fontFamily);
-    } else {
-      $('#innerdocbody').css('font-family', '');
-    }
-  };
   const padFontFamily = readPadPrefs().padFontFamily;
   if (padFontFamily) $('#viewfontmenu').val(padFontFamily);
   applyPadFontFamily(padFontFamily);
@@ -273,6 +263,16 @@ const handleClientVars = (message) => {
     applyPadFontFamily(fontFamily);
   });
 
+  // Entry points for the outer pad shell (#7659 in-place history mode) to push
+  // view settings into this iframe live when the user changes them on the pad.
+  BroadcastSlider.setShowAuthorColors = (showAuthorColors) => {
+    applyShowAuthorColors(showAuthorColors);
+    setPadPref('showAuthorshipColors', showAuthorColors);
+  };
+  BroadcastSlider.setShowLineNumbers = (showLineNumbers) => {
+    applyShowLineNumbers(showLineNumbers);
+    setPadPref('showLineNumbers', showLineNumbers);
+  };
   BroadcastSlider.setPadFontFamily = (fontFamily) => {
     applyPadFontFamily(fontFamily);
     setPadPref('padFontFamily', fontFamily);
