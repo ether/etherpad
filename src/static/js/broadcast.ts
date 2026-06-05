@@ -565,7 +565,7 @@ const loadBroadcastJS = (socket, sendSocketMsg, fireWhenAllScriptsAreLoaded, Bro
       const bgcolor = typeof data.colorId === 'number'
         ? clientVars.colorPalette[data.colorId] : data.colorId;
       if (bgcolor) {
-        const selector = dynamicCSS.selectorStyle(`.${linestylefilter.getAuthorClassName(author)}`);
+        const selector = dynamicCSS.selectorStyle(`.authorColors .${linestylefilter.getAuthorClassName(author)}`);
         selector.backgroundColor = bgcolor;
         selector.color = (colorutils.luminosity(colorutils.css2triple(bgcolor)) < 0.5)
           ? '#ffffff' : '#000000'; // see ace2_inner.js for the other part

@@ -165,7 +165,11 @@
       var text = $option.data('display') || $option.text();
       $dropdown.find('.current').text(text);
 
-      $dropdown.prev('select').val($option.data('value')).trigger('change');
+      const $nativeSelect = $dropdown.prev('select');
+      $nativeSelect.val($option.data('value')).trigger('change');
+      // Fire native event for handlers attached via addEventListener (e.g.
+      // the pad_mode.ts settings bridge to the embedded timeslider iframe).
+      $nativeSelect[0]?.dispatchEvent(new Event('change', {bubbles: true}));
     });
 
     // Keyboard events

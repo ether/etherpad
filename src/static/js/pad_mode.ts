@@ -64,6 +64,9 @@ class PadModeController {
   private chatHeaderEl: HTMLElement | null = null;
   private playbackChangeListener: ((e: Event) => void) | null = null;
   private followChangeListener: ((e: Event) => void) | null = null;
+  private authorColorsListeners: Array<{el: HTMLElement; type: string; fn: EventListener}> = [];
+  private fontFamilyListeners: Array<{el: HTMLElement; type: string; fn: EventListener}> = [];
+  private lineNumbersListeners: Array<{el: HTMLElement; type: string; fn: EventListener}> = [];
   // Outer history controls (#history-controls) — bridge listeners.
   private outerControlListeners: Array<{el: HTMLElement; type: string; fn: EventListener}> = [];
 
@@ -229,6 +232,12 @@ class PadModeController {
     // is destroyed on exit so any callbacks die with it.
     this.outerControlListeners.forEach(({el, type, fn}) => el.removeEventListener(type, fn));
     this.outerControlListeners = [];
+    this.authorColorsListeners.forEach(({el, type, fn}) => el.removeEventListener(type, fn));
+    this.authorColorsListeners = [];
+    this.fontFamilyListeners.forEach(({el, type, fn}) => el.removeEventListener(type, fn));
+    this.fontFamilyListeners = [];
+    this.lineNumbersListeners.forEach(({el, type, fn}) => el.removeEventListener(type, fn));
+    this.lineNumbersListeners = [];
   }
 
   private mountIframe(rev: number | null): void {
@@ -532,6 +541,39 @@ class PadModeController {
       };
       followCb.addEventListener('change', this.followChangeListener);
     }
+
+    const bridgeAuthorColors = (cb: HTMLInputElement | null) => {
+      if (!cb) return;
+      const listener = () => {
+        try { inner.BroadcastSlider?.setShowAuthorColors?.(cb.checked); } catch (_e) {}
+      };
+      cb.addEventListener('change', listener);
+      this.authorColorsListeners.push({el: cb, type: 'change', fn: listener});
+    };
+    bridgeAuthorColors(document.getElementById('options-colorscheck') as HTMLInputElement | null);
+    bridgeAuthorColors(document.getElementById('padsettings-options-colorscheck') as HTMLInputElement | null);
+
+    const bridgePadFontFamily = (sel: HTMLSelectElement | null) => {
+      if (!sel) return;
+      const listener = () => {
+        try { inner.BroadcastSlider?.setPadFontFamily?.(sel.value); } catch (_e) {}
+      };
+      sel.addEventListener('change', listener);
+      this.fontFamilyListeners.push({el: sel, type: 'change', fn: listener});
+    };
+    bridgePadFontFamily(document.getElementById('viewfontmenu') as HTMLSelectElement | null);
+    bridgePadFontFamily(document.getElementById('padsettings-viewfontmenu') as HTMLSelectElement | null);
+
+    const bridgeLineNumbers = (cb: HTMLInputElement | null) => {
+      if (!cb) return;
+      const listener = () => {
+        try { inner.BroadcastSlider?.setShowLineNumbers?.(cb.checked); } catch (_e) {}
+      };
+      cb.addEventListener('change', listener);
+      this.lineNumbersListeners.push({el: cb, type: 'change', fn: listener});
+    };
+    bridgeLineNumbers(document.getElementById('options-linenoscheck') as HTMLInputElement | null);
+    bridgeLineNumbers(document.getElementById('padsettings-options-linenoscheck') as HTMLInputElement | null);
   }
 
   private setInnerRevision(rev: number): void {
