@@ -34,4 +34,20 @@ test.describe('RTL URL parameter', function () {
     await page.waitForSelector('#editorcontainer.initialized');
     await expect(page.locator('#options-rtlcheck')).not.toBeChecked();
   });
+
+  test('rtl content option flips only the pad inner contents, not the whole page', {tag: '@feature:rtl-toggle'}, async function ({page}) {
+    await appendQueryParams(page, {rtl: 'true'});
+    await expect(page.locator('#options-rtlcheck')).toBeChecked();
+
+    // The inner editor document is flipped to RTL...
+    const innerBody = page.frame('ace_inner')!.locator('#innerdocbody');
+    await expect(innerBody).toHaveClass(/\brtl\b/);
+    const innerDirection = await innerBody.evaluate((el) =>
+      el.ownerDocument.defaultView!.getComputedStyle(el).direction);
+    expect(innerDirection).toBe('rtl');
+
+    // ...but the top-level page (toolbar, chrome) is governed by the UI
+    // language, not the pad's RTL content option, and must stay LTR.
+    await expect(page.locator('html')).toHaveAttribute('dir', 'ltr');
+  });
 });
