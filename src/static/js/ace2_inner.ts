@@ -683,7 +683,11 @@ function Ace2Inner(editorInfo, cssManagers) {
       rtlistrue: (value) => {
         targetBody.classList.toggle('rtl', value);
         targetBody.classList.toggle('ltr', !value);
-        document.documentElement.dir = value ? 'rtl' : 'ltr';
+        // Apply the base direction to the inner editor document only. Using the
+        // top-level `document` here would flip the whole page (toolbar, chrome)
+        // even though this is a per-pad content option — see issue #7900. The
+        // page direction is governed solely by the UI language (see l10n.ts).
+        targetDoc.documentElement.dir = value ? 'rtl' : 'ltr';
       },
       fadeinactiveauthorcolors: (value) => {
         fadeInactiveAuthorColors = `${value}` !== 'false';
