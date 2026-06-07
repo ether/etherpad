@@ -9,6 +9,19 @@ import express from 'express';
 import {format} from 'url'
 import {ParsedUrlQuery} from "node:querystring";
 import {MapArrayType} from "../types/MapType";
+import crypto from "node:crypto";
+
+// Small fixed delay applied to every failed interactive login, mirroring
+// webaccess.authnFailureDelayMs, so failures take a consistent amount of time.
+const OAUTH_LOGIN_FAILURE_DELAY_MS = 1000;
+
+// Compare two strings via fixed-length SHA-256 digests using
+// crypto.timingSafeEqual.
+const constantTimeEquals = (a: string, b: string): boolean => {
+    const ha = crypto.createHash('sha256').update(String(a)).digest();
+    const hb = crypto.createHash('sha256').update(String(b)).digest();
+    return crypto.timingSafeEqual(ha, hb);
+};
 
 const configuration: Configuration = {
     scopes: ['openid', 'profile', 'email'],
@@ -171,21 +184,28 @@ export const expressCreateServer = async (hookName: string, args: ArgsExpressTyp
                             admin: boolean;
                         }
                     }
-                    const usersArray1 = Object.keys(users).map((username) => ({
-                        username,
-                        ...users[username]
-                    }));
-                    const account = usersArray1.find((user) => user.username === login as unknown as string && user.password === password as unknown as string);
+                    const loginStr = String(login ?? '');
+                    const passwordStr = String(password ?? '');
+                    // Look up by own property only, then compare the password
+                    // with constantTimeEquals.
+                    const user = Object.prototype.hasOwnProperty.call(users, loginStr)
+                        ? users[loginStr] : undefined;
+                    const passwordOk = user != null &&
+                        constantTimeEquals(passwordStr, String(user.password));
+                    const account = passwordOk ? {username: loginStr, ...user} : undefined;
                     if (!account) {
+                        // Apply the failure delay and stop here (explicit break)
+                        // so a failed login never reaches the grant branch.
+                        await new Promise((resolve) =>
+                            setTimeout(resolve, OAUTH_LOGIN_FAILURE_DELAY_MS));
                         res.setHeader('Content-Type', 'application/json');
                         res.end(JSON.stringify({error: "Invalid login"}));
+                        break;
                     }
 
-                    if (account) {
-                        await oidc.interactionFinished(req, res, {
-                            login: {accountId: account.username}
-                        }, {mergeWithLastSubmission: false});
-                    }
+                    await oidc.interactionFinished(req, res, {
+                        login: {accountId: account.username}
+                    }, {mergeWithLastSubmission: false});
                     break;
                 }
                 case 'consent': {

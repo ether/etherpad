@@ -414,7 +414,11 @@ exports.appendChatMessage = async (padID: string, text: string|object, authorID:
     time = Date.now();
   }
 
-  // @TODO - missing getPadSafe() call ?
+  // Require the pad to already exist, like the other content API methods.
+  // Without this, sendChatMessageToPadClients -> padManager.getPad() would
+  // create the pad on demand with default content, so the documented
+  // {code:1,"padID does not exist"} result would never be returned.
+  await getPadSafe(padID, true);
 
   // save chat message to database and send message to all connected clients
   await padMessageHandler.sendChatMessageToPadClients(new ChatMessage(text, authorID, time), padID);

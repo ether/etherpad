@@ -66,8 +66,11 @@ exports.expressCreateServer = (hookName: string, args: ArgsExpressType, cb: Func
       // read file from file system
       fs.readFile(pathname, function (err, data) {
         if (err) {
+          // Log the detailed error server-side; return a generic message to the
+          // client rather than echoing the filesystem error.
+          console.error(`admin: error reading ${pathname}: ${err}`);
           res.statusCode = 500;
-          res.end(`Error getting the file: ${err}.`);
+          res.end('Error getting the file.');
         } else {
           let dataToSend:Buffer|string = data
           // if the file is found, set Content-type and send data
