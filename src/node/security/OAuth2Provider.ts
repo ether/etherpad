@@ -15,12 +15,14 @@ import crypto from "node:crypto";
 // webaccess.authnFailureDelayMs, so failures take a consistent amount of time.
 const OAUTH_LOGIN_FAILURE_DELAY_MS = 1000;
 
-// Compare two strings via fixed-length SHA-256 digests using
-// crypto.timingSafeEqual.
+// Constant-time string comparison using crypto.timingSafeEqual. Unequal-length
+// inputs short-circuit to false (that length difference is covered by the
+// uniform failure delay below). The raw bytes are compared directly — the
+// values are not hashed/stored, this only avoids a content-dependent compare.
 const constantTimeEquals = (a: string, b: string): boolean => {
-    const ha = crypto.createHash('sha256').update(String(a)).digest();
-    const hb = crypto.createHash('sha256').update(String(b)).digest();
-    return crypto.timingSafeEqual(ha, hb);
+    const ba = Buffer.from(String(a), 'utf8');
+    const bb = Buffer.from(String(b), 'utf8');
+    return ba.length === bb.length && crypto.timingSafeEqual(ba, bb);
 };
 
 const configuration: Configuration = {
