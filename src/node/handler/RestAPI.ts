@@ -1471,7 +1471,15 @@ export const expressCreateServer = async (hookName: string, {app}: ArgsExpressTy
       }
     }
 
-    const fields = Object.assign({}, headers, params, query, formData);
+    // Merge with clear precedence: body > query > path params, matching the
+    // openapi.ts handler. Forward only the authorization header explicitly
+    // instead of merging all request headers into the field set.
+    const fields = Object.assign({}, params, query, formData);
+    if (headers && headers.authorization) {
+      // Match the openapi.ts handler: fall back to the header whenever the
+      // field value is falsy (absent or empty), not only when it is null.
+      fields.authorization = fields.authorization || headers.authorization;
+    }
 
     if (mapping.has(method) && pathToFunction in mapping.get(method)!) {
       const {apiVersion, functionName} = mapping.get(method)![pathToFunction]!

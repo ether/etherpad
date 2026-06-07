@@ -33,11 +33,22 @@ import jsCookie, {CookiesStatic} from 'js-cookie'
  */
 export const randomString = (len?: number) => {
   const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
-  let randomstring = '';
   len = len || 20;
-  for (let i = 0; i < len; i++) {
-    const rnum = Math.floor(Math.random() * chars.length);
-    randomstring += chars.substring(rnum, rnum + 1);
+  // Generate these IDs from crypto.getRandomValues (a CSPRNG) rather than
+  // Math.random. getRandomValues is available in browsers and in Node >= 20
+  // (Node 24 is required) and, unlike crypto.subtle, needs no secure context.
+  // Rejection-sample to the largest multiple of chars.length (62*4=248) to
+  // avoid modulo bias.
+  const maxUnbiased = 256 - (256 % chars.length); // 248
+  let randomstring = '';
+  while (randomstring.length < len) {
+    const bytes = new Uint8Array(len - randomstring.length);
+    globalThis.crypto.getRandomValues(bytes);
+    for (const b of bytes) {
+      if (b >= maxUnbiased) continue; // drop biased samples, keep going
+      randomstring += chars[b % chars.length];
+      if (randomstring.length === len) break;
+    }
   }
   return randomstring;
 };
