@@ -19,11 +19,13 @@ services:
       - postgres
     environment:
       NODE_ENV: production
-      ADMIN_PASSWORD: ${DOCKER_COMPOSE_APP_ADMIN_PASSWORD:-admin}
+      # Required — set a strong value (e.g. in .env). No fallback, so misconfig
+      # surfaces at `docker compose up` rather than at runtime.
+      ADMIN_PASSWORD: "${DOCKER_COMPOSE_APP_ADMIN_PASSWORD:?Set DOCKER_COMPOSE_APP_ADMIN_PASSWORD to a strong value}"
       DB_CHARSET: ${DOCKER_COMPOSE_APP_DB_CHARSET:-utf8mb4}
       DB_HOST: postgres
       DB_NAME: ${DOCKER_COMPOSE_POSTGRES_DATABASE:-etherpad}
-      DB_PASS: ${DOCKER_COMPOSE_POSTGRES_PASSWORD:-admin}
+      DB_PASS: "${DOCKER_COMPOSE_POSTGRES_PASSWORD:?Set DOCKER_COMPOSE_POSTGRES_PASSWORD to a strong value}"
       DB_PORT: ${DOCKER_COMPOSE_POSTGRES_PORT:-5432}
       DB_TYPE: "postgres"
       DB_USER: ${DOCKER_COMPOSE_POSTGRES_USER:-admin}
@@ -31,7 +33,9 @@ services:
       DEFAULT_PAD_TEXT: ${DOCKER_COMPOSE_APP_DEFAULT_PAD_TEXT:- }
       DISABLE_IP_LOGGING: ${DOCKER_COMPOSE_APP_DISABLE_IP_LOGGING:-false}
       SOFFICE: ${DOCKER_COMPOSE_APP_SOFFICE:-null}
-      TRUST_PROXY: ${DOCKER_COMPOSE_APP_TRUST_PROXY:-true}
+      # Default off: only enable when actually behind a trusted reverse proxy
+      # that sets the X-Forwarded-* headers.
+      TRUST_PROXY: ${DOCKER_COMPOSE_APP_TRUST_PROXY:-false}
     restart: always
     ports:
       - "${DOCKER_COMPOSE_APP_PORT_PUBLISHED:-9001}:${DOCKER_COMPOSE_APP_PORT_TARGET:-9001}"
@@ -40,7 +44,7 @@ services:
     image: postgres:15-alpine
     environment:
       POSTGRES_DB: ${DOCKER_COMPOSE_POSTGRES_DATABASE:-etherpad}
-      POSTGRES_PASSWORD: ${DOCKER_COMPOSE_POSTGRES_PASSWORD:-admin}
+      POSTGRES_PASSWORD: "${DOCKER_COMPOSE_POSTGRES_PASSWORD:?Set DOCKER_COMPOSE_POSTGRES_PASSWORD to a strong value}"
       POSTGRES_PORT: ${DOCKER_COMPOSE_POSTGRES_PORT:-5432}
       POSTGRES_USER: ${DOCKER_COMPOSE_POSTGRES_USER:-admin}
       PGDATA: /var/lib/postgresql/data/pgdata

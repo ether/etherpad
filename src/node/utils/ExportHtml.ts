@@ -63,7 +63,12 @@ const getHTMLFromAtext = async (pad:PadType, atext: AText, authorColors?: string
     // like <span data-tag="value">
     hooks.aCallAll('exportHtmlAdditionalTagsWithData', pad).then((newProps: string[]) => {
       newProps.forEach((prop) => {
-        tags.push(`span data-${prop[0]}="${prop[1]}"`);
+        // Attribute names/values here originate from the pad's attribute pool
+        // (user content), so escape the value and constrain the data-* name
+        // before interpolating, consistent with the escaping already applied to
+        // exported URLs and text below.
+        const dataName = String(prop[0]).replace(/[^a-zA-Z0-9_-]/g, '');
+        tags.push(`span data-${dataName}="${Security.escapeHTMLAttribute(String(prop[1]))}"`);
         props.push(prop);
       });
     }),

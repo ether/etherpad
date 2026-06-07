@@ -1341,6 +1341,24 @@ export const reloadSettings = () => {
       settings.cookie.prefix = '';
     }
 
+    // Warn when an account still uses a placeholder/example password from the
+    // shipped config; these should be changed before the instance is exposed.
+    // Logged loudly (error level in production) rather than throwing, so test
+    // fixtures and existing setups that use placeholder credentials still run.
+    {
+      const weakPasswords = new Set(['changeme1', 'changeme', 'admin', 'password', '']);
+      const users = (settings.users || {}) as Record<string, {password?: string, is_admin?: boolean}>;
+      const offenders = Object.keys(users).filter((name) =>
+        users[name] && typeof users[name].password === 'string' &&
+        weakPasswords.has(users[name].password as string));
+      if (offenders.length) {
+        const msg = `Account(s) using a default/placeholder password: ${offenders.join(', ')}. ` +
+            'Set a strong password (or use the ep_hash_auth plugin) before exposing this instance.';
+        if (process.env.NODE_ENV === 'production') logger.error(msg);
+        else logger.warn(msg);
+      }
+    }
+
     if (settings.dbType === 'dirty') {
         const dirtyWarning = 'DirtyDB is used. This is not recommended for production.';
         if (!settings.suppressErrorsInPadText) {
