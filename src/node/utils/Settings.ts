@@ -1357,6 +1357,23 @@ export const reloadSettings = () => {
         if (process.env.NODE_ENV === 'production') logger.error(msg);
         else logger.warn(msg);
       }
+
+      // Same check for OIDC client secrets when SSO is configured: the shipped
+      // templates fall back to placeholder values if ADMIN_SECRET / USER_SECRET
+      // are not provided.
+      const sso = (settings as any).sso;
+      const ssoClients: Array<{client_id?: string, client_secret?: string}> =
+        (sso && Array.isArray(sso.clients)) ? sso.clients : [];
+      const weakSecrets = new Set(['admin', 'user', 'secret', 'changeme', '']);
+      const secretOffenders = ssoClients
+        .filter((c) => c && typeof c.client_secret === 'string' && weakSecrets.has(c.client_secret))
+        .map((c) => c.client_id || '(unnamed client)');
+      if (secretOffenders.length) {
+        const msg = `SSO client(s) using a default/placeholder client_secret: ${secretOffenders.join(', ')}. ` +
+            'Set a strong secret (e.g. via the ADMIN_SECRET / USER_SECRET env vars) before enabling SSO in production.';
+        if (process.env.NODE_ENV === 'production') logger.error(msg);
+        else logger.warn(msg);
+      }
     }
 
     if (settings.dbType === 'dirty') {
