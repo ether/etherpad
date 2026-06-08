@@ -68,21 +68,33 @@ function Ace2Inner(editorInfo, cssManagers) {
   //
   // The inner editor iframe never receives its own `window.clientVars` (verified
   // by direct measurement: it stays undefined for the life of the pad). The
-  // author id lives on the TOP pad window, set by pad.ts when the CLIENT_VARS
-  // message arrives — which is necessarily before the editor is interactive. Read
-  // it from there so an early insert always carries the correct author. Once the
-  // queued setProperty('userAuthor') lands, `thisAuthor` takes precedence.
+  // author id lives on the pad window (`pad.ts` sets `clientVars` there when the
+  // CLIENT_VARS message arrives, necessarily before the editor is interactive),
+  // which is an ancestor of this frame: inner -> ace_outer -> pad window.
+  //
+  // Walk UP the ancestor chain and return the first frame that actually has
+  // `clientVars.userId`. This stops at the pad window and never depends on
+  // `window.top`: in a same-origin embed `window.top` is the host page (which has
+  // no clientVars), so reading from `top` would wrongly yield '' and reintroduce
+  // the unattributed-insert bug. Guarded with try/catch so a cross-origin ancestor
+  // (cross-origin embed) ends the walk instead of throwing. Once the queued
+  // setProperty('userAuthor') lands, `thisAuthor` takes precedence.
   const getLocalAuthor = () => {
     if (thisAuthor) return thisAuthor;
     try {
-      // @ts-ignore - clientVars is not typed on Window
-      return (window.top && window.top.clientVars && window.top.clientVars.userId) || '';
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let w: any = window;
+      // Bounded to avoid an unexpected cycle; the pad window is 2 hops up.
+      for (let i = 0; i < 10 && w; i++) {
+        const id = w.clientVars && w.clientVars.userId;
+        if (id) return String(id);
+        if (w === w.parent) break; // reached the topmost accessible frame
+        w = w.parent;
+      }
     } catch (e) {
-      // Cross-origin top (embedded pad): top is inaccessible. Fall back to any
-      // clientVars on this frame (may be '' for embeds, preserving prior behavior).
-      // @ts-ignore
-      return (window.clientVars && window.clientVars.userId) || '';
+      // Cross-origin ancestor (cross-origin embed): cannot read further up.
     }
+    return '';
   };
 
   let disposed = false;
