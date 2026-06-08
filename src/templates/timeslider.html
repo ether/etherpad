@@ -45,6 +45,26 @@
   <% if (themeColor) { %><meta name="theme-color" content="<%=themeColor%>"<% if (darkThemeColor) { %> media="(prefers-color-scheme: light)"<% } %>><% } %>
   <% if (darkThemeColor) { %><meta name="theme-color" content="<%=darkThemeColor%>" media="(prefers-color-scheme: dark)"><% } %>
   <link rel="shortcut icon" href="../../favicon.ico">
+  <% if (darkThemeColor) { %>
+  <script>
+    // See pad.html: apply the dark skin classes before the stylesheet paints
+    // so dark-OS users don't see a white flash on load (issue #7606).
+    (function () {
+      try {
+        if (localStorage.getItem('ep_darkMode') === 'false') return;
+        if (!(window.matchMedia &&
+              window.matchMedia('(prefers-color-scheme: dark)').matches)) return;
+        var el = document.documentElement;
+        ['super-light', 'light', 'dark', 'super-dark'].forEach(function (c) {
+          ['editor', 'background', 'toolbar'].forEach(function (k) {
+            el.classList.remove(c + '-' + k);
+          });
+        });
+        el.classList.add('super-dark-editor', 'dark-background', 'super-dark-toolbar');
+      } catch (e) { /* localStorage/matchMedia unavailable — fall back to light */ }
+    })();
+  </script>
+  <% } %>
   <% e.begin_block("timesliderStyles"); %>
   <link rel="stylesheet" href="../../static/css/pad.css?v=<%=settings.randomVersionString%>">
   <link rel="stylesheet" href="../../static/css/iframe_editor.css?v=<%=settings.randomVersionString%>">

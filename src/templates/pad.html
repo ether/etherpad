@@ -58,6 +58,31 @@
   <% if (darkColor) { %><meta name="theme-color" content="<%=darkColor%>" media="(prefers-color-scheme: dark)"><% } %>
   <link rel="shortcut icon" href="../favicon.ico">
 
+  <% if (darkColor) { %>
+  <script>
+    // Apply the dark skin classes before the stylesheet paints so dark-OS
+    // users don't see a white flash while the JS bundle loads (issue #7606).
+    // enableDarkMode being on is implied by this script being emitted; the
+    // matchMedia + localStorage white-mode checks mirror the auto-switch in
+    // pad.ts, which still runs on init to wire up the #options-darkmode toggle
+    // and theme the editor iframes (those don't exist yet at parse time).
+    (function () {
+      try {
+        if (localStorage.getItem('ep_darkMode') === 'false') return;
+        if (!(window.matchMedia &&
+              window.matchMedia('(prefers-color-scheme: dark)').matches)) return;
+        var el = document.documentElement;
+        ['super-light', 'light', 'dark', 'super-dark'].forEach(function (c) {
+          ['editor', 'background', 'toolbar'].forEach(function (k) {
+            el.classList.remove(c + '-' + k);
+          });
+        });
+        el.classList.add('super-dark-editor', 'dark-background', 'super-dark-toolbar');
+      } catch (e) { /* localStorage/matchMedia unavailable — fall back to light */ }
+    })();
+  </script>
+  <% } %>
+
   <% e.begin_block("styles"); %>
   <link href="../static/css/pad.css?v=<%=settings.randomVersionString%>" rel="stylesheet">
 

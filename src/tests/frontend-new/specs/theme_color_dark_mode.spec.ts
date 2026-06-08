@@ -48,4 +48,15 @@ test.describe('dark color scheme', () => {
       // bar correctly at parse time (issue #7606).
       await expect.poll(() => darkThemeColor(page)).toBe('#485365');
     });
+
+  test('page paints dark without a light flash on dark-OS clients',
+    async ({page}) => {
+      await goToNewPad(page);
+      // The inline pre-paint script in <head> adds the dark skin classes to
+      // <html> before the stylesheet paints, so a dark-OS user never sees the
+      // light page (issue #7606). Asserting the class is present confirms the
+      // dark skin is applied; the backend test verifies the script is ordered
+      // before pad.css so it takes effect at first paint.
+      await expect(page.locator('html')).toHaveClass(/super-dark-editor/);
+    });
 });
