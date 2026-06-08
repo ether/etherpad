@@ -56,46 +56,6 @@ function Ace2Inner(editorInfo, cssManagers) {
   const SELECT_BUTTON_CLASS = 'selected';
 
   let thisAuthor = '';
-  // The local author id used to tag newly inserted text. `thisAuthor` is
-  // populated asynchronously: collab_client calls editor.setProperty('userAuthor',
-  // userId), which the outer ace wrapper queues via pendingInit until the inner
-  // iframe has loaded, then applies. Until that lands `thisAuthor` is '', and any
-  // text typed in that window would be tagged with an empty author. An empty
-  // author attribute canonicalizes to "no author", so the wire changeset is an
-  // unattributed insert — which the server's pad-corruption guard rejects, taking
-  // the whole USER_CHANGES with it and silently dropping authorship (the Firefox
-  // clear_authorship_color flake).
-  //
-  // The inner editor iframe never receives its own `window.clientVars` (verified
-  // by direct measurement: it stays undefined for the life of the pad). The
-  // author id lives on the pad window (`pad.ts` sets `clientVars` there when the
-  // CLIENT_VARS message arrives, necessarily before the editor is interactive),
-  // which is an ancestor of this frame: inner -> ace_outer -> pad window.
-  //
-  // Walk UP the ancestor chain and return the first frame that actually has
-  // `clientVars.userId`. This stops at the pad window and never depends on
-  // `window.top`: in a same-origin embed `window.top` is the host page (which has
-  // no clientVars), so reading from `top` would wrongly yield '' and reintroduce
-  // the unattributed-insert bug. Guarded with try/catch so a cross-origin ancestor
-  // (cross-origin embed) ends the walk instead of throwing. Once the queued
-  // setProperty('userAuthor') lands, `thisAuthor` takes precedence.
-  const getLocalAuthor = () => {
-    if (thisAuthor) return thisAuthor;
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let w: any = window;
-      // Bounded to avoid an unexpected cycle; the pad window is 2 hops up.
-      for (let i = 0; i < 10 && w; i++) {
-        const id = w.clientVars && w.clientVars.userId;
-        if (id) return String(id);
-        if (w === w.parent) break; // reached the topmost accessible frame
-        w = w.parent;
-      }
-    } catch (e) {
-      // Cross-origin ancestor (cross-origin embed): cannot read further up.
-    }
-    return '';
-  };
 
   let disposed = false;
   const outerWin = document.getElementsByName("ace_outer")[0]
@@ -223,7 +183,7 @@ function Ace2Inner(editorInfo, cssManagers) {
     buildKeepToStartOfRange(rep, builder, start);
     buildRemoveRange(rep, builder, start, end);
     builder.insert(newText, [
-      ['author', getLocalAuthor()],
+      ['author', thisAuthor],
     ], rep.apool);
     const cs = builder.toString();
 
@@ -1349,7 +1309,7 @@ function Ace2Inner(editorInfo, cssManagers) {
       const cs = new Builder(rep.lines.totalWidth()).keep(
           rep.lines.offsetOfIndex(lineNum), lineNum).insert(
           theIndent, [
-            ['author', getLocalAuthor()],
+            ['author', thisAuthor],
           ], rep.apool).toString();
       performDocumentApplyChangeset(cs);
       performSelectionChange([lineNum, theIndent.length], [lineNum, theIndent.length]);
@@ -1890,7 +1850,7 @@ function Ace2Inner(editorInfo, cssManagers) {
         let isNewTextMultiauthor = false;
         const authorizer = cachedStrFunc((oldAtts) => {
           const attribs = AttributeMap.fromString(oldAtts, rep.apool);
-          if (!isNewTextMultiauthor || !attribs.has('author')) attribs.set('author', getLocalAuthor());
+          if (!isNewTextMultiauthor || !attribs.has('author')) attribs.set('author', thisAuthor);
           return attribs.toString();
         });
 
@@ -3860,13 +3820,6 @@ function Ace2Inner(editorInfo, cssManagers) {
 
   // Init documentAttributeManager
   documentAttributeManager = new AttributeManager(rep, performDocumentApplyChangeset);
-  // Seed the line-attribute author the same way as text inserts (see
-  // getLocalAuthor): AttributeManager.author also starts '' and is otherwise
-  // only set when the async setProperty('userAuthor') lands, so an early line
-  // attribute (list/heading/alignment) would emit an unattributed line-marker
-  // insert that the server's pad-corruption guard rejects. The userauthor
-  // handler keeps it in sync afterwards.
-  documentAttributeManager.author = getLocalAuthor();
 
   editorInfo.ace_performDocumentApplyAttributesToRange =
       (...args) => documentAttributeManager.setAttributesOnRange(...args);
