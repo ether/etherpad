@@ -56,6 +56,17 @@ function Ace2Inner(editorInfo, cssManagers) {
   const SELECT_BUTTON_CLASS = 'selected';
 
   let thisAuthor = '';
+  // The local author id used to tag newly inserted text. `thisAuthor` is
+  // populated asynchronously: collab_client calls editor.setProperty('userAuthor',
+  // userId), which the outer ace wrapper queues via pendingInit until the inner
+  // iframe has loaded, then applies. Until that lands `thisAuthor` is '', and any
+  // text typed in that window would be tagged with an empty author. An empty
+  // author attribute canonicalizes to "no author", so the wire changeset is an
+  // unattributed insert — which the server's pad-corruption guard rejects, taking
+  // the whole USER_CHANGES with it and silently dropping authorship (the Firefox
+  // clear_authorship_color flake). clientVars.userId is the same author id and is
+  // available synchronously in the inner frame, so fall back to it.
+  const getLocalAuthor = () => thisAuthor || window.clientVars?.userId || '';
 
   let disposed = false;
   const outerWin = document.getElementsByName("ace_outer")[0]
@@ -183,7 +194,7 @@ function Ace2Inner(editorInfo, cssManagers) {
     buildKeepToStartOfRange(rep, builder, start);
     buildRemoveRange(rep, builder, start, end);
     builder.insert(newText, [
-      ['author', thisAuthor],
+      ['author', getLocalAuthor()],
     ], rep.apool);
     const cs = builder.toString();
 
@@ -1309,7 +1320,7 @@ function Ace2Inner(editorInfo, cssManagers) {
       const cs = new Builder(rep.lines.totalWidth()).keep(
           rep.lines.offsetOfIndex(lineNum), lineNum).insert(
           theIndent, [
-            ['author', thisAuthor],
+            ['author', getLocalAuthor()],
           ], rep.apool).toString();
       performDocumentApplyChangeset(cs);
       performSelectionChange([lineNum, theIndent.length], [lineNum, theIndent.length]);
@@ -1850,7 +1861,7 @@ function Ace2Inner(editorInfo, cssManagers) {
         let isNewTextMultiauthor = false;
         const authorizer = cachedStrFunc((oldAtts) => {
           const attribs = AttributeMap.fromString(oldAtts, rep.apool);
-          if (!isNewTextMultiauthor || !attribs.has('author')) attribs.set('author', thisAuthor);
+          if (!isNewTextMultiauthor || !attribs.has('author')) attribs.set('author', getLocalAuthor());
           return attribs.toString();
         });
 
