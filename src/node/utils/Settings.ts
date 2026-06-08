@@ -369,7 +369,7 @@ export type SettingsType = {
     from: string | null;
     auth: {user: string; pass: string} | null;
   },
-  getPublicSettings: () => Pick<SettingsType, "title" | "skinVariants"|"randomVersionString"|"skinName"|"toolbar"| "exposeVersion"| "gitVersion" | "enablePadWideSettings" | "enablePluginPadOptions" | "privacyBanner">,
+  getPublicSettings: () => Pick<SettingsType, "title" | "skinVariants"|"randomVersionString"|"skinName"|"toolbar"| "exposeVersion"| "gitVersion" | "enableDarkMode" | "enablePadWideSettings" | "enablePluginPadOptions" | "privacyBanner">,
 }
 
 const settings: SettingsType = {
@@ -871,6 +871,9 @@ const settings: SettingsType = {
       title: settings.title,
       skinName: settings.skinName,
       skinVariants: settings.skinVariants,
+      // Needed so pad.html / timeslider.html only emit the dark theme-color
+      // variant when dark mode can actually be reached client-side (#7606).
+      enableDarkMode: settings.enableDarkMode,
       enablePadWideSettings: settings.enablePadWideSettings,
       enablePluginPadOptions: settings.enablePluginPadOptions,
       privacyBanner: getPublicPrivacyBanner(),

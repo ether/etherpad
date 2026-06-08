@@ -60,19 +60,36 @@ describe(__filename, function () {
     beforeEach(function () {
       backups.skinName = settings.skinName;
       backups.skinVariants = settings.skinVariants;
+      backups.enableDarkMode = settings.enableDarkMode;
     });
     afterEach(function () {
       settings.skinName = backups.skinName;
       settings.skinVariants = backups.skinVariants;
+      settings.enableDarkMode = backups.enableDarkMode;
     });
 
-    it('pad page emits theme-color matching the configured colibris toolbar', async function () {
+    it('pad page emits a light baseline and a media-scoped dark variant', async function () {
+      // Issue #7606: iOS Safari colors the address bar at parse time and does
+      // not reliably repaint when JS mutates the meta later, so the dark
+      // toolbar color must be selectable at first paint via a media query.
       settings.skinName = 'colibris';
       settings.skinVariants = 'super-light-toolbar super-light-editor light-background';
+      settings.enableDarkMode = true;
+      const res = await agent.get('/p/testpad').expect(200);
+      assert.match(res.text,
+        /<meta name="theme-color" content="#ffffff" media="\(prefers-color-scheme: light\)">/);
+      assert.match(res.text,
+        /<meta name="theme-color" content="#485365" media="\(prefers-color-scheme: dark\)">/);
+    });
+
+    it('pad page omits the dark variant when enableDarkMode is off', async function () {
+      // With dark mode disabled the client never auto-switches, so the address
+      // bar should stay on the unscoped light baseline.
+      settings.skinName = 'colibris';
+      settings.skinVariants = 'super-light-toolbar super-light-editor light-background';
+      settings.enableDarkMode = false;
       const res = await agent.get('/p/testpad').expect(200);
       assert.match(res.text, /<meta name="theme-color" content="#ffffff">/);
-      // No media-query variants — runtime dark-mode also depends on localStorage,
-      // which a server-rendered media query cannot account for.
       assert.doesNotMatch(res.text, /prefers-color-scheme/);
     });
 
@@ -80,7 +97,7 @@ describe(__filename, function () {
       settings.skinName = 'colibris';
       settings.skinVariants = 'dark-toolbar dark-editor dark-background';
       const res = await agent.get('/p/testpad').expect(200);
-      assert.match(res.text, /<meta name="theme-color" content="#576273">/);
+      assert.match(res.text, /<meta name="theme-color" content="#576273"/);
     });
 
     it('pad page omits theme-color for non-colibris skins', async function () {
@@ -90,14 +107,17 @@ describe(__filename, function () {
       assert.doesNotMatch(res.text, /theme-color/);
     });
 
-    it('timeslider page emits theme-color matching the configured toolbar', async function () {
+    it('timeslider page emits a light baseline and a media-scoped dark variant', async function () {
       settings.skinName = 'colibris';
-      settings.skinVariants = 'super-dark-toolbar super-dark-editor dark-background';
+      settings.skinVariants = 'super-light-toolbar super-light-editor light-background';
+      settings.enableDarkMode = true;
       // Issue #7659: /p/:pad/timeslider redirects unless ?embed=1 — that
       // query is the iframe path that still serves the timeslider HTML.
       const res = await agent.get('/p/testpad/timeslider?embed=1').expect(200);
-      assert.match(res.text, /<meta name="theme-color" content="#485365">/);
-      assert.doesNotMatch(res.text, /prefers-color-scheme/);
+      assert.match(res.text,
+        /<meta name="theme-color" content="#ffffff" media="\(prefers-color-scheme: light\)">/);
+      assert.match(res.text,
+        /<meta name="theme-color" content="#485365" media="\(prefers-color-scheme: dark\)">/);
     });
 
     it('timeslider page omits theme-color for non-colibris skins', async function () {

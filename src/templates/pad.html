@@ -7,11 +7,16 @@
     && req.acceptsLanguages(Object.keys(langs))) || 'en';
   var renderDir = (langs[renderLang] && langs[renderLang].direction === 'rtl') ? 'rtl' : 'ltr';
   // theme-color matches the configured toolbar so mobile address bars don't
-  // paint a mismatched system color above the toolbar on first paint. We do
-  // not emit a prefers-color-scheme: dark variant: the client-side dark-mode
-  // auto-switch is gated on enableDarkMode, matchMedia, and a localStorage
-  // white-mode override, none of which a media query can express.
+  // paint a mismatched system color above the toolbar on first paint. We emit
+  // a prefers-color-scheme: dark variant scoped with the `media` attribute so
+  // iOS Safari — which colors the address bar at parse time and does not
+  // reliably repaint when JS mutates the tag later — picks the dark toolbar
+  // color at first paint on a dark-OS client (issue #7606). The dark variant
+  // is only emitted when enableDarkMode is on, since that is what gates the
+  // client-side auto-switch; the manual #options-darkmode toggle and the
+  // localStorage white-mode override are still handled by skin_variants.ts.
   var configuredColor = skinColors.configuredToolbarColor(settings.skinName, settings.skinVariants);
+  var darkColor = settings.enableDarkMode ? skinColors.darkToolbarColor(settings.skinName) : null;
 %>
 <!doctype html>
 <html lang="<%=renderLang%>" dir="<%=renderDir%>" translate="no" class="pad <%=pluginUtils.clientPluginNames().join(' '); %> <%=settings.skinVariants%>">
@@ -49,7 +54,8 @@
   <meta name="robots" content="noindex, nofollow">
   <meta name="referrer" content="no-referrer">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
-  <% if (configuredColor) { %><meta name="theme-color" content="<%=configuredColor%>"><% } %>
+  <% if (configuredColor) { %><meta name="theme-color" content="<%=configuredColor%>"<% if (darkColor) { %> media="(prefers-color-scheme: light)"<% } %>><% } %>
+  <% if (darkColor) { %><meta name="theme-color" content="<%=darkColor%>" media="(prefers-color-scheme: dark)"><% } %>
   <link rel="shortcut icon" href="../favicon.ico">
 
   <% e.begin_block("styles"); %>

@@ -5,6 +5,9 @@
     && req.acceptsLanguages(Object.keys(langs))) || 'en';
   var renderDir = (langs[renderLang] && langs[renderLang].direction === 'rtl') ? 'rtl' : 'ltr';
   var themeColor = skinColors.configuredToolbarColor(settings.skinName, settings.skinVariants);
+  // See pad.html: emit a media-scoped dark variant so iOS Safari picks the
+  // dark toolbar color at first paint on a dark-OS client (issue #7606).
+  var darkThemeColor = settings.enableDarkMode ? skinColors.darkToolbarColor(settings.skinName) : null;
 %>
 <!doctype html>
 <html lang="<%=renderLang%>" dir="<%=renderDir%>" translate="no" class="pad <%=settings.skinVariants%>">
@@ -39,7 +42,8 @@
   <meta name="robots" content="noindex, nofollow">
   <meta name="referrer" content="no-referrer">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
-  <% if (themeColor) { %><meta name="theme-color" content="<%=themeColor%>"><% } %>
+  <% if (themeColor) { %><meta name="theme-color" content="<%=themeColor%>"<% if (darkThemeColor) { %> media="(prefers-color-scheme: light)"<% } %>><% } %>
+  <% if (darkThemeColor) { %><meta name="theme-color" content="<%=darkThemeColor%>" media="(prefers-color-scheme: dark)"><% } %>
   <link rel="shortcut icon" href="../../favicon.ico">
   <% e.begin_block("timesliderStyles"); %>
   <link rel="stylesheet" href="../../static/css/pad.css?v=<%=settings.randomVersionString%>">

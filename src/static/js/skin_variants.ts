@@ -7,19 +7,21 @@ const containers = ['editor', 'background', 'toolbar'];
 const colors = ['super-light', 'light', 'dark', 'super-dark'];
 
 // Keep <meta name="theme-color"> in sync with the toolbar the user actually
-// sees. The server emits a baseline derived from settings.skinVariants, but
-// pad.ts may flip the toolbar to super-dark on first paint (enableDarkMode
-// + prefers-color-scheme:dark + no localStorage white-mode override) and
-// the user can toggle via #options-darkmode. Without this, dark-mode users
-// keep the light meta and see a white address bar above a dark toolbar
-// (issue #7606 follow-up). Color resolution lives in skin_toolbar_colors so
-// the server-rendered baseline and the client updates share one source of
-// truth — Qodo flagged the prior duplicated table as a drift hazard.
+// sees. The server emits a media-scoped light + dark pair so iOS Safari picks
+// the right color at first paint (issue #7606); on desktop/Android the user
+// can still override the system scheme via #options-darkmode. When that
+// happens we point EVERY theme-color meta at the chosen color so the explicit
+// choice wins regardless of which media query the browser is currently
+// matching — otherwise toggling light while the OS is dark (or vice versa)
+// would update a tag the browser is ignoring. Color resolution lives in
+// skin_toolbar_colors so the server-rendered baseline and the client updates
+// share one source of truth — Qodo flagged the prior duplicated table as a
+// drift hazard.
 const updateThemeColorMeta = (newClasses: string[]) => {
-  const meta = document.querySelector('meta[name="theme-color"]');
-  if (!meta) return;
-  meta.setAttribute('content',
-      toolbarColorForTokens(newClasses.join(' ').split(/\s+/).filter(Boolean)));
+  const metas = document.querySelectorAll('meta[name="theme-color"]');
+  if (!metas.length) return;
+  const color = toolbarColorForTokens(newClasses.join(' ').split(/\s+/).filter(Boolean));
+  metas.forEach((meta) => { meta.setAttribute('content', color); });
 };
 
 // add corresponding classes when config change
