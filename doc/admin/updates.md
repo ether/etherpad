@@ -104,6 +104,8 @@ The notice auto-fades after 8 seconds and can be dismissed immediately. The publ
 
 Set `updates.tier` to `"off"`. No HTTP request will leave the instance and no banner or badge will render.
 
+On Docker / air-gapped installs you can do this without editing `settings.json` inside the image by setting `UPDATES_TIER=off` (and, to also drop the separate `updateServer` version check, `PRIVACY_UPDATE_CHECK=false`). See the [Updates & privacy](../docker.md#updates--privacy-offline--air-gapped) table in the Docker docs for the full set of environment variables.
+
 ## Privacy
 
 The version check sends no telemetry. Etherpad fetches the public GitHub Releases API (`api.github.com/repos/<repo>/releases/latest`) with `If-None-Match` to be cache-friendly. The only metadata GitHub sees is the same as any other GitHub API client — your IP and a `User-Agent: etherpad-self-update` header. No instance ID, no version, no identifiers travel upstream.

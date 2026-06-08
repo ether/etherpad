@@ -210,15 +210,17 @@
    * tier: "off" | "notify" | "manual" | "auto" | "autonomous"
    * Default "notify" shows a banner when an update is available.
    * Docker installs are read-only — tiers above "notify" are not applied even if requested.
+   * Air-gapped / offline deployments should set UPDATES_TIER=off to suppress the
+   * periodic check against the GitHub Releases API entirely.
    */
   "updates": {
-    "tier": "notify",
-    "source": "github",
-    "channel": "stable",
+    "tier": "${UPDATES_TIER:notify}",
+    "source": "${UPDATES_SOURCE:github}",
+    "channel": "${UPDATES_CHANNEL:stable}",
     "installMethod": "docker",
-    "checkIntervalHours": 6,
-    "githubRepo": "ether/etherpad",
-    "requireAdminForStatus": false,
+    "checkIntervalHours": "${UPDATES_CHECK_INTERVAL_HOURS:6}",
+    "githubRepo": "${UPDATES_GITHUB_REPO:ether/etherpad}",
+    "requireAdminForStatus": "${UPDATES_REQUIRE_ADMIN_FOR_STATUS:false}",
     "preApplyGraceMinutes": 0,
     "drainSeconds": 60,
     "rollbackHealthCheckSeconds": 60,
@@ -321,7 +323,19 @@
    *  https://etherpad.org/ep_infos
    */
 
-  "updateServer": "https://etherpad.org/ep_infos",
+  "updateServer": "${UPDATE_SERVER:https://etherpad.org/ep_infos}",
+
+  /*
+   * Outbound network calls. See doc/privacy.md for what each one sends.
+   *  - PRIVACY_UPDATE_CHECK=false   : disables the hourly version check (UpdateCheck.ts)
+   *  - PRIVACY_PLUGIN_CATALOG=false : disables the admin plugin browser
+   *                                   (manual install-by-name via CLI still works)
+   * Air-gapped / firewalled deployments should set both to false.
+   */
+  "privacy": {
+    "updateCheck": "${PRIVACY_UPDATE_CHECK:true}",
+    "pluginCatalog": "${PRIVACY_PLUGIN_CATALOG:true}"
+  },
 
   /*
    * The type of the database.

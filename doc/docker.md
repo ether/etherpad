@@ -118,6 +118,25 @@ The `settings.json.docker` available by default allows to control almost every s
 | `USER_PASSWORD`    | the password for the first user `user` (leave unspecified if you do not want to create it) |                                                                                                                                                                                                                                     |
 
 
+### Updates & privacy (offline / air-gapped)
+
+Etherpad makes a small number of outbound calls (a periodic version check and the admin plugin catalogue). In an air-gapped or firewalled deployment these can be disabled entirely without editing `settings.json` inside the image — set the variables below. See [doc/privacy.md](privacy.md) and [doc/admin/updates.md](admin/updates.md) for what each call sends.
+
+| Variable                          | Description                                                                                                  | Default                          |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------------- | -------------------------------- |
+| `PRIVACY_UPDATE_CHECK`            | Set to `false` to disable the hourly version check (`UpdateCheck.ts`).                                       | `true`                           |
+| `PRIVACY_PLUGIN_CATALOG`          | Set to `false` to disable the admin plugin browser (manual install-by-name via CLI still works).            | `true`                           |
+| `UPDATES_TIER`                    | Self-updater tier: `off` \| `notify` \| `manual` \| `auto` \| `autonomous`. Set to `off` to suppress the GitHub Releases check entirely. | `notify`                         |
+| `UPDATES_SOURCE`                  | Where update metadata is fetched from.                                                                       | `github`                         |
+| `UPDATES_CHANNEL`                 | Release channel to track.                                                                                    | `stable`                         |
+| `UPDATES_CHECK_INTERVAL_HOURS`    | How often (hours) the updater polls when not `off`.                                                          | `6`                              |
+| `UPDATES_GITHUB_REPO`             | Repository the updater checks for releases.                                                                  | `ether/etherpad`                 |
+| `UPDATES_REQUIRE_ADMIN_FOR_STATUS`| Lock `/admin/update/status` to authenticated admins.                                                         | `false`                          |
+| `UPDATE_SERVER`                   | Endpoint backing the version check. Point elsewhere (or disable the check above) for offline installs.       | `https://etherpad.org/ep_infos`  |
+
+> **Fully offline:** set `UPDATES_TIER=off`, `PRIVACY_UPDATE_CHECK=false`, and `PRIVACY_PLUGIN_CATALOG=false`. The version check is fire-and-forget and already fails closed (a blocked endpoint is caught and logged, it does not prevent startup), but disabling it removes the outbound attempt and the log noise.
+
+
 ### Database
 
 | Variable      | Description                                                    | Default                                                               |
