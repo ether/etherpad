@@ -51,6 +51,7 @@
     // so dark-OS users don't see a white flash on load (issue #7606).
     (function () {
       try {
+        if (window.location.hash.toLowerCase() === '#skinvariantsbuilder') return;
         if (localStorage.getItem('ep_darkMode') === 'false') return;
         if (!(window.matchMedia &&
               window.matchMedia('(prefers-color-scheme: dark)').matches)) return;

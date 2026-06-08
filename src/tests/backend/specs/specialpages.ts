@@ -154,6 +154,10 @@ describe(__filename, function () {
       assert(scriptIdx !== -1, 'expected the pre-paint dark-mode script in the pad page');
       assert(cssIdx !== -1 && scriptIdx < cssIdx,
         'pre-paint dark-mode script must come before pad.css so it applies before first paint');
+      // Must skip the auto-dark switch on the skin-variants builder, matching
+      // pad.ts (so it can't fight the builder UI on a dark-OS client).
+      assert(res.text.includes('#skinvariantsbuilder'),
+        'pre-paint script must guard against the #skinvariantsbuilder hash like pad.ts');
     });
 
     it('timeslider page inlines the pre-paint dark-mode script', async function () {

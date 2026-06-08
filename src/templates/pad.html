@@ -68,6 +68,9 @@
     // and theme the editor iframes (those don't exist yet at parse time).
     (function () {
       try {
+        // The skin-variants builder lets the user pick variants by hand; pad.ts
+        // skips the auto-dark switch there, so we must too.
+        if (window.location.hash.toLowerCase() === '#skinvariantsbuilder') return;
         if (localStorage.getItem('ep_darkMode') === 'false') return;
         if (!(window.matchMedia &&
               window.matchMedia('(prefers-color-scheme: dark)').matches)) return;
