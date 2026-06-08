@@ -3831,6 +3831,13 @@ function Ace2Inner(editorInfo, cssManagers) {
 
   // Init documentAttributeManager
   documentAttributeManager = new AttributeManager(rep, performDocumentApplyChangeset);
+  // Seed the line-attribute author the same way as text inserts (see
+  // getLocalAuthor): AttributeManager.author also starts '' and is otherwise
+  // only set when the async setProperty('userAuthor') lands, so an early line
+  // attribute (list/heading/alignment) would emit an unattributed line-marker
+  // insert that the server's pad-corruption guard rejects. The userauthor
+  // handler keeps it in sync afterwards.
+  documentAttributeManager.author = getLocalAuthor();
 
   editorInfo.ace_performDocumentApplyAttributesToRange =
       (...args) => documentAttributeManager.setAttributesOnRange(...args);
