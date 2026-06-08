@@ -64,9 +64,26 @@ function Ace2Inner(editorInfo, cssManagers) {
   // author attribute canonicalizes to "no author", so the wire changeset is an
   // unattributed insert — which the server's pad-corruption guard rejects, taking
   // the whole USER_CHANGES with it and silently dropping authorship (the Firefox
-  // clear_authorship_color flake). clientVars.userId is the same author id and is
-  // available synchronously in the inner frame, so fall back to it.
-  const getLocalAuthor = () => thisAuthor || window.clientVars?.userId || '';
+  // clear_authorship_color flake).
+  //
+  // The inner editor iframe never receives its own `window.clientVars` (verified
+  // by direct measurement: it stays undefined for the life of the pad). The
+  // author id lives on the TOP pad window, set by pad.ts when the CLIENT_VARS
+  // message arrives — which is necessarily before the editor is interactive. Read
+  // it from there so an early insert always carries the correct author. Once the
+  // queued setProperty('userAuthor') lands, `thisAuthor` takes precedence.
+  const getLocalAuthor = () => {
+    if (thisAuthor) return thisAuthor;
+    try {
+      // @ts-ignore - clientVars is not typed on Window
+      return (window.top && window.top.clientVars && window.top.clientVars.userId) || '';
+    } catch (e) {
+      // Cross-origin top (embedded pad): top is inaccessible. Fall back to any
+      // clientVars on this frame (may be '' for embeds, preserving prior behavior).
+      // @ts-ignore
+      return (window.clientVars && window.clientVars.userId) || '';
+    }
+  };
 
   let disposed = false;
   const outerWin = document.getElementsByName("ace_outer")[0]
