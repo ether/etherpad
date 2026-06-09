@@ -101,9 +101,10 @@ test.describe('Language select and change', function () {
     try {
       await goToNewPad(page)
 
-      // The toolbar should have rendered in German (detection works) ...
-      await page.locator('.buttonicon-bold').evaluate((el) =>
-          el.parentElement!.title === 'Fett (Strg-B)')
+      // The toolbar should have rendered in German (detection works) — the
+      // bold button's parent <li> carries the localized German tooltip.
+      await expect(page.locator('.buttonicon-bold').locator('..'))
+          .toHaveAttribute('title', 'Fett (Strg-B)')
 
       // ... and the language dropdown must show the detected language, not
       // English, even though it was never explicitly selected.
