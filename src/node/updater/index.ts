@@ -297,7 +297,11 @@ const buildSchedulerApplyDeps = (): ApplyPipelineDeps => ({
         }
       },
       pnpmOnPath: () => new Promise<boolean>((resolve) => {
-        const c = spawn('pnpm', ['--version'], {stdio: 'ignore'});
+        // pm_on_fail=ignore so a "packageManager" pin mismatch doesn't make pnpm
+        // exit non-zero (it would otherwise try to fetch the pinned build, which
+        // fails offline) and falsely report pnpm as absent. See #7911.
+        const c = spawn('pnpm', ['--version'],
+            {stdio: 'ignore', env: {...process.env, pnpm_config_pm_on_fail: 'ignore'}});
         c.on('close', (code) => resolve(code === 0));
         c.on('error', () => resolve(false));
       }),

@@ -7,6 +7,11 @@
 #   docker build --build-arg BUILD_ENV=copy .
 ARG BUILD_ENV=git
 
+# NOTE: this intentionally lags the "packageManager" pin in package.json. pnpm
+# 11.1.x enforces the minimum-release-age supply-chain policy during install,
+# which the frozen-lockfile Docker build can't satisfy, so the image stays on
+# 11.0.x. The version gap is made harmless by pnpm_config_pm_on_fail=ignore in
+# the build stage below — see ether/etherpad#7911.
 ARG PnpmVersion=11.0.6
 
 FROM node:24-alpine AS adminbuild
@@ -27,6 +32,17 @@ RUN pnpm run build:ui
 
 FROM node:24-alpine AS build
 LABEL maintainer="Etherpad team, https://github.com/ether/etherpad"
+
+# The image's pnpm intentionally lags the "packageManager" pin (see the ARG
+# note above). pnpm would otherwise try to self-provision the pinned version on
+# invocation — including the informational `pnpm --version` probe Etherpad runs
+# at startup — which fails closed with no network and breaks air-gapped boots
+# (ether/etherpad#7911). pm_on_fail=ignore makes pnpm use the installed version
+# instead. Inherited by the development and production runtime stages, so it
+# also covers the updater's pnpm-on-PATH check and ad-hoc `pnpm` in an exec
+# shell. It does not change which pnpm runs the build-time install (still the
+# installed 11.0.x), so the frozen-lockfile build is unaffected.
+ENV pnpm_config_pm_on_fail=ignore
 
 # Set these arguments when building the image from behind a proxy
 ARG http_proxy=
