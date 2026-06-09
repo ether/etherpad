@@ -153,8 +153,8 @@ importers:
         specifier: ^6.9.1
         version: 6.9.1
       semver:
-        specifier: ^7.8.2
-        version: 7.8.2
+        specifier: ^7.8.3
+        version: 7.8.3
       tsx:
         specifier: ^4.22.4
         version: 4.22.4
@@ -338,8 +338,8 @@ importers:
         specifier: 1.0.0
         version: 1.0.0
       semver:
-        specifier: ^7.8.2
-        version: 7.8.2
+        specifier: ^7.8.3
+        version: 7.8.3
       socket.io:
         specifier: ^4.8.3
         version: 4.8.3
@@ -4962,13 +4962,13 @@ packages:
     resolution: {integrity: sha512-BR7VvDCVHO+q2xBEWskxS6DJE1qRnb7DxzUrogb71CWoSficBxYsiAGd+Kl0mmq/MprG9yArRkyrQxTO6XjMzA==}
     hasBin: true
 
-  semver@7.8.1:
-    resolution: {integrity: sha512-rkVq3IXh+4FDGch+KwzX3aV9W3kO54GyEgpvBzSyctDA6Xtd7RJQV1xmXbeQp5v7+VzLOfVqiutSE6GICgPFvg==}
+  semver@7.8.2:
+    resolution: {integrity: sha512-c8jsqUZm3omBOI66G90z1Dyw5z622G8oLG+omfsHBJf3CWQTlOcwOjvOG6wtiNfW6anKm/eA39LMwMtMez2TiQ==}
     engines: {node: '>=10'}
     hasBin: true
 
-  semver@7.8.2:
-    resolution: {integrity: sha512-c8jsqUZm3omBOI66G90z1Dyw5z622G8oLG+omfsHBJf3CWQTlOcwOjvOG6wtiNfW6anKm/eA39LMwMtMez2TiQ==}
+  semver@7.8.3:
+    resolution: {integrity: sha512-wnilbGyMxzbY7dNOl7jpKbLSjcfeweJWU5j4+u5qW+6/wuGD9KzIGOyZnQVSBM9E7DtWaaH3CyHkppYrKYoxwg==}
     engines: {node: '>=10'}
     hasBin: true
 
@@ -7307,7 +7307,7 @@ snapshots:
       globby: 11.1.0
       is-glob: 4.0.3
       minimatch: 10.2.5
-      semver: 7.8.1
+      semver: 7.8.2
       ts-api-utils: 1.4.3(typescript@6.0.3)
     optionalDependencies:
       typescript: 6.0.3
@@ -7322,7 +7322,7 @@ snapshots:
       '@typescript-eslint/visitor-keys': 8.60.1
       debug: 4.4.3(supports-color@8.1.1)
       minimatch: 10.2.5
-      semver: 7.8.1
+      semver: 7.8.2
       tinyglobby: 0.2.17
       ts-api-utils: 2.5.0(typescript@6.0.3)
       typescript: 6.0.3
@@ -8339,7 +8339,7 @@ snapshots:
   eslint-compat-utils@0.5.1(eslint@10.4.1):
     dependencies:
       eslint: 10.4.1
-      semver: 7.8.1
+      semver: 7.8.2
 
   eslint-config-etherpad@4.0.5(eslint@10.4.1)(typescript@6.0.3):
     dependencies:
@@ -8460,7 +8460,7 @@ snapshots:
       globals: 15.15.0
       globrex: 0.1.2
       ignore: 5.3.2
-      semver: 7.8.1
+      semver: 7.8.2
       ts-declaration-location: 1.0.7(typescript@6.0.3)
     transitivePeerDependencies:
       - typescript
@@ -9165,7 +9165,7 @@ snapshots:
 
   is-bun-module@1.3.0:
     dependencies:
-      semver: 7.8.1
+      semver: 7.8.2
 
   is-callable@1.2.7: {}
 
@@ -9377,7 +9377,7 @@ snapshots:
       lodash.isstring: 4.0.1
       lodash.once: 4.1.1
       ms: 2.1.3
-      semver: 7.8.1
+      semver: 7.8.2
 
   jszip@3.10.1:
     dependencies:
@@ -9513,7 +9513,7 @@ snapshots:
       lockfile: 1.0.4
       node-fetch-commonjs: 3.3.2
       proxy-agent: 6.5.0
-      semver: 7.8.1
+      semver: 7.8.2
       tar: 7.5.13
       url-join: 4.0.1
     transitivePeerDependencies:
@@ -10543,9 +10543,9 @@ snapshots:
 
   semver@6.3.1: {}
 
-  semver@7.8.1: {}
-
   semver@7.8.2: {}
+
+  semver@7.8.3: {}
 
   send@1.2.0:
     dependencies:
