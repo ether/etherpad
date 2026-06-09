@@ -551,10 +551,11 @@ exports.createPad = async (padID: string, text: string, authorId = '') => {
 
   // create pad
   await getPadSafe(padID, false, text, authorId);
-  // When requireAuthentication is on, every creator has a stable identity, so
-  // the cookie/identity path covers recovery and the one-time token is just
-  // an extra surface to leak.
-  const deletionToken = settings.requireAuthentication
+  // No recovery token when it cannot help: requireAuthentication gives every
+  // creator a stable identity, and allowPadDeletionByAllUsers lets anyone delete
+  // the pad with no token at all (issue #7926). Either way the token is just an
+  // extra surface to leak.
+  const deletionToken = settings.requireAuthentication || settings.allowPadDeletionByAllUsers
       ? null
       : await padDeletionManager.createDeletionTokenIfAbsent(padID);
   return {deletionToken};
