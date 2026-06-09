@@ -44,7 +44,15 @@ describe(__filename, function () {
       assert.ok(pinMatch, `expected packageManager "pnpm@<version>", got "${pkg.packageManager}"`);
       pinPnpm = pinMatch![1];
 
-      guardPresent = /ENV\s+pnpm_config_pm_on_fail=ignore/.test(dockerfile);
+      // The guard only protects runtime if it lives in the `build` stage, which
+      // the development/production runtime stages inherit from. The same ENV in
+      // the throwaway `adminbuild` stage would NOT reach runtime, so scope the
+      // check to the build stage block (from `FROM ... AS build` to the next
+      // `FROM`) rather than matching anywhere in the file.
+      const buildStage = dockerfile.match(
+          /^FROM\s+\S+\s+AS\s+build\b[\s\S]*?(?=^FROM\s)/m);
+      assert.ok(buildStage, 'Dockerfile must define a `FROM ... AS build` stage');
+      guardPresent = /ENV\s+pnpm_config_pm_on_fail=ignore/.test(buildStage![0]);
     });
 
     it('neutralises any pnpm version gap so offline boots do not self-provision', function () {
@@ -60,11 +68,13 @@ describe(__filename, function () {
       }
     });
 
-    it('sets pnpm_config_pm_on_fail=ignore for offline robustness', function () {
+    it('sets pnpm_config_pm_on_fail=ignore in the runtime-inherited build stage', function () {
       assert.ok(guardPresent,
-          'Dockerfile must set pnpm_config_pm_on_fail=ignore so runtime pnpm ' +
-          'calls (the startup probe, the updater pnpm check) do not fail closed ' +
-          'when offline (issue #7911).');
+          'The `build` stage must set pnpm_config_pm_on_fail=ignore (it is ' +
+          'inherited by the development/production runtime stages) so runtime ' +
+          'pnpm calls — the startup probe, the updater pnpm check — do not fail ' +
+          'closed when offline (issue #7911). Setting it only in `adminbuild` ' +
+          'would not reach runtime.');
     });
   });
 });
