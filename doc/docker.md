@@ -120,7 +120,7 @@ The `settings.json.docker` available by default allows to control almost every s
 
 ### Updates & privacy (offline / air-gapped)
 
-Etherpad makes a small number of outbound calls (a periodic version check and the admin plugin catalogue). In an air-gapped or firewalled deployment these can be disabled entirely without editing `settings.json` inside the image — set the variables below. See [doc/privacy.md](privacy.md) and [doc/admin/updates.md](admin/updates.md) for what each call sends.
+Etherpad makes a small number of outbound calls (a periodic version check and the admin plugin catalogue). In an air-gapped or firewalled deployment these can be disabled entirely without editing `settings.json` inside the image — set the variables below. See [PRIVACY.md](../PRIVACY.md) and [doc/admin/updates.md](admin/updates.md) for what each call sends.
 
 | Variable                          | Description                                                                                                  | Default                          |
 | --------------------------------- | ---------------------------------------------------------------------------------------------------------- | -------------------------------- |
