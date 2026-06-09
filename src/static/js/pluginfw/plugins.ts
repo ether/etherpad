@@ -20,9 +20,16 @@ const logger = log4js.getLogger('plugins');
 // installs go through live-plugin-manager directly), so a missing pnpm
 // is expected on hardened/packaged installs and shouldn't produce an
 // ERROR in the logs.
+//
+// pnpm_config_pm_on_fail=ignore keeps this informational probe from failing
+// when the installed pnpm differs from package.json's "packageManager" pin:
+// by default pnpm would try to download the pinned version, which throws in
+// air-gapped/firewalled installs (ether/etherpad#7911). We only want to read
+// the local version here, never to self-provision a different one.
 (async () => {
   try {
-    const version = await runCmd(['pnpm', '--version'], {stdio: [null, 'string']});
+    const version = await runCmd(['pnpm', '--version'],
+        {stdio: [null, 'string'], env: {...process.env, pnpm_config_pm_on_fail: 'ignore'}});
     logger.info(`pnpm --version: ${version}`);
   } catch (err) {
     if ((err as any).code === 'ENOENT') {
