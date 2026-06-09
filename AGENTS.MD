@@ -231,7 +231,7 @@ Releases are driven almost entirely by GitHub Actions. A maintainer dispatches *
    - `handleRelease.yml` → builds Etherpad, extracts the matching changelog section via `generateChangelog` (`bin/generateReleaseNotes.ts`), and publishes the **GitHub Release** (`make_latest: true`);
    - `docker.yml` → builds & pushes the Docker images;
    - `snap-publish.yml` → publishes the snap.
-5. **npm publish is a separate manual step:** dispatch **"releaseEtherpad.yaml"** (`workflow_dispatch`), which runs `npm publish --provenance --access public` via npm **OIDC trusted publishing**. It is *not* fired by the tag.
+5. **npm publish — PARKED, not part of the release.** `releaseEtherpad.yaml` publishes the core as `ep_etherpad` to npm, but that package is **not load-bearing**: it has 0 dependents, nothing depends on it (plugins import `ep_etherpad-lite` from the *local* core install; plugin CI clones the repo), and Etherpad is run via clone/Docker/zip/snap — never `npm install`. The publish currently fails with `E404` because `ep_etherpad` has no OIDC trusted publisher configured on npmjs.com, which is why npm sits at 2.5.0 while 3.x shipped fine without it. The workflow is gated behind a `confirm: true` input so it can't run by accident. **Skip it for a normal release.** To revive it, the npm owner of `ep_etherpad` (`samtv12345`) configures a trusted publisher (npmjs.com → ep_etherpad → Settings → Trusted Publisher → repo `ether/etherpad`, workflow `releaseEtherpad.yml`); otherwise the workflow can be removed. Decision pending.
 
 ### Documentation
 
