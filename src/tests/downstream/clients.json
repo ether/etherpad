@@ -2,27 +2,27 @@
   {
     "name": "etherpad-pad",
     "repo": "https://github.com/ether/pad.git",
-    "ref": "31176d64ce746d45349e58ee6c0bb043052c6e66",
+    "ref": "ada8cafd33b4ab31206226b4c3db80b2aa00125a",
     "kind": "rust",
-    "enabled": false,
+    "enabled": true,
     "vectorTest": "cargo test --test vectors",
     "smokeCmd": "cargo test --test smoke -- --ignored"
   },
   {
     "name": "etherpad-cli-client",
     "repo": "https://github.com/ether/etherpad-cli-client.git",
-    "ref": "edbe0bb70971e54514ebea672e4ad9b51fc55bff",
+    "ref": "e4b4643c7185c2059375c430e07ca2e65d01999a",
     "kind": "node",
-    "enabled": false,
+    "enabled": true,
     "vectorTest": "pnpm run test:vectors",
     "smokeCmd": "pnpm run test:smoke"
   },
   {
     "name": "etherpad-desktop",
     "repo": "https://github.com/ether/etherpad-desktop.git",
-    "ref": "ad273c119f1926a8390c9908fc91f62fa2cf740f",
+    "ref": "9e02fd06b2be3f0eeb91d636b7bddc547210399d",
     "kind": "desktop",
-    "enabled": false,
+    "enabled": true,
     "vectorTest": "pnpm run test:vectors",
     "smokeCmd": "pnpm run test:smoke"
   }

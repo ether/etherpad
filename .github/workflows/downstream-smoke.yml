@@ -88,19 +88,16 @@ jobs:
       - name: Generate canonical wire-vectors
         run: cd src && pnpm run vectors:gen
 
+      # Rust toolchain for the `rust`-kind client (etherpad-pad). Other kinds
+      # use the node+pnpm already set up above.
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
       - name: Run enabled downstream clients
-        run: |
-          ENABLED=$(node -e 'const c=require("./src/tests/downstream/clients.json").filter(x=>x.enabled); process.stdout.write(JSON.stringify(c))')
-          if [ "$ENABLED" = "[]" ]; then
-            echo "No downstream clients enabled yet (Phase 1 harness only). Skipping."
-            exit 0
-          fi
-          # Phase 2 implements per-`kind` clone @ pinned ref + toolchain setup +
-          # vector injection (cp src/tests/fixtures/wire-vectors.json into the
-          # client) + `vectorTest` + `smokeCmd` against http://localhost:9003,
-          # iterating the entries in $ENABLED. Until a client is enabled this is
-          # a no-op so the harness lands green on its own.
-          echo "$ENABLED"
+        env:
+          SMOKE_URL: http://localhost:9003
+          SMOKE_APIKEY: ${{ env.APIKEY }}
+        run: bash src/tests/downstream/run-clients.sh
 
       - name: Teardown (by PID, never pkill)
         if: always()
