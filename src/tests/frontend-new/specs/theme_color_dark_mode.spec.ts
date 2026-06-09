@@ -59,4 +59,18 @@ test.describe('dark color scheme', () => {
       // before pad.css so it takes effect at first paint.
       await expect(page.locator('html')).toHaveClass(/super-dark-editor/);
     });
+
+  test('root canvas matches the toolbar so the iOS status-bar area is not white',
+    async ({page}) => {
+      await goToNewPad(page);
+      // The <html> root must carry the toolbar colour as its background — iOS
+      // Safari paints the status-bar safe area from the root canvas, not from
+      // theme-color, so leaving it transparent produced a white strip above
+      // the dark pad (issue #7606). #485365 == --super-dark-color, the dark
+      // toolbar colour.
+      await expect
+        .poll(() => page.evaluate(() =>
+          getComputedStyle(document.documentElement).backgroundColor))
+        .toBe('rgb(72, 83, 101)');
+    });
 });
