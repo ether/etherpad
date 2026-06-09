@@ -149,6 +149,17 @@ const padeditor = (() => {
         }
       });
 
+      // When the user can already delete the pad without a token (everyone may
+      // delete, or they have a durable authenticated identity — issue #7926),
+      // the recovery-token disclosure is redundant: label it plainly "Delete
+      // Pad" rather than the jargon "Delete with token". Reuses the existing,
+      // already-translated pad.settings.deletePad key.
+      if ((window as any).clientVars?.canDeleteWithoutToken) {
+        const $summary = $('#delete-pad-with-token > summary');
+        $summary.attr('data-l10n-id', 'pad.settings.deletePad')
+            .text(html10n.get('pad.settings.deletePad'));
+      }
+
       // delete pad using a recovery token (second device / no creator cookie)
       $('#delete-pad-token-submit').on('click', () => {
         const token = String($('#delete-pad-token-input').val() || '').trim();
