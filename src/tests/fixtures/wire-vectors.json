@@ -1,0 +1,62 @@
+[
+  {
+    "name": "plain-insert",
+    "initialText": "abc\n",
+    "changeset": "Z:4>3=3+3$XYZ",
+    "pool": {
+      "numToAttrib": {},
+      "nextNum": 0
+    },
+    "resultText": "abcXYZ\n"
+  },
+  {
+    "name": "plain-delete",
+    "initialText": "abcdef\n",
+    "changeset": "Z:7<3=1-3$",
+    "pool": {
+      "numToAttrib": {},
+      "nextNum": 0
+    },
+    "resultText": "aef\n"
+  },
+  {
+    "name": "formatted-insert",
+    "initialText": "abc\n",
+    "changeset": "Z:4>4=3*0+4$bold",
+    "pool": {
+      "numToAttrib": {
+        "0": [
+          "bold",
+          "true"
+        ]
+      },
+      "nextNum": 1
+    },
+    "resultText": "abcbold\n"
+  },
+  {
+    "name": "multiline-insert",
+    "initialText": "abc\n",
+    "changeset": "Z:4>8=3|2+8$one\ntwo\n",
+    "pool": {
+      "numToAttrib": {},
+      "nextNum": 0
+    },
+    "resultText": "abcone\ntwo\n\n"
+  },
+  {
+    "name": "attrib-reuse",
+    "initialText": "abc\n",
+    "changeset": "Z:4>2*0+1=3*0+1$AB",
+    "pool": {
+      "numToAttrib": {
+        "0": [
+          "bold",
+          "true"
+        ]
+      },
+      "nextNum": 1
+    },
+    "resultText": "AabcB\n"
+  }
+]

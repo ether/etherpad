@@ -1,0 +1,111 @@
+name: Downstream smoke
+
+# Boots a real Etherpad from the PR and verifies the separate downstream clients
+# (Rust terminal editor, Node CLI, desktop/mobile) still round-trip against it.
+# Phase 1 lands the boot/healthcheck/self-check/teardown harness + manifest; the
+# per-client matrix activates as each client flips `enabled:true` in clients.json.
+
+on:
+  pull_request:
+    paths-ignore:
+      - "doc/**"
+      - "docs/**"
+  schedule:
+    - cron: '0 4 * * *'   # nightly against the default branch
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    name: Boot + downstream clients
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      PNPM_HOME: ~/.pnpm-store
+      APIKEY: downstream-smoke-key
+    steps:
+      - name: Checkout core (PR)
+        uses: actions/checkout@v6
+
+      - uses: actions/cache@v5
+        name: Cache pnpm store
+        with:
+          path: ${{ env.PNPM_HOME }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - uses: pnpm/action-setup@v6
+        name: Install pnpm
+        with:
+          run_install: false
+
+      - name: Use Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm i --frozen-lockfile
+
+      - name: Boot Etherpad on :9003 (apikey auth)
+        run: |
+          # The template ships a literal "port": 9001 and sso auth; rewrite both.
+          # (PORT env is ignored once the settings file specifies a port.)
+          sed -e 's#"port": 9001,#"port": 9003,#' \
+              -e 's#${AUTHENTICATION_METHOD:sso}#apikey#' \
+              settings.json.template > settings.json
+          # Fail fast if the template format drifted and sed silently no-op'd.
+          grep -q '"port": 9003,' settings.json \
+            || { echo "::error::port rewrite failed — settings.json.template format changed"; exit 1; }
+          grep -q '"authenticationMethod": "apikey"' settings.json \
+            || { echo "::error::auth rewrite failed — settings.json.template format changed"; exit 1; }
+          printf '%s' "$APIKEY" > APIKEY.txt
+          pnpm run prod > /tmp/ep.log 2>&1 &
+          echo $! > /tmp/ep.pid
+          echo "booted pid $(cat /tmp/ep.pid)"
+
+      - name: Wait for healthcheck
+        run: |
+          for i in $(seq 1 60); do
+            if curl -fsS "http://localhost:9003/api/" >/dev/null 2>&1; then
+              echo "server up after ${i} tries"; exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::server did not come up"; tail -50 /tmp/ep.log; exit 1
+
+      - name: Self-check — authenticated create + read roundtrip
+        run: |
+          K="$APIKEY"
+          curl -fsS "http://localhost:9003/api/1/createPad?apikey=${K}&padID=smoke&text=hi%0A" | tee /tmp/create.json
+          grep -q '"code":0' /tmp/create.json
+          curl -fsS "http://localhost:9003/api/1/getText?apikey=${K}&padID=smoke" | tee /tmp/get.json
+          grep -q '"text":"hi' /tmp/get.json
+
+      - name: Generate canonical wire-vectors
+        run: cd src && pnpm run vectors:gen
+
+      - name: Run enabled downstream clients
+        run: |
+          ENABLED=$(node -e 'const c=require("./src/tests/downstream/clients.json").filter(x=>x.enabled); process.stdout.write(JSON.stringify(c))')
+          if [ "$ENABLED" = "[]" ]; then
+            echo "No downstream clients enabled yet (Phase 1 harness only). Skipping."
+            exit 0
+          fi
+          # Phase 2 implements per-`kind` clone @ pinned ref + toolchain setup +
+          # vector injection (cp src/tests/fixtures/wire-vectors.json into the
+          # client) + `vectorTest` + `smokeCmd` against http://localhost:9003,
+          # iterating the entries in $ENABLED. Until a client is enabled this is
+          # a no-op so the harness lands green on its own.
+          echo "$ENABLED"
+
+      - name: Teardown (by PID, never pkill)
+        if: always()
+        run: |
+          if [ -f /tmp/ep.pid ]; then
+            kill "$(cat /tmp/ep.pid)" 2>/dev/null || true
+            echo "killed $(cat /tmp/ep.pid)"
+          fi
