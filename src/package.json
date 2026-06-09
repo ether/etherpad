@@ -154,6 +154,7 @@
     "test-container": "mocha --import=tsx --timeout 30000 --extension ts,js tests/container/specs/api",
     "dev": "cross-env NODE_ENV=development  node --require tsx/cjs node/server.ts",
     "prod": "cross-env NODE_ENV=production node --require tsx/cjs node/server.ts",
+    "vectors:gen": "node --require tsx/cjs tests/backend/specs/downstream/generate-vectors.ts",
     "ts-check": "tsc --noEmit",
     "ts-check:watch": "tsc --noEmit --watch",
     "test-ui": "cross-env NODE_ENV=production npx playwright test",
