@@ -9,6 +9,7 @@ on:
   pull_request:
     paths-ignore:
       - "doc/**"
+      - "docs/**"
   schedule:
     - cron: '0 4 * * *'   # nightly against the default branch
 
@@ -56,6 +57,11 @@ jobs:
           sed -e 's#"port": 9001,#"port": 9003,#' \
               -e 's#${AUTHENTICATION_METHOD:sso}#apikey#' \
               settings.json.template > settings.json
+          # Fail fast if the template format drifted and sed silently no-op'd.
+          grep -q '"port": 9003,' settings.json \
+            || { echo "::error::port rewrite failed — settings.json.template format changed"; exit 1; }
+          grep -q '"authenticationMethod": "apikey"' settings.json \
+            || { echo "::error::auth rewrite failed — settings.json.template format changed"; exit 1; }
           printf '%s' "$APIKEY" > APIKEY.txt
           pnpm run prod > /tmp/ep.log 2>&1 &
           echo $! > /tmp/ep.pid
