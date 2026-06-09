@@ -51,8 +51,9 @@ while IFS=$'\t' read -r name repo ref kind vectorTest smokeCmd; do
   # and the loop continues to the rest. NOTE: `set -e` is suspended inside a
   # subshell used as an `||` operand, so every step is guarded with an explicit
   # `|| exit 1` rather than relying on `set -e`. The manifest commands are a
-  # trusted in-repo allowlist; running them via `bash -c` (not `eval`) keeps
-  # them out of this script's own shell.
+  # trusted in-repo allowlist; running them via `bash -euo pipefail -c` (not
+  # `eval`) keeps them out of this script's own shell and applies strict mode
+  # (pipeline-stage failures surface) inside the child.
   (
     git clone --quiet "$repo" "$dir" || exit 1
     # A default clone has all branch heads; fetch the pinned commit only if it
@@ -66,13 +67,13 @@ while IFS=$'\t' read -r name repo ref kind vectorTest smokeCmd; do
     cd "$dir" || exit 1
     case "$kind" in
       rust)
-        bash -c "$vectorTest" || exit 1
-        bash -c "$smokeCmd" || exit 1
+        bash -euo pipefail -c "$vectorTest" || exit 1
+        bash -euo pipefail -c "$smokeCmd" || exit 1
         ;;
       node|desktop)
         pnpm install || exit 1
-        bash -c "$vectorTest" || exit 1
-        bash -c "$smokeCmd" || exit 1
+        bash -euo pipefail -c "$vectorTest" || exit 1
+        bash -euo pipefail -c "$smokeCmd" || exit 1
         ;;
       *)
         echo "::error::unknown client kind: $kind"; exit 1
