@@ -1287,9 +1287,15 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
     // once. Readonly sessions never see it.
     const isCreator =
         !sessionInfo.readonly && sessionInfo.author === await pad.getRevisionAuthor(0);
-    // Skip token issuance when requireAuthentication is on: every creator has a
-    // stable identity so the cookie/identity path is sufficient.
-    const padDeletionToken = isCreator && !settings.requireAuthentication
+    // Skip token issuance — and so the client never shows the "Save your pad
+    // deletion token" modal (issue #7926) — when the token cannot help:
+    //   - requireAuthentication: every creator already has a stable identity, so
+    //     the cookie/identity path is sufficient.
+    //   - allowPadDeletionByAllUsers: anyone can delete the pad with no token at
+    //     all (see handlePadDelete's flagOk branch), so a recovery token is noise
+    //     and the modal only overwhelms users who will never need it.
+    const padDeletionToken =
+        isCreator && !settings.requireAuthentication && !settings.allowPadDeletionByAllUsers
         ? await padDeletionManager.createDeletionTokenIfAbsent(sessionInfo.padId)
         : null;
 

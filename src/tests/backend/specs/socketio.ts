@@ -34,7 +34,7 @@ describe(__filename, function () {
       plugins.hooks[hookName] = [];
     }
     backups.settings = {};
-    for (const setting of ['editOnly', 'requireAuthentication', 'requireAuthorization', 'users', 'enablePadWideSettings']) {
+    for (const setting of ['editOnly', 'requireAuthentication', 'requireAuthorization', 'users', 'enablePadWideSettings', 'allowPadDeletionByAllUsers']) {
       // @ts-ignore
       backups.settings[setting] = settings[setting];
     }
@@ -489,6 +489,49 @@ describe(__filename, function () {
       const cvB = await common.handshake(socketB, 'foo');
       assert.equal(cvB.data.canEditPadSettings, true,
           'same author across tabs is one identity, both are the creator');
+    });
+  });
+
+  describe('Pad deletion token issuance (#7926)', function () {
+    const removeIfExists = async (padId: string) => {
+      if (await padManager.doesPadExist(padId)) {
+        const p = await padManager.getPad(padId);
+        await p.remove();
+      }
+    };
+
+    beforeEach(async function () {
+      // @ts-ignore - public setting toggled per test
+      settings.allowPadDeletionByAllUsers = false;
+      await removeIfExists('pad');
+    });
+    afterEach(async function () {
+      if (socket) socket.close();
+      socket = null;
+      await removeIfExists('pad');
+    });
+
+    it('anonymous creator receives a deletion token by default', async function () {
+      const res = await agent.get('/p/pad').expect(200);
+      socket = await common.connect(res);
+      const cv: any = await common.handshake(socket, 'pad');
+      assert.equal(cv.type, 'CLIENT_VARS');
+      assert.equal(typeof cv.data.padDeletionToken, 'string',
+          'creator should get a token so the client can show the save-token modal');
+      assert.ok(cv.data.padDeletionToken.length >= 32);
+    });
+
+    it('no token (and so no modal) when allowPadDeletionByAllUsers is true', async function () {
+      // @ts-ignore - public setting
+      settings.allowPadDeletionByAllUsers = true;
+      const res = await agent.get('/p/pad').expect(200);
+      socket = await common.connect(res);
+      const cv: any = await common.handshake(socket, 'pad');
+      assert.equal(cv.type, 'CLIENT_VARS');
+      // A null token means showDeletionTokenModalIfPresent() returns early on the
+      // client, so the "Save your pad deletion token" modal never appears. Anyone
+      // can already delete the pad without a token in this configuration.
+      assert.equal(cv.data.padDeletionToken, null);
     });
   });
 
