@@ -211,6 +211,38 @@ pnpm run plugins ls                     # List installed
 ### Settings
 Configured via `settings.json`. A template is available at `settings.json.template`. Environment variables can override any setting using `"${ENV_VAR}"` or `"${ENV_VAR:default_value}"`.
 
+## Releasing
+
+Releases are driven almost entirely by GitHub Actions. A maintainer dispatches **one** workflow; the version bump, tagging, GitHub Release, Docker images, and snap all cascade off the pushed tag. The npm publish is a separate manual dispatch.
+
+### Prerequisites (check these before dispatching)
+- **A `# X.Y.Z` changelog section for the _target_ version must already be at the top of `CHANGELOG.md`.** `bin/release.ts` aborts with `No changelog record for X.Y.Z, please create changelog record` if it's missing. Write the section before dispatching.
+- **All four `package.json` files must agree on the current version:** root `package.json`, `src/package.json`, `admin/package.json`, `bin/package.json`. `release.ts` reads the *current* version from **`src/package.json`** and computes the next with `semver.inc(current, type)`. If the files are out of sync (e.g. one was hand-edited), the computed target is wrong and the changelog guard fails. *(This exact desync — `src`/`bin` left at 3.3.0 while root/admin were 3.2.0 — blocked the 3.3.0 release in June 2026.)*
+
+### Cutting a release
+1. **Actions → "Release etherpad"** → Run workflow (`workflow_dispatch`), choose `patch` / `minor` / `major`. Cadence is monthly **minors** (3.0.0 → 3.1.0 → 3.2.0 → …); use `major` only for breaking changes.
+2. The **Prepare release** step runs `bin/release.ts`, which:
+   - sanity-checks the tree (clean working dir, on `develop`, `develop`/`master` upstreams in sync, `../ether.github.com` cloned & clean on `master`);
+   - bumps the version in all four `package.json` files;
+   - commits `bump version`, merges `develop` → `master`, creates both `X.Y.Z` **and** `vX.Y.Z` tags, merges `master` back to `develop`;
+   - builds and stages the versioned docs into the website repo (see **Documentation** below).
+3. The **Push after release** step (`bin/push-after-release.sh`) pushes `master`, `develop`, the tag, `--tags`, and the `ether.github.com` docs commit.
+4. The pushed **`vX.Y.Z` tag auto-triggers** three workflows:
+   - `handleRelease.yml` → builds Etherpad, extracts the matching changelog section via `generateChangelog` (`bin/generateReleaseNotes.ts`), and publishes the **GitHub Release** (`make_latest: true`);
+   - `docker.yml` → builds & pushes the Docker images;
+   - `snap-publish.yml` → publishes the snap.
+5. **npm publish is a separate manual step:** dispatch **"releaseEtherpad.yaml"** (`workflow_dispatch`), which runs `npm publish --provenance --access public` via npm **OIDC trusted publishing**. It is *not* fired by the tag.
+
+### Documentation
+
+Two distinct things, both important:
+
+**1. Per-PR doc updates — your responsibility in every behaviour-change PR.**
+The `doc/` workspace holds the user/admin/API docs (Markdown + AsciiDoc). Whenever a PR changes API responses, CLI flags, settings keys, hooks, or error formats, update the relevant files in `doc/` **in the same PR** — don't defer it to release time. The HTTP API reference is `doc/api/http_api.{md,adoc}` (keep both in sync). Preview locally with `pnpm run makeDocs`.
+
+**2. Release-time versioned docs publishing — automated, no manual step.**
+During a release, `release.ts` runs `pnpm run makeDocs` (→ `bin/make_docs.ts`) to render `doc/` into `out/doc/`, then copies it into the sibling website repo at `../ether.github.com/public/doc/vX.Y.Z`, bumps that repo's version, and commits `X.Y.Z docs`; `push-after-release.sh` pushes it, publishing the versioned docs on etherpad.org. This requires `ether.github.com` checked out as a **sibling directory** — the **Release etherpad** workflow checks it out automatically. If you ever run `release.ts` by hand, clone it first: `cd .. && git clone git@github.com:ether/ether.github.com.git`.
+
 ## Monorepo Structure
 
 This project uses pnpm workspaces. The workspaces are:
