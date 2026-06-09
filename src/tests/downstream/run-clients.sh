@@ -46,28 +46,39 @@ fail=0
 while IFS=$'\t' read -r name repo ref kind vectorTest smokeCmd; do
   echo "::group::$name ($kind) @ ${ref:0:12}"
   dir="$WORK/$name"
-  git clone --quiet "$repo" "$dir"
-  # Fetch the exact pinned commit (works even when it is not a branch tip).
-  git -C "$dir" fetch --quiet origin "$ref" 2>/dev/null || true
-  git -C "$dir" checkout --quiet "$ref"
-
+  # Everything — clone, checkout, AND the tests — runs inside one guarded
+  # subshell so a single client's failure becomes a per-client failure (fail=1)
+  # and the loop continues to the rest. NOTE: `set -e` is suspended inside a
+  # subshell used as an `||` operand, so every step is guarded with an explicit
+  # `|| exit 1` rather than relying on `set -e`. The manifest commands are a
+  # trusted in-repo allowlist; running them via `bash -c` (not `eval`) keeps
+  # them out of this script's own shell.
   (
-    cd "$dir"
+    git clone --quiet "$repo" "$dir" || exit 1
+    # A default clone has all branch heads; fetch the pinned commit only if it
+    # is not already reachable (e.g. a non-branch-tip SHA). Fetch errors are
+    # NOT suppressed so the real cause surfaces instead of a vague checkout fail.
+    if ! git -C "$dir" cat-file -e "${ref}^{commit}" 2>/dev/null; then
+      git -C "$dir" fetch --quiet origin "$ref" || exit 1
+    fi
+    git -C "$dir" checkout --quiet "$ref" || exit 1
+
+    cd "$dir" || exit 1
     case "$kind" in
       rust)
-        eval "$vectorTest"
-        eval "$smokeCmd"
+        bash -c "$vectorTest" || exit 1
+        bash -c "$smokeCmd" || exit 1
         ;;
       node|desktop)
-        pnpm install
-        eval "$vectorTest"
-        eval "$smokeCmd"
+        pnpm install || exit 1
+        bash -c "$vectorTest" || exit 1
+        bash -c "$smokeCmd" || exit 1
         ;;
       *)
         echo "::error::unknown client kind: $kind"; exit 1
         ;;
     esac
-  ) || { echo "::error::downstream client '$name' failed"; fail=1; }
+  ) || { echo "::error::downstream client '$name' failed (clone/checkout/test)"; fail=1; }
   echo "::endgroup::"
 done < "$WORK/clients.tsv"
 
