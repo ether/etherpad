@@ -581,7 +581,10 @@ const pad = {
     $('#padsettings-options-linenoscheck').prop('checked', view.showLineNumbers !== false);
     $('#padsettings-options-rtlcheck').prop('checked', !!view.rtlIsTrue);
     $('#padsettings-viewfontmenu').val(view.padFontFamily || '');
-    $('#padsettings-languagemenu').val(padOptions.lang || 'en');
+    // When no pad-wide lang is set, reflect the language html10n actually
+    // detected and rendered (e.g. from the browser) instead of defaulting the
+    // dropdown to English while the UI is in another language. See #7925.
+    $('#padsettings-languagemenu').val(padOptions.lang || html10n.getLanguage() || 'en');
     $('#padsettings-enforcecheck').prop('checked', !!padOptions.enforceSettings);
     $('#padsettings-options-stickychat, #padsettings-options-chatandusers')
         .prop('disabled', padOptions.showChat === false);
@@ -599,7 +602,10 @@ const pad = {
     $('#options-linenoscheck').prop('checked', effectiveOptions.view?.showLineNumbers !== false);
     $('#options-rtlcheck').prop('checked', !!effectiveOptions.view?.rtlIsTrue);
     $('#viewfontmenu').val(effectiveOptions.view?.padFontFamily || '');
-    $('#languagemenu').val(effectiveOptions.lang || 'en');
+    // Fall back to the detected language rather than hardcoded English when the
+    // user has not explicitly chosen one, so the dropdown matches the rendered
+    // UI language. See #7925.
+    $('#languagemenu').val(effectiveOptions.lang || html10n.getLanguage() || 'en');
     $('#settings input[id^="options-"]').prop('disabled', disabled);
     $('#viewfontmenu, #languagemenu').prop('disabled', disabled);
     $('#options-stickychat, #options-chatandusers')

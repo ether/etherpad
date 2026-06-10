@@ -151,6 +151,32 @@ jobs:
           docker volume rm ep7718-plugins >/dev/null 2>&1 || true
           [ "$ok" = "1" ] || exit 1
 
+      -
+        # Regression test: Etherpad container must boot without external
+        # network access (e.g., air-gapped host or restrictive runtime policy).
+        name: Regression — boot with disabled network (--network none)
+        working-directory: etherpad
+        run: |
+          docker run --rm -d \
+            --network none \
+            --name test-offline ${{ env.TEST_TAG }}
+          docker logs -f test-offline &
+          ok=0
+          for i in $(seq 1 60); do
+            status=$(docker container inspect -f '{{.State.Health.Status}}' test-offline 2>/dev/null) || {
+              echo "container exited prematurely while offline"
+              docker logs test-offline || true
+              break
+            }
+            case ${status} in
+              healthy) ok=1; echo "offline boot healthy after $((i*2))s"; break;;
+              starting) sleep 2;;
+              *) echo "unexpected status: ${status}"; docker logs test-offline || true; break;;
+            esac
+          done
+          docker rm -f test-offline >/dev/null 2>&1 || true
+          [ "$ok" = "1" ] || exit 1
+
   build-test-local-plugin:
     # Regression coverage for #7687: the Docker image's
     # `bin/installLocalPlugins.sh` step runs as the `etherpad` user and

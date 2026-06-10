@@ -11,6 +11,7 @@ import settings, {getEpVersion, getGitCommit, reloadSettings} from '../../utils/
 import {getLatestVersion} from '../../utils/UpdateCheck';
 import {redactSettings} from '../../utils/AdminSettingsRedact';
 const padManager = require('../../db/PadManager');
+const db = require('../../db/DB');
 const api = require('../../db/API');
 import {deleteRevisions} from '../../utils/Cleanup';
 
@@ -25,6 +26,24 @@ const queryPadLimit = 12;
 // pushing the event loop into back-pressure.
 const PAD_HYDRATE_CONCURRENCY = 16;
 const logger = log4js.getLogger('adminSettings');
+
+// Errors thrown while reading a pad record can embed the raw stored value
+// in their message — e.g. Pad.init's `'pool' in value` TypeError stringifies
+// the offending value ("Cannot use 'in' operator to search for 'pool' in
+// <value>"). For a corrupt record that value may be actual pad text, so
+// logging it verbatim would leak content, bloat the log, and let embedded
+// newlines forge log lines. Reduce any error to its name plus a single-line,
+// length-capped message before logging.
+const safeErr = (err: unknown): string => {
+  const e = err as {name?: unknown, message?: unknown} | null;
+  const name = (e && typeof e.name === 'string' && e.name) || 'Error';
+  const msg = String((e && e.message) ?? err ?? '')
+      .replace(/[\r\n\t]+/g, ' ')
+      .replace(/\s{2,}/g, ' ')
+      .trim()
+      .slice(0, 120);
+  return `${name}: ${msg}`;
+};
 
 // Concurrency-limited Promise.all replacement. Preserves the input
 // order in the returned array (caller slices later). Used by padLoad
@@ -147,6 +166,7 @@ exports.socketio = (hookName: string, {io}: any) => {
 
 
     socket.on('padLoad', async (query: PadSearchQuery) => {
+     try {
       const {padIDs} = await padManager.listAllPads();
 
       // ── 1. Pattern filter (cheap, by name only) ─────────────────────
@@ -172,13 +192,27 @@ exports.socketio = (hookName: string, {io}: any) => {
       const needsFullScan = filter !== 'all' || query.sortBy !== 'padName';
 
       const loadMeta = async (padName: string): Promise<PadQueryResult> => {
-        const pad = await padManager.getPad(padName);
-        return {
-          padName,
-          lastEdited: await pad.getLastEdit(),
-          userCount: api.padUsersCount(padName).padUsersCount,
-          revisionNumber: pad.getHeadRevisionNumber(),
-        };
+        // A single unreadable record must not take out the whole listing.
+        // `findKeys('pad:*', '*:*:*')` returns every key under the `pad:`
+        // prefix, including legacy/foreign or migration-corrupted records
+        // (e.g. a value stored as a JSON *string* rather than a pad object,
+        // which makes Pad.init throw `'pool' in value`). Before this guard
+        // one such key rejected the whole `padLoad` handler — the admin
+        // "Manage pads" page then showed *no* pads at all (issue #7935) and
+        // the unhandled rejection could exit the server. Surfacing the bad
+        // pad with zeroed metadata lets an admin see and delete it instead.
+        try {
+          const pad = await padManager.getPad(padName);
+          return {
+            padName,
+            lastEdited: await pad.getLastEdit(),
+            userCount: api.padUsersCount(padName).padUsersCount,
+            revisionNumber: pad.getHeadRevisionNumber(),
+          };
+        } catch (err) {
+          logger.warn(`padLoad: skipping unreadable pad "${padName}": ${safeErr(err)}`);
+          return {padName, lastEdited: 0 as any, userCount: 0, revisionNumber: 0};
+        }
       };
 
       // Lazily lifted so we don't load every pad twice on the fast path.
@@ -256,16 +290,51 @@ exports.socketio = (hookName: string, {io}: any) => {
 
       const data: {total: number, results?: PadQueryResult[]} = {total, results};
       socket.emit('results:padLoad', data);
+     } catch (err) {
+      // Never leave the SPA hanging on a missing reply (it would show an
+      // empty "No results" state forever) and never let this bubble up to
+      // the process-level unhandledRejection handler, which would exit the
+      // whole server. Always emit a terminal reply for the request.
+      logger.error(`padLoad failed: ${safeErr(err)}`);
+      socket.emit('results:padLoad',
+          {total: 0, results: [], error: safeErr(err)});
+     }
     })
 
 
     socket.on('deletePad', async (padId: string) => {
-      const padExists = await padManager.doesPadExists(padId);
-      if (padExists) {
-        logger.info(`Deleting pad: ${padId}`);
-        const pad = await padManager.getPad(padId);
-        await pad.remove();
+      try {
+        if (await padManager.doesPadExists(padId)) {
+          // Healthy pad — full relational cleanup (revs, chat, readonly,
+          // authors, deletion token, hooks).
+          logger.info(`Deleting pad: ${padId}`);
+          const pad = await padManager.getPad(padId);
+          await pad.remove();
+          socket.emit('results:deletePad', padId);
+          return;
+        }
+
+        // doesPadExists() is false either because nothing is stored under
+        // this id, or because the record is unreadable (a non-object value
+        // leaves `value.atext` undefined). The latter is exactly what
+        // padLoad now surfaces with zeroed metadata — getPad()/Pad.remove()
+        // would throw on it, so fall back to a raw key purge. Without this
+        // the surfaced corrupt pad is undeletable from the admin UI.
+        const raw = await db.get(`pad:${padId}`);
+        if (raw != null) {
+          logger.info(`Deleting unreadable pad record via raw key purge: ${padId}`);
+          // Best-effort sweep of sub-keys (revs/chat/deletionToken/…) and
+          // the readonly mapping, then the main key + pad-list/cache entry.
+          const subKeys: string[] = (await db.findKeys(`pad:${padId}:*`, null)) || [];
+          await Promise.all(subKeys.map((k) => db.remove(k)));
+          await db.remove(`pad2readonly:${padId}`);
+          await padManager.removePad(padId);
+        }
+        // Always emit a terminal reply (even for an already-absent id) so the
+        // UI clears the row instead of silently doing nothing.
         socket.emit('results:deletePad', padId);
+      } catch (err) {
+        logger.error(`deletePad failed for "${padId}": ${safeErr(err)}`);
       }
     })
 

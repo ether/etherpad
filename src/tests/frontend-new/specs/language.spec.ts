@@ -90,4 +90,28 @@ test.describe('Language select and change', function () {
     await page.waitForSelector('html[dir="ltr"]')
 
   });
+
+  // Regression test for #7925: when the UI language is auto-detected from the
+  // browser (no language cookie, no pad-wide lang set), the language dropdown
+  // must reflect the detected language instead of defaulting to English.
+  test('dropdown reflects the browser-detected language', async function ({browser}) {
+    const context = await browser.newContext({locale: 'de-DE'})
+    await context.clearCookies()
+    const page = await context.newPage()
+    try {
+      await goToNewPad(page)
+
+      // The toolbar should have rendered in German (detection works) — the
+      // bold button's parent <li> carries the localized German tooltip.
+      await expect(page.locator('.buttonicon-bold').locator('..'))
+          .toHaveAttribute('title', 'Fett (Strg-B)')
+
+      // ... and the language dropdown must show the detected language, not
+      // English, even though it was never explicitly selected.
+      await showSettings(page)
+      await expect(langDropdown(page).locator('.current')).toHaveText('Deutsch')
+    } finally {
+      await context.close()
+    }
+  });
 });
