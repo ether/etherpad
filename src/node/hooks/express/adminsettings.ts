@@ -147,6 +147,7 @@ exports.socketio = (hookName: string, {io}: any) => {
 
 
     socket.on('padLoad', async (query: PadSearchQuery) => {
+     try {
       const {padIDs} = await padManager.listAllPads();
 
       // ── 1. Pattern filter (cheap, by name only) ─────────────────────
@@ -172,13 +173,27 @@ exports.socketio = (hookName: string, {io}: any) => {
       const needsFullScan = filter !== 'all' || query.sortBy !== 'padName';
 
       const loadMeta = async (padName: string): Promise<PadQueryResult> => {
-        const pad = await padManager.getPad(padName);
-        return {
-          padName,
-          lastEdited: await pad.getLastEdit(),
-          userCount: api.padUsersCount(padName).padUsersCount,
-          revisionNumber: pad.getHeadRevisionNumber(),
-        };
+        // A single unreadable record must not take out the whole listing.
+        // `findKeys('pad:*', '*:*:*')` returns every key under the `pad:`
+        // prefix, including legacy/foreign or migration-corrupted records
+        // (e.g. a value stored as a JSON *string* rather than a pad object,
+        // which makes Pad.init throw `'pool' in value`). Before this guard
+        // one such key rejected the whole `padLoad` handler — the admin
+        // "Manage pads" page then showed *no* pads at all (issue #7935) and
+        // the unhandled rejection could exit the server. Surfacing the bad
+        // pad with zeroed metadata lets an admin see and delete it instead.
+        try {
+          const pad = await padManager.getPad(padName);
+          return {
+            padName,
+            lastEdited: await pad.getLastEdit(),
+            userCount: api.padUsersCount(padName).padUsersCount,
+            revisionNumber: pad.getHeadRevisionNumber(),
+          };
+        } catch (err) {
+          logger.warn(`padLoad: skipping unreadable pad "${padName}": ${err}`);
+          return {padName, lastEdited: 0 as any, userCount: 0, revisionNumber: 0};
+        }
       };
 
       // Lazily lifted so we don't load every pad twice on the fast path.
@@ -256,6 +271,15 @@ exports.socketio = (hookName: string, {io}: any) => {
 
       const data: {total: number, results?: PadQueryResult[]} = {total, results};
       socket.emit('results:padLoad', data);
+     } catch (err) {
+      // Never leave the SPA hanging on a missing reply (it would show an
+      // empty "No results" state forever) and never let this bubble up to
+      // the process-level unhandledRejection handler, which would exit the
+      // whole server. Always emit a terminal reply for the request.
+      logger.error(`padLoad failed: ${err}`);
+      socket.emit('results:padLoad',
+          {total: 0, results: [], error: String((err as Error)?.message || err)});
+     }
     })
 
 
