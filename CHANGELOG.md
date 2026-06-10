@@ -1,3 +1,28 @@
+# 3.3.1
+
+3.3.1 is a small bug-fix and hardening follow-up to 3.3.0. It closes a stored-XSS vector in the numbered-list `start` attribute, hardens the database layer so a dropped connection to PostgreSQL / Redis / RethinkDB no longer crashes the process (via ueberdb2 6.1.9), and fixes a handful of pad and admin regressions — the iOS dark-mode status bar, the settings language dropdown, the pad-deletion modal under `allowPadDeletionByAllUsers`, and a single unreadable pad blanking the admin Manage-pads list.
+
+### Security
+
+- **Pad editor — escape and integer-coerce the numbered-list `start` attribute (GHSA-f7h5-v9hm-548j, #7937).** A crafted `<ol start>` value flowed unescaped into `domline.ts`, a distinct client-side sink from the export-path fix in 3.3.0's #7905. The value is now integer-coerced and HTML-escaped before it reaches the DOM. A jsdom regression test covers the sink.
+
+### Notable fixes
+
+- **Skin — paint the root canvas so iOS dark mode has no white status bar (#7606 / #7931).** iOS Safari paints the top safe area from the `html` root background, which `theme-color` (an Android address-bar hint) does not affect, so dark-mode pads showed a white status-bar strip on iOS. Colibris now sets the root background and `color-scheme` so the safe area matches the editor.
+- **Settings — show the detected language in the dropdown (#7925 / #7928).** The settings language `<select>` did not reflect the language Etherpad had actually auto-detected; it now shows the active selection.
+- **Pad — don't issue a deletion token (or show its modal) when `allowPadDeletionByAllUsers` is on (#7929).** With pad deletion open to all users the client still minted a deletion token and surfaced the confirm modal; both are now suppressed in that configuration.
+- **Admin — one unreadable pad no longer empties the Manage-pads list (#7935 / #7938).** A single pad that failed to read could throw out of the list-hydration path and blank the entire admin Manage-pads view; the read is now guarded per-pad so the rest of the list still renders.
+
+### Internal / contributor-facing
+
+- **CI — downstream client compatibility gate (#7923 / #7924 / #7927).** A new gate smoke-tests the published `etherpad-pad`, `etherpad-cli`, and `etherpad-desktop` clients against the server build (Phase 1 + Phase 2), with robust per-client error handling in `run-clients.sh` so one client's failure is reported rather than masking the others.
+- **CI — verify Etherpad boots offline (#7936).** Adds a test step that confirms a built Etherpad starts with no network access.
+
+### Dependencies
+
+- `ueberdb2` 6.1.8 → 6.1.9 — PostgreSQL pool errors are now handled and TCP keep-alive is enabled (fixes #7878), and the Redis and RethinkDB drivers attach connection-error handlers so a dropped database connection no longer crashes the Etherpad process.
+- `semver` 7.8.2 → 7.8.3 (#7933), `rate-limiter-flexible` 11.1.1 → 11.2.0 (#7934), plus a dev-dependencies group update (#7932).
+
 # 3.3.0
 
 3.3 is primarily a security-hardening release. A defence-in-depth pass tightens the HTTP API entry points, switches random-id generation to a CSPRNG, escapes exported `data-*` attributes, and flips the shipped Docker deployment defaults so a fresh install no longer boots with implicit credentials or a trusting proxy. Alongside that, the `ep_*` pad-options passthrough that shipped opt-in in 3.0.0 is now on by default, the in-pad timeslider learns to honour the editor's view settings (authorship colours, font family, line numbers), and a long tail of pad-editor layout, RTL, and URL-encoding fixes lands. The release also carries the root-cause fix for the long-standing Windows backend-test "silent ELIFECYCLE" flake.
