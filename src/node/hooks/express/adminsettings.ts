@@ -26,6 +26,24 @@ const queryPadLimit = 12;
 const PAD_HYDRATE_CONCURRENCY = 16;
 const logger = log4js.getLogger('adminSettings');
 
+// Errors thrown while reading a pad record can embed the raw stored value
+// in their message — e.g. Pad.init's `'pool' in value` TypeError stringifies
+// the offending value ("Cannot use 'in' operator to search for 'pool' in
+// <value>"). For a corrupt record that value may be actual pad text, so
+// logging it verbatim would leak content, bloat the log, and let embedded
+// newlines forge log lines. Reduce any error to its name plus a single-line,
+// length-capped message before logging.
+const safeErr = (err: unknown): string => {
+  const e = err as {name?: unknown, message?: unknown} | null;
+  const name = (e && typeof e.name === 'string' && e.name) || 'Error';
+  const msg = String((e && e.message) ?? err ?? '')
+      .replace(/[\r\n\t]+/g, ' ')
+      .replace(/\s{2,}/g, ' ')
+      .trim()
+      .slice(0, 120);
+  return `${name}: ${msg}`;
+};
+
 // Concurrency-limited Promise.all replacement. Preserves the input
 // order in the returned array (caller slices later). Used by padLoad
 // to bound DB reads during hydration.
@@ -191,7 +209,7 @@ exports.socketio = (hookName: string, {io}: any) => {
             revisionNumber: pad.getHeadRevisionNumber(),
           };
         } catch (err) {
-          logger.warn(`padLoad: skipping unreadable pad "${padName}": ${err}`);
+          logger.warn(`padLoad: skipping unreadable pad "${padName}": ${safeErr(err)}`);
           return {padName, lastEdited: 0 as any, userCount: 0, revisionNumber: 0};
         }
       };
@@ -276,9 +294,9 @@ exports.socketio = (hookName: string, {io}: any) => {
       // empty "No results" state forever) and never let this bubble up to
       // the process-level unhandledRejection handler, which would exit the
       // whole server. Always emit a terminal reply for the request.
-      logger.error(`padLoad failed: ${err}`);
+      logger.error(`padLoad failed: ${safeErr(err)}`);
       socket.emit('results:padLoad',
-          {total: 0, results: [], error: String((err as Error)?.message || err)});
+          {total: 0, results: [], error: safeErr(err)});
      }
     })
 
