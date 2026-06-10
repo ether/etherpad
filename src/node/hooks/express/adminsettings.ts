@@ -11,6 +11,7 @@ import settings, {getEpVersion, getGitCommit, reloadSettings} from '../../utils/
 import {getLatestVersion} from '../../utils/UpdateCheck';
 import {redactSettings} from '../../utils/AdminSettingsRedact';
 const padManager = require('../../db/PadManager');
+const db = require('../../db/DB');
 const api = require('../../db/API');
 import {deleteRevisions} from '../../utils/Cleanup';
 
@@ -302,12 +303,38 @@ exports.socketio = (hookName: string, {io}: any) => {
 
 
     socket.on('deletePad', async (padId: string) => {
-      const padExists = await padManager.doesPadExists(padId);
-      if (padExists) {
-        logger.info(`Deleting pad: ${padId}`);
-        const pad = await padManager.getPad(padId);
-        await pad.remove();
+      try {
+        if (await padManager.doesPadExists(padId)) {
+          // Healthy pad — full relational cleanup (revs, chat, readonly,
+          // authors, deletion token, hooks).
+          logger.info(`Deleting pad: ${padId}`);
+          const pad = await padManager.getPad(padId);
+          await pad.remove();
+          socket.emit('results:deletePad', padId);
+          return;
+        }
+
+        // doesPadExists() is false either because nothing is stored under
+        // this id, or because the record is unreadable (a non-object value
+        // leaves `value.atext` undefined). The latter is exactly what
+        // padLoad now surfaces with zeroed metadata — getPad()/Pad.remove()
+        // would throw on it, so fall back to a raw key purge. Without this
+        // the surfaced corrupt pad is undeletable from the admin UI.
+        const raw = await db.get(`pad:${padId}`);
+        if (raw != null) {
+          logger.info(`Deleting unreadable pad record via raw key purge: ${padId}`);
+          // Best-effort sweep of sub-keys (revs/chat/deletionToken/…) and
+          // the readonly mapping, then the main key + pad-list/cache entry.
+          const subKeys: string[] = (await db.findKeys(`pad:${padId}:*`, null)) || [];
+          await Promise.all(subKeys.map((k) => db.remove(k)));
+          await db.remove(`pad2readonly:${padId}`);
+          await padManager.removePad(padId);
+        }
+        // Always emit a terminal reply (even for an already-absent id) so the
+        // UI clears the row instead of silently doing nothing.
         socket.emit('results:deletePad', padId);
+      } catch (err) {
+        logger.error(`deletePad failed for "${padId}": ${safeErr(err)}`);
       }
     })
 

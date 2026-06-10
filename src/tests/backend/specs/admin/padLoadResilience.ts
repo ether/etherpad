@@ -154,4 +154,24 @@ describe(__filename, function () {
     assert.ok(names.includes(goodId), `got ${JSON.stringify(names)}`);
     assert.ok(names.includes(corruptId), `got ${JSON.stringify(names)}`);
   });
+
+  // Runs last: surfacing a corrupt pad is only useful if it can be removed.
+  // deletePad's normal path (doesPadExists + getPad + Pad.remove) can't touch
+  // an unreadable record, so it must fall back to a raw key purge.
+  it('a surfaced corrupt pad can be deleted from the admin UI', async function () {
+    this.timeout(30000);
+    const ack = await ask(socket, 'deletePad', corruptId, 'results:deletePad');
+    assert.equal(ack, corruptId, `expected deletePad to ack "${corruptId}", got ${JSON.stringify(ack)}`);
+
+    // The corrupt record (and its pad-list entry) is gone; the good pad stays.
+    assert.equal(await db.get(`pad:${corruptId}`), null,
+        'the corrupt pad record should be removed from the DB');
+    const res = await ask(socket, 'padLoad', {
+      pattern: tag, offset: 0, limit: 12,
+      sortBy: 'padName', ascending: true, filter: 'all',
+    }, 'results:padLoad');
+    const names = res.results.map((r: any) => r.padName);
+    assert.ok(!names.includes(corruptId), `corrupt pad still listed: ${JSON.stringify(names)}`);
+    assert.ok(names.includes(goodId), `good pad missing after delete: ${JSON.stringify(names)}`);
+  });
 });
