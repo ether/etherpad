@@ -222,11 +222,19 @@ const getHTMLFromAtext = async (pad:PadType, atext: AText, authorColors?: string
       for (const o of ops) {
         const usedAttribs:string[] = [];
 
-        // mark all attribs as used
+        // mark all attribs as used; also collect image attributes
+        let imageUrl: string | null = null;
+        let imageWidth: string | null = null;
+        let imageHeight: string | null = null;
         for (const a of attributes.decodeAttribString(o.attribs)) {
           if (a in anumMap) {
             usedAttribs.push(String(anumMap[a])); // i = 0 => bold, etc.
           }
+          const attr = apool.numToAttrib[a];
+          if (!attr) continue;
+          if (attr[0] === 'image' && attr[1]) imageUrl = decodeURIComponent(attr[1]);
+          if (attr[0] === 'image-width' && attr[1]) imageWidth = attr[1];
+          if (attr[0] === 'image-height' && attr[1]) imageHeight = attr[1];
         }
         let outermostTag = -1;
         // find the outer most open tag that is no longer used
@@ -259,10 +267,18 @@ const getHTMLFromAtext = async (pad:PadType, atext: AText, authorColors?: string
 
         let s = taker.take(chars);
 
-        // form feed (0x0C) is a legacy control char with no meaning in HTML
-        s = s.replace(String.fromCharCode(12), '');
-
-        assem.append(_encodeWhitespace(Security.escapeHTML(s)));
+        if (imageUrl) {
+          // Emit an <img> tag for image attributes (e.g. from ep_image_upload)
+          let imgStyle = '';
+          if (imageWidth) imgStyle += `width:${imageWidth};`;
+          if (imageHeight) imgStyle += `height:${imageHeight};`;
+          const styleAttr = imgStyle ? ` style="${Security.escapeHTMLAttribute(imgStyle)}"` : '';
+          assem.append(`<img src="${Security.escapeHTMLAttribute(imageUrl)}"${styleAttr}>`);
+        } else {
+          // form feed (0x0C) is a legacy control char with no meaning in HTML
+          s = s.replace(String.fromCharCode(12), '');
+          assem.append(_encodeWhitespace(Security.escapeHTML(s)));
+        }
       } // end iteration over spans in line
 
       // close all the tags that are open after the last op
