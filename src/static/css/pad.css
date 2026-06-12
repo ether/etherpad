@@ -214,11 +214,51 @@ body.history-mode #history-controls { display: flex; }
 .history-controls button.buttonicon.buttonicon-play.pause::before {
   content: "\e829";
 }
-.history-slider-input {
+.history-slider-wrap {
+  position: relative;
   flex: 1 1 auto;
   min-width: 80px;
   margin: 0 6px;
+  display: flex;
+  align-items: center;
+}
+.history-slider-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: 100%;
   cursor: pointer;
+}
+/* Saved-revision markers overlaid on the slider track (issue #7946). Inset
+ * left/right by ~half the native range thumb so a marker lines up with the
+ * thumb centre at the track extremes. pointer-events:none on the layer keeps
+ * slider dragging unobstructed; the stars themselves re-enable clicks to seek. */
+.history-slider-stars {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  top: 0;
+  bottom: 0;
+  pointer-events: none;
+}
+.history-slider-stars .history-star {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: none;
+  line-height: 1;
+  cursor: pointer;
+  pointer-events: auto;
+}
+.history-slider-stars .history-star::before {
+  font-family: fontawesome-etherpad;
+  content: "\e856";
+  color: #da9700;
+  font-size: 14px;
 }
 .history-timer {
   flex: 0 0 auto;
@@ -282,7 +322,7 @@ body.history-mode #history-controls { display: flex; }
 @media (max-width: 800px) {
   .history-controls { padding: 0 6px; gap: 4px; min-height: 36px; }
   .history-controls button.buttonicon { padding: 4px 6px; min-width: 32px; }
-  .history-slider-input { min-width: 60px; margin: 0 2px; }
+  .history-slider-wrap { min-width: 60px; margin: 0 2px; }
 }
 @media (max-width: 480px) {
   .history-controls #history-leftstep,

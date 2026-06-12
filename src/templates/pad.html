@@ -159,8 +159,15 @@
         </button>
         <button type="button" id="history-rightstep" class="buttonicon buttonicon-step-forward">
         </button>
-        <input type="range" id="history-slider-input" class="history-slider-input"
-               min="0" max="0" value="0" step="1">
+        <!-- Slider + saved-revision markers. The stars overlay sits above the
+             range track; pad_mode.ts fills it from the embedded timeslider's
+             savedRevisions so explicit "Save Revision" points stay visible in
+             in-pad history mode (issue #7946). -->
+        <span class="history-slider-wrap">
+          <input type="range" id="history-slider-input" class="history-slider-input"
+                 min="0" max="0" value="0" step="1">
+          <span id="history-slider-stars" class="history-slider-stars" aria-hidden="true"></span>
+        </span>
         <span id="history-timer" class="history-timer hide-for-mobile" aria-live="polite"></span>
         <!-- Follow toggle: an icon-only button. The eye is always rendered;
              the diagonal slash overlay is shown only when aria-pressed is

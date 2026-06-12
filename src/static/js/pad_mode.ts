@@ -194,6 +194,11 @@ class PadModeController {
     }
     this.revLabel.textContent = '';
     this.dateLabel.textContent = '';
+    const stars = document.getElementById('history-slider-stars');
+    if (stars) {
+      stars.replaceChildren();
+      stars.dataset.sig = '';
+    }
   }
 
   // Restore everything entry-time we stashed: chat message visibility, the
@@ -374,6 +379,10 @@ class PadModeController {
         playBtn.classList.toggle('pause', playing);
         playBtn.setAttribute('aria-pressed', playing ? 'true' : 'false');
       }
+      // Saved-revision markers depend on the slider max, which is only known
+      // once the inner slider has reported its length — render them here so we
+      // pick up the correct positions on first sync and on any max change.
+      this.renderSavedRevisionStars(innerWin);
     };
     // The hook registered earlier in attachInnerBridges already calls
     // onRevChange — piggyback on it for slider input/timer updates by
@@ -388,6 +397,55 @@ class PadModeController {
       sync(BS.getSliderPosition?.() ?? 0);
     };
     registerSync();
+  }
+
+  // Mirror the embedded timeslider's saved revisions onto the outer slider as
+  // clickable star markers (issue #7946). The inner slider draws its own stars
+  // on #ui-slider-bar, but that DOM is hidden in embed mode, so users only see
+  // the outer #history-slider-input — which had no markers. We read the
+  // authoritative list from the iframe's clientVars and position each star by
+  // revNum/max. A signature guard keeps this cheap when sync() fires on every
+  // scrub; positions are percentage-based so they reflow on resize for free.
+  private renderSavedRevisionStars(innerWin: Window): void {
+    const inner: any = innerWin as any;
+    const layer = document.getElementById('history-slider-stars');
+    const sliderInput = document.getElementById('history-slider-input') as HTMLInputElement | null;
+    if (!layer || !sliderInput) return;
+
+    const saved = inner.clientVars?.savedRevisions;
+    const max = Number(sliderInput.max) || 0;
+    if (!Array.isArray(saved) || saved.length === 0 || max <= 0) {
+      if (layer.childElementCount) layer.replaceChildren();
+      layer.dataset.sig = '';
+      return;
+    }
+
+    const inRange = saved
+        .map((r: any) => Number(r && r.revNum))
+        .filter((n: number) => Number.isFinite(n) && n >= 0 && n <= max);
+    const sig = `${max}:${[...inRange].sort((a, b) => a - b).join(',')}`;
+    if (layer.dataset.sig === sig) return;
+    layer.dataset.sig = sig;
+    layer.replaceChildren();
+
+    for (const rev of saved) {
+      const revNum = Number(rev && rev.revNum);
+      if (!Number.isFinite(revNum) || revNum < 0 || revNum > max) continue;
+      const frac = max === 0 ? 0 : revNum / max;
+      // A purely visual marker (the layer is aria-hidden): keyboard/screen
+      // reader users already reach any revision via the slider and step
+      // buttons, so we mirror the legacy timeslider's mouse-only stars rather
+      // than inject extra tab stops. The hover title aids mouse users; the
+      // click is a convenience to jump straight to the saved point.
+      const star = document.createElement('span');
+      star.className = 'history-star';
+      star.style.left = `${(frac * 100).toFixed(4)}%`;
+      star.title = (rev && typeof rev.label === 'string' && rev.label) || `Revision ${revNum}`;
+      star.addEventListener('click', () => {
+        try { inner.BroadcastSlider?.setSliderPosition?.(revNum); } catch (_e) { /* inner gone */ }
+      });
+      layer.appendChild(star);
+    }
   }
 
   // Capture the live state we'll restore on exit: live chat message
