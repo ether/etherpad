@@ -1,5 +1,5 @@
 import {expect, Page, test} from "@playwright/test";
-import {clearPadContent, goToNewPad, writeToPad} from "../helper/padHelper";
+import {clearPadContent, goToNewPad, goToPad, writeToPad} from "../helper/padHelper";
 
 // Regression coverage for #7946: after #7659 moved the timeslider into the pad
 // as an embedded iframe, the user-facing control became the outer
@@ -50,9 +50,48 @@ test.describe('timeslider saved-revision markers', function () {
     expect(await marker.count()).toBeGreaterThanOrEqual(1);
 
     // The marker must be positioned within the slider track, not collapsed to
-    // the origin — a degenerate render at left:0 would still be "visible".
-    const left = await marker.first().evaluate(
-        (el) => parseFloat((el as HTMLElement).style.left) || el.getBoundingClientRect().left);
-    expect(left).toBeGreaterThan(0);
+    // the origin. Assert on the inline left percentage directly (markers are
+    // always positioned via style.left = "N%"); a fallback to a layout-derived
+    // coordinate would let a degenerate left:0% render still pass.
+    const leftPct = await marker.first().evaluate(
+        (el) => parseFloat((el as HTMLElement).style.left));
+    expect(leftPct).toBeGreaterThan(0);
+    expect(leftPct).toBeLessThan(100);
+  });
+
+  test('a revision saved live appears on an already-open history slider', async function ({browser}) {
+    // Reviewer (history viewer).
+    const ctxA = await browser.newContext();
+    const pageA = await ctxA.newPage();
+    const padId = await goToNewPad(pageA);
+    await clearPadContent(pageA);
+    await writeToPad(pageA, 'Alpha Beta ');
+    await pageA.waitForTimeout(600);
+    await pageA.click('.buttonicon-savedRevision');
+    await pageA.waitForSelector('.saved-revision', {state: 'visible'});
+    await writeToPad(pageA, 'Gamma Delta ');
+    await pageA.waitForTimeout(800);
+    await enterHistoryMode(pageA);
+    await expect(pageA.locator('.history-star').first()).toBeVisible({timeout: 15000});
+    const before = await pageA.locator('.history-star').count();
+
+    // A second collaborator keeps editing the live pad and saves a revision
+    // while pageA is sitting in history mode. The server must broadcast
+    // NEW_SAVEDREV so pageA's open timeslider gains a marker without reloading.
+    const ctxB = await browser.newContext();
+    const pageB = await ctxB.newPage();
+    await goToPad(pageB, padId);
+    await writeToPad(pageB, 'Epsilon Zeta Eta ');
+    await pageB.waitForTimeout(800);
+    await pageB.click('.buttonicon-savedRevision');
+    await pageB.waitForSelector('.saved-revision', {state: 'visible'});
+
+    await expect.poll(
+        async () => await pageA.locator('.history-star').count(),
+        {timeout: 20000})
+        .toBeGreaterThan(before);
+
+    await ctxA.close();
+    await ctxB.close();
   });
 });

@@ -55,6 +55,10 @@ class PadModeController {
   private padId: string;
   private innerHashChangeHandler: (() => void) | null = null;
   private revObserver: MutationObserver | null = null;
+  // Watches the embedded slider's #ui-slider-bar so saved revisions added live
+  // (NEW_SAVEDREV from a collaborator while we're in history mode) get mirrored
+  // onto the outer slider — clientVars only carries the entry-time snapshot.
+  private savedRevObserver: MutationObserver | null = null;
   private syncingHash = false;
 
   // History-mode bridges — populated on enter, torn down on exit.
@@ -253,6 +257,10 @@ class PadModeController {
       this.revObserver.disconnect();
       this.revObserver = null;
     }
+    if (this.savedRevObserver) {
+      this.savedRevObserver.disconnect();
+      this.savedRevObserver = null;
+    }
     if (this.iframe) {
       try {
         if (this.innerHashChangeHandler && this.iframe.contentWindow) {
@@ -395,6 +403,8 @@ class PadModeController {
       }
       BS.onSlider(sync);
       sync(BS.getSliderPosition?.() ?? 0);
+      // Now that the inner slider exists, watch it for live NEW_SAVEDREV stars.
+      this.observeInnerSavedRevisions(innerWin);
     };
     registerSync();
   }
@@ -402,35 +412,49 @@ class PadModeController {
   // Mirror the embedded timeslider's saved revisions onto the outer slider as
   // clickable star markers (issue #7946). The inner slider draws its own stars
   // on #ui-slider-bar, but that DOM is hidden in embed mode, so users only see
-  // the outer #history-slider-input — which had no markers. We read the
-  // authoritative list from the iframe's clientVars and position each star by
-  // revNum/max. A signature guard keeps this cheap when sync() fires on every
-  // scrub; positions are percentage-based so they reflow on resize for free.
+  // the outer #history-slider-input — which had no markers.
+  //
+  // The inner #ui-slider-bar .star elements are the live source of truth: the
+  // timeslider keeps them current as NEW_SAVEDREV messages arrive (each carries
+  // a `pos` attribute = revNum), whereas clientVars.savedRevisions is only the
+  // entry-time snapshot. We read positions from those stars and pull labels
+  // from the snapshot where available. A signature guard keeps this cheap when
+  // sync() fires on every scrub; positions are percentage-based so they reflow
+  // on resize for free.
   private renderSavedRevisionStars(innerWin: Window): void {
     const inner: any = innerWin as any;
     const layer = document.getElementById('history-slider-stars');
     const sliderInput = document.getElementById('history-slider-input') as HTMLInputElement | null;
-    if (!layer || !sliderInput) return;
+    if (!layer || !sliderInput || !innerWin.document) return;
 
-    const saved = inner.clientVars?.savedRevisions;
     const max = Number(sliderInput.max) || 0;
-    if (!Array.isArray(saved) || saved.length === 0 || max <= 0) {
+    const revNums = Array.from(innerWin.document.querySelectorAll('#ui-slider-bar .star'))
+        .map((el) => Number(el.getAttribute('pos')))
+        // max === 0 is a valid single-revision pad: only rev 0 belongs there.
+        .filter((n) => Number.isFinite(n) && n >= 0 && (max === 0 ? n === 0 : n <= max));
+
+    if (revNums.length === 0 || max < 0) {
       if (layer.childElementCount) layer.replaceChildren();
       layer.dataset.sig = '';
       return;
     }
 
-    const inRange = saved
-        .map((r: any) => Number(r && r.revNum))
-        .filter((n: number) => Number.isFinite(n) && n >= 0 && n <= max);
-    const sig = `${max}:${[...inRange].sort((a, b) => a - b).join(',')}`;
+    // Labels live in the clientVars snapshot, keyed by revNum.
+    const labels = new Map<number, string>();
+    const snapshot = inner.clientVars?.savedRevisions;
+    if (Array.isArray(snapshot)) {
+      for (const r of snapshot) {
+        const n = Number(r && r.revNum);
+        if (Number.isFinite(n) && r && typeof r.label === 'string' && r.label) labels.set(n, r.label);
+      }
+    }
+
+    const sig = `${max}:${[...revNums].sort((a, b) => a - b).join(',')}`;
     if (layer.dataset.sig === sig) return;
     layer.dataset.sig = sig;
     layer.replaceChildren();
 
-    for (const rev of saved) {
-      const revNum = Number(rev && rev.revNum);
-      if (!Number.isFinite(revNum) || revNum < 0 || revNum > max) continue;
+    for (const revNum of revNums) {
       const frac = max === 0 ? 0 : revNum / max;
       // A purely visual marker (the layer is aria-hidden): keyboard/screen
       // reader users already reach any revision via the slider and step
@@ -440,12 +464,24 @@ class PadModeController {
       const star = document.createElement('span');
       star.className = 'history-star';
       star.style.left = `${(frac * 100).toFixed(4)}%`;
-      star.title = (rev && typeof rev.label === 'string' && rev.label) || `Revision ${revNum}`;
+      star.title = labels.get(revNum) || `Revision ${revNum}`;
       star.addEventListener('click', () => {
         try { inner.BroadcastSlider?.setSliderPosition?.(revNum); } catch (_e) { /* inner gone */ }
       });
       layer.appendChild(star);
     }
+  }
+
+  // Re-render the outer markers whenever the embedded slider adds a star
+  // (NEW_SAVEDREV). Observing the inner #ui-slider-bar covers saved revisions
+  // created live while history mode is open, which sync()'s scrub-driven
+  // callback would otherwise miss until the next slider move.
+  private observeInnerSavedRevisions(innerWin: Window): void {
+    if (this.savedRevObserver) return;
+    const bar = innerWin.document && innerWin.document.getElementById('ui-slider-bar');
+    if (!bar) return;
+    this.savedRevObserver = new MutationObserver(() => { this.renderSavedRevisionStars(innerWin); });
+    this.savedRevObserver.observe(bar, {childList: true});
   }
 
   // Capture the live state we'll restore on exit: live chat message

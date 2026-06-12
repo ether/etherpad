@@ -622,7 +622,18 @@ exports.handleMessage = async (socket:any, message: ClientVarMessage) => {
 const handleSaveRevisionMessage = async (socket:any, message: ClientSaveRevisionMessage) => {
   const {padId, author: authorId} = sessioninfos[socket.id];
   const pad = await padManager.getPad(padId, null, authorId);
-  await pad.addSavedRevision(pad.head, authorId);
+  const savedRevision = await pad.addSavedRevision(pad.head, authorId);
+  // Notify every client in the pad room — including any open timeslider —
+  // so saved-revision markers appear live instead of only on the next
+  // timeslider load (#7946). The client's NEW_SAVEDREV handler existed but
+  // was never reached because this broadcast was missing; live editors that
+  // don't handle the type ignore it. Skip the emit for duplicate saves.
+  if (savedRevision) {
+    socketio.sockets.in(padId).emit('message', {
+      type: 'COLLABROOM',
+      data: {type: 'NEW_SAVEDREV', savedRev: savedRevision},
+    });
+  }
 };
 
 /**

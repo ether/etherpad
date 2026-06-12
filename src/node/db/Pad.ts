@@ -868,6 +868,8 @@ class Pad {
     await this.saveToDatabase();
   }
 
+  // Returns the newly created saved revision, or undefined if this revision
+  // was already saved (so callers can broadcast only genuine additions).
   async addSavedRevision(revNum: string, savedById: string, label: string) {
     // if this revision is already saved, return silently
     for (const i in this.savedRevisions) {
@@ -887,6 +889,7 @@ class Pad {
     // save this new saved revision
     this.savedRevisions.push(savedRevision);
     await this.saveToDatabase();
+    return savedRevision;
   }
 
   getSavedRevisions() {
