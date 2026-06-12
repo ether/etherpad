@@ -8,6 +8,10 @@ import {clearPadContent, goToNewPad, writeToPad} from "../helper/padHelper";
 // This guards the banner bridge against silently breaking again (cf. #7946).
 test.describe('timeslider revision labels', function () {
   test.describe.configure({mode: 'serial'});
+  // The "Version N" label and "Saved <Month> <day>, <year>" date are localized
+  // (timeslider.version / timeslider.saved). Pin the locale so the assertions
+  // are deterministic and the date string stays Date-parseable.
+  test.use({locale: 'en-US'});
 
   test.beforeEach(async ({context}) => {
     await context.clearCookies();

@@ -50,8 +50,10 @@ test.describe('timeslider export links', function () {
 
   test('export hrefs target the viewed revision, including a numeric pad id', async function ({page}) {
     // A numeric pad id is the specific case the legacy test guarded — the
-    // href rewriter must not confuse it with the revision segment.
-    const padId = String(735773577357 + Math.floor(Math.random() * 1000));
+    // href rewriter must not confuse it with the revision segment. Use a
+    // high-entropy numeric id (timestamp + random) so reruns against a
+    // persistent DB can't collide on the same pad.
+    const padId = `${Date.now()}${Math.floor(Math.random() * 1000)}`;
     await suppressDeletionTokenModal(page);
     await goToPad(page, padId); // navigates and waits for the editor to be ready
     await clearPadContent(page);
