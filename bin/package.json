@@ -9,7 +9,7 @@
   "dependencies": {
     "ep_etherpad-lite": "workspace:../src",
     "log4js": "^6.9.1",
-    "semver": "^7.8.3",
+    "semver": "^7.8.4",
     "tsx": "^4.22.4",
     "ueberdb2": "^6.1.9"
   },
