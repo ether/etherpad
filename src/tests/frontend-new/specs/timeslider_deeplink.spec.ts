@@ -16,7 +16,10 @@ test.describe('timeslider deep link', function () {
   const expectHistoryAtRev0 = async (page: Page) => {
     await expect(page.locator('body.history-mode')).toBeVisible({timeout: 15000});
     await expect(page.locator('#history-controls')).toBeVisible();
-    await expect(page.locator('#history-banner-rev')).toHaveText('Version 0', {timeout: 15000});
+    // bootstrapFromHash canonicalizes any accepted hash form to #rev/0.
+    await expect.poll(() => new URL(page.url()).hash, {timeout: 15000}).toBe('#rev/0');
+    // The slider lands on revision 0 once pad_mode syncs from the embedded
+    // BroadcastSlider — the signal that we're actually viewing that revision.
     await expect.poll(
         async () => await page.locator('#history-slider-input').evaluate(
             (el) => Number((el as HTMLInputElement).value)),
