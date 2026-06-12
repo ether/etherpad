@@ -14,7 +14,9 @@
 }
 
 .toolbar ul {
+  display: flex;
   align-items: center;
+  flex-wrap: wrap; /* Fixes layout crunching by allowing items to scale elegantly */
 }
 
 .toolbar ul.menu_left {
@@ -131,8 +133,20 @@
   }
 }
 
+.mobile-layout .toolbar ul {
+  overflow-x: auto; /* Enables native horizontal swipe gesture for extra buttons */
+  flex-wrap: nowrap; /* Keeps the editor interface clean on extra-small viewports */
+  scrollbar-width: none; /* Hides bulky native scroll tracks on Firefox */
+  -webkit-overflow-scrolling: touch; /* Ensures smooth acceleration physics on iOS safari */
+}
+
+.mobile-layout .toolbar ul::-webkit-scrollbar {
+  display: none; /* Hides bulky scrollbars on Chrome/Safari layouts */
+}
+
 .mobile-layout .toolbar ul li {
-  margin: 5px 2px;
+  margin: 5px 4px; /* Increases tap targets for thumb-friendly mobile scaling */
+  flex-shrink: 0;  /* Prevents the icons from collapsing into weird widths */
 }
 .mobile-layout .toolbar ul li.separator {
   margin: 0 5px;
