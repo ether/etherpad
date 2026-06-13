@@ -1298,15 +1298,31 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
     // once. Readonly sessions never see it.
     const isCreator =
         !sessionInfo.readonly && sessionInfo.author === await pad.getRevisionAuthor(0);
-    // Skip token issuance — and so the client never shows the "Save your pad
-    // deletion token" modal (issue #7926) — when the token cannot help:
-    //   - requireAuthentication: every creator already has a stable identity, so
-    //     the cookie/identity path is sufficient.
+    // The deletion token is a recovery handle for the one class of creator that
+    // can otherwise lose the ability to delete their pad: a user whose creator
+    // status lives only in a per-browser author-token cookie. It is pointless —
+    // and the "Save your pad deletion token" modal only overwhelms users who
+    // will never need it (issue #7926) — when either of these holds:
+    //
     //   - allowPadDeletionByAllUsers: anyone can delete the pad with no token at
-    //     all (see handlePadDelete's flagOk branch), so a recovery token is noise
-    //     and the modal only overwhelms users who will never need it.
+    //     all (see handlePadDelete's flagOk branch).
+    //   - the creator has a *durable* identity: authenticated (req.session.user
+    //     with a username) AND the deployment maps that identity to a stable
+    //     authorID via a getAuthorId hook. Only then does `isCreator`
+    //     (author === revision-0 author) survive a cookie clear or a different
+    //     device, so the creator path replaces the token on any device.
+    //
+    // Note we deliberately do NOT treat requireAuthentication alone as durable:
+    // without a getAuthorId hook the authorID still comes from the per-browser
+    // token cookie (AuthorManager.getAuthorId -> getAuthor4Token), so an
+    // authenticated user on a second device is NOT the creator and would be
+    // stranded if we also withheld the token. The getAuthorId hook is the
+    // documented way (doc/api/hooks_server-side) to pin authorID to username.
+    const hasGetAuthorIdHook = (plugins.hooks.getAuthorId || []).length > 0;
+    const hasDurableIdentity = hasGetAuthorIdHook && !!(user && user.username);
+    const canDeleteWithoutToken = settings.allowPadDeletionByAllUsers || hasDurableIdentity;
     const padDeletionToken =
-        isCreator && !settings.requireAuthentication && !settings.allowPadDeletionByAllUsers
+        isCreator && !canDeleteWithoutToken
         ? await padDeletionManager.createDeletionTokenIfAbsent(sessionInfo.padId)
         : null;
 
@@ -1325,6 +1341,11 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
       enablePadWideSettings: settings.enablePadWideSettings,
       enablePluginPadOptions: settings.enablePluginPadOptions,
       padDeletionToken,
+      // Drives the deletion-button label/visibility in pad settings: when the
+      // user can already delete without a token the recovery-token disclosure is
+      // redundant, so the client labels the action "Delete Pad" instead of
+      // "Delete with token" (issue #7926). See showDeletionTokenModalIfPresent.
+      canDeleteWithoutToken,
       // Allow-listed copy — settings.privacyBanner could carry extra nested
       // keys from a hand-edited settings.json; sending those by reference
       // would leak them to every browser. See getPublicPrivacyBanner().

@@ -493,6 +493,8 @@ describe(__filename, function () {
   });
 
   describe('Pad deletion token issuance (#7926)', function () {
+    let getAuthorIdBackup: any;
+
     const removeIfExists = async (padId: string) => {
       if (await padManager.doesPadExist(padId)) {
         const p = await padManager.getPad(padId);
@@ -500,14 +502,32 @@ describe(__filename, function () {
       }
     };
 
+    // A getAuthorId hook that pins authorID to the authenticated username — the
+    // documented way (doc/api/hooks_server-side) to give a user a stable
+    // identity across cookie clears and devices. Its mere presence is what makes
+    // an authenticated session "durable" for token-suppression purposes.
+    const installStableIdentityHook = () => {
+      plugins.hooks.getAuthorId = [{hook_fn: async (hookName: string, context: any) => {
+        const username = context.user && context.user.username;
+        if (!username) return;
+        context.dbKey = `username=${username}`;
+        return '';
+      }}];
+    };
+
     beforeEach(async function () {
       // @ts-ignore - public setting toggled per test
       settings.allowPadDeletionByAllUsers = false;
+      // The outer harness only backs up preAuthorize/authenticate/authorize, so
+      // manage getAuthorId ourselves to avoid leaking it into later specs.
+      getAuthorIdBackup = plugins.hooks.getAuthorId;
+      plugins.hooks.getAuthorId = [];
       await removeIfExists('pad');
     });
     afterEach(async function () {
       if (socket) socket.close();
       socket = null;
+      plugins.hooks.getAuthorId = getAuthorIdBackup;
       await removeIfExists('pad');
     });
 
@@ -519,6 +539,7 @@ describe(__filename, function () {
       assert.equal(typeof cv.data.padDeletionToken, 'string',
           'creator should get a token so the client can show the save-token modal');
       assert.ok(cv.data.padDeletionToken.length >= 32);
+      assert.equal(cv.data.canDeleteWithoutToken, false);
     });
 
     it('no token (and so no modal) when allowPadDeletionByAllUsers is true', async function () {
@@ -532,7 +553,33 @@ describe(__filename, function () {
       // client, so the "Save your pad deletion token" modal never appears. Anyone
       // can already delete the pad without a token in this configuration.
       assert.equal(cv.data.padDeletionToken, null);
+      assert.equal(cv.data.canDeleteWithoutToken, true);
     });
+
+    it('authenticated creator WITHOUT a getAuthorId hook still gets a token', async function () {
+      // requireAuthentication alone is NOT durable: the authorID still comes from
+      // the per-browser token cookie, so this user would be stranded on a second
+      // device if the token were withheld. They must keep getting one.
+      settings.requireAuthentication = true;
+      const res = await agent.get('/p/pad').auth('user', 'user-password').expect(200);
+      socket = await common.connect(res);
+      const cv: any = await common.handshake(socket, 'pad');
+      assert.equal(cv.type, 'CLIENT_VARS');
+      assert.equal(typeof cv.data.padDeletionToken, 'string');
+      assert.equal(cv.data.canDeleteWithoutToken, false);
+    });
+
+    it('authenticated creator WITH a getAuthorId hook gets no token (durable identity)',
+        async function () {
+          settings.requireAuthentication = true;
+          installStableIdentityHook();
+          const res = await agent.get('/p/pad').auth('user', 'user-password').expect(200);
+          socket = await common.connect(res);
+          const cv: any = await common.handshake(socket, 'pad');
+          assert.equal(cv.type, 'CLIENT_VARS');
+          assert.equal(cv.data.padDeletionToken, null);
+          assert.equal(cv.data.canDeleteWithoutToken, true);
+        });
   });
 
   describe('SocketIORouter.js', function () {

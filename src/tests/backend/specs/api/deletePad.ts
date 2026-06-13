@@ -80,6 +80,17 @@ describe(__filename, function () {
     await callApi('deletePad', {padID: padId});
   });
 
+  it('createPad returns null deletionToken when allowPadDeletionByAllUsers is on', async function () {
+    // Anyone can delete the pad with no token at all, so the recovery token is
+    // pointless — matches the socket/UI path (issue #7926).
+    settings.allowPadDeletionByAllUsers = true;
+    const padId = makeId();
+    const res = await callApi('createPad', {padID: padId});
+    assert.equal(res.body.code, 0, JSON.stringify(res.body));
+    assert.equal(res.body.data.deletionToken, null);
+    await callApi('deletePad', {padID: padId});
+  });
+
   it('JWT admin call (no deletionToken) still works — admins stay trusted', async function () {
     const padId = makeId();
     await callApi('createPad', {padID: padId});
