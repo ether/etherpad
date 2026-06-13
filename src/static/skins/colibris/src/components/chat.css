@@ -6,6 +6,7 @@
   background: none;
   padding: 0;
   width: 400px;
+  max-width: 100vw; /* Prevents the chat box from extending wider than mobile viewports */
   height: 300px;
   background-color: #f2f3f4;
   background-color: var(--bg-soft-color);
@@ -88,4 +89,21 @@
   }
 
   .stick-to-screen-btn { display: none; }
+  
+  /* Fluid scaling rule for tablets and smaller mid-sized screens */
+  .chat-content {
+    width: 100%;
+    max-width: 360px; /* Safely shrinks layout on smaller screens to preserve breathing room */
+    margin-left: auto; /* FIXED: Keeps the panel right-aligned inside full-width containers */
+    margin-right: 0;
+  }
+}
+
+/* Specific safety rule for ultra-narrow viewport screens */
+@media (max-width: 400px) {
+  .chat-content {
+    max-width: 100%;
+    height: 250px; /* Slightly drops vertical space to allow room for document visibility */
+    margin-left: 0;
+  }
 }
