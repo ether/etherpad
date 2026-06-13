@@ -1,9 +1,33 @@
+# PARKED — npm publish of the core package is not part of the standard release.
+#
+# This workflow renames `ep_etherpad-lite` -> `ep_etherpad` and publishes
+# `./src` to npm. As of 2026-06, that publish serves no load-bearing purpose:
+#   - `ep_etherpad` has 0 dependents on npm and nothing in this repo depends on it;
+#   - plugins import `ep_etherpad-lite` resolved from the LOCAL core install,
+#     and plugin CI clones `ether/etherpad` rather than `npm install`-ing core;
+#   - Etherpad is run via git clone / Docker / zip / snap, never `npm install`.
+# The publish has been failing (E404 PUT — the `ep_etherpad` package has no OIDC
+# trusted publisher configured on npmjs.com), which is why npm is stuck at 2.5.0
+# while 3.x shipped fine without it.
+#
+# It is therefore gated behind an explicit `confirm: true` dispatch input so a
+# stray run fails fast with a clear message instead of a confusing 404. To
+# actually publish, the npm owner of `ep_etherpad` (samtv12345) must first
+# configure a trusted publisher: npmjs.com -> ep_etherpad -> Settings ->
+# Trusted Publisher -> repo `ether/etherpad`, workflow `releaseEtherpad.yml`.
+# Decision pending: finish that config, or remove this workflow. See AGENTS.MD.
 name: releaseEtherpad.yaml
 permissions:
   contents: read
   id-token: write   # for npm OIDC trusted publishing
 on:
   workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'PARKED — publish ep_etherpad to npm? Requires a trusted publisher configured on npmjs.com first (see workflow header). Set true only if that is done.'
+        required: true
+        default: false
+        type: boolean
 
 env:
   PNPM_HOME: ~/.pnpm-store
@@ -12,6 +36,14 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
+        - name: Guard — refuse unless explicitly confirmed
+          if: ${{ inputs.confirm != true }}
+          run: |
+            echo "::error::releaseEtherpad is PARKED. The ep_etherpad npm publish is non-functional"
+            echo "::error::(no trusted publisher configured on npmjs.com; 0 dependents on npm)."
+            echo "::error::Re-run with confirm=true only after the owner configures a trusted"
+            echo "::error::publisher. See the workflow header / AGENTS.MD 'Releasing' section."
+            exit 1
         - name: Checkout repository
           uses: actions/checkout@v6
         - uses: actions/setup-node@v6
