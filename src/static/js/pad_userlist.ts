@@ -8,7 +8,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS-IS" BASIS,
@@ -25,6 +25,44 @@ let myUserInfo = {};
 
 let colorPickerOpen = false;
 let colorPickerSetup = false;
+
+/**
+ * Helper function to ensure author colors match accessibility requirements.
+ * Validates contrast against Etherpad's exact skin variant tokens.
+ */
+const getAccessibleColor = (hexColor: string): string => {
+  if (!hexColor || typeof hexColor !== 'string') return '#64d29b';
+  
+  // Normalize shorthand hex colors (e.g. #03f -> #0033ff)
+  let cleanHex = hexColor.replace(/^#/, '');
+  if (cleanHex.length === 3) {
+    cleanHex = cleanHex.split('').map(char => char + char).join('');
+  }
+  
+  if (cleanHex.length !== 6) return hexColor;
+
+  const r = parseInt(cleanHex.substring(0, 2), 16);
+  const g = parseInt(cleanHex.substring(2, 4), 16);
+  const b = parseInt(cleanHex.substring(4, 6), 16);
+  
+  // Calculate luminance using the standard YIQ formula
+  const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+  
+  // FIXED: Check for Etherpad's actual dark theme tokens on document.documentElement
+  const isDarkTheme = document.documentElement.classList.contains('super-dark-editor') || 
+                      document.documentElement.classList.contains('dark-editor') ||
+                      document.documentElement.classList.contains('dark');
+
+  if (isDarkTheme && yiq < 90) {
+    // Lighten colors that are too dark to read on dark backgrounds
+    return `#${Math.min(r + 70, 255).toString(16).padStart(2, '0')}${Math.min(g + 70, 255).toString(16).padStart(2, '0')}${Math.min(b + 70, 255).toString(16).padStart(2, '0')}`;
+  } else if (!isDarkTheme && yiq > 210) {
+    // Darken colors that are too light to read on light backgrounds
+    return `#${Math.max(r - 70, 0).toString(16).padStart(2, '0')}${Math.max(g - 70, 0).toString(16).padStart(2, '0')}${Math.max(b - 70, 0).toString(16).padStart(2, '0')}`;
+  }
+
+  return hexColor;
+};
 
 const paduserlist = (() => {
   const rowManager = (() => {
@@ -147,13 +185,15 @@ const paduserlist = (() => {
             .attr('value', html10n.get('pad.userlist.unnamed'));
         if (isNameEditable(data)) name.attr('disabled', 'disabled');
       }
+      
+      const safeColor = getAccessibleColor(data.color);
       return $()
           .add($('<td>')
               .css('height', `${height}px`)
               .addClass('usertdswatch')
               .append($('<div>')
                   .addClass('swatch')
-                  .css('background', padutils.escapeHtml(data.color))
+                  .css('background', padutils.escapeHtml(safeColor))
                   .html('&nbsp;')))
           .add($('<td>')
               .css('height', `${height}px`)
@@ -481,6 +521,9 @@ const paduserlist = (() => {
       if (typeof info.colorId === 'number') {
         info.colorId = clientVars.colorPalette[info.colorId];
       }
+      
+      // Safeguard contrast parameters
+      info.colorId = getAccessibleColor(info.colorId);
 
       myUserInfo = $.extend(
           {}, info);
@@ -498,8 +541,10 @@ const paduserlist = (() => {
       });
 
       const userData = {};
-      userData.color = typeof info.colorId === 'number'
+      let baselineColor = typeof info.colorId === 'number'
         ? clientVars.colorPalette[info.colorId] : info.colorId;
+      
+      userData.color = getAccessibleColor(baselineColor);
       userData.name = info.name;
       userData.status = '';
       userData.activity = '';
@@ -622,8 +667,9 @@ const paduserlist = (() => {
         $('#myswatchbox').addClass('myswatchboxhoverable').removeClass('myswatchboxunhoverable');
       }
 
-      $('#myswatch').css({'background-color': myUserInfo.colorId});
-      $('li[data-key=showusers] > a').css({'box-shadow': `inset 0 0 30px ${myUserInfo.colorId}`});
+      const verifiedColor = getAccessibleColor(myUserInfo.colorId);
+      $('#myswatch').css({'background-color': verifiedColor});
+      $('li[data-key=showusers] > a').css({'box-shadow': `inset 0 0 30px ${verifiedColor}`});
     },
   };
   return self;
@@ -635,21 +681,17 @@ const closeColorPicker = (accept) => {
   if (accept) {
     let newColor = $('#mycolorpickerpreview').css('background-color');
     const parts = newColor.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
-    // parts now should be ["rgb(0, 70, 255", "0", "70", "255"]
     if (parts) {
       delete (parts[0]);
       for (let i = 1; i <= 3; ++i) {
         parts[i] = parseInt(parts[i]).toString(16);
         if (parts[i].length === 1) parts[i] = `0${parts[i]}`;
       }
-      newColor = `#${parts.join('')}`; // "0070ff"
+      newColor = `#${parts.join('')}`;
     }
-    myUserInfo.colorId = newColor;
-    pad.notifyChangeColor(newColor);
+    myUserInfo.colorId = getAccessibleColor(newColor);
+    pad.notifyChangeColor(myUserInfo.colorId);
     paduserlist.renderMyUserInfo();
-  } else {
-    // pad.notifyChangeColor(previousColorId);
-    // paduserlist.renderMyUserInfo();
   }
 
   colorPickerOpen = false;
@@ -665,8 +707,9 @@ const showColorPicker = () => {
     if (!colorPickerSetup) {
       const colorsList = $('#colorpickerswatches');
       for (let i = 0; i < palette.length; i++) {
+        const accessibleSwatchColor = getAccessibleColor(palette[i]);
         const li = $('<li>', {
-          style: `background: ${palette[i]};`,
+          style: `background: ${accessibleSwatchColor};`,
         });
 
         li.appendTo(colorsList);
@@ -676,7 +719,8 @@ const showColorPicker = () => {
           $(event.target).addClass('picked');
 
           const newColorId = getColorPickerSwatchIndex($('#colorpickerswatches .picked'));
-          pad.notifyChangeColor(newColorId);
+          const finalColor = getAccessibleColor(palette[newColorId] || newColorId);
+          pad.notifyChangeColor(finalColor);
         });
       }
 
@@ -687,7 +731,7 @@ const showColorPicker = () => {
     colorPickerOpen = true;
 
     $('#colorpickerswatches li').removeClass('picked');
-    $($('#colorpickerswatches li')[myUserInfo.colorId]).addClass('picked'); // seems weird
+    $($('#colorpickerswatches li')[myUserInfo.colorId]).addClass('picked');
   }
 };
 
