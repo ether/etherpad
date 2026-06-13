@@ -197,4 +197,85 @@ describe(__filename, function () {
       assert.strictEqual(settings.padOptions.fadeInactiveAuthorColors, true);
     });
   });
+
+  // Regression test for ether/etherpad#7911.
+  // Air-gapped / firewalled deployments must be able to disable Etherpad's
+  // outbound calls (version check + plugin catalogue + self-updater) purely
+  // via environment variables, without editing settings.json inside the image.
+  // These assertions parse the *shipped* settings.json.docker so a future edit
+  // that drops the ${ENV} placeholders fails loudly here.
+  describe('offline / air-gapped env overrides (issue #7911)', function () {
+    const dockerSettings = path.join(__dirname, '../../../../settings.json.docker');
+    const templateSettings = path.join(__dirname, '../../../../settings.json.template');
+    const envVars = [
+      'PRIVACY_UPDATE_CHECK', 'PRIVACY_PLUGIN_CATALOG', 'UPDATES_TIER',
+      'UPDATES_SOURCE', 'UPDATES_CHANNEL', 'UPDATES_CHECK_INTERVAL_HOURS',
+      'UPDATES_GITHUB_REPO', 'UPDATES_REQUIRE_ADMIN_FOR_STATUS', 'UPDATE_SERVER',
+    ];
+    const saved: {[k: string]: string | undefined} = {};
+
+    before(function () { for (const v of envVars) saved[v] = process.env[v]; });
+    afterEach(function () {
+      for (const v of envVars) {
+        if (saved[v] == null) delete process.env[v];
+        else process.env[v] = saved[v];
+      }
+    });
+
+    it('keeps shipped defaults when no env vars are set', function () {
+      for (const v of envVars) delete process.env[v];
+      const s = exportedForTestingOnly.parseSettings(dockerSettings, true);
+      assert.strictEqual(s!.privacy.updateCheck, true);
+      assert.strictEqual(s!.privacy.pluginCatalog, true);
+      assert.strictEqual(s!.updates.tier, 'notify');
+      assert.strictEqual(s!.updates.checkIntervalHours, 6);
+      assert.strictEqual(s!.updateServer, 'https://etherpad.org/ep_infos');
+    });
+
+    it('disables all outbound calls when the offline env vars are set', function () {
+      process.env.PRIVACY_UPDATE_CHECK = 'false';
+      process.env.PRIVACY_PLUGIN_CATALOG = 'false';
+      process.env.UPDATES_TIER = 'off';
+      const s = exportedForTestingOnly.parseSettings(dockerSettings, true);
+      // Coerced to real booleans, not the strings "false".
+      assert.strictEqual(s!.privacy.updateCheck, false);
+      assert.strictEqual(s!.privacy.pluginCatalog, false);
+      assert.strictEqual(s!.updates.tier, 'off');
+    });
+
+    it('honours the remaining updates.* and updateServer overrides', function () {
+      process.env.UPDATES_SOURCE = 'gitlab';
+      process.env.UPDATES_CHANNEL = 'beta';
+      process.env.UPDATES_CHECK_INTERVAL_HOURS = '24';
+      process.env.UPDATES_GITHUB_REPO = 'acme/etherpad-fork';
+      process.env.UPDATES_REQUIRE_ADMIN_FOR_STATUS = 'true';
+      process.env.UPDATE_SERVER = 'https://mirror.internal/ep_infos';
+      const s = exportedForTestingOnly.parseSettings(dockerSettings, true);
+      assert.strictEqual(s!.updates.source, 'gitlab');
+      assert.strictEqual(s!.updates.channel, 'beta');
+      assert.strictEqual(s!.updates.checkIntervalHours, 24); // numeric coercion
+      assert.strictEqual(s!.updates.githubRepo, 'acme/etherpad-fork');
+      assert.strictEqual(s!.updates.requireAdminForStatus, true); // boolean coercion
+      assert.strictEqual(s!.updateServer, 'https://mirror.internal/ep_infos');
+    });
+
+    // The source-install template carries the same placeholders so non-Docker
+    // deployments get the offline knobs too.
+    it('settings.json.template exposes the same offline overrides', function () {
+      for (const v of envVars) delete process.env[v];
+      const dflt = exportedForTestingOnly.parseSettings(templateSettings, true);
+      assert.strictEqual(dflt!.privacy.updateCheck, true);
+      assert.strictEqual(dflt!.privacy.pluginCatalog, true);
+      assert.strictEqual(dflt!.updates.tier, 'notify');
+      assert.strictEqual(dflt!.updateServer, 'https://etherpad.org/ep_infos');
+
+      process.env.UPDATES_TIER = 'off';
+      process.env.PRIVACY_UPDATE_CHECK = 'false';
+      process.env.PRIVACY_PLUGIN_CATALOG = 'false';
+      const over = exportedForTestingOnly.parseSettings(templateSettings, true);
+      assert.strictEqual(over!.updates.tier, 'off');
+      assert.strictEqual(over!.privacy.updateCheck, false);
+      assert.strictEqual(over!.privacy.pluginCatalog, false);
+    });
+  });
 });

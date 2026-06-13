@@ -216,7 +216,7 @@
    * Default "notify" shows a banner when an update is available. "off" disables the version check.
    */
   "updates": {
-    "tier": "notify",
+    "tier": "${UPDATES_TIER:notify}",
     "source": "github",
     "channel": "stable",
     "installMethod": "auto",
@@ -443,17 +443,19 @@
    *  https://etherpad.org/ep_infos
    */
 
-  "updateServer": "https://etherpad.org/ep_infos",
+  "updateServer": "${UPDATE_SERVER:https://etherpad.org/ep_infos}",
 
   /*
    * Outbound network calls. See PRIVACY.md for what each one sends.
    *  - updateCheck=false  : disables hourly version check (UpdateCheck.ts)
    *  - pluginCatalog=false: disables admin plugin browser
    *                        (manual install-by-name via CLI still works)
+   * Air-gapped / firewalled deployments should set both PRIVACY_UPDATE_CHECK and
+   * PRIVACY_PLUGIN_CATALOG to false (or UPDATES_TIER=off, which covers the version check).
    */
   "privacy": {
-    "updateCheck": true,
-    "pluginCatalog": true
+    "updateCheck": "${PRIVACY_UPDATE_CHECK:true}",
+    "pluginCatalog": "${PRIVACY_PLUGIN_CATALOG:true}"
   },
 
   /*
