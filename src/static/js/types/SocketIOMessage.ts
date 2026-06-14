@@ -128,6 +128,20 @@ export type ClientNewChanges = {
   payload?: ClientNewChanges
 }
 
+export type NewChangesItem = {
+  apool: AttributePool,
+  author: string,
+  changeset: string,
+  currentTime: number,
+  newRev: number,
+  timeDelta: number,
+}
+
+export type ClientNewChangesBatch = {
+  type: 'NEW_CHANGES_BATCH',
+  changes: NewChangesItem[],
+}
+
 export type ClientAcceptCommitMessage = {
   type: 'ACCEPT_COMMIT'
   newRev: number

@@ -276,6 +276,7 @@ export type SettingsType = {
   automaticReconnectionTimeout: number,
   loadTest: boolean,
   scalingDiveMetrics: boolean,
+  newChangesBatch: boolean,
   dumpOnUncleanExit: boolean,
   indentationOnNewLine: boolean,
   logconfig: any | null,
@@ -705,6 +706,21 @@ const settings: SettingsType = {
    * production deployments aren't paying for instrumentation they don't use.
    */
   scalingDiveMetrics: false,
+  /**
+   * Pack multiple NEW_CHANGES revisions into a single NEW_CHANGES_BATCH emit
+   * per recipient when a fan-out has more than one revision to catch up
+   * (#7756 lever 3b). Reduces engine.io packet count under high pad
+   * concurrency, especially on the WebSocket transport, which sends one
+   * frame per packet (the polling transport already batches naturally).
+   *
+   * Requires clients to recognise the NEW_CHANGES_BATCH message type. New
+   * clients are forward-compatible (they handle both NEW_CHANGES and
+   * NEW_CHANGES_BATCH). Old clients connecting to a server with this enabled
+   * would fail to apply batched revisions, so coordinate the rollout.
+   *
+   * 0/false (default) preserves legacy per-revision emit behaviour.
+   */
+  newChangesBatch: false,
   /**
    * Disable dump of objects preventing a clean exit
    */

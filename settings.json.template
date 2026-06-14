@@ -789,6 +789,18 @@
    */
   "loadTest": false,
 
+  /*
+   * Pack multiple NEW_CHANGES revisions into a single NEW_CHANGES_BATCH emit
+   * per recipient when a fan-out has more than one revision to catch up
+   * (#7756 lever 3b). Reduces engine.io packet count under high pad
+   * concurrency, especially on the WebSocket transport.
+   *
+   * WARNING: enabling this requires all connected clients to understand
+   * NEW_CHANGES_BATCH. Old clients will silently fail to apply batched
+   * revisions. Coordinate the rollout.
+   */
+  "newChangesBatch": false,
+
   /**
   * Disable dump of objects preventing a clean exit
   */

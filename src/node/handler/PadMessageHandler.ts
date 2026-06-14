@@ -48,6 +48,7 @@ const hooks = require('../../static/js/pluginfw/hooks');
 const stats = require('../stats')
 const assert = require('assert').strict;
 import {recordChangesetApply, recordSocketEmit} from '../prom-instruments';
+import {buildNewChangesEmits, type NewChangesItem} from './NewChangesPacker';
 import {RateLimiterMemory} from 'rate-limiter-flexible';
 import {ChangesetRequest, PadUserInfo, SocketClientRequest} from "../types/SocketClientRequest";
 import {APool, AText, PadAuthor, PadType} from "../types/PadType";
@@ -1022,45 +1023,76 @@ exports.updatePadClients = async (pad: PadType) => {
   // but benefit of reusing cached revision object is HUGE
   const revCache:MapArrayType<any> = {};
 
+  // When `settings.newChangesBatch` is true and a recipient is more than one
+  // revision behind, pack the queued revisions into a single NEW_CHANGES_BATCH
+  // emit per recipient. The engine.io WebSocket transport sends one frame per
+  // packet (the polling transport already batches at the HTTP-response layer),
+  // so reducing the packet count translates directly into fewer system calls
+  // on the server and fewer onmessage callbacks on the client.
+  const batchEnabled = settings.newChangesBatch === true;
+
   await Promise.all(roomSockets.map(async (socket) => {
     const sessioninfo = sessioninfos[socket.id];
     // The user might have disconnected since _getRoomSockets() was called.
     if (sessioninfo == null) return;
 
-    while (sessioninfo.rev < pad.getHeadRevisionNumber()) {
-      const r = sessioninfo.rev + 1;
-      let revision = revCache[r];
-      if (!revision) {
-        revision = await pad.getRevision(r);
-        revCache[r] = revision;
-      }
+    // Snapshot the local state so a concurrent updatePadClients() can't make
+    // us double-emit. We hold the "I'm responsible for revs (startRev,
+    // headRev]" claim by reading sessioninfo.rev once and overwriting it
+    // before any await. A second invocation arriving mid-loop will see the
+    // bumped rev and skip those revisions; if our emit fails the catch
+    // below rolls sessioninfo.rev back so they aren't lost.
+    const startRev = sessioninfo.rev;
+    const headRev = pad.getHeadRevisionNumber();
+    if (startRev >= headRev) return;
+    const startTime = sessioninfo.time;
+    // Claim the range immediately so concurrent runs skip it.
+    sessioninfo.rev = headRev;
 
-      const author = revision.meta.author;
-      const revChangeset = revision.changeset;
-      const currentTime = revision.meta.timestamp;
+    // Collect all queued revisions for this socket.
+    const pending: Array<{
+      newRev: number;
+      changeset: string;
+      apool: unknown;
+      author: string;
+      currentTime: number;
+      timeDelta: number;
+    }> = [];
 
-      const forWire = prepareForWire(revChangeset, pad.pool);
-      const msg = {
-        type: 'COLLABROOM',
-        data: {
-          type: 'NEW_CHANGES',
+    try {
+      let previousTime = startTime;
+      for (let r = startRev + 1; r <= headRev; r++) {
+        let revision = revCache[r];
+        if (!revision) {
+          revision = await pad.getRevision(r);
+          revCache[r] = revision;
+        }
+        const author = revision.meta.author;
+        const revChangeset = revision.changeset;
+        const currentTime = revision.meta.timestamp;
+        const forWire = prepareForWire(revChangeset, pad.pool);
+        pending.push({
           newRev: r,
           changeset: forWire.translated,
           apool: forWire.pool,
           author,
           currentTime,
-          timeDelta: currentTime - sessioninfo.time,
-        },
-      };
-      try {
-        socket.emit('message', msg);
-        recordSocketEmit('NEW_CHANGES');
-      } catch (err:any) {
-        messageLogger.error(`Failed to notify user of new revision: ${err.stack || err}`);
-        return;
+          timeDelta: currentTime - previousTime,
+        });
+        previousTime = currentTime;
       }
-      sessioninfo.time = currentTime;
-      sessioninfo.rev = r;
+
+      for (const emit of buildNewChangesEmits(pending, batchEnabled)) {
+        socket.emit('message', emit);
+        recordSocketEmit(emit.data.type);
+      }
+      // Only after the wire send succeeds do we commit the new time.
+      sessioninfo.time = previousTime;
+    } catch (err: any) {
+      // Roll back the claim so the next updatePadClients retries these revs.
+      // Only set rev back if no one else has advanced past us in the meantime.
+      if (sessioninfo.rev === headRev) sessioninfo.rev = startRev;
+      messageLogger.error(`Failed to notify user of new revision: ${err.stack || err}`);
     }
   }));
 };
