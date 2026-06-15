@@ -192,7 +192,15 @@ exports.sanitizePadId = async (padId: string) => {
   return padId;
 };
 
-exports.isValidPadId = (padId: string) => /^(g.[a-zA-Z0-9]{16}\$)?[^$]{1,50}$/.test(padId);
+// Pad IDs consisting only of URL "dot-segments" ('.' or '..') are unreachable:
+// per the WHATWG URL standard a browser normalises "/p/." to "/p/" and "/p/.."
+// to "/", so the pad can never be opened or exported — the request arrives as
+// "/p/" and Etherpad answers "Cannot GET /p/". Reject them so such (broken) pads
+// can never be created.
+const dotSegmentPadId = /^\.{1,2}$/;
+
+exports.isValidPadId = (padId: string) =>
+  /^(g.[a-zA-Z0-9]{16}\$)?[^$]{1,50}$/.test(padId) && !dotSegmentPadId.test(padId);
 
 /**
  * Removes the pad from database and unloads it.
