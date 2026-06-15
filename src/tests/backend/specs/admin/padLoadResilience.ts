@@ -177,4 +177,27 @@ describe(__filename, function () {
     assert.ok(!names.includes(corruptId), `corrupt pad still listed: ${JSON.stringify(names)}`);
     assert.ok(names.includes(goodId), `good pad missing after delete: ${JSON.stringify(names)}`);
   });
+
+  // Regression for the isValidPadId tightening that rejects '.' and '..': a
+  // legacy pad with such an id predates the validation, so it still exists in
+  // the DB (doesPadExists is true → deletePad takes the "healthy" branch) but
+  // getPad() now throws on it. deletePad must fall back to the raw key purge
+  // instead of failing silently, otherwise the orphan is undeletable from the
+  // admin UI. Before the fallback this `ask()` never gets `results:deletePad`
+  // and times out.
+  it("a legacy '.' pad (now an invalid id) can still be deleted", async function () {
+    this.timeout(30000);
+    const dotId = '.';
+    // getPad('.') would now throw, so seed the record directly with a truthy
+    // `atext` so doesPadExists() returns true and the handler enters the branch
+    // where getPad() throws.
+    await db.set(`pad:${dotId}`, {atext: {text: '\n', attribs: ''}, pool: {}, head: -1, savedRevisions: []});
+    try {
+      const ack = await ask(socket, 'deletePad', dotId, 'results:deletePad');
+      assert.equal(ack, dotId, `expected deletePad to ack "${dotId}", got ${JSON.stringify(ack)}`);
+    } finally {
+      try { await db.remove(`pad:${dotId}`); } catch { /* ignore */ }
+      try { padManager.unloadPad(dotId); } catch { /* ignore */ }
+    }
+  });
 });

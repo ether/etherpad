@@ -305,13 +305,22 @@ exports.socketio = (hookName: string, {io}: any) => {
     socket.on('deletePad', async (padId: string) => {
       try {
         if (await padManager.doesPadExists(padId)) {
-          // Healthy pad — full relational cleanup (revs, chat, readonly,
-          // authors, deletion token, hooks).
-          logger.info(`Deleting pad: ${padId}`);
-          const pad = await padManager.getPad(padId);
-          await pad.remove();
-          socket.emit('results:deletePad', padId);
-          return;
+          try {
+            // Healthy pad — full relational cleanup (revs, chat, readonly,
+            // authors, deletion token, hooks).
+            logger.info(`Deleting pad: ${padId}`);
+            const pad = await padManager.getPad(padId);
+            await pad.remove();
+            socket.emit('results:deletePad', padId);
+            return;
+          } catch (err) {
+            // getPad() runs isValidPadId() and rejects ids that are no longer
+            // valid — e.g. legacy '.'/'..' pads created before that validation
+            // was tightened. Don't give up: fall through to the raw key purge
+            // below so the orphan can still be deleted from the admin UI.
+            logger.warn(`Relational cleanup failed for "${padId}" ` +
+                `(${safeErr(err)}); falling back to raw key purge`);
+          }
         }
 
         // doesPadExists() is false either because nothing is stored under
