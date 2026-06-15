@@ -599,6 +599,35 @@ describe(__filename, function () {
           }
         });
 
+    it('readonly viewer is denied canDeletePad and token-less deletion under allowPadDeletionByAllUsers (#7959)',
+        async function () {
+          // @ts-ignore - public setting toggled per test
+          settings.allowPadDeletionByAllUsers = true;
+          // Creator establishes the pad (rev-0 author) and yields its read-only id.
+          const resCreator = await agent.get('/p/pad').expect(200);
+          const creatorSocket = await common.connect(resCreator);
+          const cvCreator: any = await common.handshake(creatorSocket, 'pad');
+          const readOnlyId = cvCreator.data.readOnlyId;
+          assert.ok(readOnlyManager.isReadOnlyId(readOnlyId));
+          creatorSocket.close();
+
+          // A read-only viewer must NOT be offered the token-less delete button,
+          // even with deletion opened to all users — readonly viewers cannot edit,
+          // let alone delete (issue #7959).
+          const resRo = await agent.get(`/p/${readOnlyId}`).expect(200);
+          socket = await common.connect(resRo);
+          const cvRo: any = await common.handshake(socket, readOnlyId);
+          assert.equal(cvRo.data.readonly, true);
+          assert.equal(cvRo.data.canDeletePad, false,
+              'readonly viewers must not get the token-less Delete pad button');
+
+          // ...and the server must refuse a token-less PAD_DELETE from a readonly
+          // session, or allowPadDeletionByAllUsers becomes a data-loss hole.
+          await common.sendPadDelete(socket, {padId: 'pad'}).catch(() => {});
+          assert.ok(await padManager.doesPadExist('pad'),
+              'readonly session must not be able to delete the pad without a token');
+        });
+
     it('authenticated creator WITHOUT a getAuthorId hook still gets a token', async function () {
       // requireAuthentication alone is NOT durable: the authorID still comes from
       // the per-browser token cookie, so this user would be stranded on a second
