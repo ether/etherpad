@@ -159,6 +159,13 @@ const padeditor = (() => {
       $('#delete-pad-with-token').prop(
           'hidden', !!(window as any).clientVars?.canDeleteWithoutToken);
 
+      // The plain "Delete pad" button is shown whenever this session can delete
+      // without a token (creator on this device, or allowPadDeletionByAllUsers).
+      // It is independent of pad-wide settings so it stays reachable when that
+      // section is disabled (issue #7959).
+      $('#delete-pad').prop(
+          'hidden', !(window as any).clientVars?.canDeletePad);
+
       // delete pad using a recovery token (second device / no creator cookie)
       $('#delete-pad-token-submit').on('click', () => {
         const token = String($('#delete-pad-token-input').val() || '').trim();

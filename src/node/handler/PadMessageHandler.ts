@@ -1321,6 +1321,12 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
     const hasGetAuthorIdHook = (plugins.hooks.getAuthorId || []).length > 0;
     const hasDurableIdentity = hasGetAuthorIdHook && !!(user && user.username);
     const canDeleteWithoutToken = settings.allowPadDeletionByAllUsers || hasDurableIdentity;
+    // Whether this session may delete the pad with no token at all: the creator
+    // on this device (creator-cookie still present), or any user when the
+    // instance opted everyone in. Drives the plain "Delete pad" button, which is
+    // independent of enablePadWideSettings (issue #7959) — deletion is not a
+    // pad-wide setting and must stay reachable when that section is disabled.
+    const canDeletePad = isCreator || settings.allowPadDeletionByAllUsers;
     const padDeletionToken =
         isCreator && !canDeleteWithoutToken
         ? await padDeletionManager.createDeletionTokenIfAbsent(sessionInfo.padId)
@@ -1346,6 +1352,7 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
       // redundant, so the client labels the action "Delete Pad" instead of
       // "Delete with token" (issue #7926). See showDeletionTokenModalIfPresent.
       canDeleteWithoutToken,
+      canDeletePad,
       // Allow-listed copy — settings.privacyBanner could carry extra nested
       // keys from a hand-edited settings.json; sending those by reference
       // would leak them to every browser. See getPublicPrivacyBanner().

@@ -391,13 +391,17 @@
                 </p>
                 <% e.end_block(); %>
               </div>
-              <button class="btn btn-danger" data-l10n-id="pad.settings.deletePad" id="delete-pad">Delete pad</button>
             </div><% } %>
           </div>
-          <!-- Visibility is controlled at runtime in pad_editor.ts: hidden when
-               clientVars.canDeleteWithoutToken (issue #7926). Rendered for every
-               session (incl. requireAuthentication) because a recovery token may
-               be issued whenever the creator lacks a durable cross-device identity. -->
+          <!-- Pad deletion is independent of pad-wide settings (issue #7959):
+               both controls are always rendered and pad_editor.ts shows exactly
+               the one that applies. #delete-pad (token-less) is shown when
+               clientVars.canDeletePad — the creator on this device, or any user
+               when allowPadDeletionByAllUsers is on. The recovery-token
+               disclosure is shown when clientVars.canDeleteWithoutToken is false
+               (issue #7926): a creator on a second device, or under
+               requireAuthentication without a durable cross-device identity. -->
+          <button class="btn btn-danger" data-l10n-id="pad.settings.deletePad" id="delete-pad" hidden>Delete pad</button>
           <details id="delete-pad-with-token" hidden>
             <summary data-l10n-id="pad.deletionToken.deleteWithToken">Delete with token</summary>
             <label for="delete-pad-token-input" data-l10n-id="pad.deletionToken.tokenFieldLabel">Pad deletion token</label>
