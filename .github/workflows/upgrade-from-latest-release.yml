@@ -55,7 +55,7 @@ jobs:
           node-version: ${{ matrix.node }}
           cache: pnpm
       - name: Install libreoffice
-        uses: awalsh128/cache-apt-pkgs-action@v1.6.0
+        uses: awalsh128/cache-apt-pkgs-action@v1.6.1
         with:
           packages: libreoffice libreoffice-pdfimport
           version: 1.0
