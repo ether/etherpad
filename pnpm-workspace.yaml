@@ -22,6 +22,7 @@ strictDepBuilds: false
 # is no longer read). Force-bump transitive deps with known CVEs.
 overrides:
   '@babel/core@<7.29.6': '>=7.29.6'
+  '@opentelemetry/core@<2.8.0': '>=2.8.0'
   basic-ftp@<5.3.1: '>=5.3.1 <6.0.0'
   brace-expansion@>=2.0.0 <2.0.3: '>=2.0.3'
   diff@>=6.0.0 <8.0.3: '>=8.0.3'
