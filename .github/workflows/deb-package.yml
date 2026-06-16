@@ -15,6 +15,24 @@ on:
       - 'src/node/utils/run_cmd.ts'
       - 'src/static/js/pluginfw/**'
       - 'settings.json.template'
+  # Also build + smoke-test the package on PRs that touch the production
+  # footprint. The smoke step boots the packaged server and waits for /health,
+  # which is the only check that catches "server starts then exits before
+  # binding the port" startup regressions (e.g. a dependency bump whose change
+  # lets the event loop drain mid-boot). Previously this workflow ran only on
+  # push to develop, so such a regression was caught *after* merge — by which
+  # point develop was already red. Running it pre-merge blocks the PR instead.
+  # The release/apt-publish jobs are tag-guarded, so PRs run the build job only.
+  pull_request:
+    paths:
+      - 'packaging/**'
+      - '.github/workflows/deb-package.yml'
+      - 'src/package.json'
+      - 'pnpm-lock.yaml'
+      - 'src/node/server.ts'
+      - 'src/node/utils/run_cmd.ts'
+      - 'src/static/js/pluginfw/**'
+      - 'settings.json.template'
   workflow_dispatch:
     inputs:
       ref:
