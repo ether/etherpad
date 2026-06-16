@@ -301,8 +301,8 @@ importers:
         specifier: ^9.0.0
         version: 9.0.0
       oidc-provider:
-        specifier: 9.8.4
-        version: 9.8.4
+        specifier: 9.8.5
+        version: 9.8.5
       openapi-backend:
         specifier: ^5.17.0
         version: 5.17.0
@@ -4405,8 +4405,8 @@ packages:
     resolution: {integrity: sha512-9miFgM2OFba7hB+pRgvtV84pYTBaoTHohvmIgiRt6dRIzbwEOIaNaP+dIlGs2fNFoB0SeISs0Jz5WFVRid6Xyg==}
     engines: {node: '>=12.20.0'}
 
-  oidc-provider@9.8.4:
-    resolution: {integrity: sha512-i8qe+wvhUQ7BSj6DxssIFAdpREouuqK91j2jGdAN78NIxTB5rxvU4ZniXELhUHIM4mzABeSGlp5wE6WTa8CY1Q==}
+  oidc-provider@9.8.5:
+    resolution: {integrity: sha512-07Wqkea8jdfPI8GvbVwf9rMNNitLUzzDqPua7hWbqZreFNpfnlNVdqmllaripVmgDZS2tHHLYQYLW0Ay7yux9w==}
 
   on-finished@2.4.1:
     resolution: {integrity: sha512-oVlzkg3ENAhCk2zdv7IJwd/QUD4z2RxRwpkcGY8psCVcCYZNq4wYnVWALHM+brtuJjePWiYF/ClmuDr8Ch5+kg==}
@@ -9941,7 +9941,7 @@ snapshots:
 
   obug@2.1.3: {}
 
-  oidc-provider@9.8.4:
+  oidc-provider@9.8.5:
     dependencies:
       '@koa/cors': 5.0.0
       '@koa/router': 15.6.0(koa@3.2.1)
@@ -10247,7 +10247,7 @@ snapshots:
   proxy-agent@6.5.0:
     dependencies:
       agent-base: 7.1.3
-      debug: 4.4.3(supports-color@8.1.1)
+      debug: 4.4.1
       http-proxy-agent: 7.0.2
       https-proxy-agent: 7.0.6
       lru-cache: 7.18.3
