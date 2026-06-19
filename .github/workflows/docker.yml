@@ -26,7 +26,7 @@ jobs:
     steps:
       -
         name: Check out
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           path: etherpad
       -
@@ -190,7 +190,7 @@ jobs:
     steps:
       -
         name: Check out
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           path: etherpad
       -
@@ -261,7 +261,7 @@ jobs:
     steps:
       -
         name: Check out
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           path: etherpad
       -
@@ -358,7 +358,7 @@ jobs:
     steps:
       -
         name: Check out
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           path: etherpad
       -
@@ -416,7 +416,7 @@ jobs:
           enable-url-completion: true
       - name: Check out ether-charts
         if: github.ref == 'refs/heads/develop'
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           path: ether-charts
           repository: ether/ether-charts

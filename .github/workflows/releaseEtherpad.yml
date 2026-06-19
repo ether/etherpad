@@ -45,7 +45,7 @@ jobs:
             echo "::error::publisher. See the workflow header / AGENTS.MD 'Releasing' section."
             exit 1
         - name: Checkout repository
-          uses: actions/checkout@v6
+          uses: actions/checkout@v7
         - uses: actions/setup-node@v6
           with:
             # OIDC trusted publishing needs npm >= 11.5.1, which requires

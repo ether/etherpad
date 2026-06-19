@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
             repository: ether/etherpad-lite
             path: etherpad
@@ -42,7 +42,7 @@ jobs:
           git checkout develop
           git reset --hard origin/develop
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           repository: ether/ether.github.com
           path: ether.github.com

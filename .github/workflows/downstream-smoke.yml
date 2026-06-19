@@ -26,7 +26,7 @@ jobs:
       APIKEY: downstream-smoke-key
     steps:
       - name: Checkout core (PR)
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - uses: actions/cache@v5
         name: Cache pnpm store
