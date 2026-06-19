@@ -166,7 +166,7 @@ importers:
         version: 4.22.4
       ueberdb2:
         specifier: 6.1.13
-        version: 6.1.13(@elastic/elasticsearch@9.4.2)(async@3.2.6)(cassandra-driver@4.8.0)(dirty-ts@1.1.8)(mongodb@7.3.0)(mssql@12.5.5(@azure/core-client@1.10.1))(mysql2@3.22.5(@types/node@25.9.3))(nano@11.0.5)(pg@8.21.0)(redis@6.0.0(@opentelemetry/api@1.9.1))(rethinkdb@2.4.2)(rusty-store-kv@1.3.1)(surrealdb@2.0.3(tslib@2.8.1)(typescript@6.0.3))
+        version: 6.1.13(@elastic/elasticsearch@9.4.2)(async@3.2.6)(cassandra-driver@4.8.0)(dirty-ts@1.1.8)(mongodb@7.3.0)(mssql@12.5.5(@azure/core-client@1.10.1))(mysql2@3.22.5(@types/node@25.9.3))(nano@11.0.5)(pg@8.22.0)(redis@6.0.0(@opentelemetry/api@1.9.1))(rethinkdb@2.4.2)(rusty-store-kv@1.3.1)(surrealdb@2.0.3(tslib@2.8.1)(typescript@6.0.3))
     devDependencies:
       '@types/node':
         specifier: ^25.9.3
@@ -311,8 +311,8 @@ importers:
         specifier: ^0.19.1
         version: 0.19.1
       pg:
-        specifier: ^8.21.0
-        version: 8.21.0
+        specifier: ^8.22.0
+        version: 8.22.0
       prom-client:
         specifier: ^15.1.3
         version: 15.1.3
@@ -366,7 +366,7 @@ importers:
         version: 4.22.4
       ueberdb2:
         specifier: 6.1.13
-        version: 6.1.13(@elastic/elasticsearch@9.4.2)(async@3.2.6)(cassandra-driver@4.8.0)(dirty-ts@1.1.8)(mongodb@7.3.0)(mssql@12.5.5(@azure/core-client@1.10.1))(mysql2@3.22.5(@types/node@25.9.3))(nano@11.0.5)(pg@8.21.0)(redis@6.0.0(@opentelemetry/api@1.9.1))(rethinkdb@2.4.2)(rusty-store-kv@1.3.1)(surrealdb@2.0.3(tslib@2.8.1)(typescript@6.0.3))
+        version: 6.1.13(@elastic/elasticsearch@9.4.2)(async@3.2.6)(cassandra-driver@4.8.0)(dirty-ts@1.1.8)(mongodb@7.3.0)(mssql@12.5.5(@azure/core-client@1.10.1))(mysql2@3.22.5(@types/node@25.9.3))(nano@11.0.5)(pg@8.22.0)(redis@6.0.0(@opentelemetry/api@1.9.1))(rethinkdb@2.4.2)(rusty-store-kv@1.3.1)(surrealdb@2.0.3(tslib@2.8.1)(typescript@6.0.3))
       underscore:
         specifier: 1.13.8
         version: 1.13.8
@@ -4553,8 +4553,8 @@ packages:
   pg-cloudflare@1.4.0:
     resolution: {integrity: sha512-Vo7z/6rrQYxpNRylp4Tlob2elzbh+N/MOQbxFVWCxS7oEx6jF53GTJFxK2WWpKuBRkmiin4Mt+xofFDjx09R0A==}
 
-  pg-connection-string@2.13.0:
-    resolution: {integrity: sha512-EMnU9E2fSULdsbErBbMaXJvFeD9B4+nPcM3f+4lsiCR0BHLPrLVjv3DbyM2hgQQviKJaTWIRRTjKjWlHg3p2ig==}
+  pg-connection-string@2.14.0:
+    resolution: {integrity: sha512-XwWDGcLRGCXAR8F/AM5bG7Q+A3Wm2s6QeEjlOKZLlH3UYcguiqCWKyWXVag5TLTIjR7oOJUY8kcADaZgWPyLeg==}
 
   pg-int8@1.0.1:
     resolution: {integrity: sha512-WCtabS6t3c8SkpDBUlb1kjOs7l66xsGdKpIPZsg4wR+B3+u9UAum2odSsF9tnvxg80h4ZxLWMy4pRjOsFIqQpw==}
@@ -4565,15 +4565,15 @@ packages:
     peerDependencies:
       pg: '>=8.0'
 
-  pg-protocol@1.14.0:
-    resolution: {integrity: sha512-n5taZ1kO3s9ngDTVxsEznOqCyToTgz0FLuPq0B33COy5pPpuWJpY3/2oRBVETuOgzdqRXfWpM9HIhp2LBBT1BA==}
+  pg-protocol@1.15.0:
+    resolution: {integrity: sha512-cq9sECI5s0+uPUXjbz8ioyPJni6RzsRib0US67i5IoTZKw8fNeYlVE7u8F4dG7vEJJtc5wdD1K189lCCUwqWTQ==}
 
   pg-types@2.2.0:
     resolution: {integrity: sha512-qTAAlrEsl8s4OiEQY69wDvcMIdQN6wdz5ojQiOy6YRMuynxenON0O5oCpJI6lshc6scgAY8qvJ2On/p+CXY0GA==}
     engines: {node: '>=4'}
 
-  pg@8.21.0:
-    resolution: {integrity: sha512-AUP1EYJuHraQGsVoCQVIcM7TEJVGtDzxWtGFZd8rds9d+CCXlU5Js1rYgfLNvxy9iJrpHjGrRjoi/3BT9fRyiA==}
+  pg@8.22.0:
+    resolution: {integrity: sha512-8wih1vVIBMxoUM2oB4soJsD9tDnDpLv4OXBJ+EJzFsvycD+lfyIreC2gGHq78f8jbLLt+bvlPTFdFZfJkOuzAA==}
     engines: {node: '>= 16.0.0'}
     peerDependencies:
       pg-native: '>=3.0.1'
@@ -8426,10 +8426,10 @@ snapshots:
       '@rushstack/eslint-patch': 1.16.1
       '@typescript-eslint/eslint-plugin': 7.18.0(@typescript-eslint/parser@7.18.0(eslint@10.5.0)(typescript@6.0.3))(eslint@10.5.0)(typescript@6.0.3)
       '@typescript-eslint/parser': 7.18.0(eslint@10.5.0)(typescript@6.0.3)
-      eslint-import-resolver-typescript: 3.9.1(eslint-plugin-import@2.32.0(@typescript-eslint/parser@7.18.0(eslint@10.5.0)(typescript@6.0.3))(eslint@10.5.0))(eslint@10.5.0)
+      eslint-import-resolver-typescript: 3.9.1(eslint-plugin-import@2.32.0)(eslint@10.5.0)
       eslint-plugin-cypress: 2.15.2(eslint@10.5.0)
       eslint-plugin-eslint-comments: 3.2.0(eslint@10.5.0)
-      eslint-plugin-import: 2.32.0(@typescript-eslint/parser@7.18.0(eslint@10.5.0)(typescript@6.0.3))(eslint-import-resolver-typescript@3.9.1(eslint-plugin-import@2.32.0(@typescript-eslint/parser@7.18.0(eslint@10.5.0)(typescript@6.0.3))(eslint@10.5.0))(eslint@10.5.0))(eslint@10.5.0)
+      eslint-plugin-import: 2.32.0(@typescript-eslint/parser@7.18.0(eslint@10.5.0)(typescript@6.0.3))(eslint-import-resolver-typescript@3.9.1)(eslint@10.5.0)
       eslint-plugin-mocha: 10.5.0(eslint@10.5.0)
       eslint-plugin-n: 17.24.0(eslint@10.5.0)(typescript@6.0.3)
       eslint-plugin-prefer-arrow: 1.2.3(eslint@10.5.0)
@@ -8450,7 +8450,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  eslint-import-resolver-typescript@3.9.1(eslint-plugin-import@2.32.0(@typescript-eslint/parser@7.18.0(eslint@10.5.0)(typescript@6.0.3))(eslint@10.5.0))(eslint@10.5.0):
+  eslint-import-resolver-typescript@3.9.1(eslint-plugin-import@2.32.0)(eslint@10.5.0):
     dependencies:
       '@nolyfill/is-core-module': 1.0.39
       debug: 4.4.3(supports-color@8.1.1)
@@ -8461,18 +8461,18 @@ snapshots:
       stable-hash: 0.0.5
       tinyglobby: 0.2.17
     optionalDependencies:
-      eslint-plugin-import: 2.32.0(@typescript-eslint/parser@7.18.0(eslint@10.5.0)(typescript@6.0.3))(eslint-import-resolver-typescript@3.9.1(eslint-plugin-import@2.32.0(@typescript-eslint/parser@7.18.0(eslint@10.5.0)(typescript@6.0.3))(eslint@10.5.0))(eslint@10.5.0))(eslint@10.5.0)
+      eslint-plugin-import: 2.32.0(@typescript-eslint/parser@7.18.0(eslint@10.5.0)(typescript@6.0.3))(eslint-import-resolver-typescript@3.9.1)(eslint@10.5.0)
     transitivePeerDependencies:
       - supports-color
 
-  eslint-module-utils@2.12.1(@typescript-eslint/parser@7.18.0(eslint@10.5.0)(typescript@6.0.3))(eslint-import-resolver-node@0.3.10)(eslint-import-resolver-typescript@3.9.1(eslint-plugin-import@2.32.0(@typescript-eslint/parser@7.18.0(eslint@10.5.0)(typescript@6.0.3))(eslint@10.5.0))(eslint@10.5.0))(eslint@10.5.0):
+  eslint-module-utils@2.12.1(@typescript-eslint/parser@7.18.0(eslint@10.5.0)(typescript@6.0.3))(eslint-import-resolver-node@0.3.10)(eslint-import-resolver-typescript@3.9.1)(eslint@10.5.0):
     dependencies:
       debug: 3.2.7
     optionalDependencies:
       '@typescript-eslint/parser': 7.18.0(eslint@10.5.0)(typescript@6.0.3)
       eslint: 10.5.0
       eslint-import-resolver-node: 0.3.10
-      eslint-import-resolver-typescript: 3.9.1(eslint-plugin-import@2.32.0(@typescript-eslint/parser@7.18.0(eslint@10.5.0)(typescript@6.0.3))(eslint@10.5.0))(eslint@10.5.0)
+      eslint-import-resolver-typescript: 3.9.1(eslint-plugin-import@2.32.0)(eslint@10.5.0)
     transitivePeerDependencies:
       - supports-color
 
@@ -8494,7 +8494,7 @@ snapshots:
       eslint: 10.5.0
       ignore: 5.3.2
 
-  eslint-plugin-import@2.32.0(@typescript-eslint/parser@7.18.0(eslint@10.5.0)(typescript@6.0.3))(eslint-import-resolver-typescript@3.9.1(eslint-plugin-import@2.32.0(@typescript-eslint/parser@7.18.0(eslint@10.5.0)(typescript@6.0.3))(eslint@10.5.0))(eslint@10.5.0))(eslint@10.5.0):
+  eslint-plugin-import@2.32.0(@typescript-eslint/parser@7.18.0(eslint@10.5.0)(typescript@6.0.3))(eslint-import-resolver-typescript@3.9.1)(eslint@10.5.0):
     dependencies:
       '@rtsao/scc': 1.1.0
       array-includes: 3.1.9
@@ -8505,7 +8505,7 @@ snapshots:
       doctrine: 2.1.0
       eslint: 10.5.0
       eslint-import-resolver-node: 0.3.10
-      eslint-module-utils: 2.12.1(@typescript-eslint/parser@7.18.0(eslint@10.5.0)(typescript@6.0.3))(eslint-import-resolver-node@0.3.10)(eslint-import-resolver-typescript@3.9.1(eslint-plugin-import@2.32.0(@typescript-eslint/parser@7.18.0(eslint@10.5.0)(typescript@6.0.3))(eslint@10.5.0))(eslint@10.5.0))(eslint@10.5.0)
+      eslint-module-utils: 2.12.1(@typescript-eslint/parser@7.18.0(eslint@10.5.0)(typescript@6.0.3))(eslint-import-resolver-node@0.3.10)(eslint-import-resolver-typescript@3.9.1)(eslint@10.5.0)
       hasown: 2.0.2
       is-core-module: 2.16.1
       is-glob: 4.0.3
@@ -10153,15 +10153,15 @@ snapshots:
   pg-cloudflare@1.4.0:
     optional: true
 
-  pg-connection-string@2.13.0: {}
+  pg-connection-string@2.14.0: {}
 
   pg-int8@1.0.1: {}
 
-  pg-pool@3.14.0(pg@8.21.0):
+  pg-pool@3.14.0(pg@8.22.0):
     dependencies:
-      pg: 8.21.0
+      pg: 8.22.0
 
-  pg-protocol@1.14.0: {}
+  pg-protocol@1.15.0: {}
 
   pg-types@2.2.0:
     dependencies:
@@ -10171,11 +10171,11 @@ snapshots:
       postgres-date: 1.0.7
       postgres-interval: 1.2.0
 
-  pg@8.21.0:
+  pg@8.22.0:
     dependencies:
-      pg-connection-string: 2.13.0
-      pg-pool: 3.14.0(pg@8.21.0)
-      pg-protocol: 1.14.0
+      pg-connection-string: 2.14.0
+      pg-pool: 3.14.0(pg@8.22.0)
+      pg-protocol: 1.15.0
       pg-types: 2.2.0
       pgpass: 1.0.5
     optionalDependencies:
@@ -11098,7 +11098,7 @@ snapshots:
 
   typescript@6.0.3: {}
 
-  ueberdb2@6.1.13(@elastic/elasticsearch@9.4.2)(async@3.2.6)(cassandra-driver@4.8.0)(dirty-ts@1.1.8)(mongodb@7.3.0)(mssql@12.5.5(@azure/core-client@1.10.1))(mysql2@3.22.5(@types/node@25.9.3))(nano@11.0.5)(pg@8.21.0)(redis@6.0.0(@opentelemetry/api@1.9.1))(rethinkdb@2.4.2)(rusty-store-kv@1.3.1)(surrealdb@2.0.3(tslib@2.8.1)(typescript@6.0.3)):
+  ueberdb2@6.1.13(@elastic/elasticsearch@9.4.2)(async@3.2.6)(cassandra-driver@4.8.0)(dirty-ts@1.1.8)(mongodb@7.3.0)(mssql@12.5.5(@azure/core-client@1.10.1))(mysql2@3.22.5(@types/node@25.9.3))(nano@11.0.5)(pg@8.22.0)(redis@6.0.0(@opentelemetry/api@1.9.1))(rethinkdb@2.4.2)(rusty-store-kv@1.3.1)(surrealdb@2.0.3(tslib@2.8.1)(typescript@6.0.3)):
     optionalDependencies:
       '@elastic/elasticsearch': 9.4.2
       async: 3.2.6
@@ -11108,7 +11108,7 @@ snapshots:
       mssql: 12.5.5(@azure/core-client@1.10.1)
       mysql2: 3.22.5(@types/node@25.9.3)
       nano: 11.0.5
-      pg: 8.21.0
+      pg: 8.22.0
       redis: 6.0.0(@opentelemetry/api@1.9.1)
       rethinkdb: 2.4.2
       rusty-store-kv: 1.3.1
