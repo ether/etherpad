@@ -2,7 +2,6 @@
 
 // As of v14, Node.js does not exit when there is an unhandled Promise rejection. Convert an
 // unhandled rejection into an uncaught exception, which does cause Node.js to exit.
-import util from "node:util";
 import fs from 'node:fs';
 import log4js from 'log4js';
 import readline from 'readline';
@@ -69,8 +68,7 @@ const unescape = (val: string) => {
   if (!sqlFile) throw new Error('Use: node importSqlFile.js $SQLFILE');
 
   log('initializing db');
-  const initDb = await util.promisify(db.init.bind(db));
-  await initDb(null);
+  await db.init();
   log('done');
 
   log(`Opening ${sqlFile}...`);
@@ -86,8 +84,7 @@ const unescape = (val: string) => {
       value = value.substring(0, value.length - 2);
       console.log(`key: ${key} val: ${value}`);
       console.log(`unval: ${unescape(value)}`);
-      // @ts-ignore
-      db.set(key, unescape(value), null);
+      await db.set(key, unescape(value));
       keyNo++;
       if (keyNo % 1000 === 0) log(` ${keyNo}`);
     }
@@ -96,9 +93,7 @@ const unescape = (val: string) => {
   process.stdout.write('done. waiting for db to finish transaction. ' +
                        'depended on dbms this may take some time..\n');
 
-  const closeDB = util.promisify(db.close.bind(db));
-  // @ts-ignore
-  await closeDB(null);
+  await db.close();
   log(`finished, imported ${keyNo} keys.`);
   process.exit(0)
 })();
