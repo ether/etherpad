@@ -70,13 +70,30 @@ jobs:
 
       - name: Smoke test - start Etherpad and curl /api
         shell: bash
+        # Hard backstop: if teardown ever fails to reap the server the step
+        # fails in minutes instead of burning to GitHub's 6h job ceiling.
+        timeout-minutes: 8
         env:
           ETHERPAD_DIR: ${{ runner.temp }}/etherpad-installer-test
         run: |
           set -eu
+          # Enable job control so the backgrounded launcher gets its own
+          # process group, letting us reap the whole pnpm -> node tree below.
+          set -m
           cd "$ETHERPAD_DIR"
           pnpm run prod >/tmp/etherpad.log 2>&1 &
           PID=$!
+          # `pnpm run prod` is a nested launcher (pnpm -> pnpm --filter -> node),
+          # so killing $PID alone orphans the node server, which keeps the step's
+          # output pipe open and hangs CI. Kill the entire process group, with a
+          # SIGKILL fallback in case SIGTERM is swallowed (e.g. a live flush timer
+          # keeping the event loop alive), so the step always exits cleanly.
+          reap() {
+            kill -TERM "-$PID" 2>/dev/null || true
+            sleep 5
+            kill -KILL "-$PID" 2>/dev/null || true
+          }
+          trap reap EXIT
           # Wait up to 60s for the API to come up.
           ok=0
           for i in $(seq 1 60); do
@@ -90,11 +107,8 @@ jobs:
           if [ "$ok" != "1" ]; then
             echo "Etherpad did not start within 60s. Last 200 lines of log:" >&2
             tail -200 /tmp/etherpad.log >&2 || true
-            kill "$PID" 2>/dev/null || true
             exit 1
           fi
-          kill "$PID" 2>/dev/null || true
-          wait "$PID" 2>/dev/null || true
 
   installer-windows:
     name: end-to-end install (windows-latest)
@@ -131,6 +145,7 @@ jobs:
 
       - name: Smoke test - start Etherpad and curl /api
         shell: pwsh
+        timeout-minutes: 8
         env:
           ETHERPAD_DIR: ${{ runner.temp }}\etherpad-installer-test
         run: |
