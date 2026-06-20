@@ -91,7 +91,7 @@ importers:
         version: 8.61.1(eslint@10.5.0)(typescript@6.0.3)
       '@vitejs/plugin-react':
         specifier: ^6.0.2
-        version: 6.0.2(babel-plugin-react-compiler@19.1.0-rc.3)(vite@8.0.16(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4))
+        version: 6.0.2(babel-plugin-react-compiler@19.1.0-rc.3)(vite@8.0.16(@types/node@26.0.0)(esbuild@0.28.1)(tsx@4.22.4))
       babel-plugin-react-compiler:
         specifier: 19.1.0-rc.3
         version: 19.1.0-rc.3
@@ -123,8 +123,8 @@ importers:
         specifier: ^19.2.7
         version: 19.2.7(react@19.2.7)
       react-hook-form:
-        specifier: ^7.79.0
-        version: 7.79.0(react@19.2.7)
+        specifier: ^7.80.0
+        version: 7.80.0(react@19.2.7)
       react-i18next:
         specifier: ^17.0.8
         version: 17.0.8(i18next@26.3.1(typescript@6.0.3))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(typescript@6.0.3)
@@ -142,10 +142,10 @@ importers:
         version: 6.0.3
       vite:
         specifier: ^8.0.16
-        version: 8.0.16(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)
+        version: 8.0.16(@types/node@26.0.0)(esbuild@0.28.1)(tsx@4.22.4)
       vite-plugin-babel:
         specifier: ^1.7.3
-        version: 1.7.3(@babel/core@7.29.7)(vite@8.0.16(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4))
+        version: 1.7.3(@babel/core@7.29.7)(vite@8.0.16(@types/node@26.0.0)(esbuild@0.28.1)(tsx@4.22.4))
       zustand:
         specifier: ^5.0.14
         version: 5.0.14(@types/react@19.2.17)(react@19.2.7)(use-sync-external-store@1.6.0(react@19.2.7))
@@ -166,11 +166,11 @@ importers:
         version: 4.22.4
       ueberdb2:
         specifier: 6.1.13
-        version: 6.1.13(@elastic/elasticsearch@9.4.2)(async@3.2.6)(cassandra-driver@4.8.0)(dirty-ts@1.1.8)(mongodb@7.3.0)(mssql@12.5.5(@azure/core-client@1.10.1))(mysql2@3.22.5(@types/node@25.9.3))(nano@11.0.5)(pg@8.22.0)(redis@6.0.0(@opentelemetry/api@1.9.1))(rethinkdb@2.4.2)(rusty-store-kv@1.3.1)(surrealdb@2.0.3(tslib@2.8.1)(typescript@6.0.3))
+        version: 6.1.13(@elastic/elasticsearch@9.4.2)(async@3.2.6)(cassandra-driver@4.8.0)(dirty-ts@1.1.8)(mongodb@7.3.0)(mssql@12.5.5(@azure/core-client@1.10.1))(mysql2@3.22.5(@types/node@26.0.0))(nano@11.0.5)(pg@8.22.0)(redis@6.0.0(@opentelemetry/api@1.9.1))(rethinkdb@2.4.2)(rusty-store-kv@1.3.1)(surrealdb@2.0.3(tslib@2.8.1)(typescript@6.0.3))
     devDependencies:
       '@types/node':
-        specifier: ^25.9.3
-        version: 25.9.3
+        specifier: ^26.0.0
+        version: 26.0.0
       '@types/semver':
         specifier: ^7.7.1
         version: 7.7.1
@@ -189,7 +189,7 @@ importers:
         version: 0.137.0
       vitepress:
         specifier: ^2.0.0-alpha.17
-        version: 2.0.0-alpha.17(@types/node@25.9.3)(change-case@5.4.4)(esbuild@0.28.1)(jwt-decode@4.0.0)(oxc-minify@0.137.0)(postcss@8.5.15)(tsx@4.22.4)(typescript@6.0.3)
+        version: 2.0.0-alpha.17(@types/node@26.0.0)(change-case@5.4.4)(esbuild@0.28.1)(jwt-decode@4.0.0)(oxc-minify@0.137.0)(postcss@8.5.15)(tsx@4.22.4)(typescript@6.0.3)
 
   src:
     dependencies:
@@ -294,7 +294,7 @@ importers:
         version: 12.5.5(@azure/core-client@1.10.1)
       mysql2:
         specifier: ^3.22.5
-        version: 3.22.5(@types/node@25.9.3)
+        version: 3.22.5(@types/node@26.0.0)
       nano:
         specifier: ^11.0.5
         version: 11.0.5
@@ -366,7 +366,7 @@ importers:
         version: 4.22.4
       ueberdb2:
         specifier: 6.1.13
-        version: 6.1.13(@elastic/elasticsearch@9.4.2)(async@3.2.6)(cassandra-driver@4.8.0)(dirty-ts@1.1.8)(mongodb@7.3.0)(mssql@12.5.5(@azure/core-client@1.10.1))(mysql2@3.22.5(@types/node@25.9.3))(nano@11.0.5)(pg@8.22.0)(redis@6.0.0(@opentelemetry/api@1.9.1))(rethinkdb@2.4.2)(rusty-store-kv@1.3.1)(surrealdb@2.0.3(tslib@2.8.1)(typescript@6.0.3))
+        version: 6.1.13(@elastic/elasticsearch@9.4.2)(async@3.2.6)(cassandra-driver@4.8.0)(dirty-ts@1.1.8)(mongodb@7.3.0)(mssql@12.5.5(@azure/core-client@1.10.1))(mysql2@3.22.5(@types/node@26.0.0))(nano@11.0.5)(pg@8.22.0)(redis@6.0.0(@opentelemetry/api@1.9.1))(rethinkdb@2.4.2)(rusty-store-kv@1.3.1)(surrealdb@2.0.3(tslib@2.8.1)(typescript@6.0.3))
       underscore:
         specifier: 1.13.8
         version: 1.13.8
@@ -429,8 +429,8 @@ importers:
         specifier: ^10.0.9
         version: 10.0.10
       '@types/node':
-        specifier: ^25.9.3
-        version: 25.9.3
+        specifier: ^26.0.0
+        version: 26.0.0
       '@types/nodemailer':
         specifier: ^8.0.1
         version: 8.0.1
@@ -496,7 +496,7 @@ importers:
         version: 6.0.3
       vitest:
         specifier: ^4.1.9
-        version: 4.1.9(@opentelemetry/api@1.9.1)(@types/node@25.9.3)(jsdom@29.1.1(@noble/hashes@1.8.0))(vite@8.0.16(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4))
+        version: 4.1.9(@opentelemetry/api@1.9.1)(@types/node@26.0.0)(jsdom@29.1.1(@noble/hashes@1.8.0))(vite@8.0.16(@types/node@26.0.0)(esbuild@0.28.1)(tsx@4.22.4))
 
   ui:
     devDependencies:
@@ -508,7 +508,7 @@ importers:
         version: 6.0.3
       vite:
         specifier: ^8.0.16
-        version: 8.0.16(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)
+        version: 8.0.16(@types/node@26.0.0)(esbuild@0.28.1)(tsx@4.22.4)
 
 packages:
 
@@ -1895,11 +1895,8 @@ packages:
   '@types/node@18.19.130':
     resolution: {integrity: sha512-GRaXQx6jGfL8sKfaIDD6OupbIHBr9jv7Jnaml9tB7l4v068PAOXqfcujMMo5PhbIs6ggR1XODELqahT2R8v0fg==}
 
-  '@types/node@25.9.2':
-    resolution: {integrity: sha512-G05zqtJhcDLb8uslf5EjCxXg9G1KQxiV8OS0R26IC//Eoyitzqe8z37I7cqvnZlrlSfgocQRfSn/AHBZJJFyGw==}
-
-  '@types/node@25.9.3':
-    resolution: {integrity: sha512-603BddQMv3pUcr4U2dhujk83N2tTDVr/34wII2B6bJy6g+8WD6yUb11jszNs0gdi4PesVWl7ABt8nYMVpnLUcg==}
+  '@types/node@26.0.0':
+    resolution: {integrity: sha512-vf2YFi1iY9lHGwNJMs01biZFbKJkrZR1T6/MlzjhJLPdntOHLhTrDSnSVcdtvjihi4VQNlrFRIxLsDBlQpAipA==}
 
   '@types/nodemailer@8.0.1':
     resolution: {integrity: sha512-PxpaInm8V1JQDd4j0ds5HfvWQk8JupS1C0Picb96QJsrrRDjBH+DlK7L4ZdNSqNULhiZRQHc40nLVShaGxXAMw==}
@@ -4712,8 +4709,8 @@ packages:
     peerDependencies:
       react: ^19.2.7
 
-  react-hook-form@7.79.0:
-    resolution: {integrity: sha512-mhYp/MTmXvzYX6AJcJVko0rktoIhhmRnEouObj4wF5i/tCttgJvnp1+9wRkpITZjDTqpo4IOSJqu0dBlPlV/Lw==}
+  react-hook-form@7.80.0:
+    resolution: {integrity: sha512-4P+fk6oXsxY+6xSj7Euhc2sumQD8zQqCuVHoJwoyp9EchP+IUW9OESB7uHFJOKsIBQ4MQqYE84INJFqUCYNoOg==}
     engines: {node: '>=18.0.0'}
     peerDependencies:
       react: ^16.8.0 || ^17 || ^18 || ^19
@@ -5466,8 +5463,8 @@ packages:
   undici-types@7.24.5:
     resolution: {integrity: sha512-kNh333UBSbgK35OIW7FwJTr9tTfVIG51Fm1tSVT7m8foPHfDVjsb7OIee/q/rs3bB2aV/3qOPgG5mHNWl1odiA==}
 
-  undici-types@7.24.6:
-    resolution: {integrity: sha512-WRNW+sJgj5OBN4/0JpHFqtqzhpbnV0GuB+OozA9gCL7a993SmU+1JBZCzLNxYsbMfIeDL+lTsphD5jN5N+n0zg==}
+  undici-types@8.3.0:
+    resolution: {integrity: sha512-j375ScV60dom+YkPFIfTLcOiPxkN/buHz5GobjLhixFuANaNs3C9l4GmrWqejgXWJ7BbJcFYpTEUkS1Ge8bpZQ==}
 
   undici@7.27.2:
     resolution: {integrity: sha512-uZsKNuzQxDMUY6M3pIMvy5tvlGmtq8XJ2oLAkfRKGNu+1VQAIvLy2xIVG5ATZl5wDXl/tddByAWCizRbOme+TA==}
@@ -7022,14 +7019,14 @@ snapshots:
 
   '@types/accepts@1.3.7':
     dependencies:
-      '@types/node': 25.9.3
+      '@types/node': 26.0.0
 
   '@types/async@3.2.25': {}
 
   '@types/body-parser@1.19.6':
     dependencies:
       '@types/connect': 3.4.38
-      '@types/node': 25.9.2
+      '@types/node': 26.0.0
 
   '@types/chai@5.2.3':
     dependencies:
@@ -7038,7 +7035,7 @@ snapshots:
 
   '@types/connect@3.4.38':
     dependencies:
-      '@types/node': 25.9.3
+      '@types/node': 26.0.0
 
   '@types/content-disposition@0.5.9': {}
 
@@ -7053,15 +7050,15 @@ snapshots:
       '@types/connect': 3.4.38
       '@types/express': 5.0.6
       '@types/keygrip': 1.0.6
-      '@types/node': 25.9.3
+      '@types/node': 26.0.0
 
   '@types/cors@2.8.19':
     dependencies:
-      '@types/node': 25.9.3
+      '@types/node': 26.0.0
 
   '@types/cross-spawn@6.0.6':
     dependencies:
-      '@types/node': 25.9.2
+      '@types/node': 26.0.0
 
   '@types/debug@4.1.12':
     dependencies:
@@ -7077,7 +7074,7 @@ snapshots:
 
   '@types/express-serve-static-core@5.1.0':
     dependencies:
-      '@types/node': 25.9.2
+      '@types/node': 26.0.0
       '@types/qs': 6.14.0
       '@types/range-parser': 1.2.7
       '@types/send': 1.2.1
@@ -7094,11 +7091,11 @@ snapshots:
 
   '@types/formidable@3.5.1':
     dependencies:
-      '@types/node': 25.9.2
+      '@types/node': 26.0.0
 
   '@types/fs-extra@9.0.13':
     dependencies:
-      '@types/node': 25.9.3
+      '@types/node': 26.0.0
 
   '@types/hast@3.0.4':
     dependencies:
@@ -7114,7 +7111,7 @@ snapshots:
 
   '@types/jsdom@28.0.3':
     dependencies:
-      '@types/node': 25.9.2
+      '@types/node': 26.0.0
       '@types/tough-cookie': 4.0.5
       parse5: 8.0.1
       undici-types: 7.24.5
@@ -7128,7 +7125,7 @@ snapshots:
   '@types/jsonwebtoken@9.0.10':
     dependencies:
       '@types/ms': 2.1.0
-      '@types/node': 25.9.2
+      '@types/node': 26.0.0
 
   '@types/keygrip@1.0.6': {}
 
@@ -7145,7 +7142,7 @@ snapshots:
       '@types/http-errors': 2.0.5
       '@types/keygrip': 1.0.6
       '@types/koa-compose': 3.2.8
-      '@types/node': 25.9.3
+      '@types/node': 26.0.0
 
   '@types/linkify-it@5.0.0': {}
 
@@ -7172,34 +7169,30 @@ snapshots:
 
   '@types/node-fetch@2.6.12':
     dependencies:
-      '@types/node': 25.9.3
+      '@types/node': 26.0.0
       form-data: 4.0.6
 
   '@types/node@18.19.130':
     dependencies:
       undici-types: 5.26.5
 
-  '@types/node@25.9.2':
+  '@types/node@26.0.0':
     dependencies:
-      undici-types: 7.24.6
-
-  '@types/node@25.9.3':
-    dependencies:
-      undici-types: 7.24.6
+      undici-types: 8.3.0
 
   '@types/nodemailer@8.0.1':
     dependencies:
-      '@types/node': 25.9.3
+      '@types/node': 26.0.0
 
   '@types/oidc-provider@9.5.0':
     dependencies:
       '@types/keygrip': 1.0.6
       '@types/koa': 3.0.0
-      '@types/node': 25.9.2
+      '@types/node': 26.0.0
 
   '@types/pdfkit@0.17.6':
     dependencies:
-      '@types/node': 25.9.2
+      '@types/node': 26.0.0
 
   '@types/qs@6.14.0': {}
 
@@ -7215,18 +7208,18 @@ snapshots:
 
   '@types/readable-stream@4.0.23':
     dependencies:
-      '@types/node': 25.9.3
+      '@types/node': 26.0.0
 
   '@types/semver@7.7.1': {}
 
   '@types/send@1.2.1':
     dependencies:
-      '@types/node': 25.9.3
+      '@types/node': 26.0.0
 
   '@types/serve-static@2.2.0':
     dependencies:
       '@types/http-errors': 2.0.5
-      '@types/node': 25.9.2
+      '@types/node': 26.0.0
 
   '@types/sinon@21.0.1':
     dependencies:
@@ -7238,7 +7231,7 @@ snapshots:
     dependencies:
       '@types/cookiejar': 2.1.5
       '@types/methods': 1.1.4
-      '@types/node': 25.9.2
+      '@types/node': 26.0.0
       form-data: 4.0.6
 
   '@types/supertest@7.2.0':
@@ -7248,7 +7241,7 @@ snapshots:
 
   '@types/tar@6.1.13':
     dependencies:
-      '@types/node': 25.9.3
+      '@types/node': 26.0.0
       minipass: 4.2.8
 
   '@types/tough-cookie@4.0.5': {}
@@ -7498,17 +7491,17 @@ snapshots:
   '@unrs/rspack-resolver-binding-win32-x64-msvc@1.3.0':
     optional: true
 
-  '@vitejs/plugin-react@6.0.2(babel-plugin-react-compiler@19.1.0-rc.3)(vite@8.0.16(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4))':
+  '@vitejs/plugin-react@6.0.2(babel-plugin-react-compiler@19.1.0-rc.3)(vite@8.0.16(@types/node@26.0.0)(esbuild@0.28.1)(tsx@4.22.4))':
     dependencies:
       '@rolldown/pluginutils': 1.0.1
-      vite: 8.0.16(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)
+      vite: 8.0.16(@types/node@26.0.0)(esbuild@0.28.1)(tsx@4.22.4)
     optionalDependencies:
       babel-plugin-react-compiler: 19.1.0-rc.3
 
-  '@vitejs/plugin-vue@6.0.5(vite@8.0.16(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4))(vue@3.5.30(typescript@6.0.3))':
+  '@vitejs/plugin-vue@6.0.5(vite@8.0.16(@types/node@26.0.0)(esbuild@0.28.1)(tsx@4.22.4))(vue@3.5.30(typescript@6.0.3))':
     dependencies:
       '@rolldown/pluginutils': 1.0.0-rc.2
-      vite: 8.0.16(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)
+      vite: 8.0.16(@types/node@26.0.0)(esbuild@0.28.1)(tsx@4.22.4)
       vue: 3.5.30(typescript@6.0.3)
 
   '@vitest/expect@4.1.9':
@@ -7520,13 +7513,13 @@ snapshots:
       chai: 6.2.2
       tinyrainbow: 3.1.0
 
-  '@vitest/mocker@4.1.9(vite@8.0.16(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4))':
+  '@vitest/mocker@4.1.9(vite@8.0.16(@types/node@26.0.0)(esbuild@0.28.1)(tsx@4.22.4))':
     dependencies:
       '@vitest/spy': 4.1.9
       estree-walker: 3.0.3
       magic-string: 0.30.21
     optionalDependencies:
-      vite: 8.0.16(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)
+      vite: 8.0.16(@types/node@26.0.0)(esbuild@0.28.1)(tsx@4.22.4)
 
   '@vitest/pretty-format@4.1.9':
     dependencies:
@@ -8246,7 +8239,7 @@ snapshots:
   engine.io@6.6.5:
     dependencies:
       '@types/cors': 2.8.19
-      '@types/node': 25.9.3
+      '@types/node': 26.0.0
       accepts: 1.3.8
       base64id: 2.0.0
       cookie: 0.7.2
@@ -9835,9 +9828,9 @@ snapshots:
       - '@azure/core-client'
       - supports-color
 
-  mysql2@3.22.5(@types/node@25.9.3):
+  mysql2@3.22.5(@types/node@26.0.0):
     dependencies:
-      '@types/node': 25.9.3
+      '@types/node': 26.0.0
       aws-ssl-profiles: 1.1.2
       denque: 2.1.0
       generate-function: 2.3.1
@@ -10296,7 +10289,7 @@ snapshots:
       react: 19.2.7
       scheduler: 0.27.0
 
-  react-hook-form@7.79.0(react@19.2.7):
+  react-hook-form@7.80.0(react@19.2.7):
     dependencies:
       react: 19.2.7
 
@@ -10954,7 +10947,7 @@ snapshots:
       '@azure/identity': 4.13.1
       '@azure/keyvault-keys': 4.10.0(@azure/core-client@1.10.1)
       '@js-joda/core': 5.7.0
-      '@types/node': 25.9.3
+      '@types/node': 26.0.0
       bl: 6.1.6
       iconv-lite: 0.7.2
       js-md4: 0.3.2
@@ -11098,7 +11091,7 @@ snapshots:
 
   typescript@6.0.3: {}
 
-  ueberdb2@6.1.13(@elastic/elasticsearch@9.4.2)(async@3.2.6)(cassandra-driver@4.8.0)(dirty-ts@1.1.8)(mongodb@7.3.0)(mssql@12.5.5(@azure/core-client@1.10.1))(mysql2@3.22.5(@types/node@25.9.3))(nano@11.0.5)(pg@8.22.0)(redis@6.0.0(@opentelemetry/api@1.9.1))(rethinkdb@2.4.2)(rusty-store-kv@1.3.1)(surrealdb@2.0.3(tslib@2.8.1)(typescript@6.0.3)):
+  ueberdb2@6.1.13(@elastic/elasticsearch@9.4.2)(async@3.2.6)(cassandra-driver@4.8.0)(dirty-ts@1.1.8)(mongodb@7.3.0)(mssql@12.5.5(@azure/core-client@1.10.1))(mysql2@3.22.5(@types/node@26.0.0))(nano@11.0.5)(pg@8.22.0)(redis@6.0.0(@opentelemetry/api@1.9.1))(rethinkdb@2.4.2)(rusty-store-kv@1.3.1)(surrealdb@2.0.3(tslib@2.8.1)(typescript@6.0.3)):
     optionalDependencies:
       '@elastic/elasticsearch': 9.4.2
       async: 3.2.6
@@ -11106,7 +11099,7 @@ snapshots:
       dirty-ts: 1.1.8
       mongodb: 7.3.0
       mssql: 12.5.5(@azure/core-client@1.10.1)
-      mysql2: 3.22.5(@types/node@25.9.3)
+      mysql2: 3.22.5(@types/node@26.0.0)
       nano: 11.0.5
       pg: 8.22.0
       redis: 6.0.0(@opentelemetry/api@1.9.1)
@@ -11131,7 +11124,7 @@ snapshots:
 
   undici-types@7.24.5: {}
 
-  undici-types@7.24.6: {}
+  undici-types@8.3.0: {}
 
   undici@7.27.2: {}
 
@@ -11257,12 +11250,12 @@ snapshots:
       x-is-array: 0.1.0
       x-is-string: 0.1.0
 
-  vite-plugin-babel@1.7.3(@babel/core@7.29.7)(vite@8.0.16(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)):
+  vite-plugin-babel@1.7.3(@babel/core@7.29.7)(vite@8.0.16(@types/node@26.0.0)(esbuild@0.28.1)(tsx@4.22.4)):
     dependencies:
       '@babel/core': 7.29.7
-      vite: 8.0.16(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)
+      vite: 8.0.16(@types/node@26.0.0)(esbuild@0.28.1)(tsx@4.22.4)
 
-  vite@8.0.16(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4):
+  vite@8.0.16(@types/node@26.0.0)(esbuild@0.28.1)(tsx@4.22.4):
     dependencies:
       lightningcss: 1.32.0
       picomatch: 4.0.4
@@ -11270,12 +11263,12 @@ snapshots:
       rolldown: 1.0.3
       tinyglobby: 0.2.17
     optionalDependencies:
-      '@types/node': 25.9.3
+      '@types/node': 26.0.0
       esbuild: 0.28.1
       fsevents: 2.3.3
       tsx: 4.22.4
 
-  vitepress@2.0.0-alpha.17(@types/node@25.9.3)(change-case@5.4.4)(esbuild@0.28.1)(jwt-decode@4.0.0)(oxc-minify@0.137.0)(postcss@8.5.15)(tsx@4.22.4)(typescript@6.0.3):
+  vitepress@2.0.0-alpha.17(@types/node@26.0.0)(change-case@5.4.4)(esbuild@0.28.1)(jwt-decode@4.0.0)(oxc-minify@0.137.0)(postcss@8.5.15)(tsx@4.22.4)(typescript@6.0.3):
     dependencies:
       '@docsearch/css': 4.6.0
       '@docsearch/js': 4.6.0
@@ -11285,7 +11278,7 @@ snapshots:
       '@shikijs/transformers': 3.23.0
       '@shikijs/types': 3.23.0
       '@types/markdown-it': 14.1.2
-      '@vitejs/plugin-vue': 6.0.5(vite@8.0.16(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4))(vue@3.5.30(typescript@6.0.3))
+      '@vitejs/plugin-vue': 6.0.5(vite@8.0.16(@types/node@26.0.0)(esbuild@0.28.1)(tsx@4.22.4))(vue@3.5.30(typescript@6.0.3))
       '@vue/devtools-api': 8.1.0
       '@vue/shared': 3.5.30
       '@vueuse/core': 14.2.1(vue@3.5.30(typescript@6.0.3))
@@ -11294,7 +11287,7 @@ snapshots:
       mark.js: 8.11.1
       minisearch: 7.2.0
       shiki: 3.23.0
-      vite: 8.0.16(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)
+      vite: 8.0.16(@types/node@26.0.0)(esbuild@0.28.1)(tsx@4.22.4)
       vue: 3.5.30(typescript@6.0.3)
     optionalDependencies:
       oxc-minify: 0.137.0
@@ -11325,10 +11318,10 @@ snapshots:
       - universal-cookie
       - yaml
 
-  vitest@4.1.9(@opentelemetry/api@1.9.1)(@types/node@25.9.3)(jsdom@29.1.1(@noble/hashes@1.8.0))(vite@8.0.16(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)):
+  vitest@4.1.9(@opentelemetry/api@1.9.1)(@types/node@26.0.0)(jsdom@29.1.1(@noble/hashes@1.8.0))(vite@8.0.16(@types/node@26.0.0)(esbuild@0.28.1)(tsx@4.22.4)):
     dependencies:
       '@vitest/expect': 4.1.9
-      '@vitest/mocker': 4.1.9(vite@8.0.16(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4))
+      '@vitest/mocker': 4.1.9(vite@8.0.16(@types/node@26.0.0)(esbuild@0.28.1)(tsx@4.22.4))
       '@vitest/pretty-format': 4.1.9
       '@vitest/runner': 4.1.9
       '@vitest/snapshot': 4.1.9
@@ -11345,11 +11338,11 @@ snapshots:
       tinyexec: 1.2.4
       tinyglobby: 0.2.17
       tinyrainbow: 3.1.0
-      vite: 8.0.16(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)
+      vite: 8.0.16(@types/node@26.0.0)(esbuild@0.28.1)(tsx@4.22.4)
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@opentelemetry/api': 1.9.1
-      '@types/node': 25.9.3
+      '@types/node': 26.0.0
       jsdom: 29.1.1(@noble/hashes@1.8.0)
     transitivePeerDependencies:
       - msw
