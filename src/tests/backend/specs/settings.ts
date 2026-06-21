@@ -278,4 +278,62 @@ describe(__filename, function () {
       assert.strictEqual(over!.privacy.pluginCatalog, false);
     });
   });
+
+  // Regression test for the jsonminify -> jsonc-parser migration.
+  // The old parser was `jsonminify(str).replace(',]', ']').replace(',}', '}')`,
+  // which had two correctness bugs that jsonc-parser (allowTrailingComma) fixes:
+  //   1. String#replace with a string needle only swaps the FIRST match, so a
+  //      file with more than one trailing comma of the same kind stayed invalid.
+  //   2. The blind ',]' / ',}' replace also corrupted those byte sequences when
+  //      they appeared *inside* a string value (e.g. a URL or literal text).
+  describe('JSONC settings parsing (jsonminify -> jsonc-parser)', function () {
+    const fs = require('fs');
+    const os = require('os');
+    let tmpFile: string;
+
+    const writeTmp = (contents: string) => {
+      tmpFile = path.join(os.tmpdir(), `ep-settings-jsonc-${process.pid}.json`);
+      fs.writeFileSync(tmpFile, contents);
+      return tmpFile;
+    };
+
+    afterEach(function () {
+      if (tmpFile) { try { fs.unlinkSync(tmpFile); } catch (e) { /* ignore */ } }
+    });
+
+    it('strips comments and tolerates multiple trailing commas', function () {
+      const file = writeTmp(`// leading line comment
+/* block comment */
+{
+  "list": [
+    "a",
+    "b",
+  ],
+  "nested": [
+    [1, 2,],
+    [3, 4,],
+  ],
+  "obj": {
+    "x": 1,
+    "y": 2,
+  },
+}`);
+      const s: any = exportedForTestingOnly.parseSettings(file, true);
+      assert.deepEqual(s.list, ['a', 'b']);
+      assert.deepEqual(s.nested, [[1, 2], [3, 4]]);
+      assert.deepEqual(s.obj, {x: 1, y: 2});
+    });
+
+    it('does not corrupt ",]" / ",}" sequences inside string values', function () {
+      const file = writeTmp(`{
+  "url": "http://example.com/a,]b,}c",
+  "text": "trailing-comma-like ,] and ,} must survive"
+}`);
+      const s: any = exportedForTestingOnly.parseSettings(file, true);
+      // The old replace() would have stripped the comma and produced
+      // "http://example.com/a]b}c" here.
+      assert.strictEqual(s.url, 'http://example.com/a,]b,}c');
+      assert.strictEqual(s.text, 'trailing-comma-like ,] and ,} must survive');
+    });
+  });
 });

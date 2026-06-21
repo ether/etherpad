@@ -31,12 +31,13 @@ import Op from "./Op";
 const _MAX_LIST_LEVEL = 16;
 
 import AttributeMap from './AttributeMap';
-import UNorm from 'unorm';
 import {subattribution} from './Changeset';
 import {SmartOpAssembler} from "./SmartOpAssembler";
 const hooks = require('./pluginfw/hooks');
 
-const sanitizeUnicode = (s) => UNorm.nfc(s);
+// NFC-normalize via the native String API (replaces the unmaintained `unorm`
+// polyfill; String.prototype.normalize is available in every supported runtime).
+const sanitizeUnicode = (s: string) => s.normalize('NFC');
 const tagName = (n) => n.tagName && n.tagName.toLowerCase();
 // supportedElems are Supported natively within Etherpad and don't require a plugin
 const supportedElems = new Set([

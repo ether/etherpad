@@ -35,7 +35,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import {argv} from './Cli'
-import jsonminify from 'jsonminify';
+import {parse as parseJsonc, printParseErrorCode, ParseError} from 'jsonc-parser';
 import log4js from 'log4js';
 import {createHash} from 'node:crypto';
 import randomString from './randomstring';
@@ -116,9 +116,18 @@ const parseSettings = (settingsFilename: string, isSettings: boolean) => {
   }
 
   try {
-    settingsStr = jsonminify(settingsStr).replace(',]', ']').replace(',}', '}');
+    // jsonc-parser tolerates comments and trailing commas, so settings files
+    // can stay annotated. Unlike the old jsonminify + naive ',]'/',}' string
+    // replace, it fixes *every* trailing comma (not just the first of each
+    // kind) and never mangles those sequences when they appear inside strings.
+    const errors: ParseError[] = [];
+    const settings = parseJsonc(settingsStr, errors, {allowTrailingComma: true});
 
-    const settings = JSON.parse(settingsStr);
+    if (errors.length > 0) {
+      const {error, offset} = errors[0];
+      throw new Error(`${printParseErrorCode(error)} at offset ${offset}`);
+    }
+    if (settings === undefined) throw new Error('file is empty or not valid JSON');
 
     logger.info(`${settingsType} loaded from: ${settingsFilename}`);
 

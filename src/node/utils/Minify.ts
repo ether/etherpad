@@ -43,7 +43,6 @@ const LIBRARY_WHITELIST = [
   'split-grid',
   'tinycon',
   'underscore',
-  'unorm',
 ];
 
 // What follows is a terrible hack to avoid loop-back within the server.

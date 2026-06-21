@@ -229,9 +229,6 @@ importers:
       express-session:
         specifier: ^1.19.0
         version: 1.19.0
-      find-root:
-        specifier: 1.1.0
-        version: 1.1.0
       formidable:
         specifier: ^3.5.4
         version: 3.5.4
@@ -253,9 +250,9 @@ importers:
       jsdom:
         specifier: ^29.1.1
         version: 29.1.1(@noble/hashes@1.8.0)
-      jsonminify:
-        specifier: 0.4.2
-        version: 0.4.2
+      jsonc-parser:
+        specifier: ^3.3.1
+        version: 3.3.1
       jsonwebtoken:
         specifier: ^9.0.3
         version: 9.0.3
@@ -373,9 +370,6 @@ importers:
       undici:
         specifier: ^8.5.0
         version: 8.5.0
-      unorm:
-        specifier: 1.6.0
-        version: 1.6.0
       wtfnode:
         specifier: ^0.10.1
         version: 0.10.1
@@ -416,9 +410,6 @@ importers:
       '@types/jsdom':
         specifier: ^28.0.3
         version: 28.0.3
-      '@types/jsonminify':
-        specifier: ^0.4.3
-        version: 0.4.3
       '@types/jsonwebtoken':
         specifier: ^9.0.10
         version: 9.0.10
@@ -1846,9 +1837,6 @@ packages:
 
   '@types/json5@0.0.29':
     resolution: {integrity: sha512-dRLjCWHYg4oaA77cxO64oO+7JwCwnIzkZPdrrC71jQmQtlhM556pwKo5bUzqvZndkVbeFLIIi+9TC40JNF5hNQ==}
-
-  '@types/jsonminify@0.4.3':
-    resolution: {integrity: sha512-+oz7EbPz1Nwmn/sr3UztgXpRhdFpvFrjGi5ictEYxUri5ZvQMTcdTi36MTfD/gCb1A5xhJKdH8Hwz2uz5k6s9A==}
 
   '@types/jsonwebtoken@9.0.10':
     resolution: {integrity: sha512-asx5hIG9Qmf/1oStypjanR7iKTv0gXQ1Ov/jfrX6kS/EO0OFni8orbmGCn0672NHR3kXHwpAwR+B368ZGN/2rA==}
@@ -3326,9 +3314,6 @@ packages:
     resolution: {integrity: sha512-S8KoZgRZN+a5rNwqTxlZZePjT/4cnm0ROV70LedRHZ0p8u9fRID0hJUZQpkKLzro8LfmC8sx23bY6tVNxv8pQA==}
     engines: {node: '>= 18.0.0'}
 
-  find-root@1.1.0:
-    resolution: {integrity: sha512-NKfW6bec6GfKc0SGx1e07QZY9PE99u0Bft/0rzSD5k3sO/vwkVUpDUKVm5Gpp5Ue3YfShPFTX2070tDs5kB9Ng==}
-
   find-up@5.0.0:
     resolution: {integrity: sha512-78/PXT1wlLLDgTzDs7sjq9hzz0vXD+zn+7wypEe4fXQxCmdmqfGsEPQxmiCSQI3ajFV91bVSsvNtrJRiW6nGng==}
     engines: {node: '>=10'}
@@ -3903,10 +3888,6 @@ packages:
 
   jsonfile@6.1.0:
     resolution: {integrity: sha512-5dgndWOriYSm5cnYaJNhalLNDKOqFwyDB/rr1E9ZsGciGvKPs8R2xYGCacuf3z6K1YKDz182fd+fY3cn3pMqXQ==}
-
-  jsonminify@0.4.2:
-    resolution: {integrity: sha512-mEtP5ECD0293D+s45JhDutqF5mFCkWY8ClrPFxjSFR2KUoantofky7noSzyKnAnD9Gd8pXHZSUd5bgzLDUBbfA==}
-    engines: {node: '>=0.8.0', npm: '>=1.1.0'}
 
   jsonschema-draft4@1.0.0:
     resolution: {integrity: sha512-sBV3UnQPRiyCTD6uzY/Oao2Yohv6KKgQq7zjPwjFHeR6scg/QSXnzDxdugsGaLQDmFUrUlTbMYdEE+72PizhGA==}
@@ -5508,10 +5489,6 @@ packages:
   universalify@2.0.1:
     resolution: {integrity: sha512-gptHNQghINnc/vTGIk0SOFGFNXw7JVrlRUtConJRlvaw6DuX0wO5Jeko9sWrMBhh+PsYAZ7oXAiOnf/UKogyiw==}
     engines: {node: '>= 10.0.0'}
-
-  unorm@1.6.0:
-    resolution: {integrity: sha512-b2/KCUlYZUeA7JFUuRJZPUtr4gZvBh7tavtv4fvk4+KV9pfGiR6CQAQAWl49ZpR3ts2dk4FYkP7EIgDJoiOLDA==}
-    engines: {node: '>= 0.4.0'}
 
   unpipe@1.0.0:
     resolution: {integrity: sha512-pjy2bYhSsufwWlKwPc+l3cN7+wuJlK6uz0YdJEOlQDbl6jo/YlPi4mb8agUkVC8BF7V8NuzeyPNqRksA3hztKQ==}
@@ -7119,8 +7096,6 @@ snapshots:
   '@types/json-schema@7.0.15': {}
 
   '@types/json5@0.0.29': {}
-
-  '@types/jsonminify@0.4.3': {}
 
   '@types/jsonwebtoken@9.0.10':
     dependencies:
@@ -8774,8 +8749,6 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  find-root@1.1.0: {}
-
   find-up@5.0.0:
     dependencies:
       locate-path: 6.0.0
@@ -9429,8 +9402,6 @@ snapshots:
       universalify: 2.0.1
     optionalDependencies:
       graceful-fs: 4.2.11
-
-  jsonminify@0.4.2: {}
 
   jsonschema-draft4@1.0.0: {}
 
@@ -11180,8 +11151,6 @@ snapshots:
   universalify@0.1.2: {}
 
   universalify@2.0.1: {}
-
-  unorm@1.6.0: {}
 
   unpipe@1.0.0: {}
 
