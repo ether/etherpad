@@ -56,7 +56,12 @@ export const encodeJavaScriptIdentifier = (text: string) => text && text.replace
 export const encodeJavaScriptString = (text: string) => text && `"${encodeJavaScriptIdentifier(text)}"`;
 
 // This is not great, but it is useful.
-const JSON_STRING_LITERAL_EXPRESSION = /"(?:\\.|[^"])*"/gm;
+// NB: the original `security` package used /"(?:\\.|[^"])*"/, where `[^"]` also
+// matches a backslash and so overlaps with `\\.`, causing exponential
+// backtracking (ReDoS) on adversarial input. We exclude the backslash from the
+// character class so the two alternatives are mutually exclusive — this matches
+// exactly the same well-formed JSON string literals but in linear time.
+const JSON_STRING_LITERAL_EXPRESSION = /"(?:[^"\\]|\\.)*"/gm;
 export const encodeJavaScriptData = (object: any) => JSON.stringify(object).replace(JSON_STRING_LITERAL_EXPRESSION,
     (string: string) => encodeJavaScriptString(JSON.parse(string)));
 

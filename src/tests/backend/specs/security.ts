@@ -60,5 +60,19 @@ describe(__filename, function () {
     it('encodeCSSString quotes and backslash-escapes specials', function () {
       assert.equal(Security.encodeCSSString('a;b'), '"a\\00003bb"');
     });
+    it('encodeJavaScriptData escapes specials inside JSON string literals', function () {
+      assert.equal(
+          Security.encodeJavaScriptData({a: '<b>', c: 'x"y', d: 'a\\b'}),
+          '{"a":"\\u003cb\\u003e","c":"x\\u0022y","d":"a\\u005cb"}');
+    });
+    it('encodeJavaScriptData regex is linear (ReDoS guard)', function () {
+      // The JSON-string-literal regex used to be /"(?:\\.|[^"])*"/, which
+      // backtracks exponentially on an unterminated string of `\!` repeats.
+      // Run the regex directly on adversarial input and assert it returns fast.
+      const evil = `"${'\\!'.repeat(50000)}`; // no closing quote
+      const start = Date.now();
+      /"(?:[^"\\]|\\.)*"/gm.test(evil);
+      assert.ok(Date.now() - start < 1000, 'regex must not backtrack exponentially');
+    });
   });
 });
