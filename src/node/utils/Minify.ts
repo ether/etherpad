@@ -39,7 +39,6 @@ const ROOT_DIR = path.join(settings.root, 'src/static/');
 const LIBRARY_WHITELIST = [
   'async',
   'js-cookie',
-  'security',
   'split-grid',
   'tinycon',
   'underscore',
