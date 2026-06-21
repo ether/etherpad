@@ -13,15 +13,16 @@
  */
 
 const fs = require('fs');
-const jsonminify = require('jsonminify');
+const {parse: parseJsonc} = require('jsonc-parser');
 
 function loadSettings() {
   let settingsStr = fs.readFileSync(`${__dirname}/../../../settings.json.docker`).toString();
   // try to parse the settings
   try {
     if (settingsStr) {
-      settingsStr = jsonminify(settingsStr).replace(',]', ']').replace(',}', '}');
-      const settings = JSON.parse(settingsStr);
+      // jsonc-parser tolerates the comments and trailing commas in the docker
+      // settings file, matching node/utils/Settings.ts.
+      const settings = parseJsonc(settingsStr, [], {allowTrailingComma: true});
 
       // custom settings for running in a container
       settings.ip = 'localhost';
