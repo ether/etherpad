@@ -27,13 +27,18 @@ export default defineConfig({
             items: [
                 { text: 'Docker', link: '/docker.md' },
                 { text: 'Configuration', link: '/configuration.md' },
+                { text: 'Deployment', link: '/deployment.md' },
+                { text: 'Database', link: '/database.md' },
                 { text: 'Localization', link: '/localization.md' },
                 { text: 'Cookies', link: '/cookies.md' },
                 { text: 'Plugins', link: '/plugins.md' },
                 { text: 'Stats', link: '/stats.md' },
                 {text: 'Skins', link: '/skins.md' },
+                { text: 'Accessibility', link: '/accessibility.md' },
                 {text: 'Demo', link: '/demo.md' },
               {text: 'CLI', link: '/cli.md'},
+                { text: 'Development', link: '/development.md' },
+                { text: 'FAQ', link: '/faq.md' },
                 ]
           },
           {
