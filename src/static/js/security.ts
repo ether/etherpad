@@ -39,40 +39,30 @@ const HTML_ENTITY_MAP: {[c: string]: string} = {
 
 // OWASP Guidelines: &, <, >, ", ' plus forward slash.
 const HTML_CHARACTERS_EXPRESSION = /[&"'<>/]/gm;
-const escapeHTML = (text: string) => text && text.replace(HTML_CHARACTERS_EXPRESSION,
+export const escapeHTML = (text: string) => text && text.replace(HTML_CHARACTERS_EXPRESSION,
     (c: string) => HTML_ENTITY_MAP[c] || c);
 
 // OWASP Guidelines: escape all non alphanumeric characters in ASCII space.
 const HTML_ATTRIBUTE_CHARACTERS_EXPRESSION = /[\x00-\x2F\x3A-\x40\x5B-\x60\x7B-\xFF]/gm;
-const escapeHTMLAttribute = (text: string) => text && text.replace(HTML_ATTRIBUTE_CHARACTERS_EXPRESSION,
+export const escapeHTMLAttribute = (text: string) => text && text.replace(HTML_ATTRIBUTE_CHARACTERS_EXPRESSION,
     (c: string) => HTML_ENTITY_MAP[c] || `&#x${(`00${c.charCodeAt(0).toString(16)}`).slice(-2)};`);
 
 // OWASP Guidelines: escape all non alphanumeric characters in ASCII space.
 // Also include line breaks (for literal).
 const JAVASCRIPT_CHARACTERS_EXPRESSION = /[\x00-\x2F\x3A-\x40\x5B-\x60\x7B-\xFF\u2028\u2029]/gm;
-const encodeJavaScriptIdentifier = (text: string) => text && text.replace(JAVASCRIPT_CHARACTERS_EXPRESSION,
+export const encodeJavaScriptIdentifier = (text: string) => text && text.replace(JAVASCRIPT_CHARACTERS_EXPRESSION,
     (c: string) => `\\u${(`0000${c.charCodeAt(0).toString(16)}`).slice(-4)}`);
 
-const encodeJavaScriptString = (text: string) => text && `"${encodeJavaScriptIdentifier(text)}"`;
+export const encodeJavaScriptString = (text: string) => text && `"${encodeJavaScriptIdentifier(text)}"`;
 
 // This is not great, but it is useful.
 const JSON_STRING_LITERAL_EXPRESSION = /"(?:\\.|[^"])*"/gm;
-const encodeJavaScriptData = (object: any) => JSON.stringify(object).replace(JSON_STRING_LITERAL_EXPRESSION,
+export const encodeJavaScriptData = (object: any) => JSON.stringify(object).replace(JSON_STRING_LITERAL_EXPRESSION,
     (string: string) => encodeJavaScriptString(JSON.parse(string)));
 
 // OWASP Guidelines: escape all non alphanumeric characters in ASCII space.
 const CSS_CHARACTERS_EXPRESSION = /[\x00-\x2F\x3A-\x40\x5B-\x60\x7B-\xFF]/gm;
-const encodeCSSIdentifier = (text: string) => text && text.replace(CSS_CHARACTERS_EXPRESSION,
+export const encodeCSSIdentifier = (text: string) => text && text.replace(CSS_CHARACTERS_EXPRESSION,
     (c: string) => `\\${(`000000${c.charCodeAt(0).toString(16)}`).slice(-6)}`);
 
-const encodeCSSString = (text: string) => text && `"${encodeCSSIdentifier(text)}"`;
-
-module.exports = {
-  escapeHTML,
-  escapeHTMLAttribute,
-  encodeJavaScriptIdentifier,
-  encodeJavaScriptString,
-  encodeJavaScriptData,
-  encodeCSSIdentifier,
-  encodeCSSString,
-};
+export const encodeCSSString = (text: string) => text && `"${encodeCSSIdentifier(text)}"`;

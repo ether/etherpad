@@ -24,7 +24,7 @@ import {binarySearch} from "./ace2_common";
  * limitations under the License.
  */
 
-const Security = require('./security');
+import * as Security from './security';
 import jsCookie, {CookiesStatic} from 'js-cookie'
 
 /**
