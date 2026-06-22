@@ -82,7 +82,7 @@ jobs:
         with:
           ruby-version: 2.7
 
-      - uses: reitzig/actions-asciidoctor@v2.0.4
+      - uses: reitzig/actions-asciidoctor@v2.0.5
         with:
           version: 2.0.18
       - name: Prepare release
