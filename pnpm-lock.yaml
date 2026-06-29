@@ -299,8 +299,8 @@ importers:
         specifier: ^9.0.1
         version: 9.0.1
       oidc-provider:
-        specifier: 9.8.5
-        version: 9.8.5
+        specifier: 9.8.6
+        version: 9.8.6
       openapi-backend:
         specifier: ^5.17.0
         version: 5.17.0
@@ -4287,8 +4287,8 @@ packages:
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
     hasBin: true
 
-  nanoid@5.1.11:
-    resolution: {integrity: sha512-v+KEsUv2ps74PaSKv0gHTxTCgMXOIfBEbaqa6w6ISIGC7ZsvHN4N9oJ8d4cmf0n5oTzQz2SLmThbQWhjd/8eKg==}
+  nanoid@5.1.16:
+    resolution: {integrity: sha512-kVrnsrJqMR8+oLJnGEmSWw9BivK5mt7H3FZatVRjrc5wGqFYuBxX1yG7+A7Gi5AefkX6t/oCkizcQgpu0cY1dQ==}
     engines: {node: ^18 || >=20}
     hasBin: true
 
@@ -4381,8 +4381,8 @@ packages:
     resolution: {integrity: sha512-9miFgM2OFba7hB+pRgvtV84pYTBaoTHohvmIgiRt6dRIzbwEOIaNaP+dIlGs2fNFoB0SeISs0Jz5WFVRid6Xyg==}
     engines: {node: '>=12.20.0'}
 
-  oidc-provider@9.8.5:
-    resolution: {integrity: sha512-07Wqkea8jdfPI8GvbVwf9rMNNitLUzzDqPua7hWbqZreFNpfnlNVdqmllaripVmgDZS2tHHLYQYLW0Ay7yux9w==}
+  oidc-provider@9.8.6:
+    resolution: {integrity: sha512-jodnMKbwfMbV5qUFnbCxtnrdRztJJubJbw/7HTokIJSiHm1JT7pU4G83sD/bPkvZnFDdv5POB/kJU5uGG3ek4g==}
 
   on-finished@2.4.1:
     resolution: {integrity: sha512-oVlzkg3ENAhCk2zdv7IJwd/QUD4z2RxRwpkcGY8psCVcCYZNq4wYnVWALHM+brtuJjePWiYF/ClmuDr8Ch5+kg==}
@@ -9815,7 +9815,7 @@ snapshots:
 
   nanoid@3.3.12: {}
 
-  nanoid@5.1.11: {}
+  nanoid@5.1.16: {}
 
   native-duplexpair@1.0.0: {}
 
@@ -9900,7 +9900,7 @@ snapshots:
 
   obug@2.1.3: {}
 
-  oidc-provider@9.8.5:
+  oidc-provider@9.8.6:
     dependencies:
       '@koa/cors': 5.0.0
       '@koa/router': 15.6.0(koa@3.2.1)
@@ -9909,7 +9909,7 @@ snapshots:
       jose: 6.2.3
       jsesc: 3.1.0
       koa: 3.2.1
-      nanoid: 5.1.11
+      nanoid: 5.1.16
       quick-lru: 7.3.0
       raw-body: 3.0.2
     transitivePeerDependencies:
@@ -10206,7 +10206,7 @@ snapshots:
   proxy-agent@6.5.0:
     dependencies:
       agent-base: 7.1.3
-      debug: 4.4.3(supports-color@8.1.1)
+      debug: 4.4.1
       http-proxy-agent: 7.0.2
       https-proxy-agent: 7.0.6
       lru-cache: 7.18.3
