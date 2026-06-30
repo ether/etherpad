@@ -51,7 +51,7 @@ jobs:
           cache: pnpm
       -
         name: Install libreoffice
-        uses: awalsh128/cache-apt-pkgs-action@v1.6.1
+        uses: awalsh128/cache-apt-pkgs-action@v1.6.3
         with:
           packages: libreoffice libreoffice-pdfimport
           version: 1.0
@@ -107,7 +107,7 @@ jobs:
           cache: pnpm
       -
         name: Install libreoffice
-        uses: awalsh128/cache-apt-pkgs-action@v1.6.1
+        uses: awalsh128/cache-apt-pkgs-action@v1.6.3
         with:
           packages: libreoffice libreoffice-pdfimport
           version: 1.0
