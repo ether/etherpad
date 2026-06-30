@@ -166,7 +166,7 @@ importers:
         version: 4.22.4
       ueberdb2:
         specifier: 6.1.14
-        version: 6.1.14(@elastic/elasticsearch@9.4.2)(async@3.2.6)(cassandra-driver@4.8.0)(dirty-ts@1.1.8)(mongodb@7.3.0)(mssql@12.5.5(@azure/core-client@1.10.1))(mysql2@3.22.5(@types/node@26.0.1))(nano@11.0.5)(pg@8.22.0)(redis@6.0.0(@opentelemetry/api@1.9.1))(rethinkdb@2.4.2)(rusty-store-kv@1.3.1)(surrealdb@2.0.3(tslib@2.8.1)(typescript@6.0.3))
+        version: 6.1.14(@elastic/elasticsearch@9.4.2)(async@3.2.6)(cassandra-driver@4.8.0)(dirty-ts@1.1.8)(mongodb@7.3.0)(mssql@12.5.5(@azure/core-client@1.10.1))(mysql2@3.22.5(@types/node@26.0.1))(nano@11.0.5)(pg@8.22.0)(redis@6.0.0(@opentelemetry/api@1.9.1))(rethinkdb@2.4.2)(rusty-store-kv@1.3.1)(surrealdb@2.0.4(tslib@2.8.1)(typescript@6.0.3))
     devDependencies:
       '@types/node':
         specifier: ^26.0.1
@@ -350,8 +350,8 @@ importers:
         specifier: 10.3.0
         version: 10.3.0
       surrealdb:
-        specifier: ^2.0.3
-        version: 2.0.3(tslib@2.8.1)(typescript@6.0.3)
+        specifier: ^2.0.4
+        version: 2.0.4(tslib@2.8.1)(typescript@6.0.3)
       tinycon:
         specifier: 0.6.8
         version: 0.6.8
@@ -360,7 +360,7 @@ importers:
         version: 4.22.4
       ueberdb2:
         specifier: 6.1.14
-        version: 6.1.14(@elastic/elasticsearch@9.4.2)(async@3.2.6)(cassandra-driver@4.8.0)(dirty-ts@1.1.8)(mongodb@7.3.0)(mssql@12.5.5(@azure/core-client@1.10.1))(mysql2@3.22.5(@types/node@26.0.1))(nano@11.0.5)(pg@8.22.0)(redis@6.0.0(@opentelemetry/api@1.9.1))(rethinkdb@2.4.2)(rusty-store-kv@1.3.1)(surrealdb@2.0.3(tslib@2.8.1)(typescript@6.0.3))
+        version: 6.1.14(@elastic/elasticsearch@9.4.2)(async@3.2.6)(cassandra-driver@4.8.0)(dirty-ts@1.1.8)(mongodb@7.3.0)(mssql@12.5.5(@azure/core-client@1.10.1))(mysql2@3.22.5(@types/node@26.0.1))(nano@11.0.5)(pg@8.22.0)(redis@6.0.0(@opentelemetry/api@1.9.1))(rethinkdb@2.4.2)(rusty-store-kv@1.3.1)(surrealdb@2.0.4(tslib@2.8.1)(typescript@6.0.3))
       underscore:
         specifier: 1.13.8
         version: 1.13.8
@@ -1701,6 +1701,12 @@ packages:
   '@surrealdb/cbor@2.0.0-alpha.4':
     resolution: {integrity: sha512-l/hNZ3ZCOJq8rzwx1y5ZV/8b2bYCWdhGqRVY33Pu50NAHyAW5qLsMn3ZBkZow77mAKwNCsbDsRGnyYEuU95mjw==}
     engines: {node: '>=18.0.0'}
+
+  '@surrealdb/sqon@0.1.0':
+    resolution: {integrity: sha512-pooKLZ0W6mN8XHzJQavGOdfZOZksycmIjhwFwvG0kdCAt4I5U6KKPHcXQwFkTDNKFKFKdufczLRnzHapPIslQw==}
+    peerDependencies:
+      tslib: ^2.6.3
+      typescript: ^5.0.0
 
   '@swc/helpers@0.5.23':
     resolution: {integrity: sha512-5lSsMOTXURePglDfvuAQUqkGek9Hg2kksOYay2m0+XR++b2NWYL/4sWyuvVBIs8oKnJaxkdi9whaL/sqN13afw==}
@@ -5186,11 +5192,11 @@ packages:
     resolution: {integrity: sha512-ot0WnXS9fgdkgIcePe6RHNk1WA8+muPa6cSjeR3V8K27q9BB1rTE3R1p7Hv0z1ZyAc8s6Vvv8DIyWf681MAt0w==}
     engines: {node: '>= 0.4'}
 
-  surrealdb@2.0.3:
-    resolution: {integrity: sha512-60dXe7K+7M5EUr6VyIgd/SEUCKFXqc54JHUhCTG8IDlqp7pmuuQQWs2wpgulp2oSXpy+9jwKhgNR/mP3wrEgfw==}
+  surrealdb@2.0.4:
+    resolution: {integrity: sha512-tCmMzcsLB/CVDZtxsj/xOWY6NWy9MrX2abMuwnVpAI5xj7kvnq9noRtc1nhjuDihei/Njfkxe/NYMxy7ZLLl4g==}
     peerDependencies:
       tslib: ^2.6.3
-      typescript: ^5.0.0
+      typescript: ^5.0.0 || ^6.0.0
 
   swagger-schema-official@2.0.0-bab6bed:
     resolution: {integrity: sha512-rCC0NWGKr/IJhtRuPq/t37qvZHI/mH4I4sxflVM+qgVe5Z2uOCivzWaVbuioJaB61kvm5UvB7b49E+oBY0M8jA==}
@@ -6964,6 +6970,13 @@ snapshots:
   '@standard-schema/spec@1.1.0': {}
 
   '@surrealdb/cbor@2.0.0-alpha.4': {}
+
+  '@surrealdb/sqon@0.1.0(tslib@2.8.1)(typescript@6.0.3)':
+    dependencies:
+      '@surrealdb/cbor': 2.0.0-alpha.4
+      tslib: 2.8.1
+      typescript: 6.0.3
+      uuidv7: 1.2.1
 
   '@swc/helpers@0.5.23':
     dependencies:
@@ -10880,12 +10893,11 @@ snapshots:
 
   supports-preserve-symlinks-flag@1.0.0: {}
 
-  surrealdb@2.0.3(tslib@2.8.1)(typescript@6.0.3):
+  surrealdb@2.0.4(tslib@2.8.1)(typescript@6.0.3):
     dependencies:
-      '@surrealdb/cbor': 2.0.0-alpha.4
+      '@surrealdb/sqon': 0.1.0(tslib@2.8.1)(typescript@6.0.3)
       tslib: 2.8.1
       typescript: 6.0.3
-      uuidv7: 1.2.1
 
   swagger-schema-official@2.0.0-bab6bed: {}
 
@@ -11059,7 +11071,7 @@ snapshots:
 
   typescript@6.0.3: {}
 
-  ueberdb2@6.1.14(@elastic/elasticsearch@9.4.2)(async@3.2.6)(cassandra-driver@4.8.0)(dirty-ts@1.1.8)(mongodb@7.3.0)(mssql@12.5.5(@azure/core-client@1.10.1))(mysql2@3.22.5(@types/node@26.0.1))(nano@11.0.5)(pg@8.22.0)(redis@6.0.0(@opentelemetry/api@1.9.1))(rethinkdb@2.4.2)(rusty-store-kv@1.3.1)(surrealdb@2.0.3(tslib@2.8.1)(typescript@6.0.3)):
+  ueberdb2@6.1.14(@elastic/elasticsearch@9.4.2)(async@3.2.6)(cassandra-driver@4.8.0)(dirty-ts@1.1.8)(mongodb@7.3.0)(mssql@12.5.5(@azure/core-client@1.10.1))(mysql2@3.22.5(@types/node@26.0.1))(nano@11.0.5)(pg@8.22.0)(redis@6.0.0(@opentelemetry/api@1.9.1))(rethinkdb@2.4.2)(rusty-store-kv@1.3.1)(surrealdb@2.0.4(tslib@2.8.1)(typescript@6.0.3)):
     optionalDependencies:
       '@elastic/elasticsearch': 9.4.2
       async: 3.2.6
@@ -11073,7 +11085,7 @@ snapshots:
       redis: 6.0.0(@opentelemetry/api@1.9.1)
       rethinkdb: 2.4.2
       rusty-store-kv: 1.3.1
-      surrealdb: 2.0.3(tslib@2.8.1)(typescript@6.0.3)
+      surrealdb: 2.0.4(tslib@2.8.1)(typescript@6.0.3)
 
   uid-safe@2.1.5:
     dependencies:
