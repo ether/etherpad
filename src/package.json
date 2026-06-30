@@ -64,7 +64,7 @@
     "mssql": "^12.5.5",
     "mysql2": "^3.22.5",
     "nano": "^11.0.5",
-    "nodemailer": "^9.0.1",
+    "nodemailer": "^9.0.3",
     "oidc-provider": "9.8.6",
     "openapi-backend": "^5.17.0",
     "pdfkit": "^0.19.1",
