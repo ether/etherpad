@@ -22,9 +22,9 @@
     "openapi-react-query": "^0.5.4"
   },
   "devDependencies": {
-    "@radix-ui/react-dialog": "^1.1.17",
-    "@radix-ui/react-toast": "^1.2.17",
-    "@radix-ui/react-visually-hidden": "^1.2.6",
+    "@radix-ui/react-dialog": "^1.1.18",
+    "@radix-ui/react-toast": "^1.2.18",
+    "@radix-ui/react-visually-hidden": "^1.2.7",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@typescript-eslint/eslint-plugin": "^8.62.1",
@@ -36,7 +36,7 @@
     "eslint-plugin-react-refresh": "^0.5.3",
     "i18next": "^26.3.4",
     "i18next-browser-languagedetector": "^8.2.1",
-    "lucide-react": "^1.22.0",
+    "lucide-react": "^1.23.0",
     "openapi-typescript": "^7.13.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
@@ -46,7 +46,7 @@
     "socket.io-client": "^4.8.3",
     "tsx": "^4.22.4",
     "typescript": "^6.0.3",
-    "vite": "^8.1.1",
+    "vite": "^8.1.2",
     "vite-plugin-babel": "^1.7.3",
     "zustand": "^5.0.14"
   }
