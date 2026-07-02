@@ -87,7 +87,7 @@
     "tsx": "4.22.4",
     "ueberdb2": "6.1.15",
     "underscore": "1.13.8",
-    "undici": "^8.5.0",
+    "undici": "^8.6.0",
     "wtfnode": "^0.10.1"
   },
   "bin": {
