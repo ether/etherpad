@@ -166,7 +166,7 @@ importers:
         version: 4.23.0
       ueberdb2:
         specifier: 6.1.15
-        version: 6.1.15(@elastic/elasticsearch@9.4.2)(async@3.2.6)(cassandra-driver@4.8.0)(dirty-ts@1.1.8)(mongodb@7.4.0)(mssql@12.6.0)(mysql2@3.22.5(@types/node@26.1.0))(nano@11.0.6)(pg@8.22.0)(redis@6.1.0(@opentelemetry/api@1.9.1))(rethinkdb@2.4.2)(rusty-store-kv@1.3.1)(surrealdb@2.0.4(tslib@2.8.1)(typescript@6.0.3))
+        version: 6.1.15(@elastic/elasticsearch@9.4.2)(async@3.2.6)(cassandra-driver@4.8.0)(dirty-ts@1.1.8)(mongodb@7.4.0)(mssql@12.6.0)(mysql2@3.22.6(@types/node@26.1.0))(nano@11.0.6)(pg@8.22.0)(redis@6.1.0(@opentelemetry/api@1.9.1))(rethinkdb@2.4.2)(rusty-store-kv@1.3.1)(surrealdb@2.0.4(tslib@2.8.1)(typescript@6.0.3))
     devDependencies:
       '@types/node':
         specifier: ^26.1.0
@@ -290,8 +290,8 @@ importers:
         specifier: ^12.6.0
         version: 12.6.0
       mysql2:
-        specifier: ^3.22.5
-        version: 3.22.5(@types/node@26.1.0)
+        specifier: ^3.22.6
+        version: 3.22.6(@types/node@26.1.0)
       nano:
         specifier: ^11.0.6
         version: 11.0.6
@@ -360,7 +360,7 @@ importers:
         version: 4.23.0
       ueberdb2:
         specifier: 6.1.15
-        version: 6.1.15(@elastic/elasticsearch@9.4.2)(async@3.2.6)(cassandra-driver@4.8.0)(dirty-ts@1.1.8)(mongodb@7.4.0)(mssql@12.6.0)(mysql2@3.22.5(@types/node@26.1.0))(nano@11.0.6)(pg@8.22.0)(redis@6.1.0(@opentelemetry/api@1.9.1))(rethinkdb@2.4.2)(rusty-store-kv@1.3.1)(surrealdb@2.0.4(tslib@2.8.1)(typescript@6.0.3))
+        version: 6.1.15(@elastic/elasticsearch@9.4.2)(async@3.2.6)(cassandra-driver@4.8.0)(dirty-ts@1.1.8)(mongodb@7.4.0)(mssql@12.6.0)(mysql2@3.22.6(@types/node@26.1.0))(nano@11.0.6)(pg@8.22.0)(redis@6.1.0(@opentelemetry/api@1.9.1))(rethinkdb@2.4.2)(rusty-store-kv@1.3.1)(surrealdb@2.0.4(tslib@2.8.1)(typescript@6.0.3))
       underscore:
         specifier: 1.13.8
         version: 1.13.8
@@ -3584,8 +3584,8 @@ packages:
       typescript:
         optional: true
 
-  iconv-lite@0.7.2:
-    resolution: {integrity: sha512-im9DjEDQ55s9fL4EYzOAv0yMqmMBSZp6G0VvFyTMPKWxiSBHUj9NW/qqLmXUwXrrM7AvqSlTCfvqRb0cM8yYqw==}
+  iconv-lite@0.7.3:
+    resolution: {integrity: sha512-IKXpvIzjnC9XTAUbVBcMfGS0EPaIXtW6v+zr+RRp+hqULEpo0owZax6wyRwPOJbWbzjYspQwusTsfVr0ifh4uQ==}
     engines: {node: '>=0.10.0'}
 
   ieee754@1.2.1:
@@ -4245,8 +4245,8 @@ packages:
     engines: {node: '>=18.19.0'}
     hasBin: true
 
-  mysql2@3.22.5:
-    resolution: {integrity: sha512-95uZ2TrPWAZdwpB3vvvDbmEMcNG8yIeNCyu6GUcr/QnWEE/wXm7+mhOCsdQfWQDTV7qYT/PDUZ4U4UPP4AsXqQ==}
+  mysql2@3.22.6:
+    resolution: {integrity: sha512-fPKmeDGUzvFP7bMD5SASlJ5zIgvCC4hbanTmhbUlEmhyrY1hR4Hi3xLOWgTd3luYjLVifx6uGvMNJ2m/LlqEpg==}
     engines: {node: '>= 8.0'}
     peerDependencies:
       '@types/node': '>= 8'
@@ -5098,8 +5098,8 @@ packages:
   sprintf-js@1.1.3:
     resolution: {integrity: sha512-Oo+0REFV59/rz3gfJNKQiBlwfHaSESl1pcGyABQsnnIfWOFt6JNj5gCog2U6MLZ//IGYD+nA8nI+mTShREReaA==}
 
-  sql-escaper@1.3.3:
-    resolution: {integrity: sha512-BsTCV265VpTp8tm1wyIm1xqQCS+Q9NHx2Sr+WcnUrgLrQ6yiDIvHYJV5gHxsj1lMBy2zm5twLaZao8Jd+S8JJw==}
+  sql-escaper@1.4.0:
+    resolution: {integrity: sha512-Ti/Zx9J3aITMYUMFhCKbkplQjyi7Kk2SyYXp+rzrkyKZetIy19XbQtVZ+0ZR5aVm/178tIJ6+aVvBqXkH+Xs7w==}
     engines: {bun: '>=1.0.0', deno: '>=2.0.0', node: '>=12.0.0'}
 
   stable-hash@0.0.5:
@@ -7795,7 +7795,7 @@ snapshots:
       content-type: 1.0.5
       debug: 4.4.3(supports-color@8.1.1)
       http-errors: 2.0.1
-      iconv-lite: 0.7.2
+      iconv-lite: 0.7.3
       on-finished: 2.4.1
       qs: 6.15.2
       raw-body: 3.0.2
@@ -9145,7 +9145,7 @@ snapshots:
     optionalDependencies:
       typescript: 6.0.3
 
-  iconv-lite@0.7.2:
+  iconv-lite@0.7.3:
     dependencies:
       safer-buffer: 2.1.2
 
@@ -9802,17 +9802,17 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  mysql2@3.22.5(@types/node@26.1.0):
+  mysql2@3.22.6(@types/node@26.1.0):
     dependencies:
       '@types/node': 26.1.0
       aws-ssl-profiles: 1.1.2
       denque: 2.1.0
       generate-function: 2.3.1
-      iconv-lite: 0.7.2
+      iconv-lite: 0.7.3
       long: 5.3.2
       lru.min: 1.1.4
       named-placeholders: 1.1.6
-      sql-escaper: 1.3.3
+      sql-escaper: 1.4.0
 
   named-placeholders@1.1.6:
     dependencies:
@@ -10260,7 +10260,7 @@ snapshots:
     dependencies:
       bytes: 3.1.2
       http-errors: 2.0.1
-      iconv-lite: 0.7.2
+      iconv-lite: 0.7.3
       unpipe: 1.0.0
 
   react-dom@19.2.7(react@19.2.7):
@@ -10786,7 +10786,7 @@ snapshots:
 
   sprintf-js@1.1.3: {}
 
-  sql-escaper@1.3.3: {}
+  sql-escaper@1.4.0: {}
 
   stable-hash@0.0.5: {}
 
@@ -10933,7 +10933,7 @@ snapshots:
       '@js-joda/core': 6.0.1
       '@types/node': 26.0.1
       bl: 6.1.6
-      iconv-lite: 0.7.2
+      iconv-lite: 0.7.3
       js-md4: 0.3.2
       native-duplexpair: 1.0.0
       sprintf-js: 1.1.3
@@ -11074,7 +11074,7 @@ snapshots:
 
   typescript@6.0.3: {}
 
-  ueberdb2@6.1.15(@elastic/elasticsearch@9.4.2)(async@3.2.6)(cassandra-driver@4.8.0)(dirty-ts@1.1.8)(mongodb@7.4.0)(mssql@12.6.0)(mysql2@3.22.5(@types/node@26.1.0))(nano@11.0.6)(pg@8.22.0)(redis@6.1.0(@opentelemetry/api@1.9.1))(rethinkdb@2.4.2)(rusty-store-kv@1.3.1)(surrealdb@2.0.4(tslib@2.8.1)(typescript@6.0.3)):
+  ueberdb2@6.1.15(@elastic/elasticsearch@9.4.2)(async@3.2.6)(cassandra-driver@4.8.0)(dirty-ts@1.1.8)(mongodb@7.4.0)(mssql@12.6.0)(mysql2@3.22.6(@types/node@26.1.0))(nano@11.0.6)(pg@8.22.0)(redis@6.1.0(@opentelemetry/api@1.9.1))(rethinkdb@2.4.2)(rusty-store-kv@1.3.1)(surrealdb@2.0.4(tslib@2.8.1)(typescript@6.0.3)):
     optionalDependencies:
       '@elastic/elasticsearch': 9.4.2
       async: 3.2.6
@@ -11082,7 +11082,7 @@ snapshots:
       dirty-ts: 1.1.8
       mongodb: 7.4.0
       mssql: 12.6.0
-      mysql2: 3.22.5(@types/node@26.1.0)
+      mysql2: 3.22.6(@types/node@26.1.0)
       nano: 11.0.6
       pg: 8.22.0
       redis: 6.1.0(@opentelemetry/api@1.9.1)
