@@ -60,7 +60,7 @@
     "mammoth": "^1.12.0",
     "measured-core": "^2.0.0",
     "mime-types": "^3.0.2",
-    "mongodb": "^7.4.0",
+    "mongodb": "^7.5.0",
     "mssql": "^12.6.0",
     "mysql2": "^3.22.6",
     "nano": "^11.0.6",
