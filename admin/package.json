@@ -34,7 +34,7 @@
     "eslint": "^10.6.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.3",
-    "i18next": "^26.3.4",
+    "i18next": "^26.3.5",
     "i18next-browser-languagedetector": "^8.2.1",
     "lucide-react": "^1.23.0",
     "openapi-typescript": "^7.13.0",
