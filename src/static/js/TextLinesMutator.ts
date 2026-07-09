@@ -280,7 +280,7 @@ class TextLinesMutator {
     if (!this._inSplice) this._enterSplice();
     if (L) {
       // @ts-ignore
-      const newLines = splitTextLines(text);
+      const newLines = splitTextLines(text) ?? [];
       if (this._isCurLineInSplice()) {
         const sline = this._curSplice.length - 1;
         /** @type {string} */
