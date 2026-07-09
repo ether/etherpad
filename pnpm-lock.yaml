@@ -299,8 +299,8 @@ importers:
         specifier: ^9.0.3
         version: 9.0.3
       oidc-provider:
-        specifier: 9.9.0
-        version: 9.9.0(supports-color@8.1.1)
+        specifier: 9.9.1
+        version: 9.9.1
       openapi-backend:
         specifier: ^5.18.0
         version: 5.18.0
@@ -4346,8 +4346,8 @@ packages:
     resolution: {integrity: sha512-9miFgM2OFba7hB+pRgvtV84pYTBaoTHohvmIgiRt6dRIzbwEOIaNaP+dIlGs2fNFoB0SeISs0Jz5WFVRid6Xyg==}
     engines: {node: '>=12.20.0'}
 
-  oidc-provider@9.9.0:
-    resolution: {integrity: sha512-RZVcul1BMSjQLaEbD9AYXLZYrWe7gW3n96akMqQC91Z9wmAHrsYKaUUutzxoYNTQj8UlQdRqtD5F+EqnXy7wGQ==}
+  oidc-provider@9.9.1:
+    resolution: {integrity: sha512-2kvtykfLu3FJSzaIStg8Dz58/pLtAwI3j/vLdy7KXJBDuJJAEgZhOSWklc+MTjKBLlQjeFwBXpKoE0Pf23pnIQ==}
 
   on-finished@2.4.1:
     resolution: {integrity: sha512-oVlzkg3ENAhCk2zdv7IJwd/QUD4z2RxRwpkcGY8psCVcCYZNq4wYnVWALHM+brtuJjePWiYF/ClmuDr8Ch5+kg==}
@@ -6329,7 +6329,7 @@ snapshots:
     dependencies:
       vary: 1.1.2
 
-  '@koa/router@15.7.0(koa@3.2.1)(supports-color@8.1.1)':
+  '@koa/router@15.7.0(koa@3.2.1)':
     dependencies:
       debug: 4.4.3(supports-color@8.1.1)
       http-errors: 2.0.1
@@ -9862,10 +9862,10 @@ snapshots:
 
   obug@2.1.3: {}
 
-  oidc-provider@9.9.0(supports-color@8.1.1):
+  oidc-provider@9.9.1:
     dependencies:
       '@koa/cors': 5.0.0
-      '@koa/router': 15.7.0(koa@3.2.1)(supports-color@8.1.1)
+      '@koa/router': 15.7.0(koa@3.2.1)
       debug: 4.4.3(supports-color@8.1.1)
       eta: 4.6.0
       jose: 6.2.3
