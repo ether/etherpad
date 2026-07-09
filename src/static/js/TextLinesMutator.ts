@@ -301,6 +301,7 @@ class TextLinesMutator {
         this._curSplice.push(theLine.substring(lineCol));
         this._curCol = 0; // TODO(doc) why is this not set to the length of last line?
       } else {
+        // @ts-ignore
         this._curSplice.push(...newLines);
         this._curLine += newLines!.length;
       }

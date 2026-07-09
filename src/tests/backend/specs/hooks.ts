@@ -563,8 +563,7 @@ describe(__filename, function () {
     });
 
     describe('supported hook function styles', function () {
-      // @ts-ignore
-      const supportedHookFunctions = supportedSyncHookFunctions.concat([
+      const supportedHookFunctions = (supportedSyncHookFunctions as any[]).concat([
         {
           name: 'legacy async cb',
           fn: (hn:Function, ctx:any, cb:Function) => { process.nextTick(cb, 'val'); },
