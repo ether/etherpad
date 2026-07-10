@@ -171,6 +171,7 @@ ARG ETHERPAD_GITHUB_PLUGINS=
 COPY --chown=etherpad:etherpad ./src/ ./src/
 COPY --chown=etherpad:etherpad --from=adminbuild /opt/etherpad-lite/src/templates/admin ./src/templates/admin
 COPY --chown=etherpad:etherpad --from=adminbuild /opt/etherpad-lite/src/static/oidc ./src/static/oidc
+RUN mkdir -p ./src/plugin_packages
 
 COPY --chown=etherpad:etherpad ./local_plugin[s] ./local_plugins/
 
@@ -203,6 +204,7 @@ RUN printf 'packages:\n  - src\n  - bin\nonlyBuiltDependencies:\n  - esbuild\nig
 COPY --chown=etherpad:etherpad ./src ./src
 COPY --chown=etherpad:etherpad --from=adminbuild /opt/etherpad-lite/src/templates/admin ./src/templates/admin
 COPY --chown=etherpad:etherpad --from=adminbuild /opt/etherpad-lite/src/static/oidc ./src/static/oidc
+RUN mkdir -p ./src/plugin_packages
 
 COPY --chown=etherpad:etherpad ./local_plugin[s] ./local_plugins/
 
