@@ -27,6 +27,16 @@ const getStage = (dockerfile: string, stageName: string): string => {
   return rest.slice(0, stageStart[0].length + nextStage.index);
 };
 
+const findInstruction = (
+  stage: string,
+  pattern: RegExp,
+  description: string,
+): RegExpExecArray => {
+  const match = pattern.exec(stage);
+  assert.ok(match, description);
+  return match;
+};
+
 describe(__filename, function () {
   describe('Docker plugin package volume mountpoint (issue #8026)', function () {
     let dockerfile: string;
@@ -38,22 +48,20 @@ describe(__filename, function () {
     for (const stageName of ['development', 'production']) {
       it(`creates src/plugin_packages in the ${stageName} runtime stage`, function () {
         const stage = getStage(dockerfile, stageName);
-        const srcCopy = stage.indexOf('COPY --chown=etherpad:etherpad ./src');
-        const mkdir = stage.indexOf('RUN mkdir -p ./src/plugin_packages');
-
-        assert.notStrictEqual(
-          srcCopy,
-          -1,
+        const srcCopy = findInstruction(
+          stage,
+          /^COPY\s+--chown=etherpad:etherpad\s+\.\/src\/?\s+\.\/src\/?\s*$/m,
           `Dockerfile ${stageName} stage must copy ./src before preparing plugin_packages`,
         );
-        assert.notStrictEqual(
-          mkdir,
-          -1,
+        const pluginPackagesDir = findInstruction(
+          stage,
+          /^RUN\s+.*\b(?:mkdir\s+-p|install\s+-d)(?:\s+\S+)*\s+\.\/src\/plugin_packages\b.*$/m,
           `Dockerfile ${stageName} stage must create ./src/plugin_packages so a fresh ` +
             'Docker named volume is initialized writable by the etherpad user',
         );
+
         assert.ok(
-          mkdir > srcCopy,
+          pluginPackagesDir.index > srcCopy.index,
           `Dockerfile ${stageName} stage must create ./src/plugin_packages after copying ./src`,
         );
       });
