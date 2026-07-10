@@ -8,9 +8,9 @@
 // the etherpad user. If the directory is absent, Docker creates it as root:root
 // and plugin installs fail when install.lock is created.
 
-const assert = require('assert').strict;
-import fs from 'fs';
-import path from 'path';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
 
 const repoRoot = path.join(__dirname, '../../../../');
 const readRepoFile = (rel: string) => fs.readFileSync(path.join(repoRoot, rel), 'utf8');
@@ -21,7 +21,9 @@ const getStage = (dockerfile: string, stageName: string): string => {
 
   const rest = dockerfile.slice(stageStart.index);
   const nextStage = /^FROM\s+/m.exec(rest.slice(stageStart[0].length));
+
   if (nextStage == null) return rest;
+
   return rest.slice(0, stageStart[0].length + nextStage.index);
 };
 
@@ -39,13 +41,21 @@ describe(__filename, function () {
         const srcCopy = stage.indexOf('COPY --chown=etherpad:etherpad ./src');
         const mkdir = stage.indexOf('RUN mkdir -p ./src/plugin_packages');
 
-        assert.notStrictEqual(srcCopy, -1,
-            `Dockerfile ${stageName} stage must copy ./src before preparing plugin_packages`);
-        assert.notStrictEqual(mkdir, -1,
-            `Dockerfile ${stageName} stage must create ./src/plugin_packages so a fresh ` +
-            'Docker named volume is initialized writable by the etherpad user');
-        assert.ok(mkdir > srcCopy,
-            `Dockerfile ${stageName} stage must create ./src/plugin_packages after copying ./src`);
+        assert.notStrictEqual(
+          srcCopy,
+          -1,
+          `Dockerfile ${stageName} stage must copy ./src before preparing plugin_packages`,
+        );
+        assert.notStrictEqual(
+          mkdir,
+          -1,
+          `Dockerfile ${stageName} stage must create ./src/plugin_packages so a fresh ` +
+            'Docker named volume is initialized writable by the etherpad user',
+        );
+        assert.ok(
+          mkdir > srcCopy,
+          `Dockerfile ${stageName} stage must create ./src/plugin_packages after copying ./src`,
+        );
       });
     }
   });
