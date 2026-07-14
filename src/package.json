@@ -84,7 +84,7 @@
     "superagent": "10.3.0",
     "surrealdb": "^2.0.4",
     "tinycon": "0.6.8",
-    "tsx": "4.23.0",
+    "tsx": "4.23.1",
     "ueberdb2": "6.1.16",
     "underscore": "1.13.8",
     "undici": "^8.7.0",
