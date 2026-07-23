@@ -46,7 +46,7 @@
     "html-to-docx": "^1.8.0",
     "htmlparser2": "^12.0.0",
     "http-errors": "^2.0.1",
-    "jose": "^6.2.3",
+    "jose": "^6.2.4",
     "js-cookie": "^3.0.8",
     "jsdom": "^29.1.1",
     "jsonc-parser": "^3.3.1",
