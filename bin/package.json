@@ -16,7 +16,7 @@
   "devDependencies": {
     "@types/node": "^26.1.1",
     "@types/semver": "^7.7.1",
-    "typescript": "^6.0.3"
+    "typescript": "^7.0.2"
   },
   "scripts": {
     "makeDocs": "node --import tsx make_docs.ts",
