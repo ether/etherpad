@@ -163,7 +163,13 @@ exports.doExport = async (req: any, res: any, padId: string, readOnlyId: string,
     // for the temp path token (see matching note in ImportHandler.ts).
     const randNum = crypto.randomBytes(16).toString('hex');
     const srcFile = `${tempDirectory}/etherpad_export_${randNum}.html`;
-    await fsp_writeFile(srcFile, html);
+    // Strip remote <img> tags before handing the document to LibreOffice.
+    // soffice fetches remote image URLs during conversion, so any plugin/hook
+    // that injects an <img src="http://..."> into export HTML would otherwise
+    // turn export into a blind SSRF sink. The native path already does this
+    // (see stripRemoteImages above); apply it here so both paths match.
+    const {stripRemoteImages} = require('../utils/ExportSanitizeHtml');
+    await fsp_writeFile(srcFile, stripRemoteImages(html));
 
     // ensure html can be collected by the garbage collector
     html = null;
