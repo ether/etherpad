@@ -632,6 +632,15 @@ class Pad {
   }
 
   async copy(destinationID: string, force: boolean) {
+    // Reject a destinationID that isn't a valid pad id BEFORE any db write. The
+    // copy path writes `pad:${destinationID}...` records directly (bypassing
+    // getPad), so a destinationID carrying the ueberdb delimiter `:` would
+    // otherwise clobber another pad's internal sub-records and slip past the
+    // force=false existence guard. (GHSA-wg58-mhwv-35pq.)
+    if (!padManager.isValidPadId(destinationID)) {
+      throw new CustomError('destinationID is not a valid padId', 'apierror');
+    }
+
     // Kick everyone from this pad.
     // This was commented due to https://github.com/ether/etherpad-lite/issues/3183.
     // Do we really need to kick everyone out?
@@ -729,6 +738,12 @@ class Pad {
   }
 
   async copyPadWithoutHistory(destinationID: string, force: string|boolean, authorId = '') {
+    // See copy(): reject an invalid destinationID (notably one containing the
+    // ueberdb delimiter `:`) before any db write. (GHSA-wg58-mhwv-35pq.)
+    if (!padManager.isValidPadId(destinationID)) {
+      throw new CustomError('destinationID is not a valid padId', 'apierror');
+    }
+
     // flush the source pad
     this.saveToDatabase();
 
