@@ -30,8 +30,15 @@ import {sanitizeProxyPath} from '../../utils/sanitizeProxyPath';
 // headers in Vary so a shared cache/CDN in front of Etherpad keys on them and
 // can't serve a proxy-path injected by one client to another (cache poisoning).
 // Mirrors the admin-route fix in admin.ts (GHSA-fjgc-3mj7-8rg8).
-const PROXY_PATH_VARY_HEADERS = ['x-proxy-path', 'x-forwarded-prefix', 'x-ingress-path'];
-const varyOnProxyPath = (res: any) => res.vary(PROXY_PATH_VARY_HEADERS);
+//
+// Only vary on the headers sanitizeProxyPath() actually consults for the
+// current config: x-proxy-path is always honored, but x-forwarded-prefix and
+// x-ingress-path are ignored unless trustProxy is enabled — varying on them
+// then would only fragment shared caches without affecting the response.
+const varyOnProxyPath = (res: any) => {
+  res.vary('x-proxy-path');
+  if (settings.trustProxy) res.vary(['x-forwarded-prefix', 'x-ingress-path']);
+};
 
 
 exports.socketio = (hookName: string, {io}: any) => {
