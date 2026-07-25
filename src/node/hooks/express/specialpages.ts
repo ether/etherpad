@@ -25,6 +25,14 @@ let ioI: { sockets: { sockets: any[]; }; } | null = null
 // rules. Reused by admin.ts so both call sites share one definition.
 import {sanitizeProxyPath} from '../../utils/sanitizeProxyPath';
 
+// Public routes echo the proxy-path headers into rendered URLs, social-preview
+// metadata, manifest links and the legacy timeslider redirect. Advertise the
+// headers in Vary so a shared cache/CDN in front of Etherpad keys on them and
+// can't serve a proxy-path injected by one client to another (cache poisoning).
+// Mirrors the admin-route fix in admin.ts (GHSA-fjgc-3mj7-8rg8).
+const PROXY_PATH_VARY_HEADERS = ['x-proxy-path', 'x-forwarded-prefix', 'x-ingress-path'];
+const varyOnProxyPath = (res: any) => res.vary(PROXY_PATH_VARY_HEADERS);
+
 
 exports.socketio = (hookName: string, {io}: any) => {
   ioI = io
@@ -173,6 +181,7 @@ const handleLiveReload = async (args: ArgsExpressType, padString: string, timeSl
       })
       setRouteHandler('/', (req: any, res: any) => {
         const proxyPath = sanitizeProxyPath(req);
+        varyOnProxyPath(res);
         const socialMetaHtml = renderSocialMeta({
           req, settings, availableLangs: i18n.availableLangs, locales: i18n.locales, kind: 'home',
           proxyPath,
@@ -202,6 +211,7 @@ const handleLiveReload = async (args: ArgsExpressType, padString: string, timeSl
         });
 
         const proxyPath = sanitizeProxyPath(req);
+        varyOnProxyPath(res);
         const socialMetaHtml = renderSocialMeta({
           req, settings, availableLangs: i18n.availableLangs, locales: i18n.locales, kind: 'pad', padName: req.params.pad,
           proxyPath,
@@ -246,6 +256,7 @@ const handleLiveReload = async (args: ArgsExpressType, padString: string, timeSl
         });
 
         const proxyPath = sanitizeProxyPath(req);
+        varyOnProxyPath(res);
         const socialMetaHtml = renderSocialMeta({
           req, settings, availableLangs: i18n.availableLangs, locales: i18n.locales, kind: 'timeslider', padName: req.params.pad,
           proxyPath,
@@ -369,6 +380,7 @@ exports.expressCreateServer = async (_hookName: string, args: ArgsExpressType, c
     // serve index.html under /
     args.app.get('/', (req: any, res: any) => {
       const proxyPath = sanitizeProxyPath(req);
+      varyOnProxyPath(res);
       const socialMetaHtml = renderSocialMeta({
         req, settings, availableLangs: i18n.availableLangs, locales: i18n.locales, kind: 'home',
         proxyPath,
@@ -389,6 +401,7 @@ exports.expressCreateServer = async (_hookName: string, args: ArgsExpressType, c
       });
 
       const proxyPath = sanitizeProxyPath(req);
+      varyOnProxyPath(res);
       const socialMetaHtml = renderSocialMeta({
         req, settings, availableLangs: i18n.availableLangs, locales: i18n.locales, kind: 'pad', padName: req.params.pad,
         proxyPath,
@@ -417,6 +430,7 @@ exports.expressCreateServer = async (_hookName: string, args: ArgsExpressType, c
         // technically well-defined but Firefox dropped a trailing-slash
         // case once that flaked the legacy-URL test (#7710).
         const proxyPath = sanitizeProxyPath(req);
+        varyOnProxyPath(res);
         return res.redirect(302, `${proxyPath}/p/${encodeURIComponent(req.params.pad)}`);
       }
       ensureAuthorTokenCookie(req, res, settings);
@@ -425,6 +439,7 @@ exports.expressCreateServer = async (_hookName: string, args: ArgsExpressType, c
       });
 
       const proxyPath = sanitizeProxyPath(req);
+      varyOnProxyPath(res);
       const socialMetaHtml = renderSocialMeta({
         req, settings, availableLangs: i18n.availableLangs, locales: i18n.locales, kind: 'timeslider', padName: req.params.pad,
         proxyPath,
