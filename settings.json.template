@@ -966,6 +966,14 @@
 
   "sso": {
     "issuer": "${SSO_ISSUER:http://localhost:9001}",
+      /*
+       * Optional signing keys for the embedded OIDC provider's cookies. When
+       * omitted, Etherpad derives a secret key from the persisted session
+       * secret (SESSIONKEY.txt), which is stable across restarts and shared
+       * across horizontally-scaled pods. Set an explicit ordered array to
+       * rotate: the first key signs, the rest are still accepted for verify.
+       * "cookieKeys": ["${OIDC_COOKIE_KEY:}"],
+       */
       "clients": [
         {
           "client_id": "${ADMIN_CLIENT:admin_client}",

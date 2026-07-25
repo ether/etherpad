@@ -10,6 +10,7 @@ import {format} from 'url'
 import {ParsedUrlQuery} from "node:querystring";
 import {MapArrayType} from "../types/MapType";
 import crypto from "node:crypto";
+import {resolveOidcCookieKeys, isOriginAllowedForOidcClient} from "./OidcProviderSecurity";
 
 // Small fixed delay applied to every failed interactive login, mirroring
 // webaccess.authnFailureDelayMs, so failures take a consistent amount of time.
@@ -68,9 +69,13 @@ const configuration: Configuration = {
         profile: ['name'],
         admin: ['admin']
     },
-    cookies: {
-      keys: ['oidc'],
-    },
+    // NOTE: cookies.keys is deliberately NOT set here. A committed literal key
+    // (historically ['oidc']) lets anyone with the public source forge valid
+    // OIDC provider `.sig` cookies. The real key material is resolved at
+    // provider-construction time in expressCreateServer() via
+    // resolveOidcCookieKeys(), which prefers an operator-supplied
+    // settings.sso.cookieKeys and otherwise derives a secret, stable key from
+    // the persisted session secret. See OidcProviderSecurity.ts.
     features:{
       devInteractions: {enabled: false},
     },
@@ -93,7 +98,16 @@ export const expressCreateServer = async (hookName: string, args: ArgsExpressTyp
     privateKeyExported = privateKey
 
     const oidc = new Provider(settings.sso.issuer, {
-        ...configuration, jwks: {
+        ...configuration,
+        cookies: {
+            // Secret, operator/deployment-stable signing keys — never a
+            // committed literal. See resolveOidcCookieKeys().
+            keys: resolveOidcCookieKeys({
+                cookieKeys: (settings.sso as {cookieKeys?: unknown}).cookieKeys,
+                sessionKey: settings.sessionKey,
+            }),
+        },
+        jwks: {
             keys: [
                 privateKeyJWK
             ],
@@ -127,9 +141,12 @@ export const expressCreateServer = async (hookName: string, args: ArgsExpressTyp
           },
             jwtResponseModes: {enabled: true},
         },
-        clientBasedCORS: (ctx, origin, client) => {
-          return true
-        },
+        clientBasedCORS: (ctx, origin, client) =>
+          // Only allow cross-origin reads from an origin registered as one of
+          // the client's redirect URIs. Returning `true` unconditionally
+          // reflected any Origin into Access-Control-Allow-Origin. See
+          // isOriginAllowedForOidcClient().
+          isOriginAllowedForOidcClient(origin, client as {redirectUris?: unknown}),
         extraParams: [],
         extraTokenClaims: async (ctx, token) => {
             if(token.kind === 'AccessToken') {
