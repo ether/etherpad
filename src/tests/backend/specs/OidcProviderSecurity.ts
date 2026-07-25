@@ -35,6 +35,36 @@ describe(__filename, function () {
       assert.ok(keys[0].length >= 32);
     });
 
+    it('prefers rotated DB-backed secrets over the session-key derivation', function () {
+      const rotated = ['rot-new', 'rot-old'];
+      const keys = resolveOidcCookieKeys({rotatedSecrets: rotated, sessionKey: 'secret'});
+      assert.deepEqual(keys, ['rot-new', 'rot-old']);
+    });
+
+    it('returns the live rotatedSecrets array by reference (so rotation propagates)', function () {
+      // oidc-provider/keygrip holds the array by reference and reads it live on
+      // each sign/verify, so returning the same object means a rotation that
+      // mutates the array in place is picked up without reconstructing the provider.
+      const rotated = ['rot-new'];
+      const keys = resolveOidcCookieKeys({rotatedSecrets: rotated, sessionKey: 'secret'});
+      assert.strictEqual(keys, rotated);
+    });
+
+    it('ignores an empty rotatedSecrets array and falls through', function () {
+      const keys = resolveOidcCookieKeys({rotatedSecrets: [], sessionKey: 'secret'});
+      assert.equal(keys.length, 1);
+      assert.notEqual(keys[0], 'oidc');
+      // fell through to the session-key derivation (stable, deterministic)
+      assert.deepEqual(keys, resolveOidcCookieKeys({sessionKey: 'secret'}));
+    });
+
+    it('lets operator cookieKeys win over rotated secrets', function () {
+      const keys = resolveOidcCookieKeys({
+        cookieKeys: ['operator'], rotatedSecrets: ['rot'], sessionKey: 'secret',
+      });
+      assert.deepEqual(keys, ['operator']);
+    });
+
     it('derives a stable key from the session secret (survives restart/multi-pod)', function () {
       const a = resolveOidcCookieKeys({sessionKey: 'secret'});
       const b = resolveOidcCookieKeys({sessionKey: 'secret'});

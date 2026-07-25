@@ -24,23 +24,35 @@ export const COOKIE_KEY_DERIVATION_LABEL = 'etherpad-oidc-provider-cookie-signin
  * Resolution order:
  *   1. An explicit operator-supplied `settings.sso.cookieKeys` array — use this
  *      for controlled rotation: `[newKey, ...oldKeys]`.
- *   2. A value derived from the persisted Etherpad session secret
- *      (`SESSIONKEY.txt`) via a domain-separated SHA-256. Stable across restarts
- *      and identical across horizontally-scaled pods (which share the session
- *      key), so an in-flight OIDC interaction survives a restart and can land on
- *      any pod — without ever committing key material to source.
- *   3. As a last resort (no session key available), an ephemeral per-process
+ *   2. The live secrets array of a DB-backed `SecretRotator` (the same mechanism
+ *      the Express session-cookie stack uses). This is the default path: it is
+ *      stable across restarts, shared across horizontally-scaled pods via the
+ *      database, and rotates automatically. The array is returned BY REFERENCE
+ *      so a later in-place rotation propagates to oidc-provider/keygrip without
+ *      reconstructing the provider.
+ *   3. A value derived from the persisted Etherpad session secret
+ *      (`SESSIONKEY.txt`) via a domain-separated SHA-256 — used when rotation is
+ *      disabled but a static session key exists. Stable across restarts/pods,
+ *      never committed to source.
+ *   4. As a last resort (no key material at all), an ephemeral per-process
  *      random key. The integrity boundary holds, but interactions won't survive
  *      a restart or span multiple pods.
  */
 export const resolveOidcCookieKeys = (
-  opts: {cookieKeys?: unknown, sessionKey?: string | null},
+  opts: {cookieKeys?: unknown, rotatedSecrets?: string[] | null, sessionKey?: string | null},
 ): string[] => {
-  const {cookieKeys, sessionKey} = opts;
+  const {cookieKeys, rotatedSecrets, sessionKey} = opts;
 
   if (Array.isArray(cookieKeys)) {
     const usable = cookieKeys.filter((k): k is string => typeof k === 'string' && k.length > 0);
     if (usable.length > 0) return usable;
+  }
+
+  // Return the rotator's array by reference (do not copy/filter) so in-place
+  // rotation is observed live by keygrip.
+  if (Array.isArray(rotatedSecrets) &&
+      rotatedSecrets.some((k) => typeof k === 'string' && k.length > 0)) {
+    return rotatedSecrets;
   }
 
   if (typeof sessionKey === 'string' && sessionKey.length > 0) {

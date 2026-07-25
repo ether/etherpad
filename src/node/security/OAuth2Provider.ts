@@ -11,6 +11,11 @@ import {ParsedUrlQuery} from "node:querystring";
 import {MapArrayType} from "../types/MapType";
 import crypto from "node:crypto";
 import {resolveOidcCookieKeys, isOriginAllowedForOidcClient} from "./OidcProviderSecurity";
+import SecretRotator from "./SecretRotator";
+
+// Held at module scope so the rotator (and its refresh timer) is not garbage
+// collected for the lifetime of the process, mirroring express.ts.
+let oidcCookieSecretRotator: SecretRotator | null = null;
 
 // Small fixed delay applied to every failed interactive login, mirroring
 // webaccess.authnFailureDelayMs, so failures take a consistent amount of time.
@@ -97,13 +102,35 @@ export const expressCreateServer = async (hookName: string, args: ArgsExpressTyp
     publicKeyExported = publicKey
     privateKeyExported = privateKey
 
+    // Resolve the OIDC provider's cookie-signing keys. Never a committed literal.
+    // When the operator hasn't pinned settings.sso.cookieKeys and cookie key
+    // rotation is enabled (the default), reuse the same DB-backed SecretRotator
+    // mechanism as the Express session cookies so the key is stable across
+    // restarts and shared across horizontally-scaled pods. `settings.sessionKey`
+    // is commonly null under default rotation settings, so relying on it alone
+    // would hand the provider an unstable per-process random key.
+    const operatorCookieKeys = (settings.sso as {cookieKeys?: unknown}).cookieKeys;
+    const hasOperatorKeys = Array.isArray(operatorCookieKeys) &&
+        operatorCookieKeys.some((k) => typeof k === 'string' && k.length > 0);
+    const {keyRotationInterval, sessionLifetime} = settings.cookie;
+    let rotatedSecrets: string[] | null = null;
+    if (!hasOperatorKeys && keyRotationInterval && sessionLifetime) {
+        if (oidcCookieSecretRotator == null) {
+            oidcCookieSecretRotator = new SecretRotator(
+                'oidcCookieSecrets', keyRotationInterval, sessionLifetime, settings.sessionKey);
+            await oidcCookieSecretRotator.start();
+        }
+        rotatedSecrets = oidcCookieSecretRotator.secrets;
+    }
+
     const oidc = new Provider(settings.sso.issuer, {
         ...configuration,
         cookies: {
-            // Secret, operator/deployment-stable signing keys — never a
-            // committed literal. See resolveOidcCookieKeys().
+            // Secret, deployment-stable signing keys — never a committed literal.
+            // See resolveOidcCookieKeys().
             keys: resolveOidcCookieKeys({
-                cookieKeys: (settings.sso as {cookieKeys?: unknown}).cookieKeys,
+                cookieKeys: operatorCookieKeys,
+                rotatedSecrets,
                 sessionKey: settings.sessionKey,
             }),
         },
