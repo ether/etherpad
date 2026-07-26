@@ -1,86 +1,92 @@
 'use strict';
 
 /**
- * Regression for GHSA-6mcx-x5h6-rpw2 (PadMessageHandler TOCTOU cross-pad write).
+ * Regression for GHSA-6mcx-x5h6-rpw2 (PadMessageHandler cross-pad write TOCTOU).
  *
- * A USER_CHANGES message is authorized and enqueued against the pad the session
- * points at when the message ARRIVES, but the actual write ran later and re-read
- * the mutable sessioninfos[socket.id].padId. A concurrent same-socket
- * CLIENT_READY could swap that padId in between, redirecting the queued write
- * onto a read-only / unauthorized pad.
+ * A USER_CHANGES message is authorized (access + read-only gate) against the pad
+ * the session points at when the message arrives, but the write ran later off
+ * mutable session state. A concurrent same-socket CLIENT_READY could swap
+ * sessioninfos[socket.id].padId during the awaits in handleMessage(), redirecting
+ * the queued write onto a read-only / unauthorized pad.
  *
- * The fix threads the enqueue-time pad id (the channel key) into
- * handleUserChanges as `authorizedPadId`, which is used for the write. This test
- * drives that seam directly: it invokes handleUserChanges with the session's
- * padId ALREADY swapped to a victim pad, and asserts the change lands on the
- * authorized (argument) pad and never on the victim.
+ * This test drives a real USER_CHANGES over a socket and, via a
+ * handleMessageSecurity hook (which runs during those awaits), swaps the
+ * session's padId to a victim pad — exactly the concurrent-CLIENT_READY race.
+ * The change must still land on the pad the message was authorized against, and
+ * never on the victim.
  */
+
+import {MapArrayType} from '../../../node/types/MapType';
 
 const assert = require('assert').strict;
 const common = require('../common');
 const padManager = require('../../../node/db/PadManager');
-const authorManager = require('../../../node/db/AuthorManager');
+const plugins = require('../../../static/js/pluginfw/plugin_defs');
 const padMessageHandler = require('../../../node/handler/PadMessageHandler');
 
 describe(__filename, function () {
   this.timeout(30000);
+  let agent: any;
+  const backups: MapArrayType<any> = {};
 
-  before(async function () { await common.init(); });
+  before(async function () { agent = await common.init(); });
 
-  it('applies a queued change to the enqueue-time pad, not the swapped session pad',
-      async function () {
-        const authorizedId = `toctou_authorized_${common.randomString()}`;
-        const victimId = `toctou_victim_${common.randomString()}`;
-        // Identical seed text so the changeset is valid against either pad — the
-        // point is *which* pad receives it, not changeset validity.
-        const authorizedPad = await padManager.getPad(authorizedId, 'seed\n');
-        await authorizedPad.setText('seed\n');
-        const victimPad = await padManager.getPad(victimId, 'seed\n');
-        await victimPad.setText('seed\n');
-        assert.equal(authorizedPad.text(), 'seed\n');
-        const baseRev = authorizedPad.getHeadRevisionNumber();
+  beforeEach(function () {
+    backups.hooks = {handleMessageSecurity: plugins.hooks.handleMessageSecurity};
+    plugins.hooks.handleMessageSecurity = [];
+  });
+  afterEach(function () {
+    Object.assign(plugins.hooks, backups.hooks);
+  });
 
-        const {authorID} = await authorManager.createAuthor('toctou');
+  it('a mid-message pad swap cannot redirect the write onto another pad', async function () {
+    // Authorized (writable) pad the client is editing.
+    const authorizedId = `toctou_ok_${common.randomString()}`;
+    const authorizedPad = await padManager.getPad(authorizedId, 'seed\n');
+    await authorizedPad.setText('seed\n');
+    // Victim pad with identical text, so the changeset is valid against either
+    // pad — the test distinguishes purely by which pad receives the write.
+    const victimId = `toctou_victim_${common.randomString()}`;
+    const victimPad = await padManager.getPad(victimId, 'seed\n');
+    await victimPad.setText('seed\n');
 
-        // Fake socket that captures server emits instead of using the wire.
-        const emitted: any[] = [];
-        const socket = {id: `toctou-socket-${common.randomString()}`, emit: (_e: string, m: any) => emitted.push(m)};
+    const res = await agent.get(`/p/${authorizedId}`).expect(200);
+    const socket = await common.connect(res);
+    try {
+      const {data: clientVars} = await common.handshake(socket, authorizedId);
+      const rev = clientVars.collab_client_vars.rev;
+      const authorId = clientVars.userId;
 
-        // Simulate the attack window: the session padId has ALREADY been swapped
-        // to the victim by a concurrent CLIENT_READY. The author is kept (the
-        // TOCTOU keeps the attacker's author, so the author check passes).
-        const {sessioninfos} = padMessageHandler;
-        sessioninfos[socket.id] = {padId: victimId, author: authorID, rev: baseRev, readonly: false};
+      // Simulate the concurrent same-socket CLIENT_READY: while THIS USER_CHANGES
+      // is mid-flight (handleMessageSecurity runs during handleMessage's awaits),
+      // swap the session's padId to the victim pad in place.
+      plugins.hooks.handleMessageSecurity = [{
+        hook_fn: (hookName: string, ctx: any) => {
+          if (ctx.message?.data?.type === 'USER_CHANGES') {
+            padMessageHandler.sessioninfos[ctx.socket.id].padId = victimId;
+          }
+        },
+        hook_fn_name: 'toctou/handleMessageSecurity',
+        hook_name: 'handleMessageSecurity',
+        part: {plugin: 'toctou'},
+      }];
 
-        // A valid insert of "ZZ" at the start, attributed to `authorID`.
-        const message = {
-          data: {
-            baseRev,
-            apool: {numToAttrib: {0: ['author', authorID]}, nextNum: 1},
-            changeset: 'Z:5>2*0+2$ZZ',
-          },
-        };
-
-        const realUpdatePadClients = padMessageHandler.updatePadClients;
-        padMessageHandler.updatePadClients = async () => {}; // neutralise fan-out
-        try {
-          // authorizedPadId = the pad authorized at enqueue time (NOT the swapped
-          // session padId).
-          await padMessageHandler.handleUserChanges(socket, message, authorizedId);
-        } finally {
-          padMessageHandler.updatePadClients = realUpdatePadClients;
-          delete sessioninfos[socket.id];
-        }
-
-        const freshAuthorized = await padManager.getPad(authorizedId);
-        const freshVictim = await padManager.getPad(victimId);
-
-        assert.equal(freshVictim.text(), 'seed\n',
-            'the victim pad (swapped session padId) must NOT be modified');
-        assert.equal(freshAuthorized.text(), 'ZZseed\n',
-            'the change must land on the enqueue-time authorized pad');
-
-        await authorizedPad.remove();
-        await victimPad.remove();
+      const accept = common.waitForSocketEvent(socket, 'message');
+      await common.sendUserChanges(socket, {
+        baseRev: rev,
+        changeset: 'Z:5>2*0+2$ZZ',
+        apool: {numToAttrib: {0: ['author', authorId]}, nextNum: 1},
       });
+      await accept; // wait for the server to finish applying
+
+      assert.equal(victimPad.text(), 'seed\n',
+          'the victim pad (swapped session padId) must NOT be modified');
+      assert.equal(authorizedPad.text(), 'ZZseed\n',
+          'the change must land on the pad the message was authorized against');
+    } finally {
+      socket.close();
+      await authorizedPad.remove();
+      await victimPad.remove();
+    }
+  });
 });

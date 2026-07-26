@@ -512,6 +512,17 @@ exports.handleMessage = async (socket:any, message: ClientVarMessage) => {
     throw new Error(`pre-CLIENT_READY message from IP ${ip}: ${msg}`);
   }
 
+  // Pin the pad this message is authorized against — together with `auth` and
+  // the read-only flag — BEFORE any of the awaits below (checkAccess and the
+  // handleMessageSecurity/handleMessage hooks). A concurrent same-socket
+  // CLIENT_READY can mutate sessioninfos[socket.id] (padId/readonly/auth) IN
+  // PLACE during those awaits (the object identity check below does not catch an
+  // in-place mutation). Using these pinned values for the read-only gate, the
+  // queue key and the write keeps them all referring to the SAME pad, closing
+  // the cross-pad write TOCTOU (GHSA-6mcx-x5h6-rpw2).
+  const messagePadId = thisSession.padId;
+  const messageReadonly = thisSession.readonly;
+
   const {session: {user} = {}} = socket.client.request as SocketClientRequest;
   const {accessStatus, authorID} =
       await securityManager.checkAccess(auth.padID, auth.sessionID, auth.token, user);
@@ -533,14 +544,15 @@ exports.handleMessage = async (socket:any, message: ClientVarMessage) => {
   }
   thisSession.author = authorID;
 
-  // Allow plugins to bypass the readonly message blocker
-  let readOnly = thisSession.readonly;
+  // Allow plugins to bypass the readonly message blocker. Base the decision on
+  // the value pinned above so a concurrent CLIENT_READY can't flip it mid-message.
+  let readOnly = messageReadonly;
   const context = {
     message,
     sessionInfo: {
       authorId: thisSession.author,
-      padId: thisSession.padId,
-      readOnly: thisSession.readonly,
+      padId: messagePadId,
+      readOnly: messageReadonly,
     },
     socket,
     get client() {
@@ -587,7 +599,10 @@ exports.handleMessage = async (socket:any, message: ClientVarMessage) => {
           switch (type) {
             case 'USER_CHANGES':
               stats.counter('pendingEdits').inc();
-              await padChannels.enqueue(thisSession.padId, {socket, message});
+              // Queue key = the pinned pad, NOT the (possibly-swapped) live
+              // session padId. This value is forwarded to handleUserChanges as
+              // the write target (see the padChannels executor).
+              await padChannels.enqueue(messagePadId, {socket, message});
               break;
             case 'PAD_DELETE': await handlePadDelete(socket, message.data as unknown as PadDeleteMessage); break;
             case 'USERINFO_UPDATE': await handleUserInfoUpdate(socket, message as unknown as UserNewInfoMessage); break;
@@ -1018,11 +1033,6 @@ const handleUserChanges = async (socket:any, message: {
     stopWatch.end();
   }
 };
-
-// Exported for the cross-pad TOCTOU regression test (GHSA-6mcx-x5h6-rpw2), which
-// verifies the write targets the enqueue-time `authorizedPadId` argument rather
-// than the mutable sessioninfos[socket.id].padId.
-exports.handleUserChanges = handleUserChanges;
 
 exports.updatePadClients = async (pad: PadType) => {
   // skip this if no-one is on this pad
