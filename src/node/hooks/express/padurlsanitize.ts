@@ -21,7 +21,15 @@ exports.expressCreateServer = (hookName:string, args:ArgsExpressType, cb:Functio
       // invalid after sanitizing (e.g. one containing `$`) is forbidden.
       const sanitizedPadId = await padManager.sanitizePadId(padId);
 
-      if (!padManager.isValidPadId(sanitizedPadId)) {
+      // A pad that already exists keeps its URL even if its id is no longer a
+      // valid one to *create*: `:` was accepted by isValidPadId until
+      // GHSA-wg58-mhwv-35pq, so pads carrying one exist in the wild (that is why
+      // padIdTransforms maps `:` in the first place) and 404ing them would lock
+      // their content away. Only ids that are invalid AND unknown are rejected —
+      // opening a pad URL creates the pad, so this is what keeps new invalid ids
+      // out.
+      if (!padManager.isValidPadId(sanitizedPadId) &&
+          !(await padManager.doesPadExist(sanitizedPadId))) {
         res.status(404).send('Such a padname is forbidden');
         return;
       }

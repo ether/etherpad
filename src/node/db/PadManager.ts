@@ -108,7 +108,15 @@ const padList = new class {
  */
 exports.getPad = async (id: string, text?: string|null, authorId:string|null = ''):Promise<PadType> => {
   // check if this is a valid padId
-  if (!exports.isValidPadId(id)) {
+  //
+  // An id that is no longer valid to *create* is still served when a pad with
+  // that exact id already exists: `:` was accepted until GHSA-wg58-mhwv-35pq, so
+  // pads carrying one exist in the wild (that is why padIdTransforms maps `:` at
+  // all) and rejecting them here would lock their content away. doesPadExist()
+  // requires a top-level `atext`, which only a real pad record has — the
+  // `pad:<id>:revs:<n>` / `:chat:<n>` sub-records an injected id would address do
+  // not have one, so they stay unreachable.
+  if (!exports.isValidPadId(id) && !(await exports.doesPadExist(id))) {
     throw new CustomError(`${id} is not a valid padId`, 'apierror');
   }
 
