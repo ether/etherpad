@@ -50,10 +50,19 @@ export const installEngineFlushDeferral = (): void => {
 
   let SocketProto: {sendPacket: (...a: unknown[]) => unknown};
   try {
+    // Resolve engine.io through socket.io, and only via its public entry point:
+    //   - engine.io is a transitive dependency of socket.io, so under pnpm's
+    //     layout it is not resolvable from `src` at all (MODULE_NOT_FOUND), and
+    //   - `engine.io/build/socket` is not in engine.io's `exports` map, so a deep
+    //     require fails with ERR_PACKAGE_PATH_NOT_EXPORTED even when it is.
+    // Resolving relative to socket.io also guarantees we patch the very copy
+    // socket.io loaded, not a second one that a hoisting layout might provide.
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    SocketProto = require('engine.io/build/socket').Socket.prototype;
+    const engineIo = require(require.resolve('engine.io', {paths: [require.resolve('socket.io')]}));
+    SocketProto = engineIo.Socket.prototype;
   } catch (err: any) {
-    logger.warn(`Unable to install engine.io flush deferral (module not found): ${err && err.message || err}`);
+    logger.warn('engineFlushDefer is enabled but the engine.io Socket class could not be ' +
+                `resolved, so the patch is NOT active: ${err && err.message || err}`);
     return;  // Leave `installed` false so a later boot path can retry.
   }
   if (typeof SocketProto.sendPacket !== 'function') {
@@ -68,9 +77,10 @@ export const installEngineFlushDeferral = (): void => {
 
   // Re-implementing sendPacket inline rather than wrapping the original
   // so the single closing `this.flush()` becomes a microtask-coalesced
-  // schedule. The body is intentionally a near-verbatim copy of the
-  // engine.io 6.6.5 implementation so future engine.io upgrades that
-  // change packet-shape semantics still need re-vetting.
+  // schedule. The body is a verbatim copy of engine.io 6.6.9's
+  // implementation apart from that last line — engineFlushDeferral.ts pins the
+  // upstream source with a fingerprint, so an engine.io upgrade that touches
+  // sendPacket fails the test suite and forces a re-vet of this copy.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   SocketProto.sendPacket = function (this: any, type: any, data: any, options: any, callback: any) {
     if ('function' === typeof options) {
@@ -82,7 +92,9 @@ export const installEngineFlushDeferral = (): void => {
     options = options || {};
     options.compress = options.compress !== false;
     const packet: any = {type, options};
-    if (data !== undefined) packet.data = data;
+    // Upstream uses a truthiness check, not `!== undefined`: a falsy payload is
+    // deliberately not attached (encodePacket renders `type` alone for it).
+    if (data) packet.data = data;
     this.emit('packetCreate', packet);
     this.writeBuffer.push(packet);
     if ('function' === typeof callback) this.packetsFn.push(callback);
