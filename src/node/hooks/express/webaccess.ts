@@ -22,6 +22,22 @@ const aCallFirst0 =
     // @ts-ignore
     async (hookName: string, context:any, pred = null) => (await aCallFirst(hookName, context, pred))[0];
 
+// Rotate the express-session id while preserving the session's data. Used at the
+// authentication boundary to prevent session fixation (GHSA-73h9-c5xp-gfg4).
+// The freshly minted cookie for the new id is kept; all other session data
+// (notably req.session.user) is carried across onto the new session.
+const regenerateSessionPreservingData = (req: any) => new Promise<void>((resolve, reject) => {
+  // Session prototype methods (regenerate/save/...) are non-enumerable, so the
+  // spread captures only data properties. Drop `cookie` so the new session keeps
+  // the fresh cookie regenerate() creates.
+  const {cookie, ...data} = req.session;
+  req.session.regenerate((err: any) => {
+    if (err) return reject(err);
+    Object.assign(req.session, data);
+    req.session.save((saveErr: any) => saveErr != null ? reject(saveErr) : resolve());
+  });
+});
+
 exports.normalizeAuthzLevel = (level: string|boolean) => {
   if (!level) return false;
   switch (level) {
@@ -158,6 +174,11 @@ const checkAccess = async (req:any, res:any, next: Function) => {
 
   if (settings.users == null) settings.users = {};
   const ctx:WebAccessTypes = {req, res, users: settings.users, next};
+  // Identity carried by the session BEFORE the authenticate step runs. Used
+  // below to decide whether authentication changed the principal (anonymous ->
+  // user, or a privilege/identity change such as non-admin -> admin), which is
+  // the point at which the session id must be rotated (see below).
+  const prevUser = req.session != null ? req.session.user : null;
   // If the HTTP basic auth header is present, extract the username and password so it can be given
   // to authn plugins.
   const httpBasicAuth = req.headers.authorization && req.headers.authorization.startsWith('Basic ');
@@ -205,6 +226,26 @@ const checkAccess = async (req:any, res:any, next: Function) => {
   if (req.session.user == null) {
     httpLogger.error('authenticate hook failed to add user settings to session');
     return res.status(500).send('Internal Server Error');
+  }
+  // Session fixation defense (GHSA-73h9-c5xp-gfg4): rotate the session id
+  // whenever authentication changed the principal — an anonymous session
+  // becoming authenticated, OR an authenticated session changing identity or
+  // privilege level (e.g. non-admin -> admin re-authentication). This prevents a
+  // pre-auth / lower-privilege id (which an attacker may have planted or
+  // captured — e.g. one an SSO plugin persisted before redirecting to the IdP)
+  // from owning the resulting session. A no-op re-authentication of the same
+  // principal is left alone (no churn), and the rotation is skipped when the
+  // session store doesn't expose regenerate().
+  const identityChanged = prevUser == null ||
+      prevUser.username !== req.session.user.username ||
+      !!prevUser.is_admin !== !!req.session.user.is_admin;
+  if (identityChanged && typeof req.session.regenerate === 'function') {
+    try {
+      await regenerateSessionPreservingData(req);
+    } catch (err) {
+      httpLogger.error(`failed to regenerate session on authentication: ${err}`);
+      return res.status(500).send('Internal Server Error');
+    }
   }
   const {username = '<no username>'} = req.session.user;
   httpLogger.info(

@@ -108,7 +108,15 @@ const padList = new class {
  */
 exports.getPad = async (id: string, text?: string|null, authorId:string|null = ''):Promise<PadType> => {
   // check if this is a valid padId
-  if (!exports.isValidPadId(id)) {
+  //
+  // An id that is no longer valid to *create* is still served when a pad with
+  // that exact id already exists: `:` was accepted until GHSA-wg58-mhwv-35pq, so
+  // pads carrying one exist in the wild (that is why padIdTransforms maps `:` at
+  // all) and rejecting them here would lock their content away. doesPadExist()
+  // requires a top-level `atext`, which only a real pad record has — the
+  // `pad:<id>:revs:<n>` / `:chat:<n>` sub-records an injected id would address do
+  // not have one, so they stay unreachable.
+  if (!exports.isValidPadId(id) && !(await exports.doesPadExist(id))) {
     throw new CustomError(`${id} is not a valid padId`, 'apierror');
   }
 
@@ -199,8 +207,13 @@ exports.sanitizePadId = async (padId: string) => {
 // can never be created.
 const dotSegmentPadId = /^\.{1,2}$/;
 
+// `:` is the ueberdb key-namespace delimiter (records are stored under
+// `pad:<id>`, `pad:<id>:revs:<n>`, `pad:<id>:chat:<n>`). A pad id containing a
+// `:` can therefore address another pad's internal sub-records, so it is never
+// valid — the name portion excludes `$` (group-pad separator) and `:`.
+// (GHSA-wg58-mhwv-35pq: copyPad/movePad destinationID injection.)
 exports.isValidPadId = (padId: string) =>
-  /^(g.[a-zA-Z0-9]{16}\$)?[^$]{1,50}$/.test(padId) && !dotSegmentPadId.test(padId);
+  /^(g.[a-zA-Z0-9]{16}\$)?[^$:]{1,50}$/.test(padId) && !dotSegmentPadId.test(padId);
 
 /**
  * Removes the pad from database and unloads it.

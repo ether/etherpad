@@ -304,6 +304,10 @@ export type SettingsType = {
   sso: {
     issuer: string,
     clients?: {client_id: string}[]
+    // Optional operator-supplied signing keys for the embedded OIDC provider's
+    // cookies. When unset, a secret key is derived from the session secret.
+    // Provide an ordered array `[newKey, ...oldKeys]` to rotate.
+    cookieKeys?: string[]
   },
   showSettingsInAdminPage: boolean,
   cleanup: {
@@ -1261,6 +1265,13 @@ export const reloadSettings = () => {
     logger.warn("loglevel: " + settings.loglevel);
     logger.warn("logLayoutType: " + settings.logLayoutType);
     initLogging(settings.logconfig);
+
+    if (settings.loadTest) {
+      logger.warn(
+        'settings.loadTest is true: SecurityManager.checkAccess() will bypass ' +
+        'authentication and authorization for both HTTP and socket.io requests. ' +
+        'Do NOT enable this in production.');
+    }
 
     if (!settings.skinName) {
         logger.warn('No "skinName" parameter found. Please check out settings.json.template and ' +

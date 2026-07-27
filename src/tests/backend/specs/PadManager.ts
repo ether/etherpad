@@ -44,5 +44,15 @@ describe(__filename, function () {
       assert.equal(padManager.isValidPadId(''), false);
       assert.equal(padManager.isValidPadId('a$b'), false);
     });
+
+    // `:` is the ueberdb key-namespace delimiter (`pad:<id>:revs:<n>`). A pad id
+    // carrying a `:` can address another pad's internal sub-records, so it must
+    // never be a valid pad id. Regression for the copyPad/movePad destinationID
+    // injection (GHSA-wg58-mhwv-35pq).
+    it('rejects ids containing the ueberdb delimiter ":"', async function () {
+      assert.equal(padManager.isValidPadId('victim:revs:0'), false);
+      assert.equal(padManager.isValidPadId('a:b'), false);
+      assert.equal(padManager.isValidPadId('g.s8oes9dhwrvt0zif$bar:revs:0'), false);
+    });
   });
 });
