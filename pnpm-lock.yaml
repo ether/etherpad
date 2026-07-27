@@ -225,7 +225,7 @@ importers:
         version: 5.2.1(supports-color@8.1.1)
       express-rate-limit:
         specifier: ^8.6.0
-        version: 8.6.0(express@5.2.1(supports-color@8.1.1))
+        version: 8.6.0(express@5.2.1(supports-color@8.1.1))(supports-color@8.1.1)
       express-session:
         specifier: ^1.19.0
         version: 1.19.0
@@ -299,8 +299,8 @@ importers:
         specifier: ^9.0.3
         version: 9.0.3
       oidc-provider:
-        specifier: 9.9.1
-        version: 9.9.1(supports-color@8.1.1)
+        specifier: 9.10.0
+        version: 9.10.0
       openapi-backend:
         specifier: ^5.18.0
         version: 5.18.0
@@ -4300,9 +4300,9 @@ packages:
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
     hasBin: true
 
-  nanoid@5.1.16:
-    resolution: {integrity: sha512-kVrnsrJqMR8+oLJnGEmSWw9BivK5mt7H3FZatVRjrc5wGqFYuBxX1yG7+A7Gi5AefkX6t/oCkizcQgpu0cY1dQ==}
-    engines: {node: ^18 || >=20}
+  nanoid@6.0.0:
+    resolution: {integrity: sha512-mkUH+rPkwU2qPadJ0oJZOjeZ5Mxn8Q1UhevwkTRWNuUZzyia3h4rhzK39hxaHTk0o2OxB8W2SQ6A8k23ZDi1pQ==}
+    engines: {node: ^22 || ^24 || >=26}
     hasBin: true
 
   native-duplexpair@1.0.0:
@@ -4395,8 +4395,8 @@ packages:
     resolution: {integrity: sha512-9miFgM2OFba7hB+pRgvtV84pYTBaoTHohvmIgiRt6dRIzbwEOIaNaP+dIlGs2fNFoB0SeISs0Jz5WFVRid6Xyg==}
     engines: {node: '>=12.20.0'}
 
-  oidc-provider@9.9.1:
-    resolution: {integrity: sha512-2kvtykfLu3FJSzaIStg8Dz58/pLtAwI3j/vLdy7KXJBDuJJAEgZhOSWklc+MTjKBLlQjeFwBXpKoE0Pf23pnIQ==}
+  oidc-provider@9.10.0:
+    resolution: {integrity: sha512-Olmg6oxgHIviZnrf9yaey6vdaWG1f19UiyvpSj0gCgj6wl9YMcOw3uDv3FHj+x62EXeFj7GfZeTL09MCgIEKnw==}
 
   on-finished@2.4.1:
     resolution: {integrity: sha512-oVlzkg3ENAhCk2zdv7IJwd/QUD4z2RxRwpkcGY8psCVcCYZNq4wYnVWALHM+brtuJjePWiYF/ClmuDr8Ch5+kg==}
@@ -4695,6 +4695,10 @@ packages:
   raw-body@3.0.2:
     resolution: {integrity: sha512-K5zQjDllxWkf7Z5xJdV0/B0WTNqx6vxG70zJE4N0kBs4LovmEYWJzQGxC9bS9RAKu3bgM40lrd5zoLJ12MQ5BA==}
     engines: {node: '>= 0.10'}
+
+  raw-body@4.0.0:
+    resolution: {integrity: sha512-TMHtwexrgOt9VJ2E5JF9RO8mRXGNgC5wXvKkc5AVSJUt1L5gxvjg7eiCQl96EqUEpCWrnNEkCnbAplYtyuq1IA==}
+    engines: {node: '>=22'}
 
   react-dom@19.2.7:
     resolution: {integrity: sha512-t0BRVXvbiE/o20Hfw669rLbMCDWtYZLvmJigy2f0MxsXF+71pxhR3xOkspmsO8h3ZlNzyibAmtCa3l4lYKk6gQ==}
@@ -6378,7 +6382,7 @@ snapshots:
     dependencies:
       vary: 1.1.2
 
-  '@koa/router@15.7.0(koa@3.2.1)(supports-color@8.1.1)':
+  '@koa/router@15.7.0(koa@3.2.1)':
     dependencies:
       debug: 4.4.3(supports-color@8.1.1)
       http-errors: 2.0.1
@@ -8684,7 +8688,7 @@ snapshots:
 
   expect-type@1.4.0: {}
 
-  express-rate-limit@8.6.0(express@5.2.1(supports-color@8.1.1)):
+  express-rate-limit@8.6.0(express@5.2.1(supports-color@8.1.1))(supports-color@8.1.1):
     dependencies:
       debug: 4.4.3(supports-color@8.1.1)
       express: 5.2.1(supports-color@8.1.1)
@@ -9866,7 +9870,7 @@ snapshots:
 
   nanoid@3.3.15: {}
 
-  nanoid@5.1.16: {}
+  nanoid@6.0.0: {}
 
   native-duplexpair@1.0.0: {}
 
@@ -9951,18 +9955,18 @@ snapshots:
 
   obug@2.1.3: {}
 
-  oidc-provider@9.9.1(supports-color@8.1.1):
+  oidc-provider@9.10.0:
     dependencies:
       '@koa/cors': 5.0.0
-      '@koa/router': 15.7.0(koa@3.2.1)(supports-color@8.1.1)
+      '@koa/router': 15.7.0(koa@3.2.1)
       debug: 4.4.3(supports-color@8.1.1)
       eta: 4.6.0
       jose: 6.2.4
       jsesc: 3.1.0
       koa: 3.2.1
-      nanoid: 5.1.16
+      nanoid: 6.0.0
       quick-lru: 7.3.0
-      raw-body: 3.0.2
+      raw-body: 4.0.0
     transitivePeerDependencies:
       - supports-color
 
@@ -10300,6 +10304,11 @@ snapshots:
       http-errors: 2.0.1
       iconv-lite: 0.7.3
       unpipe: 1.0.0
+
+  raw-body@4.0.0:
+    dependencies:
+      bytes: 3.1.2
+      http-errors: 2.0.1
 
   react-dom@19.2.7(react@19.2.7):
     dependencies:
