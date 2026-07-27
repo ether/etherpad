@@ -175,7 +175,7 @@ importers:
         specifier: ^7.7.1
         version: 7.7.1
       typescript:
-        specifier: ^7.0.2
+        specifier: ^7.0.0
         version: 7.0.2
 
   doc:
@@ -480,7 +480,7 @@ importers:
         specifier: ^7.2.2
         version: 7.2.2
       typescript:
-        specifier: ^7.0.2
+        specifier: ^7.0.0
         version: 7.0.2
       vitest:
         specifier: ^4.1.10

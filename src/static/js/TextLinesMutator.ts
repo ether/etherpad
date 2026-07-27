@@ -13,10 +13,10 @@ import {splitTextLines} from "./Changeset";
  */
 class TextLinesMutator {
   private _lines: string[];
-  // [start index, lines to remove, ...replacement/new lines] — see the comment in
-  // the constructor. The element type was declared as `[number, number?]`, which
-  // is why every access to the line elements below needs a `@ts-ignore`.
-  private _curSplice: [number, number?, ...string[]];
+  // Args for a future this._lines.splice(): [index, deleteCount, ...linesToInsert].
+  // Indexing past the two leading numbers yields `string | number` to the compiler even though
+  // elements from index 2 on are always strings, hence the `as string` casts below.
+  private _curSplice: [number, number, ...string[]];
   private _inSplice: boolean;
   private _curLine: number;
   private _curCol: number;
@@ -109,8 +109,7 @@ class TextLinesMutator {
    * close or TODO(doc).
    */
   _leaveSplice() {
-    const [start, deleteCount = 0, ...newLines] = this._curSplice;
-    this._lines.splice(start, deleteCount, ...newLines);
+    this._lines.splice(...this._curSplice);
     this._curSplice.length = 2;
     this._curSplice[0] = this._curSplice[1] = 0;
     this._inSplice = false;
@@ -136,9 +135,7 @@ class TextLinesMutator {
    */
   _putCurLineInSplice() {
     if (!this._isCurLineInSplice()) {
-      // @ts-ignore
       this._curSplice.push(this._linesGet(this._curSplice[0] + this._curSplice[1]));
-      // @ts-ignore
       this._curSplice[1]++;
     }
     // TODO should be the same as this._curSplice.length - 1
@@ -215,7 +212,6 @@ class TextLinesMutator {
      * @returns {string} joined lines
      */
     const nextKLinesText = (k: number) => {
-      // @ts-ignore
       const m = this._curSplice[0] + this._curSplice[1];
       return this._linesSlice(m, m + k).join('');
     };
@@ -223,29 +219,22 @@ class TextLinesMutator {
     let removed = '';
     if (this._isCurLineInSplice()) {
       if (this._curCol === 0) {
-        // @ts-ignore
-        removed = this._curSplice[this._curSplice.length - 1];
+        removed = this._curSplice[this._curSplice.length - 1] as string;
         this._curSplice.length--;
         removed += nextKLinesText(L - 1);
-        // @ts-ignore
         this._curSplice[1] += L - 1;
       } else {
         removed = nextKLinesText(L - 1);
-        // @ts-ignore
         this._curSplice[1] += L - 1;
         const sline = this._curSplice.length - 1;
-        // @ts-ignore
-        removed = this._curSplice[sline].substring(this._curCol) + removed;
-        // @ts-ignore
-        this._curSplice[sline] = this._curSplice[sline].substring(0, this._curCol) +
-          // @ts-ignore
+        removed = (this._curSplice[sline] as string).substring(this._curCol) + removed;
+        this._curSplice[sline] = (this._curSplice[sline] as string).substring(0, this._curCol) +
           this._linesGet(this._curSplice[0] + this._curSplice[1]);
-        // @ts-ignore
         this._curSplice[1] += 1;
       }
     } else {
       removed = nextKLinesText(L);
-      this._curSplice[1]! += L;
+      this._curSplice[1] += L;
     }
     return removed;
   }
@@ -264,12 +253,9 @@ class TextLinesMutator {
     // although the line is put into splice, curLine is not increased, because
     // only some chars are removed not the whole line
     const sline = this._putCurLineInSplice();
-    // @ts-ignore
-    const removed = this._curSplice[sline].substring(this._curCol, this._curCol + N);
-    // @ts-ignore
-    this._curSplice[sline] = this._curSplice[sline].substring(0, this._curCol) +
-      // @ts-ignore
-      this._curSplice[sline].substring(this._curCol + N);
+    const line = this._curSplice[sline] as string;
+    const removed = line.substring(this._curCol, this._curCol + N);
+    this._curSplice[sline] = line.substring(0, this._curCol) + line.substring(this._curCol + N);
     return removed;
   }
 
@@ -283,14 +269,9 @@ class TextLinesMutator {
     if (!text) return;
     if (!this._inSplice) this._enterSplice();
     if (L) {
-      // splitTextLines() is a String.match(), so it returns null for a string with
-      // no line content at all. L > 0 means `text` contains a newline, so that
-      // cannot happen here — treat it as "no lines" rather than dereferencing null.
-      const newLines = splitTextLines(text) || [];
+      const newLines = splitTextLines(text) ?? [];
       if (this._isCurLineInSplice()) {
         const sline = this._curSplice.length - 1;
-        // Everything from index 2 on is a line, and sline is past the two leading
-        // splice arguments whenever the current line is in the splice.
         const theLine = this._curSplice[sline] as string;
         const lineCol = this._curCol;
         // Insert the chars up to `curCol` and the first new line.
@@ -319,10 +300,8 @@ class TextLinesMutator {
           'https://github.com/ether/etherpad-lite/issues/2802');
         console.error(err.stack || err.toString());
       }
-      // @ts-ignore
-      this._curSplice[sline] = this._curSplice[sline].substring(0, this._curCol) + text +
-        // @ts-ignore
-        this._curSplice[sline].substring(this._curCol);
+      const line = this._curSplice[sline] as string;
+      this._curSplice[sline] = line.substring(0, this._curCol) + text + line.substring(this._curCol);
       this._curCol += text.length;
     }
   }
@@ -335,7 +314,6 @@ class TextLinesMutator {
   hasMore() {
     let docLines = this._linesLength();
     if (this._inSplice) {
-      // @ts-ignore
       docLines += this._curSplice.length - 2 - this._curSplice[1];
     }
     return this._curLine < docLines;
