@@ -171,6 +171,11 @@ ARG ETHERPAD_GITHUB_PLUGINS=
 COPY --chown=etherpad:etherpad ./src/ ./src/
 COPY --chown=etherpad:etherpad --from=adminbuild /opt/etherpad-lite/src/templates/admin ./src/templates/admin
 COPY --chown=etherpad:etherpad --from=adminbuild /opt/etherpad-lite/src/static/oidc ./src/static/oidc
+# docker-compose mounts a named volume over src/plugin_packages. Docker seeds a
+# fresh named volume from the mountpoint in the image, so the directory has to
+# exist here (owned by etherpad, since USER is already etherpad) — otherwise
+# Docker creates it root:root and plugin installs cannot write install.lock.
+# See ether/etherpad#8026.
 RUN mkdir -p ./src/plugin_packages
 
 COPY --chown=etherpad:etherpad ./local_plugin[s] ./local_plugins/
@@ -204,6 +209,11 @@ RUN printf 'packages:\n  - src\n  - bin\nonlyBuiltDependencies:\n  - esbuild\nig
 COPY --chown=etherpad:etherpad ./src ./src
 COPY --chown=etherpad:etherpad --from=adminbuild /opt/etherpad-lite/src/templates/admin ./src/templates/admin
 COPY --chown=etherpad:etherpad --from=adminbuild /opt/etherpad-lite/src/static/oidc ./src/static/oidc
+# docker-compose mounts a named volume over src/plugin_packages. Docker seeds a
+# fresh named volume from the mountpoint in the image, so the directory has to
+# exist here (owned by etherpad, since USER is already etherpad) — otherwise
+# Docker creates it root:root and plugin installs cannot write install.lock.
+# See ether/etherpad#8026.
 RUN mkdir -p ./src/plugin_packages
 
 COPY --chown=etherpad:etherpad ./local_plugin[s] ./local_plugins/
