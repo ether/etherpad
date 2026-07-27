@@ -304,6 +304,10 @@ export type SettingsType = {
   sso: {
     issuer: string,
     clients?: {client_id: string}[]
+    // Optional operator-supplied signing keys for the embedded OIDC provider's
+    // cookies. When unset, a secret key is derived from the session secret.
+    // Provide an ordered array `[newKey, ...oldKeys]` to rotate.
+    cookieKeys?: string[]
   },
   showSettingsInAdminPage: boolean,
   cleanup: {
