@@ -10,7 +10,7 @@
         <title><%=settings.title%></title>
 <%- typeof socialMetaHtml !== 'undefined' ? socialMetaHtml : '' %>
         <meta charset="utf-8">
-        <link rel="manifest" href="/manifest.json" />
+        <link rel="manifest" href="<%= typeof proxyPath !== 'undefined' ? proxyPath : '' %>/manifest.json" />
         <meta name="referrer" content="no-referrer">
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
         <link rel="shortcut icon" href="favicon.ico">
@@ -248,5 +248,5 @@
         <% e.begin_block("indexCustomScripts"); %>
         <script src="static/skins/<%=encodeURI(settings.skinName)%>/index.js?v=<%=settings.randomVersionString%>"></script>
         <% e.end_block(); %>
-        <div style="display:none"><a href="/javascript" data-jslicense="1">JavaScript license information</a></div>
+        <div style="display:none"><a href="<%= typeof proxyPath !== 'undefined' ? proxyPath : '' %>/javascript" data-jslicense="1">JavaScript license information</a></div>
 </html>

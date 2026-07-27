@@ -244,3 +244,49 @@ If any step diverges, capture `var/log/update.log` and stop. Add to the §10 sig
 - [ ] Apply now during scheduled runs the Tier 2 pipeline immediately.
 - [ ] Restart-in-grace rehydrates the timer.
 - [ ] `grace-start` email fires once per tag when `adminEmail` is set.
+
+## 12. Tier 4 — autonomous in a maintenance window
+
+Goal: verify the scheduler defers autonomous applies to the configured window, snaps grace forward to the next opening, and surfaces the configuration state in the admin UI.
+
+### Setup
+
+Continuing from §11. Settings additions in `settings.json`:
+
+```jsonc
+{
+  "updates": {
+    "tier": "autonomous",
+    "preApplyGraceMinutes": 1,
+    "maintenanceWindow": null
+  }
+}
+```
+
+Restart Etherpad.
+
+1. **Missing window banner:** visit `/admin/update`. Expect:
+    - A red/yellow banner at the top: *"Autonomous updates are disabled until a maintenance window is configured."*
+    - The "Maintenance window" section shows "Not configured."
+    - `policy.reason` in `GET /admin/update/status` is `maintenance-window-missing`.
+2. **Malformed window:** set `"maintenanceWindow": {"start":"oops","end":"05:00","tz":"local"}`. Restart. Expect:
+    - `journalctl -u etherpad` shows `updater: ignoring malformed updates.maintenanceWindow (...)`.
+    - The banner now reads *"Autonomous updates are disabled because the maintenance window is malformed."*
+    - `policy.reason` is `maintenance-window-invalid`.
+3. **Outside-window deferral:** set the window to **5 minutes in the future**, e.g. at 14:00 local set `{"start":"14:05","end":"14:10","tz":"local"}`. Restart. Force a new release as in §3. Expect:
+    - The next version check transitions `execution.status` to `scheduled`.
+    - `scheduledFor` is at the **window start** (14:05), not at `now + 1m`.
+    - The scheduled panel shows both the countdown *and* an *"Outside maintenance window. Update will start when the window opens at …"* line.
+4. **Fire-at-opening:** wait for the window to open. The scheduler should fire and the regular Tier 2 pipeline (drain → executor → exit 75) runs. State ends at `verified`.
+5. **Window-closes-mid-grace:** repeat the setup, but configure a window that **closes** before `now + preApplyGraceMinutes`. For example: at 14:00 local set `{"start":"14:01","end":"14:02","tz":"local"}`, `preApplyGraceMinutes: 5`. Force a release. The scheduler arms for 14:01 but at fire time (after the window has closed) `decideTriggerApply` returns `defer`. Expected:
+    - `journalctl -u etherpad` shows `updater: scheduler deferred ... to next maintenance window at ...`.
+    - `var/update-state.json` has a *new* `scheduledFor` ~24h ahead.
+    - No drain, no exit, no apply.
+
+Add to the §10 sign-off checklist:
+
+- [ ] Tier 4 missing-window banner renders the localised string.
+- [ ] Tier 4 malformed-window banner renders the localised string.
+- [ ] Outside-window `scheduledFor` snaps to the next window opening.
+- [ ] Scheduled panel shows the "deferred until" line when outside the window.
+- [ ] Window-closes-mid-grace cleanly defers without applying.

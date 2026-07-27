@@ -4,6 +4,13 @@
 			"Saraiki"
 		]
 	},
+	"admin_login.title": "ایتھرپیڈ",
+	"admin_pads.bulk.delete": "مٹاؤ",
+	"admin_pads.cancel": "منسوخ",
+	"admin_pads.filter.active": "فعال",
+	"admin_pads.filter.empty": "خالی",
+	"admin_pads.open": "کھولو",
+	"admin_pads.pagination.previous": "پچھلا",
 	"admin_plugins": "پلگ ان منیجر",
 	"admin_plugins.available": "دستیاب پلگ ان",
 	"admin_plugins.available_not-found": "کوئی پلگ ان کائنی لبھے۔",
@@ -12,6 +19,7 @@
 	"admin_plugins.installed_uninstall.value": "ان انسٹال",
 	"admin_plugins.last-update": "چھیکڑی تبدیلی",
 	"admin_plugins.name": "ناں",
+	"admin_plugins.update_tooltip": "اپ ڈیٹ",
 	"admin_plugins.version": "ورژن",
 	"admin_plugins_info.parts": "انسٹال تھئے حصے",
 	"admin_plugins_info.plugins": "انسٹال تھئے پلگ ان",

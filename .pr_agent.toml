@@ -1,5 +1,0 @@
-[pr_reviewer]
-run_on_pr_sync = true
-
-[pr_description]
-run_on_pr_sync = true

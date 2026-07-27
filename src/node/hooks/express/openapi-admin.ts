@@ -20,7 +20,10 @@ export const generateAdminDefinition = (): any => ({
     title: 'Etherpad Admin API',
     description:
       'Authenticated administrative endpoints consumed by the Etherpad admin UI. ' +
-      'Distinct from the public /api/{version}/* surface served by /api/openapi.json.',
+      'Distinct from the public /api/{version}/* surface served by /api/openapi.json. ' +
+      'For completeness this document also includes non-admin endpoints that are ' +
+      'consumed by the pad UI itself (e.g. /api/version-status) since they share the ' +
+      'same internal route registration.',
     version: getEpVersion(),
   },
   paths: {
@@ -45,13 +48,51 @@ export const generateAdminDefinition = (): any => ({
         },
       },
     },
+    '/api/version-status': {
+      get: {
+        operationId: 'getVersionStatus',
+        summary: 'Outdated-version notice signal for the pad UI',
+        description:
+          'Returns a non-null `outdated` value only to the first author of the supplied pad, ' +
+          'and only when the running server is at least one minor version behind the latest ' +
+          'published release. Result is cached per (padId, authorId) for 60 s.',
+        parameters: [
+          {
+            name: 'padId',
+            in: 'query',
+            required: false,
+            schema: {type: 'string'},
+            description:
+              'Pad whose first-author membership is being checked. ' +
+              'Omitted padId always yields a null result.',
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Outdated-notice signal.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['outdated', 'isFirstAuthor'],
+                  properties: {
+                    outdated: {type: 'string', enum: ['minor'], nullable: true},
+                    isFirstAuthor: {type: 'boolean'},
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
     '/admin/update/status': {
       get: {
         operationId: 'getUpdateStatus',
         summary: 'Fetch updater status for the admin UI banner and update page',
         description:
           'Returns the cached update state (current version, latest known release, ' +
-          'install method, tier, policy verdict, and vulnerability directives). ' +
+          'install method, tier, policy verdict, execution state, lastResult, and lockHeld). ' +
           'Open by default; gated to authenticated admin sessions when ' +
           'updates.requireAdminForStatus=true in settings.',
         security: [
@@ -102,17 +143,9 @@ export const generateAdminDefinition = (): any => ({
           reason:        {type: 'string'},
         },
       },
-      VulnerableBelowDirective: {
-        type: 'object',
-        required: ['announcedBy', 'threshold'],
-        properties: {
-          announcedBy: {type: 'string'},
-          threshold:   {type: 'string'},
-        },
-      },
       UpdateStatus: {
         type: 'object',
-        required: ['currentVersion', 'installMethod', 'tier', 'vulnerableBelow'],
+        required: ['currentVersion', 'installMethod', 'tier'],
         properties: {
           currentVersion: {type: 'string'},
           latest: {
@@ -131,10 +164,6 @@ export const generateAdminDefinition = (): any => ({
           policy: {
             allOf: [{$ref: '#/components/schemas/PolicyResult'}],
             nullable: true,
-          },
-          vulnerableBelow: {
-            type: 'array',
-            items: {$ref: '#/components/schemas/VulnerableBelowDirective'},
           },
         },
       },

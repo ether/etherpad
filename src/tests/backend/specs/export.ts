@@ -150,6 +150,26 @@ describe(__filename, function () {
       const html = '<h1>hi</h1><p>body <a href="/x">link</a></p>';
       assert.strictEqual(stripRemoteImages(html), html);
     });
+
+    it('preserves the doctype directive (soffice reads a full document)', function () {
+      const html = '<!doctype html><html><body><p>hi</p></body></html>';
+      const out = stripRemoteImages(html);
+      assert.match(out, /<!doctype html>/i);
+    });
+
+    it('preserves HTML comments', function () {
+      const html = '<body><!-- keep me --><p>hi</p></body>';
+      const out = stripRemoteImages(html);
+      assert.match(out, /<!-- keep me -->/);
+    });
+
+    it('preserves the doctype while still dropping a remote image', function () {
+      const html =
+          '<!doctype html><html><body><img src="https://evil.example/x.png" alt="a"></body></html>';
+      const out = stripRemoteImages(html);
+      assert.match(out, /<!doctype html>/i);
+      assert.doesNotMatch(out, /evil\.example/);
+    });
   });
 
   describe('extractBody', function () {

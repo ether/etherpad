@@ -7,11 +7,16 @@
     && req.acceptsLanguages(Object.keys(langs))) || 'en';
   var renderDir = (langs[renderLang] && langs[renderLang].direction === 'rtl') ? 'rtl' : 'ltr';
   // theme-color matches the configured toolbar so mobile address bars don't
-  // paint a mismatched system color above the toolbar on first paint. We do
-  // not emit a prefers-color-scheme: dark variant: the client-side dark-mode
-  // auto-switch is gated on enableDarkMode, matchMedia, and a localStorage
-  // white-mode override, none of which a media query can express.
+  // paint a mismatched system color above the toolbar on first paint. We emit
+  // a prefers-color-scheme: dark variant scoped with the `media` attribute so
+  // iOS Safari — which colors the address bar at parse time and does not
+  // reliably repaint when JS mutates the tag later — picks the dark toolbar
+  // color at first paint on a dark-OS client (issue #7606). The dark variant
+  // is only emitted when enableDarkMode is on, since that is what gates the
+  // client-side auto-switch; the manual #options-darkmode toggle and the
+  // localStorage white-mode override are still handled by skin_variants.ts.
   var configuredColor = skinColors.configuredToolbarColor(settings.skinName, settings.skinVariants);
+  var darkColor = settings.enableDarkMode ? skinColors.darkToolbarColor(settings.skinName) : null;
 %>
 <!doctype html>
 <html lang="<%=renderLang%>" dir="<%=renderDir%>" translate="no" class="pad <%=pluginUtils.clientPluginNames().join(' '); %> <%=settings.skinVariants%>">
@@ -20,7 +25,7 @@
   <% e.end_block(); %>
   <title><%=settings.title%></title>
 <%- typeof socialMetaHtml !== 'undefined' ? socialMetaHtml : '' %>
-  <link rel="manifest" href="../../manifest.json" />
+  <link rel="manifest" href="../manifest.json" />
   <script>
     /*
     |@licstart  The following is the entire license notice for the
@@ -49,8 +54,37 @@
   <meta name="robots" content="noindex, nofollow">
   <meta name="referrer" content="no-referrer">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
-  <% if (configuredColor) { %><meta name="theme-color" content="<%=configuredColor%>"><% } %>
+  <% if (configuredColor) { %><meta name="theme-color" content="<%=configuredColor%>"<% if (darkColor) { %> media="(prefers-color-scheme: light)"<% } %>><% } %>
+  <% if (darkColor) { %><meta name="theme-color" content="<%=darkColor%>" media="(prefers-color-scheme: dark)"><% } %>
   <link rel="shortcut icon" href="../favicon.ico">
+
+  <% if (darkColor) { %>
+  <script>
+    // Apply the dark skin classes before the stylesheet paints so dark-OS
+    // users don't see a white flash while the JS bundle loads (issue #7606).
+    // enableDarkMode being on is implied by this script being emitted; the
+    // matchMedia + localStorage white-mode checks mirror the auto-switch in
+    // pad.ts, which still runs on init to wire up the #options-darkmode toggle
+    // and theme the editor iframes (those don't exist yet at parse time).
+    (function () {
+      try {
+        // The skin-variants builder lets the user pick variants by hand; pad.ts
+        // skips the auto-dark switch there, so we must too.
+        if (window.location.hash.toLowerCase() === '#skinvariantsbuilder') return;
+        if (localStorage.getItem('ep_darkMode') === 'false') return;
+        if (!(window.matchMedia &&
+              window.matchMedia('(prefers-color-scheme: dark)').matches)) return;
+        var el = document.documentElement;
+        ['super-light', 'light', 'dark', 'super-dark'].forEach(function (c) {
+          ['editor', 'background', 'toolbar'].forEach(function (k) {
+            el.classList.remove(c + '-' + k);
+          });
+        });
+        el.classList.add('super-dark-editor', 'dark-background', 'super-dark-toolbar');
+      } catch (e) { /* localStorage/matchMedia unavailable — fall back to light */ }
+    })();
+  </script>
+  <% } %>
 
   <% e.begin_block("styles"); %>
   <link href="../static/css/pad.css?v=<%=settings.randomVersionString%>" rel="stylesheet">
@@ -80,10 +114,27 @@
   <!----------------------------->
   <!--------- TOOLBAR ----------->
   <!----------------------------->
+  <!-- Visually-hidden labels for the role=toolbar regions. Sitting outside the
+       <ul>s keeps the toolbar markup valid (HTML disallows non-<li>/<script>
+       children inside <ul>) while still giving each toolbar a translated
+       accessible name via aria-labelledby. See ether/etherpad#7255. -->
+  <span id="editbar-formatting-label" class="sr-only"
+        data-l10n-id="pad.editor.toolbar.formatting">Formatting toolbar</span>
+  <!-- Reuses pad.historyMode.controlsLabel rather than minting a new key:
+       pad_mode.ts already set this as aria-label on #history-controls via JS,
+       and the existing key has translations in nl/de/etc. A new English-only
+       key would cause non-English locales to regress to fallback English. -->
+  <span id="editbar-history-label" class="sr-only"
+        data-l10n-id="pad.historyMode.controlsLabel">Pad history controls</span>
+  <span id="editbar-actions-label" class="sr-only"
+        data-l10n-id="pad.editor.toolbar.actions">Pad actions toolbar</span>
+  <span id="editbar-showmore-label" class="sr-only"
+        data-l10n-id="pad.editor.toolbar.showMore">Show more toolbar buttons</span>
+
   <div id="editbar" class="toolbar">
       <div id="toolbar-overlay"></div>
 
-      <ul class="menu_left" role="toolbar">
+      <ul class="menu_left" role="toolbar" aria-labelledby="editbar-formatting-label">
           <% e.begin_block("editbarMenuLeft"); %>
           <%- toolbar.menu(settings.toolbar.left, isReadOnly, 'left', 'pad') %>
           <% e.end_block(); %>
@@ -100,15 +151,23 @@
            translation keys. We deliberately do NOT put data-l10n-id on
            the icon buttons — that would set their textContent, which on
            a buttonicon glyph would draw the localized string on screen. -->
-      <div id="history-controls" class="history-controls" role="toolbar" hidden>
+      <div id="history-controls" class="history-controls" role="toolbar"
+           aria-labelledby="editbar-history-label" hidden>
         <button type="button" id="history-playpause" class="buttonicon buttonicon-play"
                 aria-pressed="false"></button>
         <button type="button" id="history-leftstep" class="buttonicon buttonicon-step-backward">
         </button>
         <button type="button" id="history-rightstep" class="buttonicon buttonicon-step-forward">
         </button>
-        <input type="range" id="history-slider-input" class="history-slider-input"
-               min="0" max="0" value="0" step="1">
+        <!-- Slider + saved-revision markers. The stars overlay sits above the
+             range track; pad_mode.ts fills it from the embedded timeslider's
+             savedRevisions so explicit "Save Revision" points stay visible in
+             in-pad history mode (issue #7946). -->
+        <span class="history-slider-wrap">
+          <input type="range" id="history-slider-input" class="history-slider-input"
+                 min="0" max="0" value="0" step="1">
+          <span id="history-slider-stars" class="history-slider-stars" aria-hidden="true"></span>
+        </span>
         <span id="history-timer" class="history-timer hide-for-mobile" aria-live="polite"></span>
         <!-- Follow toggle: an icon-only button. The eye is always rendered;
              the diagonal slash overlay is shown only when aria-pressed is
@@ -137,12 +196,14 @@
           <option value="1000" data-l10n-id="timeslider.settings.playbackSpeed.1000ms">1000 ms</option>
         </select>
       </div>
-      <ul class="menu_right" role="toolbar">
+      <ul class="menu_right" role="toolbar" aria-labelledby="editbar-actions-label">
           <% e.begin_block("editbarMenuRight"); %>
           <%- toolbar.menu(settings.toolbar.right, isReadOnly, 'right', 'pad') %>
           <% e.end_block(); %>
       </ul>
-      <button type="button" class="show-more-icon-btn" aria-label="Show more toolbar buttons" aria-expanded="false"></button> <!-- use on small screen to display hidden toolbar buttons -->
+      <button type="button" class="show-more-icon-btn"
+              aria-labelledby="editbar-showmore-label"
+              aria-expanded="false"></button> <!-- use on small screen to display hidden toolbar buttons -->
   </div>
 
   <% e.begin_block("afterEditbar"); %><% e.end_block(); %>
@@ -330,18 +391,24 @@
                 </p>
                 <% e.end_block(); %>
               </div>
-              <button class="btn btn-danger" data-l10n-id="pad.settings.deletePad" id="delete-pad">Delete pad</button>
             </div><% } %>
           </div>
-          <% if (!settings.requireAuthentication) { %>
-          <details id="delete-pad-with-token">
+          <!-- Pad deletion is independent of pad-wide settings (issue #7959):
+               both controls are always rendered and pad_editor.ts shows exactly
+               the one that applies. #delete-pad (token-less) is shown when
+               clientVars.canDeletePad — the creator on this device, or any user
+               when allowPadDeletionByAllUsers is on. The recovery-token
+               disclosure is shown when clientVars.canDeleteWithoutToken is false
+               (issue #7926): a creator on a second device, or under
+               requireAuthentication without a durable cross-device identity. -->
+          <button class="btn btn-danger" data-l10n-id="pad.settings.deletePad" id="delete-pad" hidden>Delete pad</button>
+          <details id="delete-pad-with-token" hidden>
             <summary data-l10n-id="pad.deletionToken.deleteWithToken">Delete with token</summary>
             <label for="delete-pad-token-input" data-l10n-id="pad.deletionToken.tokenFieldLabel">Pad deletion token</label>
             <input type="password" id="delete-pad-token-input" autocomplete="off" spellcheck="false">
             <button id="delete-pad-token-submit" type="button" class="btn btn-danger"
                     data-l10n-id="pad.settings.deletePad">Delete pad</button>
           </details>
-          <% } %>
         <h2 data-l10n-id="pad.settings.about">About</h2>
           <span data-l10n-id="pad.settings.poweredBy">Powered by</span>
           <a href="https://etherpad.org" target="_blank" referrerpolicy="no-referrer" rel="noopener">Etherpad</a>
@@ -495,7 +562,7 @@
             <button id="forcereconnect" class="btn btn-primary" data-l10n-id="pad.modals.forcereconnect"></button>
             <% e.end_block(); %>
           </div>
-          <form id="reconnectform" method="post" action="/ep/pad/reconnect" accept-charset="UTF-8" style="display: none;">
+          <form id="reconnectform" method="post" action="<%= typeof proxyPath !== 'undefined' ? proxyPath : '' %>/ep/pad/reconnect" accept-charset="UTF-8" style="display: none;">
               <input type="hidden" class="padId" name="padId">
               <input type="hidden" class="diagnosticInfo" name="diagnosticInfo">
               <input type="hidden" class="missedChanges" name="missedChanges">
@@ -625,7 +692,6 @@
 
       <% e.end_block(); %>
 
-    <div id="version-badge" role="status" aria-live="polite" style="display:none"></div>
   </div> <!-- End of #editorcontainerbox -->
 
   <% e.end_block(); %>
@@ -642,7 +708,7 @@
   <% e.begin_block("customScripts"); %>
   <script type="text/javascript" src="../static/skins/<%=encodeURI(settings.skinName)%>/pad.js?v=<%=settings.randomVersionString%>"></script>
   <% e.end_block(); %>
-  <div style="display:none"><a href="/javascript" data-jslicense="1">JavaScript license information</a></div>
+  <div style="display:none"><a href="<%= typeof proxyPath !== 'undefined' ? proxyPath : '' %>/javascript" data-jslicense="1">JavaScript license information</a></div>
   <% e.end_block(); %>
 </body>
 </html>

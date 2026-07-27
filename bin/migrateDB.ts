@@ -74,10 +74,20 @@ const handleSync = async ()=>{
   }
 }
 
-handleSync().then(()=>{
+handleSync().then(async ()=>{
+  // Closing flushes any buffered writes to the target DB and clears
+  // ueberdb2's keep-alive timer (added in 6.1.x). Without this the migrated
+  // data may not be fully persisted and the process would hang forever
+  // instead of exiting once the sync is done.
+  await ueberdb2.close()
+  await ueberdb1.close()
   console.log("Done syncing dbs")
-}).catch(e=>{
+  process.exit(0)
+}).catch(async e=>{
   console.log(`Error syncing db ${e}`)
+  await ueberdb2.close().catch(()=>{})
+  await ueberdb1.close().catch(()=>{})
+  process.exit(1)
 })
 
 

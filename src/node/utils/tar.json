@@ -67,7 +67,6 @@
   , "skiplist.js"
   , "colorutils.js"
   , "undomodule.js"
-  , "$unorm/lib/unorm.js"
   , "contentcollector.js"
   , "changesettracker.js"
   , "linestylefilter.js"

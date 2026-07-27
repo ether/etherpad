@@ -42,16 +42,16 @@
     "ui": "link:ui"
   },
   "engines": {
-    "node": ">=25.0.0",
+    "node": ">=24.0.0",
     "pnpm": ">=11.1.2"
   },
-  "packageManager": "pnpm@11.1.2",
+  "packageManager": "pnpm@11.10.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/ether/etherpad.git"
   },
   "engineStrict": true,
-  "version": "2.7.3",
+  "version": "3.3.2",
   "license": "Apache-2.0",
   "pnpm": {
     "onlyBuiltDependencies": [

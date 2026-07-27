@@ -465,6 +465,20 @@ also use this to handle existing types.
 `collab_client.js` has a pretty extensive list of message types, if you want to
 take a look.
 
+## handleClientTimesliderMessage_`name`
+
+Called from: `src/static/js/broadcast.ts`
+
+Things in context:
+
+1. payload - the data that got sent with the message (use it for custom message
+   content)
+
+This is the timeslider analog of `handleClientMessage_name`. It gets called
+every time the timeslider receives a message of type `name`. Use it to handle
+custom message types (or react to existing ones) while a user is viewing the
+timeslider rather than editing the pad.
+
 ## aceStartLineAndCharForPoint-aceEndLineAndCharForPoint
 
 Called from: src/static/js/ace2_inner.js
@@ -495,6 +509,34 @@ Things in context:
 
 This hook is provided to allow a plugin to handle key events.
 The return value should be true if you have handled the event.
+
+## acePaste
+
+Called from: `src/static/js/ace2_inner.ts`
+
+Things in context:
+
+1. editorInfo - information about the user who is making the change
+2. rep - information about where the change is being made
+3. documentAttributeManager - information about attributes in the document
+4. e - the fired paste event
+
+This hook is called when content is pasted into the editor, before Etherpad
+processes the pasted content. Use it to inspect or react to paste events.
+
+## aceDrop
+
+Called from: `src/static/js/ace2_inner.ts`
+
+Things in context:
+
+1. editorInfo - information about the user who is making the change
+2. rep - information about where the change is being made
+3. documentAttributeManager - information about attributes in the document
+4. e - the fired drop event
+
+This hook is called when content is dropped into the editor via drag-and-drop.
+Use it to inspect or react to drop events.
 
 ## collectContentLineText
 

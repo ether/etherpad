@@ -680,6 +680,16 @@ export class Html10n {
       // @ts-ignore
       node[prop] = str.str!
       populateAriaLabel()
+    } else if (node.tagName === 'SELECT' || node.tagName === 'INPUT' ||
+               node.tagName === 'TEXTAREA') {
+      // Form-controllable elements carry their accessible name on aria-label
+      // rather than as text content — a <select>'s text is its <option>
+      // labels, not its own name. Plugins that put `data-l10n-id` on a
+      // <select> (ep_headings2, ep_align, ep_font_size, …) used to trigger a
+      // spurious "could not translate element content" warning here because
+      // the text-node hunt below finds nothing to write. Short-circuit and
+      // just localize aria-label. See ether/ep_align#182 review.
+      populateAriaLabel()
     } else {
       let children = node.childNodes,
         found = false
@@ -696,17 +706,6 @@ export class Html10n {
       }
       if (!found) {
         console.warn('Unexpected error: could not translate element content for key '+str.id, node)
-      }
-      // Form-controllable elements (<select>, <input>, <textarea>) carry their
-      // accessible name on aria-label rather than as text content (a <select>'s
-      // text is its <option> labels, not its own name). The textContent branch
-      // above doesn't fall through to populateAriaLabel(), so plugins that put
-      // data-l10n-id on a <select> and rely on the auto-population (introduced
-      // in #7584) end up with no accessible name. Populate aria-label here so
-      // those controls stay localized too. See ether/ep_align#182 review.
-      const tag = node.tagName;
-      if (tag === 'SELECT' || tag === 'INPUT' || tag === 'TEXTAREA') {
-        populateAriaLabel()
       }
     }
   }

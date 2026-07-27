@@ -1,19 +1,19 @@
 'use strict';
 
-// Source-level lint pinning the Windows + Node 24 backend-test flake
-// mitigations from PR #7748. Two independent attacks at the failure:
+// Source-level lint pinning the one remaining Windows backend-test CI
+// invariant after the silent-ELIFECYCLE flake was root-caused and fixed
+// (the in-process process.exit path is gated in src/node/server.ts, and the
+// Windows jobs run on Node 24.16.0 to avoid the libuv TCP-connect stack
+// overrun in 24.15.0 — tracked upstream as nodejs/node#63620):
 //
-//   1. Mocha --exit on the Windows CI jobs so the post-suite event-loop
-//      drain — where Windows + Node 24 hard-kills the process — never
-//      executes. Scoped to Windows so Linux/local runs still surface
-//      real handle leaks via natural drain.
-//   2. NODE_OPTIONS=--report-on-fatalerror (and friends) on every
-//      Backend tests step, with the resulting node-report/ directory
-//      uploaded as an artifact on failure. If the flake recurs we
-//      finally get a V8 stack + libuv handle table.
+//   mocha --exit on the Windows CI jobs, and ONLY there, so a leaked handle
+//   can't hang the job at post-suite drain. Linux/local keep natural drain so
+//   real handle leaks stay visible. Easy to silently revert in a workflow
+//   refactor or leak into the shared test script; this test fails fast if it
+//   disappears or spreads.
 //
-// Both pieces are easy to silently revert in a workflow refactor; this
-// test fails fast if either disappears.
+// (The earlier --report-on-fatalerror NODE_OPTIONS + node-report uploads were
+// diagnostics for hunting the flake; removed once the cause was found.)
 
 import {readFileSync} from 'fs';
 import {join} from 'path';
@@ -24,27 +24,7 @@ const read = (rel: string) => readFileSync(join(repoRoot, rel), 'utf8');
 
 const workflow = read('.github/workflows/backend-tests.yml');
 
-describe('backend-tests flake mitigation (PR #7748)', () => {
-  it('every Backend tests step exposes Node diagnostic reports via NODE_OPTIONS', () => {
-    // Count the "Run the backend tests" steps so the expected-count is
-    // explicit — if a job is added later, this test reminds the author
-    // to wire the diag flags into it too.
-    const runStepCount = (workflow.match(/name: Run the backend tests/g) || []).length;
-    expect(runStepCount, 'expected 4 Backend tests step blocks (Linux × 2, Windows × 2)')
-      .toBe(4);
-    const nodeOptionsCount = (workflow.match(
-      /--report-on-fatalerror --report-uncaught-exception --report-on-signal --report-compact/g,
-    ) || []).length;
-    expect(nodeOptionsCount,
-      'every Backend tests step must set NODE_OPTIONS with the report-on-fatalerror diag flags')
-      .toBe(runStepCount);
-    const uploadCount = (workflow.match(/name: Upload Node diagnostic reports on failure/g) || [])
-      .length;
-    expect(uploadCount,
-      'every Backend tests step must be followed by an Upload Node diagnostic reports step')
-      .toBe(runStepCount);
-  });
-
+describe('backend-tests Windows --exit invariant', () => {
   it('Windows backend-test steps invoke pnpm test with --exit', () => {
     // --exit is the Windows-only mitigation. Linux still runs natural-drain
     // so leaked-handle regressions stay visible there.

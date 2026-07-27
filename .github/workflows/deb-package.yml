@@ -15,6 +15,24 @@ on:
       - 'src/node/utils/run_cmd.ts'
       - 'src/static/js/pluginfw/**'
       - 'settings.json.template'
+  # Also build + smoke-test the package on PRs that touch the production
+  # footprint. The smoke step boots the packaged server and waits for /health,
+  # which is the only check that catches "server starts then exits before
+  # binding the port" startup regressions (e.g. a dependency bump whose change
+  # lets the event loop drain mid-boot). Previously this workflow ran only on
+  # push to develop, so such a regression was caught *after* merge — by which
+  # point develop was already red. Running it pre-merge blocks the PR instead.
+  # The release/apt-publish jobs are tag-guarded, so PRs run the build job only.
+  pull_request:
+    paths:
+      - 'packaging/**'
+      - '.github/workflows/deb-package.yml'
+      - 'src/package.json'
+      - 'pnpm-lock.yaml'
+      - 'src/node/server.ts'
+      - 'src/node/utils/run_cmd.ts'
+      - 'src/static/js/pluginfw/**'
+      - 'settings.json.template'
   workflow_dispatch:
     inputs:
       ref:
@@ -44,16 +62,16 @@ jobs:
             runner: ubuntu-24.04-arm
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.ref || github.ref }}
 
       - uses: pnpm/action-setup@v6
 
       - name: Setup Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
-          node-version: '25'
+          node-version: '24'
           cache: pnpm
 
       - name: Resolve version
@@ -128,16 +146,16 @@ jobs:
         run: |
           set -eux
           # Ubuntu's default apt nodejs is 18 — too old for our
-          # `Depends: nodejs (>= 25)`. Add NodeSource's apt repo
+          # `Depends: nodejs (>= 24)`. Add NodeSource's apt repo
           # explicitly (key + sources.list) instead of `curl | sudo bash`
           # so we don't execute network-fetched code as root.
-          NODE_MAJOR=25
+          NODE_MAJOR=24
           # GitHub runner images often ship a NodeSource node_20.x list
           # preinstalled (sometimes as a .sources deb822 file). Wipe any
           # existing nodesource entries so the only Node candidate apt sees
-          # is our node_25.x repo. Otherwise `apt-get install -y nodejs`
+          # is our node_24.x repo. Otherwise `apt-get install -y nodejs`
           # picks the higher-version 20.x build that's already cached and
-          # `dpkg -i` then fails on `Depends: nodejs (>= 25)`.
+          # `dpkg -i` then fails on `Depends: nodejs (>= 24)`.
           sudo rm -f /etc/apt/sources.list.d/nodesource.list \
                      /etc/apt/sources.list.d/nodesource.sources \
                      /etc/apt/preferences.d/nodesource \
@@ -147,7 +165,7 @@ jobs:
             | sudo gpg --dearmor --yes -o "${KEYRING}"
           echo "deb [signed-by=${KEYRING}] https://deb.nodesource.com/node_${NODE_MAJOR}.x nodistro main" \
             | sudo tee /etc/apt/sources.list.d/nodesource.list
-          # Pin nodejs to the 25.x line so neither Ubuntu's noble-updates
+          # Pin nodejs to the 24.x line so neither Ubuntu's noble-updates
           # 20.x nor any leftover NodeSource cache can win the resolver.
           printf 'Package: nodejs\nPin: version %s.*\nPin-Priority: 1001\n' "${NODE_MAJOR}" \
             | sudo tee /etc/apt/preferences.d/nodesource >/dev/null
@@ -328,7 +346,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout etherpad source (for packaging/apt/key.asc)
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 1
 

@@ -10,7 +10,7 @@
 
 Every keystroke is attributed to its author. Every revision is preserved. The timeslider lets you scrub through a document's entire history, character by character. Author colours make collaboration visible at a glance — not buried in a menu.
 
-Etherpad runs on your server, under your governance. No telemetry. No upsells. AI is a plugin you install, pointed at the model you choose, running on infrastructure you control — not a feature decided for you in a boardroom you weren't in.
+Etherpad runs on your server, under your governance. No telemetry. No upsells. AI is a plugin you install, pointed at the model you choose, running on infrastructure you control — not a feature decided for you in a boardroom you weren't in. See [PRIVACY.md](PRIVACY.md) for the two opt-out network calls Etherpad's own code makes and how to disable each.
 
 The code is Apache 2.0. The data format is open. It [scales to thousands of simultaneous editors per pad](http://scale.etherpad.org/). Translated into 105 languages. Extended through hundreds of plugins. Used by Wikimedia, governments, public-sector institutions, and self-hosters worldwide since 2009.
 
@@ -64,7 +64,7 @@ For more than a decade, Etherpad has quietly underpinned the documents that matt
 
 ### Quick install (one-liner)
 
-The fastest way to get Etherpad running. Requires `git` and Node.js >= 25.
+The fastest way to get Etherpad running. Requires `git` and Node.js >= 24.
 
 **macOS / Linux / WSL:**
 
@@ -117,11 +117,11 @@ services:
       - postgres
     environment:
       NODE_ENV: production
-      ADMIN_PASSWORD: ${DOCKER_COMPOSE_APP_ADMIN_PASSWORD:-admin}
+      ADMIN_PASSWORD: "${DOCKER_COMPOSE_APP_ADMIN_PASSWORD:?Set DOCKER_COMPOSE_APP_ADMIN_PASSWORD to a strong value}"
       DB_CHARSET: ${DOCKER_COMPOSE_APP_DB_CHARSET:-utf8mb4}
       DB_HOST: postgres
       DB_NAME: ${DOCKER_COMPOSE_POSTGRES_DATABASE:-etherpad}
-      DB_PASS: ${DOCKER_COMPOSE_POSTGRES_PASSWORD:-admin}
+      DB_PASS: "${DOCKER_COMPOSE_POSTGRES_PASSWORD:?Set DOCKER_COMPOSE_POSTGRES_PASSWORD to a strong value}"
       DB_PORT: ${DOCKER_COMPOSE_POSTGRES_PORT:-5432}
       DB_TYPE: "postgres"
       DB_USER: ${DOCKER_COMPOSE_POSTGRES_USER:-admin}
@@ -129,7 +129,7 @@ services:
       DEFAULT_PAD_TEXT: ${DOCKER_COMPOSE_APP_DEFAULT_PAD_TEXT:- }
       DISABLE_IP_LOGGING: ${DOCKER_COMPOSE_APP_DISABLE_IP_LOGGING:-false}
       SOFFICE: ${DOCKER_COMPOSE_APP_SOFFICE:-null}
-      TRUST_PROXY: ${DOCKER_COMPOSE_APP_TRUST_PROXY:-true}
+      TRUST_PROXY: ${DOCKER_COMPOSE_APP_TRUST_PROXY:-false}
     restart: always
     ports:
       - "${DOCKER_COMPOSE_APP_PORT_PUBLISHED:-9001}:${DOCKER_COMPOSE_APP_PORT_TARGET:-9001}"
@@ -138,7 +138,7 @@ services:
     image: postgres:15-alpine
     environment:
       POSTGRES_DB: ${DOCKER_COMPOSE_POSTGRES_DATABASE:-etherpad}
-      POSTGRES_PASSWORD: ${DOCKER_COMPOSE_POSTGRES_PASSWORD:-admin}
+      POSTGRES_PASSWORD: "${DOCKER_COMPOSE_POSTGRES_PASSWORD:?Set DOCKER_COMPOSE_POSTGRES_PASSWORD to a strong value}"
       POSTGRES_PORT: ${DOCKER_COMPOSE_POSTGRES_PORT:-5432}
       POSTGRES_USER: ${DOCKER_COMPOSE_POSTGRES_USER:-admin}
       PGDATA: /var/lib/postgresql/data/pgdata
@@ -158,7 +158,7 @@ volumes:
 
 ### Requirements
 
-[Node.js](https://nodejs.org/) >= 25.
+[Node.js](https://nodejs.org/) >= 24.
 
 ### Windows, macOS, Linux
 
@@ -172,7 +172,7 @@ volumes:
 
 ### Docker container
 
-Find [here](doc/docker.adoc) information on running Etherpad in a container.
+Find [here](doc/docker.md) information on running Etherpad in a container.
 
 ## Plugins
 
@@ -247,8 +247,8 @@ git -P tag --list "v*" --merged
 ```
 4. Select the version
 ```sh
-git checkout v2.2.5
-git switch -c v2.2.5
+git checkout v3.2.0
+git switch -c v3.2.0
 ```
 5. Upgrade Etherpad
 ```sh

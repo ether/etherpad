@@ -4,7 +4,8 @@
 			"AmaryllisGardener",
 			"CiphriusKane",
 			"John Reid",
-			"Nintendofan885"
+			"Nintendofan885",
+			"Tensama0415"
 		]
 	},
 	"index.newPad": "New Pad",
@@ -72,7 +73,7 @@
 	"pad.modals.corruptPad.cause": "This micht be cause o ae wrang server confeeguration or some ither onexpected behavior. Please contact the service admeenistrater.",
 	"pad.modals.deleted": "Deletit.",
 	"pad.modals.deleted.explanation": "This pad has been hif't.",
-	"pad.modals.disconnected": "Ye'v been disconnected.",
+	"pad.modals.disconnected": "切断されました。",
 	"pad.modals.disconnected.explanation": "The connection til the server wis loast",
 	"pad.modals.disconnected.cause": "The server micht be onavailable. Please notify the service admeenistrater gif this continues tae happen.",
 	"pad.share": "Share this pad",

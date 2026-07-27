@@ -34,6 +34,37 @@ textarea.settings:focus {
   border-top: 1px solid #ddd;
 }
 
+/* --- env-var banner --- */
+/* Shown only when settings.json contains ${VAR} placeholders. The
+   typical reader is a Docker/K8s operator who has just been surprised
+   by env-var substitution semantics, so the copy must explain rather
+   than warn — visual weight matches a note, not an error. */
+.settings-envvar-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  background: #f5f7ff;
+  border: 1px solid #c7d2fe;
+  border-radius: 6px;
+  color: #1e293b;
+}
+.settings-envvar-banner svg {
+  flex-shrink: 0;
+  color: #4f46e5;
+  margin-top: 2px;
+}
+.settings-envvar-banner strong {
+  display: block;
+  margin-bottom: 4px;
+}
+.settings-envvar-banner p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
 /* --- mode toggle --- */
 .settings-mode-toggle {
   display: inline-flex;
@@ -232,6 +263,32 @@ textarea.settings:focus {
 .settings-widget-env-default-input:focus {
   outline: 2px solid var(--accent, #2b8a3e);
   outline-offset: 1px;
+}
+.settings-widget-env-runtime {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 4px;
+  padding: 1px 8px;
+  border-radius: 10px;
+  background: #e6f4ea;
+  color: #1e5631;
+  font-family: "Fira Code", monospace;
+  font-size: 12px;
+}
+.settings-widget-env-runtime-redacted {
+  background: #ececec;
+  color: #555;
+}
+.settings-widget-env-runtime-arrow {
+  opacity: 0.6;
+}
+.settings-widget-env-runtime-label {
+  font-style: italic;
+  opacity: 0.7;
+}
+.settings-widget-env-runtime-value {
+  font-weight: 600;
 }
 
 /* Radix switch (boolean) */

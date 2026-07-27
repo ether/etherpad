@@ -35,7 +35,7 @@ jobs:
       snap-file: ${{ steps.build.outputs.snap }}
     steps:
       - name: Check out
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Build snap
         id: build

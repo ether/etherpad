@@ -243,6 +243,11 @@ const Ace2Editor = function () {
     sideDiv.appendChild(sideDivInner);
     const lineMetricsDiv = outerDocument.createElement('div');
     lineMetricsDiv.id = 'linemetricsdiv';
+    // Measurement-only node: holds a single "x" so the renderer can read
+    // its computed line height. Without aria-hidden, AT exposes the stray
+    // glyph as a "text leaf" sandwiched between the editor iframe and the
+    // chat button — see ether/etherpad#7255 (comment "Ether X" announcement).
+    lineMetricsDiv.setAttribute('aria-hidden', 'true');
     lineMetricsDiv.appendChild(outerDocument.createTextNode('x'));
     outerDocument.body.appendChild(lineMetricsDiv);
 
@@ -296,8 +301,12 @@ const Ace2Editor = function () {
     // <body> tag
     innerDocument.body.id = 'innerdocbody';
     innerDocument.body.classList.add('innerdocbody');
-    innerDocument.body.setAttribute('role', 'textbox');
-    innerDocument.body.setAttribute('aria-multiline', 'true');
+    // Deliberately no role="textbox" / aria-multiline: those put NVDA/JAWS
+    // into focus mode (the whole pad becomes one flat edit field), which
+    // hides links and headings from the rotor and suppresses arrow-key
+    // line navigation. contenteditable=true already tells AT this is
+    // editable; without textbox semantics AT can browse the content as a
+    // document. See #7778 / #7255.
     innerDocument.body.setAttribute('aria-label', 'Pad content');
     innerDocument.body.setAttribute('aria-describedby', 'editor-keyboard-hint');
     innerDocument.body.setAttribute('spellcheck', 'false');

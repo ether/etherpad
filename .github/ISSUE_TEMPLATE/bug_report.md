@@ -30,7 +30,8 @@ If applicable, add screenshots to help explain your problem.
  - OS: [e.g., Ubuntu 20.04]
  - Node.js version (`node --version`):
  - npm version (`npm --version`):
- - Is the server free of plugins: 
+ - Is the server free of plugins:
+ - Are you using any abstraction IE docker?
 
 **Desktop (please complete the following information):**
  - OS: [e.g. iOS]

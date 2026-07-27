@@ -177,7 +177,20 @@ export class LinkInstaller {
     }
   }
 
+  // A dependency name comes from a plugin's package.json and is used to build
+  // filesystem paths (readFileSync / symlinkSync), so validate it is a plain npm
+  // package name (optional scope, no path separators or "..") before use.
+  private isValidDependencyName(dependency: string): boolean {
+    return typeof dependency === 'string' &&
+      !dependency.includes('..') &&
+      /^(@[a-z0-9-._~]+\/)?[a-z0-9-._~]+$/i.test(dependency);
+  }
+
   private async addSubDependency(plugin: string, dependency: string) {
+    if (!this.isValidDependencyName(dependency)) {
+      console.error(`Skipping plugin dependency with invalid name: ${dependency}`)
+      return
+    }
     if (this.dependenciesMap.has(dependency)) {
       // We already added the sub dependency
       this.dependenciesMap.get(dependency)?.add(plugin)
@@ -201,6 +214,10 @@ export class LinkInstaller {
   }
 
   private linkDependency(dependency: string) {
+    if (!this.isValidDependencyName(dependency)) {
+      console.error(`Skipping plugin dependency with invalid name: ${dependency}`)
+      return
+    }
     try {
       // Check if the dependency is already installed
       accessSync(path.join(node_modules, dependency), constants.F_OK)

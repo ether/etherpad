@@ -7,6 +7,10 @@ const baseInput = {
   tier: 'manual' as Tier,
   current: '2.7.1',
   latest: '2.7.2',
+  // Default to a valid window so tier-4 cases below can assert canAutonomous
+  // without also having to wire a window each time. The "no window" + "invalid
+  // window" cases set this explicitly.
+  maintenanceWindow: {start: '03:00', end: '05:00', tz: 'local' as const},
 };
 
 describe('evaluatePolicy', () => {
@@ -91,5 +95,46 @@ describe('evaluatePolicy terminal-state gating', () => {
     expect(r.canManual).toBe(true);
     expect(r.canAuto).toBe(true);
     expect(r.canAutonomous).toBe(true);
+  });
+});
+
+describe('evaluatePolicy tier 4 — maintenance window gating', () => {
+  it('autonomous without a window degrades to canAuto only', () => {
+    const r = evaluatePolicy({
+      ...baseInput, tier: 'autonomous', maintenanceWindow: null,
+    });
+    expect(r.canManual).toBe(true);
+    expect(r.canAuto).toBe(true);
+    expect(r.canAutonomous).toBe(false);
+    expect(r.reason).toBe('maintenance-window-missing');
+  });
+
+  it('autonomous with a malformed window degrades to canAuto only', () => {
+    const r = evaluatePolicy({
+      ...baseInput, tier: 'autonomous',
+      maintenanceWindow: {start: 'oops', end: '05:00', tz: 'local'},
+    });
+    expect(r.canAutonomous).toBe(false);
+    expect(r.reason).toBe('maintenance-window-invalid');
+  });
+
+  it('lower tiers ignore the maintenance window (reason stays ok)', () => {
+    const r = evaluatePolicy({
+      ...baseInput, tier: 'auto', maintenanceWindow: null,
+    });
+    expect(r.canAuto).toBe(true);
+    expect(r.canAutonomous).toBe(false);
+    expect(r.reason).toBe('ok');
+  });
+
+  it('rollback-failed still wins over the window denial', () => {
+    const r = evaluatePolicy({
+      ...baseInput, tier: 'autonomous',
+      maintenanceWindow: null,
+      executionStatus: 'rollback-failed',
+    });
+    expect(r.canAuto).toBe(false);
+    expect(r.canAutonomous).toBe(false);
+    expect(r.reason).toBe('rollback-failed-terminal');
   });
 });

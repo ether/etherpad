@@ -19,10 +19,15 @@
  * limitations under the License.
  */
 
+import AttributeMap from '../../static/js/AttributeMap';
 import {deserializeOps} from '../../static/js/Changeset';
 import ChatMessage from '../../static/js/ChatMessage';
 import {Builder} from "../../static/js/Builder";
 import {Attribute} from "../../static/js/types/Attribute";
+
+// Mirror of `Pad.SYSTEM_AUTHOR_ID`. Inlined to avoid a circular load
+// (API <-> Pad) at module init time.
+const SYSTEM_AUTHOR_ID = 'a.etherpad-system';
 import settings from '../utils/Settings';
 const CustomError = require('../utils/customError');
 const padManager = require('./PadManager');
@@ -409,7 +414,13 @@ exports.appendChatMessage = async (padID: string, text: string|object, authorID:
     time = Date.now();
   }
 
-  // @TODO - missing getPadSafe() call ?
+  // Reject messages addressed to a pad that doesn't exist. Without this check
+  // the downstream padManager.getPad() would create the pad on demand with
+  // default content, so the documented {code:1,"padID does not exist"} result
+  // would never be returned.
+  if (!await padManager.doesPadExists(padID)) {
+    throw new CustomError('padID does not exist', 'apierror');
+  }
 
   // save chat message to database and send message to all connected clients
   await padMessageHandler.sendChatMessageToPadClients(new ChatMessage(text, authorID, time), padID);
@@ -540,10 +551,11 @@ exports.createPad = async (padID: string, text: string, authorId = '') => {
 
   // create pad
   await getPadSafe(padID, false, text, authorId);
-  // When requireAuthentication is on, every creator has a stable identity, so
-  // the cookie/identity path covers recovery and the one-time token is just
-  // an extra surface to leak.
-  const deletionToken = settings.requireAuthentication
+  // No recovery token when it cannot help: requireAuthentication gives every
+  // creator a stable identity, and allowPadDeletionByAllUsers lets anyone delete
+  // the pad with no token at all (issue #7926). Either way the token is just an
+  // extra surface to leak.
+  const deletionToken = settings.requireAuthentication || settings.allowPadDeletionByAllUsers
       ? null
       : await padDeletionManager.createDeletionTokenIfAbsent(padID);
   return {deletionToken};
@@ -620,9 +632,28 @@ exports.restoreRevision = async (padID: string, rev: number, authorId = '') => {
   // create a new changeset with a helper builder object
   const builder = new Builder(oldText.length);
 
+  // The author to attribute inserts to. If the caller supplied an
+  // explicit authorId, that wins; otherwise fall back to the stable
+  // system author. The replayed atext was built from historical
+  // revisions that may legitimately have insert ops without an
+  // author attribute (legacy server-internal flows / .etherpad
+  // imports); appendRevision now requires every insert to carry
+  // one, so we merge the marker in below.
+  const replayAuthorId = authorId || SYSTEM_AUTHOR_ID;
+
   // assemble each line into the builder
-  eachAttribRun(atext.attribs, (start: number, end: number, attribs:Attribute[]) => {
-    builder.insert(atext.text.substring(start, end), attribs);
+  eachAttribRun(atext.attribs, (start: number, end: number, attribs:string) => {
+    // attribs here is the op.attribs *string* (the eachAttribRun
+    // callback receives it as the third arg). Use AttributeMap to
+    // merge in `author` while preserving canonical (sorted) order
+    // so checkRep doesn't reject the result. The `.set` call is a
+    // no-op when the existing attribs already contain an `author`
+    // attribute that matches; when they contain a *different*
+    // author it preserves the historical attribution (we only
+    // set author when it's missing).
+    const map = AttributeMap.fromString(attribs, pad.pool);
+    if (!map.get('author')) map.set('author', replayAuthorId);
+    builder.insert(atext.text.substring(start, end), map.toString());
   });
 
   const lastNewlinePos = oldText.lastIndexOf('\n');
@@ -831,7 +862,13 @@ Example returns:
 exports.listAuthorsOfPad = async (padID: string) => {
   // get the pad
   const pad = await getPadSafe(padID, true);
-  const authorIDs = pad.getAllAuthors();
+  // Pad.SYSTEM_AUTHOR_ID is the synthetic author Etherpad attributes inserts to
+  // when no authorId is supplied (HTTP API setText/appendText/setHTML without
+  // authorId, server-side import flows, plugins like ep_post_data). It is an
+  // implementation detail of changeset bookkeeping, not a real contributor, so
+  // it should not surface through this public API.
+  const {Pad} = require('./Pad');
+  const authorIDs = pad.getAllAuthors().filter((id: string) => id !== Pad.SYSTEM_AUTHOR_ID);
   return {authorIDs};
 };
 

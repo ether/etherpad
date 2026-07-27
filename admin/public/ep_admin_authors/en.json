@@ -14,6 +14,8 @@
   "cap-warning": "Showing the first 1000 authors. Narrow your search to see more.",
   "feature-disabled-banner": "Author erasure is disabled. Set \"gdprAuthorErasure\": {\"enabled\": true} in settings.json to enable.",
   "no-results": "No authors match this search.",
+  "confirm-dialog-title": "Confirm author erasure",
+  "confirm-dialog-description": "Review the impact of erasing this author and confirm or cancel.",
   "confirm-preview-title": "Erase author {{name}}",
   "confirm-preview-counters": "Will clear {{tokenMappings}} token mappings, {{externalMappings}} mapper bindings, and {{chatMessages}} chat messages across {{affectedPads}} pads.",
   "confirm-irreversible": "This cannot be undone.",

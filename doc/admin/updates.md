@@ -2,10 +2,10 @@
 
 Etherpad ships with a built-in update subsystem.
 
-- **Tier 1 (notify)** — default. A banner appears in the admin UI when a new release is available, and pad users see a discreet badge if the running version is severely outdated or flagged as vulnerable. No execution.
+- **Tier 1 (notify)** — default. A banner appears in the admin UI when a new release is available, and pad users see a dismissable gritter notification if the running version is at least one minor version behind the latest release. No execution.
 - **Tier 2 (manual click)** — admins on a git install can click "Apply update" at `/admin/update`. Etherpad drains active sessions, runs `git fetch / checkout / pnpm install / pnpm run build:ui`, and exits with code 75 so a process supervisor restarts it on the new version. Auto-rolls back on failure.
 - **Tier 3 (auto with grace window)** — opt-in. On a git install, a newly detected release transitions execution state to `scheduled` and is applied after `preApplyGraceMinutes`. During the grace window, `/admin/update` shows a live countdown plus Cancel and Apply now buttons; an admin email (if `adminEmail` is set) fires once per scheduled tag.
-- **Tier 4 (autonomous in maintenance window)** — designed, not yet implemented.
+- **Tier 4 (autonomous in maintenance window)** — opt-in. Tier 3 + `updates.maintenanceWindow` is required; the scheduler only fires while the wall clock is inside the configured window. Updates detected outside the window queue for the next opening.
 
 ## Settings
 
@@ -29,13 +29,22 @@ In `settings.json`:
     "requireSignature": false,
     "trustedKeysPath": null
   },
-  "adminEmail": null
+  "adminEmail": null,
+  // SMTP transport for the admin notification emails. host=null keeps
+  // log-only behaviour ("(would send email)"); set host+from to deliver.
+  "mail": {
+    "host": null,
+    "port": 587,
+    "secure": false,
+    "from": null,
+    "auth": null
+  }
 }
 ```
 
 | Setting | Default | Notes |
 | --- | --- | --- |
-| `updates.tier` | `"notify"` | One of `"off"`, `"notify"`, `"manual"`, `"auto"`, `"autonomous"`. Higher tiers are silently downgraded if the install method does not allow them. PR 1 only honors `"notify"` and `"off"`. |
+| `updates.tier` | `"notify"` | One of `"off"`, `"notify"`, `"manual"`, `"auto"`, `"autonomous"`. All tiers are implemented. Higher tiers are silently downgraded if the install method does not allow them (only `"git"` installs can run the write tiers `manual` / `auto` / `autonomous`). |
 | `updates.source` | `"github"` | Reserved for future alternative sources. Only `"github"` is implemented. |
 | `updates.channel` | `"stable"` | Reserved. Stable releases only. |
 | `updates.installMethod` | `"auto"` | One of `"auto"`, `"git"`, `"docker"`, `"npm"`, `"managed"`. Auto-detects via filesystem heuristics. Set explicitly to override. |
@@ -49,37 +58,53 @@ In `settings.json`:
 | `updates.requireSignature` | `false` | When `true`, refuse updates whose tag is not signed by a trusted key. Verification is done via `git verify-tag <tag>` against the user's GPG keyring. Default `false` because Etherpad's release process does not yet sign tags consistently — turning the check on by default would block every Tier 2 update. Set `true` if you run your own builds or have imported a fork's keys. |
 | `updates.trustedKeysPath` | `null` | Override the keyring location passed to `git verify-tag` via the `$GNUPGHOME` env var. Useful when the trusted keys live in a dedicated keyring outside the Etherpad user's home. Only meaningful when `requireSignature: true`. |
 | `adminEmail` | `null` | Top-level. Contact for admin notifications. Setting it enables the email nudges below. |
+| `mail.host` | `null` | Top-level SMTP host. **`null` keeps log-only behaviour** — notifications are logged as `(would send email)` and never delivered. Set a host (and `mail.from`) to deliver over SMTP via nodemailer. The `nodemailer` dependency is lazy-loaded, so installs that leave `mail.host` unset pay no runtime cost. |
+| `mail.port` | `587` | SMTP port. |
+| `mail.secure` | `false` | `true` for an implicit-TLS connection (typically port 465); `false` uses STARTTLS upgrade when offered. |
+| `mail.from` | `null` | Envelope/From address. **Required for delivery** — if `mail.from` is unset (even with a host) the updater falls back to log-only `(would send email)`. |
+| `mail.auth` | `null` | SMTP credentials object `{ "user": "...", "pass": "..." }`, passed through to nodemailer. Leave `null` for unauthenticated relays. |
 
 ## What "outdated" means
 
-- **`severe`** — running at least one major version behind the latest release.
-- **`vulnerable`** — the running version is below a `vulnerable-below` threshold announced in a recent release. Releases declare these via a `<!-- updater: vulnerable-below X.Y.Z -->` HTML comment in their body. The newest such directive wins.
+- **`minor`** — the running server is at least one minor version behind the latest published release. Patch-only deltas (same major and minor, higher patch) do not fire the notice.
 
 ## Email cadence (when `adminEmail` is set)
 
+These are the "nudge" emails sent by the periodic checker when the instance is behind:
+
 | Trigger | First send | Repeat |
 | --- | --- | --- |
-| Vulnerable status detected | Immediate | Weekly while still vulnerable |
-| New release announced while still vulnerable | Immediate | n/a (one event per tag change) |
-| Severely outdated detected | Immediate | Monthly while still severely outdated |
+| Outdated (minor or more behind) detected | Immediate | Every 30 days while still outdated (`SEVERE_INTERVAL`) |
 | Up to date | No email | — |
 
-If `adminEmail` is unset, the updater never sends mail. The admin UI banner and the pad-side badge still work without it.
+The write tiers also email about **apply outcomes** so admins learn about failures without watching the UI:
 
-PR 1 ships the cadence machinery but does not yet wire a real SMTP transport — emails are logged with `(would send email)` until a future PR adds the transport. The dedupe state still advances correctly so admins are not bombarded once SMTP is wired.
+| Outcome | When | Dedupe |
+| --- | --- | --- |
+| `update-preflight-failed` | An auto/autonomous apply was blocked at preflight (e.g. `node-engine-mismatch`, dirty tree, low disk). Subject: *Auto-update to `<tag>` blocked at preflight*. | Deduped on `<outcome>:<targetTag>` — one email per outcome per target tag. |
+| `update-rolled-back` | An apply failed mid-flow and Etherpad auto-recovered to the previous version. Subject: *Auto-update to `<tag>` rolled back*. | Deduped on `<outcome>:<targetTag>`. |
+| `update-rollback-failed` | **Terminal.** The apply failed *and* the rollback failed — manual intervention required. Subject: *Auto-update FAILED and could not be rolled back — manual intervention required*. | **Always sends**, bypassing dedupe, because the admin must learn about it even if a transient failure shared the same key. |
 
-## Pad-side badge
+A different outcome or a different target tag resets the dedupe key and fires a fresh email. Manual (Tier 2) failures surface in the admin UI banner; the outcome emails are tied to the auto/autonomous flows.
 
-Pad users see no version information by default. A small badge appears in the bottom-right corner only when:
+If `adminEmail` is unset, the updater never sends mail. The admin UI banner and the pad-side notice still work without it.
 
-- The instance is `severe` (one or more major versions behind), or
-- The instance is `vulnerable` (running below an announced threshold).
+SMTP delivery is wired via [nodemailer](https://nodemailer.com/) (lazy-loaded). When `mail.host` and `mail.from` are both set, emails are delivered over SMTP. When either is unset the updater falls back to logging each message as `(would send email)` — the dedupe state still advances correctly, so admins are not bombarded once SMTP is configured. An SMTP send failure is caught and logged (`email send failed: …`) and never disrupts the updater state machine.
 
-The public endpoint `/api/version-status` returns only `{outdated: null|"severe"|"vulnerable"}` — it never leaks the running version, so attackers do not gain a fingerprint vector.
+## Pad-side notice
+
+Pad users see no version information by default. A dismissable gritter notification appears only when:
+
+- The running server is at least one minor version behind the latest published release (patch-only deltas do not fire), **and**
+- The requesting user is the first author of the pad.
+
+The notice auto-fades after 8 seconds and can be dismissed immediately. The public endpoint `/api/version-status` accepts an optional `?padId=<id>` query parameter and returns `{outdated: "minor" | null, isFirstAuthor: boolean}` — it never leaks the running version, so attackers do not gain a fingerprint vector. Results are cached per `(padId, authorId)` for 60 seconds.
 
 ## Disabling everything
 
-Set `updates.tier` to `"off"`. No HTTP request will leave the instance and no banner or badge will render.
+Set `updates.tier` to `"off"`. The self-updater goes silent — no request to the GitHub Releases API leaves the instance and no banner or badge renders. Note this does **not** cover the separate legacy version check in `UpdateCheck.ts`, which still fetches `${updateServer}/info.json` until you also set `privacy.updateCheck` to `false` (see [PRIVACY.md](https://github.com/ether/etherpad/blob/develop/PRIVACY.md)).
+
+On Docker / air-gapped installs you can do both without editing `settings.json` inside the image by setting `UPDATES_TIER=off` **and** `PRIVACY_UPDATE_CHECK=false` (add `PRIVACY_PLUGIN_CATALOG=false` to also disable the admin plugin browser's catalogue fetch). See the [Updates & privacy](../docker.md#updates--privacy-offline--air-gapped) table in the Docker docs for the full set of environment variables.
 
 ## Privacy
 
@@ -96,7 +121,7 @@ The version check sends no telemetry. Etherpad fetches the public GitHub Release
 
 Set the value explicitly if the heuristics get it wrong (e.g., a docker container that bind-mounts a writable git checkout).
 
-In PR 1 (notify only) the install method does not change behavior — every install method gets the banner. From PR 2 onward the install method gates whether the manual-click and automatic tiers can run; only `"git"` is initially supported for write tiers.
+Every install method gets the Tier 1 banner. The install method gates whether the write tiers (manual click, auto, autonomous) can run: only `"git"` installs are supported for the write tiers — other methods are silently downgraded to notify.
 
 ## Tier 2 — manual click
 
@@ -113,7 +138,7 @@ Etherpad applies an update by **exiting with code 75** so a process supervisor r
 ### What clicking "Apply update" does
 
 1. **Lock acquire** — `var/update.lock` (PID-based, stale locks reaped automatically).
-2. **Pre-flight checks** — install method writable, working tree clean, free disk ≥ `diskSpaceMinMB`, `pnpm` on `PATH`, target tag exists at the configured remote, signature verifies (if `requireSignature: true`). On failure, state goes to `preflight-failed` with a typed reason; the admin sees a banner and clicks **Acknowledge** to clear it. No filesystem mutation has happened — nothing to roll back.
+2. **Pre-flight checks** — install method writable, working tree clean, free disk ≥ `diskSpaceMinMB`, `pnpm` on `PATH`, no lock held, target tag exists at the configured remote, signature verifies (if `requireSignature: true`), and the target's Node engine matches the running Node. The Node-engine check runs *after* signature verification (so the `engines.node` range comes from a trusted tag): Etherpad reads `engines.node` from the target tag's `package.json` via `git show <tag>:package.json` and refuses the update via `semver.satisfies` if the running Node does not satisfy it. On failure, state goes to `preflight-failed` with a typed reason; the admin sees a banner and clicks **Acknowledge** to clear it. No filesystem mutation has happened — nothing to roll back.
 3. **Drain** — `drainSeconds` window during which T-60 / T-30 / T-10 announcements broadcast to every connected pad and new socket connections are refused. Click **Cancel** during this window to abort cleanly.
 4. **Execute** — `git fetch --tags origin`, `git checkout <tag>`, `pnpm install --frozen-lockfile`, `pnpm run build:ui`. Output streams to `var/log/update.log` (rotated 10 MB × 5).
 5. **Exit 75** — the supervisor restarts on the new version.
@@ -124,6 +149,7 @@ Etherpad applies an update by **exiting with code 75** so a process supervisor r
 | What went wrong | Resulting state | Admin action |
 | --- | --- | --- |
 | Pre-flight check fails | `preflight-failed` | Click **Acknowledge** after fixing the underlying issue (free up disk, clean working tree, etc.). |
+| Target tag requires a newer (or different) Node than the one running | `preflight-failed` (reason `node-engine-mismatch`) | Fails cleanly at preflight with a detail like *"target requires Node >=X, running Y"*. No drain, no `git checkout`, no restart, nothing to roll back — the install is untouched. Upgrade Node to a version that satisfies the target's `engines.node`, then **Acknowledge** and retry. |
 | `git fetch` / `git checkout` fails mid-flow | `rolled-back` | Informational. The working tree is back where it started; click **Acknowledge** to clear. |
 | `pnpm install` or `pnpm run build:ui` fails | `rolled-back` | Same as above. The lockfile and SHA are restored. |
 | `/health` doesn't come up within `rollbackHealthCheckSeconds` | `rolled-back` | Same — RollbackHandler restores the previous SHA + lockfile and exits 75 again. |
@@ -184,7 +210,7 @@ A single `grace-start` notification fires per scheduled tag:
 
 > [Etherpad] Auto-update scheduled for 2.7.2
 
-with the `scheduledFor` timestamp. Etherpad core does not yet wire SMTP; the message logs as `(would send email)` until a future PR adds a transport. Cadence and dedupe still update correctly.
+with the `scheduledFor` timestamp. Delivery follows the same SMTP path as every other notification: when `mail.host` and `mail.from` are set the message is sent via nodemailer, otherwise it logs as `(would send email)`. Cadence and dedupe update correctly either way.
 
 The right way to give docker admins an in-product Apply button is to delegate to the orchestrator rather than mutate the container. Two patterns to consider in a follow-up PR:
 
@@ -192,3 +218,43 @@ The right way to give docker admins an in-product Apply button is to delegate to
 - **Deploy webhook.** New setting `updates.dockerWebhook`. When set, the Apply button on a docker install POSTs to the configured URL and trusts the orchestrator (Render / Railway / Fly / Portainer / Coolify / GitHub Actions — they all expose redeploy webhooks) to do the actual pull-and-recreate.
 
 Direct Docker-socket access (mount `/var/run/docker.sock` into the container) is **out of scope** — anyone who escapes the Etherpad process via that socket gets root on the host. Admins who want fully autonomous docker updates should run [Watchtower](https://containrrr.dev/watchtower/) alongside Etherpad rather than bake equivalent privilege into Etherpad itself.
+
+## Tier 4 — autonomous in a maintenance window
+
+Tier 4 layers a wall-clock window on top of Tier 3 so autonomous updates only run while it is safe to drain sessions (typically nightly).
+
+To enable, on a git install:
+
+```jsonc
+{
+  "updates": {
+    "tier": "autonomous",
+    "preApplyGraceMinutes": 15,
+    "maintenanceWindow": { "start": "03:00", "end": "05:00", "tz": "local" }
+  }
+}
+```
+
+`start` and `end` are 24-hour `HH:MM` wall-clock times in the configured `tz` (`"local"` or `"utc"`). `end` is exclusive; `end < start` denotes a cross-midnight window (`22:00–02:00` runs from 22:00 through 01:59).
+
+### How the window gate works
+
+1. `evaluatePolicy` returns `canAutonomous: true` only when the install is `git`, tier is `"autonomous"`, no terminal `rollback-failed` is set, and `updates.maintenanceWindow` is set and parse-valid. Missing/malformed windows return `canAutonomous: false` with `policy.reason` equal to `maintenance-window-missing` / `maintenance-window-invalid`, and the rest of the policy degrades to Tier 3 (`canAuto: true`). An admin banner surfaces the misconfiguration so the autonomous behavior is never silently disabled.
+2. When the scheduler picks up a new release while `canAutonomous: true`, it computes `scheduledFor = now + preApplyGraceMinutes`. If that timestamp falls **outside** the window, it is snapped forward to the **next opening** of the window.
+3. When the timer fires, the scheduler re-checks the clock. If the window has already closed (long grace, clock skew, host suspend), the fire is **deferred**: `var/update-state.json` is updated with a new `scheduledFor` pointing at the next opening, the timer is re-armed, and the actual apply runs at the next valid moment.
+
+### DST and timezone notes
+
+- `tz: "utc"` is recommended for hosts running across DST boundaries — the window is interpreted against the same wall clock every day of the year.
+- `tz: "local"` follows the host's local time. On DST spring-forward days, a window starting at a non-existent local time (e.g. `02:30` in `America/New_York` on the second Sunday of March) silently lands at the next valid wall-clock minute via the host JS `Date` constructor's normalization. On fall-back days, the first occurrence of the wall-clock start time is used.
+- Cross-midnight windows (`end < start`) span at most 24 hours; longer "windows" should be split into two settings, e.g. by running Tier 3 instead.
+
+### Admin UI
+
+`/admin/update` shows a "Maintenance window" section when `updates.tier == "autonomous"`:
+
+- Configured: summary `HH:MM–HH:MM (tz)` plus "Next window opens at …".
+- Not configured: a clear "Not configured" message and a top-of-page banner that links back to the page.
+- During a deferred-grace schedule, the scheduled panel shows both the countdown to `scheduledFor` and an explanatory "Outside maintenance window. Update will start when the window opens at …" line.
+
+Admins edit `updates.maintenanceWindow` via the parsed JSONC settings editor at `/admin/settings`. Saving an invalid shape is caught at boot — the warning is logged via the `updater` log4js category and the policy downgrades to Tier 3.

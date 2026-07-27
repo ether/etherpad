@@ -34,4 +34,30 @@ test.describe('RTL URL parameter', function () {
     await page.waitForSelector('#editorcontainer.initialized');
     await expect(page.locator('#options-rtlcheck')).not.toBeChecked();
   });
+
+  test('rtl content option flips only the pad inner contents, not the whole page', {tag: '@feature:rtl-toggle'}, async function ({page}) {
+    // The top-level page direction is owned by the UI language, not the pad's
+    // RTL content option. Capture whatever the language chose so the assertion
+    // is locale-independent (it could legitimately be rtl on an RTL locale).
+    const html = page.locator('html');
+    await expect(html).toHaveAttribute('dir', /^(ltr|rtl)$/);
+    const initialPageDir = await html.getAttribute('dir');
+
+    await appendQueryParams(page, {rtl: 'true'});
+    await expect(page.locator('#options-rtlcheck')).toBeChecked();
+
+    // The inner editor document is flipped to RTL. Use a frameLocator chain so
+    // Playwright auto-waits for the nested iframes/body to be ready.
+    const innerBody = page
+      .frameLocator('iframe[name="ace_outer"]')
+      .frameLocator('iframe[name="ace_inner"]')
+      .locator('#innerdocbody');
+    await expect(innerBody).toHaveClass(/\brtl\b/);
+    await expect.poll(() => innerBody.evaluate((el) =>
+      el.ownerDocument.defaultView!.getComputedStyle(el).direction)).toBe('rtl');
+
+    // ...but the top-level page (toolbar, chrome) is unaffected: its dir is
+    // whatever the UI language set and must not change when the pad flips.
+    await expect(html).toHaveAttribute('dir', initialPageDir!);
+  });
 });

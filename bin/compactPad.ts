@@ -4,8 +4,8 @@
  * Compact a pad's revision history to reclaim database space.
  *
  * Usage:
- *   node bin/compactPad.js <padID>           # collapse all history
- *   node bin/compactPad.js <padID> --keep N  # keep only the last N revisions
+ *   pnpm run --filter bin compactPad <padID>           # collapse all history
+ *   pnpm run --filter bin compactPad <padID> --keep N  # keep only the last N revisions
  *
  * Wraps the existing Cleanup helper (src/node/utils/Cleanup.ts) via the
  * compactPad HTTP API so admins can trigger it from the CLI without
@@ -41,8 +41,8 @@ const apiPost = async (p: string): Promise<any> => {
 
 const usage = () => {
   console.error('Usage:');
-  console.error('  node bin/compactPad.js <padID>');
-  console.error('  node bin/compactPad.js <padID> --keep <N>');
+  console.error('  pnpm run --filter bin compactPad <padID>');
+  console.error('  pnpm run --filter bin compactPad <padID> --keep <N>');
   process.exit(2);
 };
 

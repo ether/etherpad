@@ -35,26 +35,16 @@ process.on('unhandledRejection', (err) => { throw err; });
   const keys = await dirty.findKeys('*', '')
 
   console.log(`Found ${keys.length} records, processing now.`);
-  const p: Promise<void>[] = [];
   let numWritten = 0;
   for (const key of keys) {
-    let value = await dirty.get(key);
-    let bcb, wcb;
-    p.push(new Promise((resolve, reject) => {
-      bcb = (err:any) => { if (err != null) return reject(err); };
-      wcb = (err:any) => {
-        if (err != null) return reject(err);
-        if (++numWritten % 100 === 0) console.log(`Wrote record ${numWritten} of ${length}`);
-        resolve();
-      };
-    }));
-    db.set(key, value, bcb, wcb);
+    const value = await dirty.get(key);
+    await db.set(key, value);
+    if (++numWritten % 100 === 0) console.log(`Wrote record ${numWritten} of ${keys.length}`);
   }
-  await Promise.all(p);
   console.log(`Wrote all ${numWritten} records`);
 
-  await db.close(null);
-  await dirty.close(null);
+  await db.close();
+  await dirty.close();
   console.log('Finished.');
   process.exit(0)
 })();

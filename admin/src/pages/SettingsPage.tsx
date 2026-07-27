@@ -1,21 +1,41 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useStore } from '../store/store';
 import { isJSONClean, cleanComments } from '../utils/utils';
 import { Trans, useTranslation } from 'react-i18next';
 import { IconButton } from '../components/IconButton';
-import { RotateCw, Save, AlignLeft, ShieldCheck } from 'lucide-react';
+import { RotateCw, Save, AlignLeft, ShieldCheck, Info } from 'lucide-react';
 import { FormView } from '../components/settings/FormView';
 import { ModeToggle, type Mode } from '../components/settings/ModeToggle';
 
 const TAB_INDENT = '  ';
 
+// Heuristic: `${VAR}` or `${VAR:default}` in the file means the operator is
+// running with env-var substitution (overwhelmingly Docker / Kubernetes).
+// We use this to gate the Docker-aware UX (the explanatory banner and the
+// Effective-config tab) so non-container installs see the existing UI
+// unchanged. Conservative on purpose — false negatives just keep the old
+// behaviour.
+const ENV_VAR_PATTERN = /\$\{[A-Za-z_][A-Za-z0-9_]*(?::[^}]*)?\}/;
+
 export const SettingsPage = () => {
   const { t } = useTranslation();
   const settingsSocket = useStore(state => state.settingsSocket);
   const settings = useStore(state => state.settings) ?? '';
+  const resolved = useStore(state => state.resolved);
+
+  const usesEnvVars = useMemo(() => ENV_VAR_PATTERN.test(settings), [settings]);
 
   const [mode, setMode] = useState<Mode>('form');
   const [exposeExperimental] = useState(false);
+
+  // The Effective tab is only meaningful when there is a `resolved`
+  // payload AND the file uses substitution. Falling back to Raw on
+  // either condition keeps the toggle honest if the user opens this
+  // page against an older server.
+  const canShowEffective = usesEnvVars && resolved != null;
+  useEffect(() => {
+    if (mode === 'effective' && !canShowEffective) setMode('raw');
+  }, [mode, canShowEffective]);
 
   // Tab in textarea inserts two spaces instead of moving focus; rAF restores caret position after React re-renders.
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -57,49 +77,80 @@ export const SettingsPage = () => {
     settingsSocket.emit('saveSettings', settings);
   };
 
+  const effectiveJson = useMemo(() => {
+    if (resolved == null) return '';
+    try { return JSON.stringify(resolved, null, 2); } catch { return ''; }
+  }, [resolved]);
+
   return (
     <div className="settings-page">
       <h1><Trans i18nKey="admin_settings.current" /></h1>
 
-      <ModeToggle mode={mode} onChange={setMode} />
+      {usesEnvVars && (
+        <div
+          className="settings-envvar-banner"
+          role="note"
+          data-testid="settings-envvar-banner"
+        >
+          <Info size={18} aria-hidden="true" />
+          <div>
+            <strong><Trans i18nKey="admin_settings.envvar_banner.title" /></strong>
+            <p><Trans i18nKey="admin_settings.envvar_banner.body" /></p>
+          </div>
+        </div>
+      )}
 
-      {mode === 'form'
-        ? <FormView onSwitchToRaw={() => setMode('raw')} />
-        : (
-          <textarea
-            value={settings}
-            className="settings"
-            data-testid="settings-raw-textarea"
-            spellCheck={false}
-            onKeyDown={handleKeyDown}
-            onChange={v => useStore.getState().setSettings(v.target.value)}
-          />
-        )
-      }
+      <ModeToggle mode={mode} onChange={setMode} showEffective={canShowEffective} />
+
+      {mode === 'form' && <FormView onSwitchToRaw={() => setMode('raw')} />}
+      {mode === 'raw' && (
+        <textarea
+          value={settings}
+          className="settings"
+          data-testid="settings-raw-textarea"
+          spellCheck={false}
+          onKeyDown={handleKeyDown}
+          onChange={v => useStore.getState().setSettings(v.target.value)}
+        />
+      )}
+      {mode === 'effective' && (
+        <textarea
+          value={effectiveJson}
+          className="settings"
+          data-testid="settings-effective-textarea"
+          spellCheck={false}
+          readOnly
+          aria-readonly="true"
+        />
+      )}
 
       <div className="settings-button-bar">
-        <IconButton
-          className="settingsButton"
-          data-testid="save-settings-button"
-          icon={<Save />}
-          title={<Trans i18nKey="admin_settings.current_save.value" />}
-          onClick={handleSave}
-        />
-        <IconButton
-          className="settingsButton"
-          data-testid="test-settings-button"
-          icon={<ShieldCheck />}
-          title={<Trans i18nKey="admin_settings.current_test.value" />}
-          onClick={testJSON}
-        />
-        {exposeExperimental && (
-          <IconButton
-            className="settingsButton"
-            data-testid="prettify-settings-button"
-            icon={<AlignLeft />}
-            title={<Trans i18nKey="admin_settings.current_prettify.value" />}
-            onClick={prettifyJSON}
-          />
+        {mode !== 'effective' && (
+          <>
+            <IconButton
+              className="settingsButton"
+              data-testid="save-settings-button"
+              icon={<Save />}
+              title={<Trans i18nKey="admin_settings.current_save.value" />}
+              onClick={handleSave}
+            />
+            <IconButton
+              className="settingsButton"
+              data-testid="test-settings-button"
+              icon={<ShieldCheck />}
+              title={<Trans i18nKey="admin_settings.current_test.value" />}
+              onClick={testJSON}
+            />
+            {exposeExperimental && (
+              <IconButton
+                className="settingsButton"
+                data-testid="prettify-settings-button"
+                icon={<AlignLeft />}
+                title={<Trans i18nKey="admin_settings.current_prettify.value" />}
+                onClick={prettifyJSON}
+              />
+            )}
+          </>
         )}
         <IconButton
           className="settingsButton"

@@ -124,6 +124,66 @@ test.describe('admin settings',()=> {
     await expect(settings).not.toHaveValue('', {timeout: 30000});
   });
 
+  // Regression for https://github.com/ether/etherpad/issues/7819.
+  // The pre-existing 'restart works' test only proves the server comes
+  // back up; it never sets a custom value first, so a deployment that
+  // resets settings.json on restart (Docker layer wipe, init-container
+  // template render, snap reseed bug) would pass it. This test mirrors
+  // the user's actual workflow: open Raw, add a new top-level plugin
+  // block, save, restart, confirm the block is still there.
+  test('#7819 custom top-level block survives server restart', async ({page}) => {
+    await page.goto('http://localhost:9001/admin/settings');
+    await page.waitForSelector('[data-testid="settings-form-view"]', {timeout: 30000});
+    await page.getByTestId('mode-toggle-raw').click();
+    const raw = page.getByTestId('settings-raw-textarea');
+    await expect(raw).toBeVisible({timeout: 10000});
+    const original = await raw.inputValue();
+    expect(original.length).toBeGreaterThan(0);
+
+    // Inject `"ep_oauth": {…},` right after the opening brace. This matches
+    // what a user adding a plugin config block would type — we keep every
+    // other key intact, no schema, just a new top-level object.
+    const augmented = original.replace(
+      /^(\s*\{)/,
+      '$1"ep_oauth":{"clientID":"persist-marker-7819","clientSecret":"x",' +
+      '"callbackURL":"http://x/cb"},',
+    );
+    expect(augmented).not.toEqual(original);
+    expect(augmented).toContain('persist-marker-7819');
+
+    await raw.fill(augmented);
+    await saveSettings(page);
+
+    await restartEtherpad(page);
+    await loginToAdmin(page, 'admin', 'changeme1');
+    await page.goto('http://localhost:9001/admin/settings');
+    await page.waitForSelector('[data-testid="settings-form-view"]', {timeout: 30000});
+    await page.getByTestId('mode-toggle-raw').click();
+    const rawAfter = page.getByTestId('settings-raw-textarea');
+    await expect(rawAfter).toBeVisible({timeout: 10000});
+    await expect(rawAfter).not.toHaveValue('', {timeout: 30000});
+
+    const afterRestart = await rawAfter.inputValue();
+    expect(afterRestart).toContain('"ep_oauth"');
+    expect(afterRestart).toContain('persist-marker-7819');
+
+    // The Form view must also surface the new block as its own section,
+    // since FormView renders every top-level object/array as a Section
+    // (admin/src/components/settings/FormView.tsx). humanize('ep_oauth')
+    // becomes 'Ep oauth'.
+    await page.getByTestId('mode-toggle-form').click();
+    await page.waitForSelector('[data-testid="settings-form-view"]', {timeout: 30000});
+    await expect(page.locator('[data-testid="settings-form-view"]'))
+        .toContainText(/Ep oauth/i);
+
+    // Restore — DO NOT rely on the next test's cleanup; the file is
+    // shared across the serial run and a custom ep_oauth block could
+    // poison anything that asserts the exact length of settings.
+    await page.getByTestId('mode-toggle-raw').click();
+    await rawAfter.fill(original);
+    await saveSettings(page);
+  });
+
   test('form view derives label + help text from key comment', async ({page}) => {
     await page.goto('http://localhost:9001/admin/settings');
     await page.waitForSelector('[data-testid="settings-form-view"]', {timeout: 30000});
@@ -341,6 +401,36 @@ test.describe('admin settings',()=> {
       'xpath=ancestor::*[contains(@class,"settings-row")][1]',
     );
     await expect(altCRow).toContainText('focus on the Chat window');
+  });
+
+  // Env-var-banner + Effective tab are gated on ${VAR} placeholders in
+  // the on-disk settings. The CI admin-UI workflow copies
+  // settings.json.template (which has ~30 `${VAR}` blocks) verbatim, so
+  // the banner + tab are already present at page load — the positive
+  // path is exactly the path we exercise here. The "non-container UX
+  // unchanged" guarantee (no banner when no placeholders) lives at the
+  // unit level: it's a single regex test in ENV_VAR_PATTERN, and
+  // covering it via Playwright would mean swapping the test
+  // settings.json mid-suite which is fragile.
+  test('env-var banner + effective tab render in env-substitution mode', async ({page}) => {
+    await page.goto('http://localhost:9001/admin/settings');
+    await page.waitForSelector('[data-testid="settings-form-view"]', {timeout: 30000});
+
+    await expect(page.getByTestId('settings-envvar-banner')).toBeVisible();
+    await expect(page.getByTestId('mode-toggle-effective')).toBeVisible();
+
+    await page.getByTestId('mode-toggle-effective').click();
+    const effective = page.getByTestId('settings-effective-textarea');
+    await expect(effective).toBeVisible();
+    // The Effective view must be non-editable — the operator changes
+    // settings via Raw or env vars, not here.
+    await expect(effective).not.toBeEditable();
+    const effectiveText = await effective.inputValue();
+    expect(effectiveText.length).toBeGreaterThan(0);
+    // AdminSettingsRedact replaces user passwords and known secret
+    // paths with [REDACTED]; the admin user defined in the CI settings
+    // exercises that path.
+    expect(effectiveText).toContain('[REDACTED]');
   });
 
   test('toggling form on broken raw JSON shows parse error banner', async ({page}) => {

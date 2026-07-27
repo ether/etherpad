@@ -17,9 +17,16 @@ import  settings, {
   reloadSettings
 } from '../../../node/utils/Settings';
 import {LinkInstaller} from "./LinkInstaller";
+import {assertPluginCatalogEnabled} from "./pluginCatalogGuard";
+import {
+  checkEngineCompatibility,
+  EngineIncompatibleError,
+} from './pluginEngineCheck';
+import {InstallerTaskQueue} from './installerTasks';
 
 import {findEtherpadRoot} from '../../../node/utils/AbsolutePaths';
 const logger = log4js.getLogger('plugins');
+const npmRegistry = 'https://registry.npmjs.org';
 
 export const pluginInstallPath = path.join(settings.root, 'src','plugin_packages');
 export const node_modules = path.join(findEtherpadRoot(),'src', 'node_modules');
@@ -38,19 +45,10 @@ const headers = {
   'User-Agent': `Etherpad/${getEpVersion()}`,
 };
 
-let tasks = 0;
-
 export const linkInstaller = new LinkInstaller();
 
-const wrapTaskCb = (cb:Function|null) => {
-  tasks++;
-
-  return (...args: any) => {
-    cb && cb(...args);
-    tasks--;
-    if (tasks === 0) onAllTasksFinished();
-  };
-};
+const taskQueue = new InstallerTaskQueue(onAllTasksFinished);
+const wrapTaskCb = (cb: Function | null) => taskQueue.wrap(cb);
 
 const migratePluginsFromNodeModules = async () => {
   logger.info('start migration of plugins in node_modules');
@@ -156,19 +154,53 @@ export const uninstall = async (pluginName: string, cb:Function|null = null) => 
   cb(null);
 };
 
+// Best-effort lookup of the published plugin's engines.node range. Returns
+// undefined on any failure (network, 404, parse error, timeout) so the
+// caller falls through to the existing install path rather than blocking on
+// a flaky registry call. A 5s AbortSignal.timeout guards against a stalled
+// registry hanging the install promise forever — without it the
+// finished:install socket event would never fire and the admin UI would
+// stay spinning indefinitely.
+const ENGINES_PREFLIGHT_TIMEOUT_MS = 5000;
+const fetchPluginEnginesNode = async (pluginName: string): Promise<string | undefined> => {
+  try {
+    const res = await fetch(
+      `${npmRegistry}/${encodeURIComponent(pluginName)}/latest`,
+      {headers, signal: AbortSignal.timeout(ENGINES_PREFLIGHT_TIMEOUT_MS)},
+    );
+    if (!res.ok) return undefined;
+    const data = await res.json() as {engines?: {node?: string}};
+    return data.engines?.node;
+  } catch (err) {
+    logger.debug(`engines preflight for ${pluginName} fell through: ${err}`);
+    return undefined;
+  }
+};
+
 export const install = async (pluginName: string, cb:Function|null = null) => {
   cb = wrapTaskCb(cb);
   logger.info(`Installing plugin ${pluginName}...`);
-  await linkInstaller.installPlugin(pluginName);
-  logger.info(`Successfully installed plugin ${pluginName}`);
-  await hooks.aCallAll('pluginInstall', {pluginName});
-  cb(null);
+  try {
+    const enginesNode = await fetchPluginEnginesNode(pluginName);
+    const compat = checkEngineCompatibility(enginesNode, process.version);
+    if (!compat.compatible) {
+      throw new EngineIncompatibleError(pluginName, compat.required, compat.current);
+    }
+    await linkInstaller.installPlugin(pluginName);
+    logger.info(`Successfully installed plugin ${pluginName}`);
+    await hooks.aCallAll('pluginInstall', {pluginName});
+    cb(null);
+  } catch (err) {
+    logger.warn(`Failed to install plugin ${pluginName}: ${err}`);
+    cb(err);
+  }
 };
 
 export let availablePlugins:MapArrayType<PackageInfo>|null = null;
 let cacheTimestamp = 0;
 
 export const getAvailablePlugins = async (maxCacheAge: number | false) => {
+  assertPluginCatalogEnabled();
   const nowTimestamp = Math.round(Date.now() / 1000);
 
   // check cache age before making any request

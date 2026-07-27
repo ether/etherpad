@@ -27,13 +27,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Etherpad requires Node >= 25 (see package.json engines.node).
-        node: ${{ fromJSON('[25]') }}
+        # Etherpad requires Node >= 24 (see package.json engines.node).
+        node: ${{ fromJSON('[24]') }}
     steps:
       -
         name: Checkout repository
-        uses: actions/checkout@v6
-      - uses: actions/cache@v5
+        uses: actions/checkout@v7
+      - uses: actions/cache@v6
         name: Cache pnpm store
         with:
           path: ${{ env.PNPM_HOME }}
@@ -45,13 +45,13 @@ jobs:
         with:
           run_install: false
       - name: Use Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: ${{ matrix.node }}
           cache: pnpm
       -
         name: Install libreoffice
-        uses: awalsh128/cache-apt-pkgs-action@v1.6.0
+        uses: awalsh128/cache-apt-pkgs-action@v1.6.3
         with:
           packages: libreoffice libreoffice-pdfimport
           version: 1.0
@@ -66,24 +66,7 @@ jobs:
         run: pnpm build
       -
         name: Run the backend tests
-        env:
-          # --report-on-fatalerror and friends write a Node diagnostic report
-          # (V8 stack, libuv handles, OS info) on fatal errors that bypass JS
-          # handlers — the failure mode we've been chasing on Windows + Node
-          # 24 since PR #7663. Reports land in node-report/ and are uploaded
-          # as an artifact if the step fails.
-          NODE_OPTIONS: "--report-on-fatalerror --report-uncaught-exception --report-on-signal --report-compact --report-directory=${{ github.workspace }}/node-report"
-        run: |
-          mkdir -p "${{ github.workspace }}/node-report"
-          pnpm test
-      - name: Upload Node diagnostic reports on failure
-        if: ${{ failure() }}
-        uses: actions/upload-artifact@v7
-        with:
-          name: node-diagnostic-report-${{ runner.os }}-node${{ matrix.node }}-${{ github.job }}
-          path: node-report/
-          if-no-files-found: ignore
-          retention-days: 7
+        run: pnpm test
       - name: Run the new vitest tests
         working-directory: src
         run: pnpm run test:vitest
@@ -101,12 +84,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: ${{ fromJSON('[25]') }}
+        node: ${{ fromJSON('[24]') }}
     steps:
       -
         name: Checkout repository
-        uses: actions/checkout@v6
-      - uses: actions/cache@v5
+        uses: actions/checkout@v7
+      - uses: actions/cache@v6
         name: Cache pnpm store
         with:
           path: ${{ env.PNPM_HOME }}
@@ -118,13 +101,13 @@ jobs:
         with:
           run_install: false
       - name: Use Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: ${{ matrix.node }}
           cache: pnpm
       -
         name: Install libreoffice
-        uses: awalsh128/cache-apt-pkgs-action@v1.6.0
+        uses: awalsh128/cache-apt-pkgs-action@v1.6.3
         with:
           packages: libreoffice libreoffice-pdfimport
           version: 1.0
@@ -146,26 +129,14 @@ jobs:
           ep_hash_auth
           ep_headings2
           ep_markdown
-          ep_readonly_guest
+          ep_guest
           ep_set_title_on_pad
           ep_spellcheck
           ep_subscript_and_superscript
           ep_table_of_contents
       -
         name: Run the backend tests
-        env:
-          NODE_OPTIONS: "--report-on-fatalerror --report-uncaught-exception --report-on-signal --report-compact --report-directory=${{ github.workspace }}/node-report"
-        run: |
-          mkdir -p "${{ github.workspace }}/node-report"
-          pnpm test
-      - name: Upload Node diagnostic reports on failure
-        if: ${{ failure() }}
-        uses: actions/upload-artifact@v7
-        with:
-          name: node-diagnostic-report-${{ runner.os }}-node${{ matrix.node }}-${{ github.job }}
-          path: node-report/
-          if-no-files-found: ignore
-          retention-days: 7
+        run: pnpm test
       - name: Run the new vitest tests
         working-directory: src
         run: pnpm run test:vitest
@@ -179,15 +150,26 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Etherpad requires Node >= 25 (see package.json engines.node).
-        node: ${{ fromJSON('[25]') }}
+        # Etherpad requires Node >= 24 (see package.json engines.node).
+        # Windows pins Node 24.16.0, not the runner-default 24.15.0. Node 24.15.0's
+        # bundled libuv (1.51.0) has a stack buffer overrun in the Windows TCP-connect
+        # path (uv__tcp_connect), proven by a /GS __fastfail full-memory dump under the
+        # backend suite's heavy localhost connection churn -- the long-standing Windows
+        # backend silent-ELIFECYCLE flake (memory corruption, so no JS/Node
+        # observability). Bisect: 24.15.0 crashes (4/4 on 127.0.0.1), 24.16.0
+        # (libuv 1.52.1) is clean (0/8). Stays on the 24 LTS line. Pin explicitly
+        # because setup-node's default check-latest:false reuses the runner's
+        # pre-cached 24.15.0 for a bare "24".
+        # Tracking: https://github.com/nodejs/node/issues/63620 — drop this pin
+        # back to plain "24" once the fix is across the supported 24.x baseline.
+        node: ${{ fromJSON('["24.16.0"]') }}
     name: Windows without plugins
     runs-on: windows-latest
     steps:
       -
         name: Checkout repository
-        uses: actions/checkout@v6
-      - uses: actions/cache@v5
+        uses: actions/checkout@v7
+      - uses: actions/cache@v6
         name: Cache pnpm store
         with:
           path: ${{ env.PNPM_HOME }}
@@ -199,7 +181,7 @@ jobs:
         with:
           run_install: false
       - name: Use Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: ${{ matrix.node }}
           cache: pnpm
@@ -218,23 +200,9 @@ jobs:
         name: Run the backend tests
         shell: bash
         working-directory: src
-        env:
-          NODE_OPTIONS: "--report-on-fatalerror --report-uncaught-exception --report-on-signal --report-compact --report-directory=${{ github.workspace }}/node-report"
-        run: |
-          mkdir -p "${{ github.workspace }}/node-report"
-          # --exit forces process.exit(failures) after the suite completes,
-          # closing the post-suite event-loop drain window where Windows +
-          # Node 24 hard-kills the process. Scoped to Windows so Linux/local
-          # runs still surface real handle leaks via natural drain.
-          pnpm test -- --exit
-      - name: Upload Node diagnostic reports on failure
-        if: ${{ failure() }}
-        uses: actions/upload-artifact@v7
-        with:
-          name: node-diagnostic-report-${{ runner.os }}-node${{ matrix.node }}-${{ github.job }}
-          path: node-report/
-          if-no-files-found: ignore
-          retention-days: 7
+        # --exit makes mocha call process.exit() after the run so a leaked handle
+        # cannot hang the job on Windows.
+        run: pnpm test -- --exit
       - name: Run the new vitest tests
         working-directory: src
         run: pnpm run test:vitest
@@ -247,16 +215,27 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Etherpad requires Node >= 25 (see package.json engines.node).
-        node: ${{ fromJSON('[25]') }}
+        # Etherpad requires Node >= 24 (see package.json engines.node).
+        # Windows pins Node 24.16.0, not the runner-default 24.15.0. Node 24.15.0's
+        # bundled libuv (1.51.0) has a stack buffer overrun in the Windows TCP-connect
+        # path (uv__tcp_connect), proven by a /GS __fastfail full-memory dump under the
+        # backend suite's heavy localhost connection churn -- the long-standing Windows
+        # backend silent-ELIFECYCLE flake (memory corruption, so no JS/Node
+        # observability). Bisect: 24.15.0 crashes (4/4 on 127.0.0.1), 24.16.0
+        # (libuv 1.52.1) is clean (0/8). Stays on the 24 LTS line. Pin explicitly
+        # because setup-node's default check-latest:false reuses the runner's
+        # pre-cached 24.15.0 for a bare "24".
+        # Tracking: https://github.com/nodejs/node/issues/63620 — drop this pin
+        # back to plain "24" once the fix is across the supported 24.x baseline.
+        node: ${{ fromJSON('["24.16.0"]') }}
     name: Windows with Plugins
     runs-on: windows-latest
 
     steps:
       -
         name: Checkout repository
-        uses: actions/checkout@v6
-      - uses: actions/cache@v5
+        uses: actions/checkout@v7
+      - uses: actions/cache@v6
         name: Cache pnpm store
         with:
           path: ${{ env.PNPM_HOME }}
@@ -268,7 +247,7 @@ jobs:
         with:
           run_install: false
       - name: Use Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: ${{ matrix.node }}
           cache: pnpm
@@ -289,7 +268,7 @@ jobs:
           ep_hash_auth
           ep_headings2
           ep_markdown
-          ep_readonly_guest
+          ep_guest
           ep_set_title_on_pad
           ep_spellcheck
           ep_subscript_and_superscript
@@ -315,23 +294,9 @@ jobs:
         name: Run the backend tests
         shell: bash
         working-directory: src
-        env:
-          NODE_OPTIONS: "--report-on-fatalerror --report-uncaught-exception --report-on-signal --report-compact --report-directory=${{ github.workspace }}/node-report"
-        run: |
-          mkdir -p "${{ github.workspace }}/node-report"
-          # --exit forces process.exit(failures) after the suite completes,
-          # closing the post-suite event-loop drain window where Windows +
-          # Node 24 hard-kills the process. Scoped to Windows so Linux/local
-          # runs still surface real handle leaks via natural drain.
-          pnpm test -- --exit
-      - name: Upload Node diagnostic reports on failure
-        if: ${{ failure() }}
-        uses: actions/upload-artifact@v7
-        with:
-          name: node-diagnostic-report-${{ runner.os }}-node${{ matrix.node }}-${{ github.job }}
-          path: node-report/
-          if-no-files-found: ignore
-          retention-days: 7
+        # --exit makes mocha call process.exit() after the run so a leaked handle
+        # cannot hang the job on Windows.
+        run: pnpm test -- --exit
       - name: Run the new vitest tests
         working-directory: src
         run: pnpm run test:vitest

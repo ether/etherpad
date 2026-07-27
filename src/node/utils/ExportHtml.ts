@@ -63,7 +63,12 @@ const getHTMLFromAtext = async (pad:PadType, atext: AText, authorColors?: string
     // like <span data-tag="value">
     hooks.aCallAll('exportHtmlAdditionalTagsWithData', pad).then((newProps: string[]) => {
       newProps.forEach((prop) => {
-        tags.push(`span data-${prop[0]}="${prop[1]}"`);
+        // Attribute names/values here originate from the pad's attribute pool
+        // (user content), so escape the value and constrain the data-* name
+        // before interpolating, consistent with the escaping already applied to
+        // exported URLs and text below.
+        const dataName = String(prop[0]).replace(/[^a-zA-Z0-9_-]/g, '');
+        tags.push(`span data-${dataName}="${Security.escapeHTMLAttribute(String(prop[1]))}"`);
         props.push(prop);
       });
     }),
@@ -470,7 +475,10 @@ const getHTMLFromAtext = async (pad:PadType, atext: AText, authorColors?: string
           // preserve counters so numbering can continue after interruptions.
           // Use 0 as sentinel (not delete) so the ol-opening logic knows this
           // level was explicitly reset and won't fall back to line.start.
-          if (diff + 1 > actualNextLevel) {
+          // Only reset when closing an ordered list — closing an unordered list
+          // at the same level must not poison the ol counter for a future
+          // unrelated ol at this level (which would still want line.start).
+          if (line.listTypeName === 'number' && diff + 1 > actualNextLevel) {
             olItemCounts[diff + 1] = 0;
           }
 
@@ -529,6 +537,7 @@ exports.getPadHTMLDocument = async (padId: string, revNum: string, readOnlyId: n
     body: html,
     padId: Security.escapeHTML(readOnlyId || padId),
     extraCSS: stylesForExportCSS,
+    proxyPath: '',
   });
 };
 

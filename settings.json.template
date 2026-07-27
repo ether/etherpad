@@ -216,7 +216,7 @@
    * Default "notify" shows a banner when an update is available. "off" disables the version check.
    */
   "updates": {
-    "tier": "notify",
+    "tier": "${UPDATES_TIER:notify}",
     "source": "github",
     "channel": "stable",
     "installMethod": "auto",
@@ -239,13 +239,18 @@
      * - diskSpaceMinMB: pre-flight refuses to start an update without this much free.
      * - requireSignature: refuse updates whose tag isn't signed by a trusted key.
      * - trustedKeysPath: override the keyring location passed to git verify-tag (GNUPGHOME).
+     * - maintenanceWindow: tier 4 only — nightly window during which the scheduler
+     *     may fire. Null = tier 4 disabled (with tier="autonomous", the policy
+     *     downgrades to canAuto). Shape: {"start":"HH:MM","end":"HH:MM","tz":"local"|"utc"}.
+     *     `end` is exclusive; `end < start` denotes a cross-midnight window.
      */
     "preApplyGraceMinutes": 0,
     "drainSeconds": 60,
     "rollbackHealthCheckSeconds": 60,
     "diskSpaceMinMB": 500,
     "requireSignature": false,
-    "trustedKeysPath": null
+    "trustedKeysPath": null,
+    "maintenanceWindow": null
   },
 
   /*
@@ -266,6 +271,29 @@
    * Set to null to disable outbound mail from the updater.
    */
   "adminEmail": null,
+
+  /*
+   * SMTP transport for outbound admin notifications. host=null keeps the
+   * legacy log-only behaviour (Notifier still dedupes; nothing leaves the
+   * box). Set host+from (and optionally auth) to deliver via nodemailer.
+   * The dependency is lazy-loaded so installs without mail.host pay no
+   * runtime cost.
+   *
+   *   "mail": {
+   *     "host": "smtp.example.com",
+   *     "port": 587,
+   *     "secure": false,
+   *     "from": "etherpad@example.com",
+   *     "auth": { "user": "smtp-user", "pass": "smtp-pass" }
+   *   }
+   */
+  "mail": {
+    "host": null,
+    "port": 587,
+    "secure": false,
+    "from": null,
+    "auth": null
+  },
 
   /*
    * Settings for cleanup of pads
@@ -415,7 +443,20 @@
    *  https://etherpad.org/ep_infos
    */
 
-  "updateServer": "https://etherpad.org/ep_infos",
+  "updateServer": "${UPDATE_SERVER:https://etherpad.org/ep_infos}",
+
+  /*
+   * Outbound network calls. See PRIVACY.md for what each one sends.
+   *  - updateCheck=false  : disables hourly version check (UpdateCheck.ts)
+   *  - pluginCatalog=false: disables admin plugin browser
+   *                        (manual install-by-name via CLI still works)
+   * Air-gapped / firewalled deployments should set both PRIVACY_UPDATE_CHECK and
+   * PRIVACY_PLUGIN_CATALOG to false (or UPDATES_TIER=off, which covers the version check).
+   */
+  "privacy": {
+    "updateCheck": "${PRIVACY_UPDATE_CHECK:true}",
+    "pluginCatalog": "${PRIVACY_PLUGIN_CATALOG:true}"
+  },
 
   /*
    * Should we suppress errors from being visible in the default Pad Text?
@@ -496,6 +537,15 @@
    *
    * The other effect will be that the logs will contain the real client's IP,
    * instead of the reverse proxy's IP.
+   *
+   * Setting this to `true` also makes Etherpad honor two standard URL-path-
+   * prefix headers from upstream proxies:
+   *   - `X-Forwarded-Prefix` (HAProxy / Traefik convention)
+   *   - `X-Ingress-Path` (Home Assistant supervisor ingress)
+   *
+   * Both are sanitised before use. Etherpad's own `x-proxy-path` header is
+   * honored regardless of this setting; the operator is presumed to have
+   * configured their proxy intentionally when sending the custom header.
    */
   "trustProxy": false,
 
@@ -586,6 +636,12 @@
     /*
      * Whether to periodically clean up expired and stale sessions from the
      * database. Set to false to disable. Default: true.
+     *
+     * Cleanup runs hourly and walks the sessionstorage:* keyspace in 500-key
+     * pages so very large session tables don't pin the keys in memory all at
+     * once (see https://github.com/ether/etherpad/issues/7830). A single run
+     * is capped at 10 minutes; if your DB is so large the budget is reached,
+     * a warning is logged and the next scheduled run continues.
      */
     "sessionCleanup": true
   },
@@ -811,11 +867,11 @@
     * accepting pad-wide values under plugin-namespaced keys matching
     * /^ep_[a-z0-9_]+$/ (e.g. ep_table_of_contents). Values are validated
     * (JSON-safe, 64 KB per key, 256 KB total) and broadcast to every
-    * connected client just like native pad-wide toggles. Disabled by
-    * default; flip to true once your plugins (e.g. ep_plugin_helpers'
-    * padToggle) require it. See doc/plugins.md.
+    * connected client just like native pad-wide toggles. Enabled by
+    * default; set to false to lock plugins out of pad-wide state. See
+    * doc/plugins.md.
     **/
-    "enablePluginPadOptions": "${ENABLE_PLUGIN_PAD_OPTIONS:false}",
+    "enablePluginPadOptions": "${ENABLE_PLUGIN_PAD_OPTIONS:true}",
 
   /*
    * Optional privacy banner shown once the pad loads. Disabled by default.
@@ -922,6 +978,14 @@
 
   "sso": {
     "issuer": "${SSO_ISSUER:http://localhost:9001}",
+      /*
+       * Signing keys for the embedded OIDC provider's cookies. Leave empty and
+       * Etherpad derives a secret key from the persisted session secret
+       * (SESSIONKEY.txt), which is stable across restarts and shared across
+       * horizontally-scaled pods. Set an explicit ordered array to rotate: the
+       * first key signs, the rest are still accepted for verify.
+       */
+      "cookieKeys": ["${OIDC_COOKIE_KEY:}"],
       "clients": [
         {
           "client_id": "${ADMIN_CLIENT:admin_client}",

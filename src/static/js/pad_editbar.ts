@@ -155,6 +155,24 @@ exports.padeditbar = new class {
       });
     });
 
+    // Lighthouse / axe-core's `listitem` rule fires on every <li> child of an
+    // element whose role isn't `list` — and role="toolbar" on our <ul>s
+    // overrides the implicit list role. Core's toolbar.ts emits its <li>s
+    // with role="presentation" already; plugins ship their own editbarButtons
+    // EJS templates (ep_headings2, ep_align, ep_font_*, ep_print, ...) that
+    // emit <li> directly without the role, which kept the Lighthouse error
+    // alive. Sweep here once the toolbar DOM is fully built — runs before
+    // postToolbarInit hooks so anything plugins add even later still has the
+    // role attribute added to it the moment it lands (covered by the same
+    // sweep on the next init() call). role="presentation" only affects the
+    // accessibility tree, so CSS / JS selectors keep working. #7255.
+    $('#editbar .menu_left > li, #editbar .menu_right > li, #history-controls > li')
+        .filter((_i, el) => !el.hasAttribute('role'))
+        .attr('role', 'presentation');
+    $('#editbar .menu_left > li > a, #editbar .menu_right > li > a, #history-controls > li > a')
+        .filter((_i, el) => !el.hasAttribute('role'))
+        .attr('role', 'presentation');
+
     $('body:not(#editorcontainerbox)').on('keydown', (evt) => {
       this._bodyKeyEvent(evt);
     });

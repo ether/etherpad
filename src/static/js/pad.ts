@@ -55,8 +55,7 @@ const socketio = require('./socketio');
 
 const hooks = require('./pluginfw/hooks');
 import {showPrivacyBannerIfEnabled} from './privacy_banner';
-
-import './pad_version_badge';
+import {maybeShowOutdatedNotice} from './pad_outdated_notice';
 
 // This array represents all GET-parameters which can be used to change a setting.
 //   name:     the parameter-name, eg  `?noColors=true`  =>  `noColors`
@@ -91,10 +90,12 @@ const getParameters = [
   },
   {
     // showMenuRight accepts 'true' or 'false'. Explicit 'false' hides the
-    // right-side toolbar (import/export/timeslider/settings/share/users);
-    // explicit 'true' forces it visible, overriding the readonly
-    // auto-hide applied further down (issue #5182). Any other value is
-    // a no-op — the menu stays in its default state.
+    // right-side toolbar (import/export/timeslider/settings/embed/home/
+    // users) — useful for iframe-embedded readonly pads where the menu
+    // is just chrome (issue #5182). Explicit 'true' forces the menu
+    // visible (a no-op against the default, kept for symmetry and for
+    // overriding any future caller-applied hide). Any other value is a
+    // no-op — the menu stays in its default state.
     name: 'showMenuRight',
     checkVal: null,
     callback: (val) => {
@@ -580,7 +581,10 @@ const pad = {
     $('#padsettings-options-linenoscheck').prop('checked', view.showLineNumbers !== false);
     $('#padsettings-options-rtlcheck').prop('checked', !!view.rtlIsTrue);
     $('#padsettings-viewfontmenu').val(view.padFontFamily || '');
-    $('#padsettings-languagemenu').val(padOptions.lang || 'en');
+    // When no pad-wide lang is set, reflect the language html10n actually
+    // detected and rendered (e.g. from the browser) instead of defaulting the
+    // dropdown to English while the UI is in another language. See #7925.
+    $('#padsettings-languagemenu').val(padOptions.lang || html10n.getLanguage() || 'en');
     $('#padsettings-enforcecheck').prop('checked', !!padOptions.enforceSettings);
     $('#padsettings-options-stickychat, #padsettings-options-chatandusers')
         .prop('disabled', padOptions.showChat === false);
@@ -598,7 +602,10 @@ const pad = {
     $('#options-linenoscheck').prop('checked', effectiveOptions.view?.showLineNumbers !== false);
     $('#options-rtlcheck').prop('checked', !!effectiveOptions.view?.rtlIsTrue);
     $('#viewfontmenu').val(effectiveOptions.view?.padFontFamily || '');
-    $('#languagemenu').val(effectiveOptions.lang || 'en');
+    // Fall back to the detected language rather than hardcoded English when the
+    // user has not explicitly chosen one, so the dropdown matches the rendered
+    // UI language. See #7925.
+    $('#languagemenu').val(effectiveOptions.lang || html10n.getLanguage() || 'en');
     $('#settings input[id^="options-"]').prop('disabled', disabled);
     $('#viewfontmenu, #languagemenu').prop('disabled', disabled);
     $('#options-stickychat, #options-chatandusers')
@@ -719,9 +726,26 @@ const pad = {
       pad.refreshPadSettingsControls();
       pad.applyOptionsChange();
       pad.refreshMyViewControls();
+      // The following view overrides MUST run inside postAceInit (after
+      // padeditor.init resolves), not in the synchronous tail of
+      // _afterHandshake. Running them sync queues a setProperty in the
+      // Ace2Editor pending-init queue; the queue is flushed when ace
+      // finishes loading, but padeditor.init's own
+      // setViewOptions(initialViewOptions) call runs immediately *after*
+      // that flush and clobbers the URL-driven value. See #7464 for the
+      // RTL incarnation of this race (now generalised here for #7840).
       if (settings.rtlIsExplicit) {
         // URL or server config explicitly set RTL — takes priority over cookie
         pad.changeViewOption('rtlIsTrue', settings.rtlIsTrue === true);
+      }
+      if (settings.LineNumbersDisabled === true) {
+        pad.changeViewOption('showLineNumbers', false);
+      }
+      if (settings.noColors === true) {
+        pad.changeViewOption('noColors', true);
+      }
+      if (settings.useMonospaceFontGlobal === true) {
+        pad.changeViewOption('padFontFamily', 'RobotoMono');
       }
 
       // Prevent sticky chat or chat and users to be checked for mobiles
@@ -747,6 +771,7 @@ const pad = {
 
       showDeletionTokenModalIfPresent();
       showPrivacyBannerIfEnabled((clientVars as any).privacyBanner);
+      void maybeShowOutdatedNotice();
 
       hooks.aCallAll('postAceInit', {ace: padeditor.ace, clientVars, pad});
     };
@@ -787,14 +812,18 @@ const pad = {
       $('#chaticon').hide();
       $('#options-chatandusers').parent().hide();
       $('#options-stickychat').parent().hide();
-      // Hide the right-side toolbar on readonly pads — import/export,
-      // timeslider, settings, share, users are all noise for viewers
-      // who can't interact with the pad. Callers who need those
-      // controls visible on a readonly pad can force them back via
-      // `?showMenuRight=true`, which runs in getParameters() above.
-      if (getUrlVars().get('showMenuRight') !== 'true') {
-        $('#editbar .menu_right').hide();
-      }
+      // The right-side toolbar stays visible on readonly pads. The
+      // server-side `toolbar.menu(buttons, isReadOnly)` (see
+      // src/node/utils/toolbar.ts) already strips `savedrevision`, and
+      // `.readonly .acl-write { display: none }` hides the Import column
+      // inside the import/export popup, so the remaining controls
+      // (export, timeslider, settings, embed, home, showusers) are all
+      // safe for readonly viewers — and the userlist is the surface that
+      // plugins like ep_guest hang their "Log In" button off, so hiding
+      // it traps guests in readonly with no way out. Iframe-embed use
+      // cases that want a clean look (issue #5182) opt in to the hide
+      // via `?showMenuRight=false`, or hide the whole editbar via
+      // `?showControls=false`.
     } else if (!settings.hideChat) { $('#chaticon').show(); }
 
     $('body').addClass(window.clientVars.readonly ? 'readonly' : 'readwrite');
@@ -803,24 +832,6 @@ const pad = {
       ace.ace_setEditable(!window.clientVars.readonly);
     });
 
-    // If the LineNumbersDisabled value is set to true then we need to hide the Line Numbers
-    if (settings.LineNumbersDisabled === true) {
-      this.changeViewOption('showLineNumbers', false);
-    }
-
-    // If the noColors value is set to true then we need to
-    // hide the background colors on the ace spans
-    if (settings.noColors === true) {
-      this.changeViewOption('noColors', true);
-    }
-
-    // RTL override is applied in postAceInit (after padeditor.init resolves)
-    // to avoid a race where setViewOptions(initialViewOptions) overwrites it.
-
-    // If the Monospacefont value is set to true then change it to monospace.
-    if (settings.useMonospaceFontGlobal === true) {
-      this.changeViewOption('padFontFamily', 'RobotoMono');
-    }
     // if the globalUserName value is set we need to tell the server and
     // the client about the new authorname
     if (settings.globalUserName !== false) {
@@ -871,6 +882,14 @@ const pad = {
           options,
           changedBy: pad.myUserInfo.name || 'unnamed',
         });
+    // The pad creator is never "enforced upon themselves", so their personal
+    // view overrides (cookies) are always merged on top of the pad-wide value
+    // in getEffectivePadOptions. A stale personal pref would therefore mask the
+    // pad-wide value they just set, making the control appear to do nothing
+    // (#7900). Sync the creator's personal pref to the value they chose so
+    // their own view adopts it immediately. They can still override it
+    // afterwards via the "My view" controls.
+    pad.setMyViewOption(key, value);
   },
   changeViewOption: (key, value) => {
     const effectiveOptions = pad.getEffectivePadOptions();
