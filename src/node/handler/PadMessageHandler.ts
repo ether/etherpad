@@ -24,7 +24,7 @@ import {MapArrayType} from "../types/MapType";
 import AttributeMap from '../../static/js/AttributeMap';
 const padManager = require('../db/PadManager');
 const padDeletionManager = require('../db/PadDeletionManager');
-import {checkRep, cloneAText, compose, deserializeOps, follow, identity, inverse, makeAText, makeSplice, moveOpsToNewPool, mutateAttributionLines, mutateTextLines, oldLen, prepareForWire, splitAttributionLines, splitTextLines, unpack} from '../../static/js/Changeset';
+import {applyToText, checkRep, cloneAText, compose, deserializeOps, follow, identity, inverse, makeAText, moveOpsToNewPool, mutateAttributionLines, mutateTextLines, oldLen, prepareForWire, splitAttributionLines, splitTextLines, unpack} from '../../static/js/Changeset';
 import ChatMessage from '../../static/js/ChatMessage';
 import AttributePool from '../../static/js/AttributePool';
 const AttributeManager = require('../../static/js/AttributeManager');
@@ -204,7 +204,14 @@ class Channels {
 /**
  * A changeset queue per pad that is processed by handleUserChanges()
  */
-const padChannels = new Channels((ch, {socket, message}) => handleUserChanges(socket, message));
+// The channel key `ch` is the pad id captured at enqueue time (see the enqueue
+// call). Pass it through to handleUserChanges so the write targets the pad that
+// was authorized when the message arrived — NOT whatever pad the mutable
+// sessioninfos[socket.id].padId happens to point at by apply time. A concurrent
+// same-socket CLIENT_READY can swap that padId between enqueue and apply, which
+// otherwise redirects the queued write onto a read-only / unauthorized pad
+// (GHSA-6mcx-x5h6-rpw2).
+const padChannels = new Channels((ch, {socket, message}) => handleUserChanges(socket, message, ch));
 
 /**
  * This Method is called by server.ts to tell the message handler on which socket it should send
@@ -305,8 +312,13 @@ const handlePadDelete = async (socket: any, padDeleteMessage: PadDeleteMessage) 
   // back to the creator-cookie path, otherwise a creator pasting a wrong
   // recovery token into the disclosure field would still succeed — masking a
   // typo and contradicting the UI.
-  const creatorOk = !tokenSupplied && isCreator;
-  const flagOk = !tokenSupplied && !isCreator && settings.allowPadDeletionByAllUsers;
+  // Readonly sessions can never delete via the token-less paths: they cannot
+  // edit the pad, so they must not be able to destroy it just because
+  // allowPadDeletionByAllUsers is on (issue #7959). A valid recovery token
+  // (tokenOk) remains a sufficient credential regardless of session mode.
+  const writable = !session.readonly;
+  const creatorOk = !tokenSupplied && isCreator && writable;
+  const flagOk = !tokenSupplied && !isCreator && settings.allowPadDeletionByAllUsers && writable;
 
   if (creatorOk || tokenOk || flagOk) {
     await retrievedPad.remove();
@@ -500,6 +512,17 @@ exports.handleMessage = async (socket:any, message: ClientVarMessage) => {
     throw new Error(`pre-CLIENT_READY message from IP ${ip}: ${msg}`);
   }
 
+  // Pin the pad this message is authorized against — together with `auth` and
+  // the read-only flag — BEFORE any of the awaits below (checkAccess and the
+  // handleMessageSecurity/handleMessage hooks). A concurrent same-socket
+  // CLIENT_READY can mutate sessioninfos[socket.id] (padId/readonly/auth) IN
+  // PLACE during those awaits (the object identity check below does not catch an
+  // in-place mutation). Using these pinned values for the read-only gate, the
+  // queue key and the write keeps them all referring to the SAME pad, closing
+  // the cross-pad write TOCTOU (GHSA-6mcx-x5h6-rpw2).
+  const messagePadId = thisSession.padId;
+  const messageReadonly = thisSession.readonly;
+
   const {session: {user} = {}} = socket.client.request as SocketClientRequest;
   const {accessStatus, authorID} =
       await securityManager.checkAccess(auth.padID, auth.sessionID, auth.token, user);
@@ -521,14 +544,15 @@ exports.handleMessage = async (socket:any, message: ClientVarMessage) => {
   }
   thisSession.author = authorID;
 
-  // Allow plugins to bypass the readonly message blocker
-  let readOnly = thisSession.readonly;
+  // Allow plugins to bypass the readonly message blocker. Base the decision on
+  // the value pinned above so a concurrent CLIENT_READY can't flip it mid-message.
+  let readOnly = messageReadonly;
   const context = {
     message,
     sessionInfo: {
       authorId: thisSession.author,
-      padId: thisSession.padId,
-      readOnly: thisSession.readonly,
+      padId: messagePadId,
+      readOnly: messageReadonly,
     },
     socket,
     get client() {
@@ -575,7 +599,10 @@ exports.handleMessage = async (socket:any, message: ClientVarMessage) => {
           switch (type) {
             case 'USER_CHANGES':
               stats.counter('pendingEdits').inc();
-              await padChannels.enqueue(thisSession.padId, {socket, message});
+              // Queue key = the pinned pad, NOT the (possibly-swapped) live
+              // session padId. This value is forwarded to handleUserChanges as
+              // the write target (see the padChannels executor).
+              await padChannels.enqueue(messagePadId, {socket, message});
               break;
             case 'PAD_DELETE': await handlePadDelete(socket, message.data as unknown as PadDeleteMessage); break;
             case 'USERINFO_UPDATE': await handleUserInfoUpdate(socket, message as unknown as UserNewInfoMessage); break;
@@ -622,7 +649,18 @@ exports.handleMessage = async (socket:any, message: ClientVarMessage) => {
 const handleSaveRevisionMessage = async (socket:any, message: ClientSaveRevisionMessage) => {
   const {padId, author: authorId} = sessioninfos[socket.id];
   const pad = await padManager.getPad(padId, null, authorId);
-  await pad.addSavedRevision(pad.head, authorId);
+  const savedRevision = await pad.addSavedRevision(pad.head, authorId);
+  // Notify every client in the pad room — including any open timeslider —
+  // so saved-revision markers appear live instead of only on the next
+  // timeslider load (#7946). The client's NEW_SAVEDREV handler existed but
+  // was never reached because this broadcast was missing; live editors that
+  // don't handle the type ignore it. Skip the emit for duplicate saves.
+  if (savedRevision) {
+    socketio.sockets.in(padId).emit('message', {
+      type: 'COLLABROOM',
+      data: {type: 'NEW_SAVEDREV', savedRev: savedRevision},
+    });
+  }
 };
 
 /**
@@ -807,7 +845,7 @@ const handleUserInfoUpdate = async (socket:any, {data: {userInfo: {name, colorId
  */
 const handleUserChanges = async (socket:any, message: {
   data: ClientUserChangesMessage
-}) => {
+}, authorizedPadId: string) => {
   // This one's no longer pending, as we're gonna process it now
   stats.counter('pendingEdits').dec();
 
@@ -834,7 +872,9 @@ const handleUserChanges = async (socket:any, message: {
     if (apool == null) throw new Error('missing apool');
     if (changeset == null) throw new Error('missing changeset');
     const wireApool = (new AttributePool()).fromJsonable(apool);
-    const pad = await padManager.getPad(thisSession.padId, null, thisSession.author);
+    // Use the pad id captured at enqueue time, not the (mutable) session padId,
+    // which a concurrent CLIENT_READY may have swapped (GHSA-6mcx-x5h6-rpw2).
+    const pad = await padManager.getPad(authorizedPadId, null, thisSession.author);
 
     // Verify that the changeset has valid syntax and is in canonical form
     checkRep(changeset);
@@ -875,12 +915,49 @@ const handleUserChanges = async (socket:any, message: {
                           `${opAuthorId} in changeset ${changeset}`);
         }
       }
+      // Reject '+' ops that do not carry the author attribute. The standard
+      // JS client always tags inserts with the author; rejecting unattributed
+      // inserts here keeps pad.atext.text and pad.atext.attribs in lock-step.
+      // Without this check, an insert op with empty attribs grows the text
+      // without contributing matching markers to the attribs string, leaving
+      // the stored AText in a state where the two iterables disagree on
+      // length — applyToAText then desyncs and breaks reconciliation in
+      // every client that later loads the pad.
+      if (op.opcode === '+' && !opAuthorId) {
+        throw new Error(`Author ${thisSession.author} submitted an insert without an ` +
+                        `author attribute in changeset ${changeset}`);
+      }
+      // Defense-in-depth: reject any wire-borne `*N` that resolves to the
+      // system author. The session-author equality check above already
+      // catches the case where `*N` claims a different real user as
+      // author, but `Pad.SYSTEM_AUTHOR_ID` is server-internal — it's
+      // only used when `spliceText` / `setText` are called with an empty
+      // authorId from HTTP API or plugin paths. No legitimate
+      // socket.io session ever writes as the system author, so a wire
+      // op that names it is either a confused client or an attempt to
+      // launder writes through a reserved attribution slot. Either way,
+      // refuse.
+      // Hardcoded mirror of `Pad.SYSTEM_AUTHOR_ID` from src/node/db/Pad.ts.
+      // A `const {Pad} = require('../db/Pad')` at module scope returned
+      // a partially-initialized class here (circular load via padManager),
+      // so the static-field access ended up undefined and short-circuited
+      // the check at runtime. Inline literal is the simplest fix.
+      if (opAuthorId === 'a.etherpad-system') {
+        throw new Error(`Author ${thisSession.author} attempted to submit changes as the ` +
+                        `reserved system author ${opAuthorId} in changeset ${changeset}`);
+      }
     }
 
     // ex. adoptChangesetAttribs
 
     // Afaik, it copies the new attributes from the changeset, to the global Attribute Pool
     let rebasedChangeset = moveOpsToNewPool(changeset, wireApool, pad.pool);
+    // Snapshot the post-pool-mapping form so the retransmission check below
+    // can recognise our changeset against the stored revision form. Comparing
+    // the raw client `changeset` against `c` would miss legitimate
+    // retransmissions whenever moveOpsToNewPool renumbered an attribute
+    // (e.g. `*0` -> `*1` because the pad pool already had something at slot 0).
+    const canonicalCs = rebasedChangeset;
 
     // ex. applyUserChanges
     let r = baseRev;
@@ -891,9 +968,9 @@ const handleUserChanges = async (socket:any, message: {
     while (r < pad.getHeadRevisionNumber()) {
       r++;
       const {changeset: c, meta: {author: authorId}} = await pad.getRevision(r);
-      if (changeset === c && thisSession.author === authorId) {
+      if (canonicalCs === c && thisSession.author === authorId) {
         // Assume this is a retransmission of an already applied changeset.
-        rebasedChangeset = identity(unpack(changeset).oldLen);
+        rebasedChangeset = identity(unpack(canonicalCs).oldLen);
       }
       // At this point, both "c" (from the pad) and "changeset" (from the
       // client) are relative to revision r - 1. The follow function
@@ -909,6 +986,22 @@ const handleUserChanges = async (socket:any, message: {
           `Can't apply changeset ${rebasedChangeset} with oldLen ` +
           `${oldLen(rebasedChangeset)} to document of length ${prevText.length}`);
     }
+    // Defensive: reject any rebased changeset whose application would leave
+    // the pad text not ending with '\n'. Previously the server silently
+    // appended a separate `nlChangeset` correction revision; that worked
+    // for the stored pad but the FIRST broadcast (the malformed user
+    // revision) reached browsers BEFORE the correction did, and the
+    // browser's line assembler asserts "line assembler not finished" on
+    // a doc that doesn't end with '\n', taking the session out. Refuse to
+    // accept such changesets — clients must always preserve the
+    // trailing-newline invariant.
+    const projectedText = applyToText(rebasedChangeset, prevText);
+    if (!projectedText.endsWith('\n')) {
+      throw new Error(
+          `Rejected USER_CHANGES whose application would leave the pad ` +
+          `without a trailing '\\n' (length ${projectedText.length}). ` +
+          `Every USER_CHANGES must preserve the "doc ends with \\n" invariant.`);
+    }
 
     const newRev = await pad.appendRevision(rebasedChangeset, thisSession.author);
     // The head revision will either stay the same or increase by 1 depending on whether the
@@ -918,12 +1011,6 @@ const handleUserChanges = async (socket:any, message: {
     const correctionChangeset = _correctMarkersInPad(pad.atext, pad.pool);
     if (correctionChangeset) {
       await pad.appendRevision(correctionChangeset, thisSession.author);
-    }
-
-    // Make sure the pad always ends with an empty line.
-    if (pad.text().lastIndexOf('\n') !== pad.text().length - 1) {
-      const nlChangeset = makeSplice(pad.text(), pad.text().length - 1, 0, '\n');
-      await pad.appendRevision(nlChangeset, thisSession.author);
     }
 
     // The client assumes that ACCEPT_COMMIT and NEW_CHANGES messages arrive in order. Make sure we
@@ -941,7 +1028,7 @@ const handleUserChanges = async (socket:any, message: {
     socket.emit('message', {disconnect: 'badChangeset'});
     stats.meter('failedChangesets').mark();
     messageLogger.warn(`Failed to apply USER_CHANGES from author ${thisSession.author} ` +
-                       `(socket ${socket.id}) on pad ${thisSession.padId}: ${err.stack || err}`);
+                       `(socket ${socket.id}) on pad ${authorizedPadId}: ${err.stack || err}`);
   } finally {
     stopWatch.end();
   }
@@ -1240,9 +1327,41 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
     // once. Readonly sessions never see it.
     const isCreator =
         !sessionInfo.readonly && sessionInfo.author === await pad.getRevisionAuthor(0);
-    // Skip token issuance when requireAuthentication is on: every creator has a
-    // stable identity so the cookie/identity path is sufficient.
-    const padDeletionToken = isCreator && !settings.requireAuthentication
+    // The deletion token is a recovery handle for the one class of creator that
+    // can otherwise lose the ability to delete their pad: a user whose creator
+    // status lives only in a per-browser author-token cookie. It is pointless —
+    // and the "Save your pad deletion token" modal only overwhelms users who
+    // will never need it (issue #7926) — when either of these holds:
+    //
+    //   - allowPadDeletionByAllUsers: anyone can delete the pad with no token at
+    //     all (see handlePadDelete's flagOk branch).
+    //   - the creator has a *durable* identity: authenticated (req.session.user
+    //     with a username) AND the deployment maps that identity to a stable
+    //     authorID via a getAuthorId hook. Only then does `isCreator`
+    //     (author === revision-0 author) survive a cookie clear or a different
+    //     device, so the creator path replaces the token on any device.
+    //
+    // Note we deliberately do NOT treat requireAuthentication alone as durable:
+    // without a getAuthorId hook the authorID still comes from the per-browser
+    // token cookie (AuthorManager.getAuthorId -> getAuthor4Token), so an
+    // authenticated user on a second device is NOT the creator and would be
+    // stranded if we also withheld the token. The getAuthorId hook is the
+    // documented way (doc/api/hooks_server-side) to pin authorID to username.
+    const hasGetAuthorIdHook = (plugins.hooks.getAuthorId || []).length > 0;
+    const hasDurableIdentity = hasGetAuthorIdHook && !!(user && user.username);
+    const canDeleteWithoutToken = settings.allowPadDeletionByAllUsers || hasDurableIdentity;
+    // Whether this session may delete the pad with no token at all: the creator
+    // on this device (creator-cookie still present), or any user when the
+    // instance opted everyone in. Drives the plain "Delete pad" button, which is
+    // independent of enablePadWideSettings (issue #7959) — deletion is not a
+    // pad-wide setting and must stay reachable when that section is disabled.
+    // Readonly viewers are excluded: they cannot edit, let alone delete, so
+    // allowPadDeletionByAllUsers must not hand them a delete button (the server
+    // enforces the same in handlePadDelete).
+    const canDeletePad =
+        !sessionInfo.readonly && (isCreator || settings.allowPadDeletionByAllUsers);
+    const padDeletionToken =
+        isCreator && !canDeleteWithoutToken
         ? await padDeletionManager.createDeletionTokenIfAbsent(sessionInfo.padId)
         : null;
 
@@ -1261,6 +1380,12 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
       enablePadWideSettings: settings.enablePadWideSettings,
       enablePluginPadOptions: settings.enablePluginPadOptions,
       padDeletionToken,
+      // Drives the deletion-button label/visibility in pad settings: when the
+      // user can already delete without a token the recovery-token disclosure is
+      // redundant, so the client labels the action "Delete Pad" instead of
+      // "Delete with token" (issue #7926). See showDeletionTokenModalIfPresent.
+      canDeleteWithoutToken,
+      canDeletePad,
       // Allow-listed copy — settings.privacyBanner could carry extra nested
       // keys from a hand-edited settings.json; sending those by reference
       // would leak them to every browser. See getPublicPrivacyBanner().

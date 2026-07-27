@@ -2,8 +2,16 @@ export type InstallMethod = 'auto' | 'git' | 'docker' | 'npm' | 'managed';
 
 export type Tier = 'off' | 'notify' | 'manual' | 'auto' | 'autonomous';
 
-/** null = up-to-date (or not yet checked); 'severe' = at least one major version behind; 'vulnerable' = matched a vulnerable-below directive. */
-export type OutdatedLevel = null | 'severe' | 'vulnerable';
+/**
+ * Tier 4 (autonomous) maintenance window. `start`/`end` are HH:MM (24h) in the
+ * configured `tz`. `end` is exclusive; `end < start` denotes a cross-midnight
+ * window. See `MaintenanceWindow.ts` for the parser/predicate implementation.
+ */
+export interface MaintenanceWindow {
+  start: string;
+  end: string;
+  tz: 'local' | 'utc';
+}
 
 export interface ReleaseInfo {
   /** semver string without leading 'v', e.g. "2.7.2". */
@@ -20,13 +28,6 @@ export interface ReleaseInfo {
   htmlUrl: string;
 }
 
-export interface VulnerableBelowDirective {
-  /** The release that *announced* the vulnerability (latest release wins on conflict). */
-  announcedBy: string;
-  /** Versions strictly below this string are considered vulnerable. */
-  threshold: string;
-}
-
 export interface PolicyResult {
   canNotify: boolean;
   canManual: boolean;
@@ -39,12 +40,15 @@ export interface PolicyResult {
 export interface EmailSendLog {
   /** Last time we emailed about being severely-outdated, ISO-8601. */
   severeAt: string | null;
-  /** Last time we emailed about being vulnerable, ISO-8601. */
-  vulnerableAt: string | null;
-  /** Tag of the release the last "new release while vulnerable" email referenced. */
-  vulnerableNewReleaseTag: string | null;
   /** Tag of the most recent release for which we sent a Tier 3 `grace-start` email. */
   graceStartTag: string | null;
+  /**
+   * Dedupe key for `update-rolled-back` / `update-preflight-failed` emails.
+   * Stores the `<tag>:<outcome>` of the last failure we emailed about so a
+   * retry-loop (e.g. repeated `pnpm install` failures on the same release)
+   * doesn't fire one email per attempt. Cleared when the next outcome differs.
+   */
+  lastFailureKey: string | null;
 }
 
 /**
@@ -96,8 +100,6 @@ export interface UpdateState {
   lastEtag: string | null;
   /** Cached release info, or null if we've never successfully fetched. */
   latest: ReleaseInfo | null;
-  /** Vulnerable-below directives parsed from the most recent N releases. */
-  vulnerableBelow: VulnerableBelowDirective[];
   /** Email send dedupe state. */
   email: EmailSendLog;
   /** Current in-flight execution state. Persisted so a restart mid-update reaches RollbackHandler. */
@@ -117,12 +119,10 @@ export const EMPTY_STATE: UpdateState = {
   lastCheckAt: null,
   lastEtag: null,
   latest: null,
-  vulnerableBelow: [],
   email: {
     severeAt: null,
-    vulnerableAt: null,
-    vulnerableNewReleaseTag: null,
     graceStartTag: null,
+    lastFailureKey: null,
   },
   execution: {status: 'idle'},
   bootCount: 0,

@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Etherpad API</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="referrer" content="no-referrer" />
+    <style>
+      html, body { margin: 0; padding: 0; height: 100%; }
+      /* Scalar ships @font-face rules pointing at fonts.scalar.com.
+         withDefaultFonts:false disables that import; the rule below
+         forces a system-font stack so nothing fetches over the wire. */
+      :root, .scalar-app, body { font-family: system-ui, -apple-system, sans-serif !important; }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script src="/static/vendor/scalar/standalone.js"></script>
+    <script>
+      Scalar.createApiReference('#app', {
+        url: '/api-docs.json',
+        theme: 'default',
+        layout: 'modern',
+        hideClientButton: true,
+        showDeveloperTools: 'never',
+        withDefaultFonts: false,
+        telemetry: false,
+        agent: { disabled: true },
+        mcp: { disabled: true }
+      });
+    </script>
+  </body>
+</html>

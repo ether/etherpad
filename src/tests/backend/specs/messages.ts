@@ -23,6 +23,8 @@ describe(__filename, function () {
     agent = await common.init();
   });
 
+  let authorId: string;
+  let roAuthorId: string;
   beforeEach(async function () {
     backups.hooks = {handleMessageSecurity: plugins.hooks.handleMessageSecurity};
     plugins.hooks.handleMessageSecurity = [];
@@ -36,11 +38,18 @@ describe(__filename, function () {
     const {type, data: clientVars} = await common.handshake(socket, padId);
     assert.equal(type, 'CLIENT_VARS');
     rev = clientVars.collab_client_vars.rev;
+    authorId = clientVars.userId;
 
     roPadId = await readOnlyManager.getReadOnlyId(padId);
     res = await agent.get(`/p/${roPadId}`).expect(200);
     roSocket = await common.connect(res);
-    await common.handshake(roSocket, roPadId);
+    const roHandshake = await common.handshake(roSocket, roPadId);
+    // Capture roSocket's own author so tests that send USER_CHANGES via
+    // roSocket can build apools that match thisSession.author server-side;
+    // otherwise the wire's *0 reference points at the writer-socket's
+    // author and the server rejects with badChangeset on the
+    // "author mismatch" check added in this PR.
+    roAuthorId = (roHandshake as any).data.userId;
     await new Promise(resolve => setTimeout(resolve, 1000));
   });
 
@@ -167,8 +176,14 @@ describe(__filename, function () {
   });
 
   describe('USER_CHANGES', function () {
+    // Insert ops MUST carry the author attribute (server-side validation
+    // added in this PR — see PadMessageHandler.ts). Helper assembles the
+    // wire form `*0+N` plus the matching apool entry for the session author.
+    const authorPool = () =>
+        ({numToAttrib: {0: ['author', authorId]}, nextNum: 1});
     const sendUserChanges =
-        async (socket:any, cs:any) => await common.sendUserChanges(socket, {baseRev: rev, changeset: cs});
+        async (socket:any, cs:any, apool: any = authorPool()) =>
+            await common.sendUserChanges(socket, {baseRev: rev, changeset: cs, apool});
     const assertAccepted = async (socket:any, wantRev: number) => {
       await common.waitForAcceptCommit(socket, wantRev);
       rev = wantRev;
@@ -181,7 +196,7 @@ describe(__filename, function () {
     it('changes are applied', async function () {
       await Promise.all([
         assertAccepted(socket, rev + 1),
-        sendUserChanges(socket, 'Z:1>5+5$hello'),
+        sendUserChanges(socket, 'Z:1>5*0+5$hello'),
       ]);
       assert.equal(pad!.text(), 'hello\n');
     });
@@ -193,8 +208,66 @@ describe(__filename, function () {
       ]);
     });
 
+    it('insert without author attribute is rejected', async function () {
+      // Defensive validation: every '+' op must carry the author attrib so
+      // pad.atext.text and pad.atext.attribs stay in lock-step. An insert
+      // with empty attribs would grow text without contributing matching
+      // attribute markers, leaving the stored AText in a state where the
+      // two iterables disagree on length — downstream clients then fail
+      // reconciliation on every subsequent pad load.
+      await Promise.all([
+        assertRejected(socket),
+        sendUserChanges(socket, 'Z:1>5+5$hello', {numToAttrib: {}, nextNum: 0}),
+      ]);
+    });
+
+    it('insert claiming the reserved system author is rejected', async function () {
+      // The author equality check above already rejects wire-borne `*N`
+      // that names another real user, but `a.etherpad-system` is
+      // server-internal — only the spliceText / setText paths use it,
+      // never a live socket.io session. A client that tries to write as
+      // the system author is either confused or trying to launder edits
+      // through a reserved attribution slot. Refuse.
+      const systemPool = {
+        numToAttrib: {0: ['author', 'a.etherpad-system']},
+        nextNum: 1,
+      };
+      await Promise.all([
+        assertRejected(socket),
+        sendUserChanges(socket, 'Z:1>5*0+5$hello', systemPool),
+      ]);
+    });
+
+    it('changeset that would strand the trailing \\n is rejected', async function () {
+      // Defensive validation: every USER_CHANGES must leave the pad ending
+      // with '\n'. The pre-existing handler used to auto-append a
+      // correction revision when the trailing '\n' got stranded, but the
+      // first NEW_CHANGES broadcast (the malformed user revision) reached
+      // browsers BEFORE the correction did, and the browser's line
+      // assembler asserts "line assembler not finished" on a non-'\n'-
+      // terminated doc — kicking the watching session offline. Refuse such
+      // changesets up front instead.
+      //
+      // Seed the pad as 'hello\n' (6 chars, 1 line), then send a changeset
+      // that explicitly keeps all 6 chars (consuming the trailing '\n')
+      // and inserts 'X' AFTER. Projected text = 'hello\nX' — doesn't end
+      // with '\n', must be rejected. The keep spans 1 newline so the wire
+      // must carry the `|1` marker to be in canonical form.
+      await Promise.all([
+        assertAccepted(socket, rev + 1),
+        sendUserChanges(socket, 'Z:1>5*0+5$hello'),
+      ]);
+      assert.equal(pad!.text(), 'hello\n');
+      await Promise.all([
+        assertRejected(socket),
+        sendUserChanges(socket, 'Z:6>1|1=6*0+1$X'),
+      ]);
+      // Pad must be unchanged after the rejection.
+      assert.equal(pad!.text(), 'hello\n');
+    });
+
     it('retransmission is accepted, has no effect', async function () {
-      const cs = 'Z:1>5+5$hello';
+      const cs = 'Z:1>5*0+5$hello';
       await Promise.all([
         assertAccepted(socket, rev + 1),
         sendUserChanges(socket, cs),
@@ -210,11 +283,11 @@ describe(__filename, function () {
     it('identity changeset is accepted, has no effect', async function () {
       await Promise.all([
         assertAccepted(socket, rev + 1),
-        sendUserChanges(socket, 'Z:1>5+5$hello'),
+        sendUserChanges(socket, 'Z:1>5*0+5$hello'),
       ]);
       await Promise.all([
         assertAccepted(socket, rev),
-        sendUserChanges(socket, 'Z:6>0$'),
+        sendUserChanges(socket, 'Z:6>0$', {numToAttrib: {}, nextNum: 0}),
       ]);
       assert.equal(pad!.text(), 'hello\n');
     });
@@ -222,20 +295,26 @@ describe(__filename, function () {
     it('non-identity changeset with no net change is accepted, has no effect', async function () {
       await Promise.all([
         assertAccepted(socket, rev + 1),
-        sendUserChanges(socket, 'Z:1>5+5$hello'),
+        sendUserChanges(socket, 'Z:1>5*0+5$hello'),
       ]);
       await Promise.all([
         assertAccepted(socket, rev),
-        sendUserChanges(socket, 'Z:6>0-5+5$hello'),
+        sendUserChanges(socket, 'Z:6>0-5*0+5$hello'),
       ]);
       assert.equal(pad!.text(), 'hello\n');
     });
 
     it('handleMessageSecurity can grant one-time write access', async function () {
-      const cs = 'Z:1>5+5$hello';
+      const cs = 'Z:1>5*0+5$hello';
+      // Use roSocket's own author in the apool so the *0 reference matches
+      // thisSession.author server-side. Without this, the new author-attrib
+      // validation rejects the changeset before handleMessageSecurity gets
+      // a chance to permit it.
+      const roPool = () =>
+          ({numToAttrib: {0: ['author', roAuthorId]}, nextNum: 1});
       const errRegEx = /write attempt on read-only pad/;
       // First try to send a change and verify that it was dropped.
-      await assert.rejects(sendUserChanges(roSocket, cs), errRegEx);
+      await assert.rejects(sendUserChanges(roSocket, cs, roPool()), errRegEx);
       // sendUserChanges() waits for message ack, so if the message was accepted then head should
       // have already incremented by the time we get here.
       assert.equal(pad!.head, rev); // Not incremented.
@@ -244,13 +323,14 @@ describe(__filename, function () {
       plugins.hooks.handleMessageSecurity.push({hook_fn: () => 'permitOnce'});
       await Promise.all([
         assertAccepted(roSocket, rev + 1),
-        sendUserChanges(roSocket, cs),
+        sendUserChanges(roSocket, cs, roPool()),
       ]);
       assert.equal(pad!.text(), 'hello\n');
 
       // The next change should be dropped.
       plugins.hooks.handleMessageSecurity = [];
-      await assert.rejects(sendUserChanges(roSocket, 'Z:6>6=5+6$ world'), errRegEx);
+      await assert.rejects(
+          sendUserChanges(roSocket, 'Z:6>6=5*0+6$ world', roPool()), errRegEx);
       assert.equal(pad!.head, rev); // Not incremented.
       assert.equal(pad!.text(), 'hello\n');
     });

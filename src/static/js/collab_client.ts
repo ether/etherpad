@@ -26,6 +26,7 @@
 const chat = require('./chat').chat;
 const hooks = require('./pluginfw/hooks');
 const browser = require('./vendors/browser');
+import {stampAuthorOnInserts} from './stampAuthorOnInserts';
 
 // Dependency fill on init. This exists for `pad.socket` only.
 // TODO: bind directly to the socket.
@@ -48,6 +49,23 @@ const getCollabClient = (ace2editor, serverVars, initialUserInfo, options, _pad)
   let commitDelay = 500;
 
   const userId = initialUserInfo.userId;
+
+  // Build the outgoing changeset and guarantee every insert carries an author.
+  // collab_client only exists after CLIENT_VARS has arrived, so `userId` is always
+  // populated here — whereas the editor can build a changeset with an empty author
+  // if the user typed before CLIENT_VARS landed (the early-typing race that the
+  // server's pad-corruption guard rejects). Stamping here is the last line of
+  // defense before the changeset goes on the wire. See stampAuthorOnInserts.
+  const prepareUserChangeset = () => {
+    const data = editor.prepareUserChangeset();
+    if (data.changeset) {
+      const stamped = stampAuthorOnInserts(data.changeset, data.apool, userId);
+      data.changeset = stamped.changeset;
+      data.apool = stamped.apool;
+    }
+    return data;
+  };
+
   // var socket;
   const userSet = {}; // userId -> userInfo
   userSet[userId] = initialUserInfo;
@@ -114,7 +132,7 @@ const getCollabClient = (ace2editor, serverVars, initialUserInfo, options, _pad)
     // Check if there are any pending revisions to be received from server.
     // Allow only if there are no pending revisions to be received from server
     if (!isPendingRevision) {
-      const userChangesData = editor.prepareUserChangeset();
+      const userChangesData = prepareUserChangeset();
       if (userChangesData.changeset) {
         lastCommitTime = now;
         committing = true;
@@ -416,7 +434,7 @@ const getCollabClient = (ace2editor, serverVars, initialUserInfo, options, _pad)
       obj.committedChangesetAPool = stateMessage.apool;
       editor.applyPreparedChangesetToBase();
     }
-    const userChangesData = editor.prepareUserChangeset();
+    const userChangesData = prepareUserChangeset();
     if (userChangesData.changeset) {
       obj.furtherChangeset = userChangesData.changeset;
       obj.furtherChangesetAPool = userChangesData.apool;

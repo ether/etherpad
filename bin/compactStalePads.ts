@@ -4,9 +4,9 @@
  * Compact every pad on the instance that has not been edited recently.
  *
  * Usage:
- *   node bin/compactStalePads.js --older-than 90              # collapse history on pads not edited in 90 days
- *   node bin/compactStalePads.js --older-than 90 --keep 50    # keep last 50 revisions
- *   node bin/compactStalePads.js --older-than 90 --dry-run    # list, don't write
+ *   pnpm run --filter bin compactStalePads --older-than 90            # collapse history on pads not edited in 90 days
+ *   pnpm run --filter bin compactStalePads --older-than 90 --keep 50  # keep last 50 revisions
+ *   pnpm run --filter bin compactStalePads --older-than 90 --dry-run  # list, don't write
  *
  * Composes `listAllPads` → `getLastEdited` → `compactPad`. Same shape as
  * `bin/compactAllPads` (per-pad error tolerance, dry-run, tally), but
@@ -255,9 +255,9 @@ export const parseArgs = (argv: string[]): CompactStaleOpts | null => {
 
 const usage = () => {
   console.error('Usage:');
-  console.error('  node bin/compactStalePads.js --older-than <days>');
-  console.error('  node bin/compactStalePads.js --older-than <days> --keep <N>');
-  console.error('  node bin/compactStalePads.js --older-than <days> --dry-run');
+  console.error('  pnpm run --filter bin compactStalePads --older-than <days>');
+  console.error('  pnpm run --filter bin compactStalePads --older-than <days> --keep <N>');
+  console.error('  pnpm run --filter bin compactStalePads --older-than <days> --dry-run');
   process.exit(2);
 };
 

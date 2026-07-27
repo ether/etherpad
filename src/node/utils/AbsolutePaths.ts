@@ -19,6 +19,7 @@
  * limitations under the License.
  */
 import log4js from 'log4js';
+import fs from 'fs';
 import path from 'path';
 import _ from 'underscore';
 
@@ -29,6 +30,25 @@ const absPathLogger = log4js.getLogger('AbsolutePaths');
  * Subsequent invocations are served from this variable.
  */
 let etherpadRoot: string|null = null;
+
+/**
+ * Walks up the directory tree from `start`, returning the closest ancestor
+ * directory (including `start` itself) that contains a package.json. Replaces
+ * the unmaintained `find-root` package, mirroring its semantics: it throws if
+ * no package.json is found before reaching the filesystem root.
+ *
+ * @param {string} start - The directory to start searching from.
+ * @return {string} The closest ancestor directory containing a package.json.
+ */
+const findRoot = (start: string): string => {
+  let dir = start;
+  for (;;) {
+    if (fs.existsSync(path.join(dir, 'package.json'))) return dir;
+    const parent = path.dirname(dir);
+    if (parent === dir) throw new Error('package.json not found in path');
+    dir = parent;
+  }
+};
 
 /**
  * If stringArray's last elements are exactly equal to lastDesiredElements,
@@ -79,7 +99,6 @@ export const findEtherpadRoot = () => {
     return etherpadRoot;
   }
 
-  const findRoot = require('find-root');
   const foundRoot = findRoot(__dirname);
   const splitFoundRoot = foundRoot.split(path.sep);
 

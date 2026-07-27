@@ -64,3 +64,25 @@ const SettingsPanel = () => {
 The admin endpoints are not yet present in the OpenAPI spec — this client is
 in place to support upcoming work (see issue #7638 follow-up). For now, it is
 exercised only by the smoke test.
+
+## Socket.io: `padLoad` query shape
+
+The admin `/settings` namespace's `padLoad` event accepts a `PadSearchQuery`
+defined in `src/node/types/PadSearchQuery.ts`:
+
+| field        | type                                                              | required | notes |
+| ------------ | ----------------------------------------------------------------- | -------- | ----- |
+| `pattern`    | `string`                                                          | yes      | Substring match on pad name. |
+| `offset`     | `number`                                                          | yes      | Pagination start, in items. Clamped server-side. |
+| `limit`      | `number`                                                          | yes      | Page size. Capped at 12. |
+| `ascending`  | `boolean`                                                         | yes      | Sort direction. |
+| `sortBy`     | `"padName" \| "lastEdited" \| "userCount" \| "revisionNumber"`    | yes      | Column to sort by. |
+| `filter`     | `"all" \| "active" \| "recent" \| "empty" \| "stale"` *(opt.)*    | no       | Filter chip; defaults to `"all"`. Applied **before** pagination so `total` and the page slice both reflect the filtered universe. Older clients that omit the field get the unchanged `"all"` behaviour. |
+
+Filter semantics — applied after pattern matching, before sort + slice:
+
+- `active`: `userCount > 0`
+- `recent`: edited within the last 7 days
+- `empty`: `revisionNumber === 0`
+- `stale`: not edited in the last 365 days
+- `all` / missing: no further filtering

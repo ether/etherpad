@@ -133,4 +133,17 @@ test.describe('embed links', function () {
         await checkiFrameCode(embedCode, true, page);
       });
   })
+
+  test.describe('URL encoding of pad names', function () {
+    test('share link encodes special characters in pad name', async function ({page}) {
+      const padName = 'test%2Fencoding';
+      await page.goto(`http://localhost:9001/p/${padName}`);
+
+      const shareButton = page.locator('.buttonicon-embed');
+      await shareButton.click();
+
+      const shareLink = await page.locator('#linkinput').inputValue();
+      expect(shareLink).toContain(padName);
+    });
+  })
 })

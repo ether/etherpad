@@ -3,7 +3,7 @@ import {goToNewPad, goToPad, sendChatMessage, showChat} from "../helper/padHelpe
 import {showSettings} from "../helper/settingsHelper";
 
 test.describe('creator-owned pad settings', () => {
-  test('shows pad settings only to the creator and keeps delete pad there', async ({page, browser}) => {
+  test('shows pad settings only to the creator; delete pad is creator-gated but separate', async ({page, browser}) => {
     const padId = await goToNewPad(page);
 
     const context2 = await browser.newContext();
@@ -19,6 +19,9 @@ test.describe('creator-owned pad settings', () => {
     await expect(page.locator('#pad-settings-section')).toBeVisible();
     await expect(page.locator('#delete-pad')).toBeVisible();
     await expect(page.locator('#padsettings-enforcecheck')).toBeVisible();
+    // The delete-pad button is no longer nested inside the pad-wide settings
+    // section: deletion is independent of enablePadWideSettings (issue #7959).
+    await expect(page.locator('#pad-settings-section #delete-pad')).toHaveCount(0);
 
     await expect(page2.locator('#user-settings-section > h2')).toHaveText('User Settings');
     await expect(page2.locator('#theme-toggle-row')).toBeVisible();

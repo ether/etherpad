@@ -27,8 +27,8 @@ jobs:
     steps:
       -
         name: Checkout repository
-        uses: actions/checkout@v6
-      - uses: actions/cache@v5
+        uses: actions/checkout@v7
+      - uses: actions/cache@v6
         name: Cache pnpm store
         with:
           path: ${{ env.PNPM_HOME }}
@@ -40,9 +40,9 @@ jobs:
         with:
           run_install: false
       - name: Use Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
-          node-version: 25
+          node-version: 24
           cache: pnpm
       - name: Install all dependencies and symlink for ep_etherpad-lite
         run: pnpm install --frozen-lockfile

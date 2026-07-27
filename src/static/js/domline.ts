@@ -102,12 +102,21 @@ domline.createDomLine = (nonEmpty, doesWrap, optBrowser, optDocument) => {
             postHtml = `</li></ul>${postHtml}`;
           } else {
             if (start) { // is it a start of a list with more than one item in?
-              if (Number.parseInt(start[1]) === 1) { // if its the first one at this level?
+              // The `start` value comes verbatim from the attribute pool (which
+              // an attacker can populate via a crafted `.etherpad` import), so it
+              // must never be interpolated raw into the markup. An <ol> start is
+              // only ever an integer: coerce it and HTML-escape it defensively so
+              // a value such as `1><svg/onload=...>` cannot break out of the tag.
+              const startNum = Number.parseInt(start[1]);
+              if (startNum === 1) { // if its the first one at this level?
                 // Add start class to DIV node
                 lineClass = `${lineClass} ` + `list-start-${listType}`;
               }
+              const startAttr = Number.isNaN(startNum)
+                ? ''
+                : ` start="${Security.escapeHTMLAttribute(String(startNum))}"`;
               preHtml +=
-                `<ol start=${start[1]} class="list-${Security.escapeHTMLAttribute(listType)}"><li>`;
+                `<ol${startAttr} class="list-${Security.escapeHTMLAttribute(listType)}"><li>`;
             } else {
               // Handles pasted contents into existing lists
               preHtml += `<ol class="list-${Security.escapeHTMLAttribute(listType)}"><li>`;

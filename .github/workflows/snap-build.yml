@@ -34,7 +34,7 @@ jobs:
     name: Wrapper unit tests
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Run snap/tests/run-all.sh
         run: bash snap/tests/run-all.sh
 
@@ -43,7 +43,7 @@ jobs:
     needs: wrapper-tests
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Install snapcraft
         run: sudo snap install --classic snapcraft

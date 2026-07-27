@@ -115,20 +115,6 @@ input {
   margin-right:auto;
 }
 
-/* Auto-update version badge — only visible when /api/version-status reports severe or vulnerable. */
-#version-badge {
-  position: fixed;
-  bottom: 8px;
-  right: 8px;
-  padding: 6px 10px;
-  font-size: 12px;
-  border-radius: 4px;
-  z-index: 9999;
-  pointer-events: auto;
-  max-width: 320px;
-}
-#version-badge[data-level="severe"]   { background: #fff3cd; color: #664d03; border: 1px solid #ffe69c; }
-#version-badge[data-level="vulnerable"] { background: #f8d7da; color: #58151c; border: 1px solid #f1aeb5; }
 
 /* ----------------------------------------------------------------------- */
 /* History mode (issue #7659): timeslider rendered in-place inside the     */
@@ -153,16 +139,22 @@ input {
 .history-banner-date    { opacity: 0.85; }
 .history-banner #history-banner-return { margin-left: auto; }
 
-/* The history iframe takes the place of the live ACE editor. We use the    */
-/* same positioning model (absolute, fill the editor area) so the page      */
-/* layout is identical between modes.                                       */
+/* The history iframe takes the place of the live ACE editor by occupying the
+ * same in-flow flex slot that #editorcontainer fills in live mode (flex: 1 1
+ * auto inside the row-flex #editorcontainerbox). This keeps the layout
+ * identical between modes — crucially including any in-flow side panels in
+ * #editorcontainerbox, such as ep_webrtc's video column, which now sit beside
+ * the history iframe exactly as they sit beside the live editor.
+ *
+ * This used to be an absolute, inset:0 overlay: it filled the editor area but
+ * took the iframe out of flow, so an in-flow side panel ended up hidden
+ * beneath it (see ether/ep_webrtc rendering nothing in the timeslider). */
 .history-frame-mount {
   display: none;
-  position: absolute;
-  inset: 0;
+  flex: 1 1 auto;
+  min-width: 0; /* allow the iframe to shrink to make room for a side panel */
   border: 0;
   background: var(--bg-color, #f2f3f4);
-  z-index: 4;
 }
 .history-frame-mount[hidden] { display: none; }
 .history-frame-mount > iframe {
@@ -178,8 +170,14 @@ input {
 /* editor, so we swap it for the history controls (slider + play/step      */
 /* buttons) that drive the iframe. The right-side menu (Settings / Share / */
 /* Users / Chat / Home) stays fully interactive across modes.              */
-body.history-mode #editorcontainer { display: none; }
-body.history-mode #editorcontainerbox { position: relative; }
+/* The two-id `#editorcontainerbox #editorcontainer { display: flex }` layout
+ * rule (specificity 0-2-0) outranks a plain `body.history-mode #editorcontainer`
+ * (0-1-1), so match the same container path here to actually win the cascade
+ * and remove the live editor from flow. This was latent before: the old
+ * absolute, inset:0 iframe overlay painted over the still-in-flow editor, so
+ * nobody noticed it wasn't hidden. Now that the iframe sits in the normal
+ * flex flow, the editor must genuinely be gone or the two would split the row. */
+body.history-mode #editorcontainerbox #editorcontainer { display: none; }
 body.history-mode .history-frame-mount { display: block; }
 body.history-mode #editbar .menu_left { display: none; }
 body.history-mode #editbar .show-more-icon-btn { display: none; }
@@ -216,11 +214,51 @@ body.history-mode #history-controls { display: flex; }
 .history-controls button.buttonicon.buttonicon-play.pause::before {
   content: "\e829";
 }
-.history-slider-input {
+.history-slider-wrap {
+  position: relative;
   flex: 1 1 auto;
   min-width: 80px;
   margin: 0 6px;
+  display: flex;
+  align-items: center;
+}
+.history-slider-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: 100%;
   cursor: pointer;
+}
+/* Saved-revision markers overlaid on the slider track (issue #7946). Inset
+ * left/right by ~half the native range thumb so a marker lines up with the
+ * thumb centre at the track extremes. pointer-events:none on the layer keeps
+ * slider dragging unobstructed; the stars themselves re-enable clicks to seek. */
+.history-slider-stars {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  top: 0;
+  bottom: 0;
+  pointer-events: none;
+}
+.history-slider-stars .history-star {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: none;
+  line-height: 1;
+  cursor: pointer;
+  pointer-events: auto;
+}
+.history-slider-stars .history-star::before {
+  font-family: fontawesome-etherpad;
+  content: "\e856";
+  color: #da9700;
+  font-size: 14px;
 }
 .history-timer {
   flex: 0 0 auto;
@@ -284,7 +322,7 @@ body.history-mode #history-controls { display: flex; }
 @media (max-width: 800px) {
   .history-controls { padding: 0 6px; gap: 4px; min-height: 36px; }
   .history-controls button.buttonicon { padding: 4px 6px; min-width: 32px; }
-  .history-slider-input { min-width: 60px; margin: 0 2px; }
+  .history-slider-wrap { min-width: 60px; margin: 0 2px; }
 }
 @media (max-width: 480px) {
   .history-controls #history-leftstep,

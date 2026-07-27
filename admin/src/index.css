@@ -1044,6 +1044,16 @@ input, button, select, optgroup, textarea {
   padding: 8px 8px 40px;
 }
 
+.pm-banner {
+  margin: 8px 0 16px;
+  padding: 12px 16px;
+  border-radius: 6px;
+  border: 1px solid var(--ink-3, #cbd5e1);
+  background: var(--surface-2, #f8fafc);
+  font-size: .9rem;
+}
+.pm-banner-info { border-left: 4px solid var(--accent, #0ea5e9); }
+
 /* Header */
 .pm-header {
   display: flex;

@@ -78,24 +78,16 @@ const isValidLatest = (v: unknown): boolean => {
     && typeof v.prerelease === 'boolean';
 };
 
-const isValidVulnerableBelow = (v: unknown): boolean => {
-  if (!Array.isArray(v)) return false;
-  return v.every((entry) =>
-    isPlainObject(entry)
-    && typeof entry.announcedBy === 'string'
-    && typeof entry.threshold === 'string');
-};
-
 const isValidEmail = (v: unknown): boolean => {
   if (!isPlainObject(v)) return false;
-  // graceStartTag was added in Tier 3. Treat as optional for backwards
-  // compatibility with state files written by Tier 1/2 installs; loadState
-  // backfills the missing field to null. If present, must be string|null.
+  // graceStartTag (Tier 3) and lastFailureKey (Tier 4) are both optional for
+  // backwards compatibility with state files written by earlier installs;
+  // loadState backfills missing fields to null. If present, must be string|null.
   const graceOk = v.graceStartTag === undefined || isStringOrNull(v.graceStartTag);
+  const failOk = v.lastFailureKey === undefined || isStringOrNull(v.lastFailureKey);
   return isStringOrNull(v.severeAt)
-    && isStringOrNull(v.vulnerableAt)
-    && isStringOrNull(v.vulnerableNewReleaseTag)
-    && graceOk;
+    && graceOk
+    && failOk;
 };
 
 // Validate the full shape so loadState() actually delivers on its "safely
@@ -112,7 +104,6 @@ const isValid = (raw: unknown): raw is Partial<UpdateState> & object => {
   if (!isStringOrNull(raw.lastCheckAt)) return false;
   if (!isStringOrNull(raw.lastEtag)) return false;
   if (!isValidLatest(raw.latest)) return false;
-  if (!isValidVulnerableBelow(raw.vulnerableBelow)) return false;
   if (!isValidEmail(raw.email)) return false;
   if (raw.execution !== undefined && !isValidExecution(raw.execution)) return false;
   if (raw.bootCount !== undefined && typeof raw.bootCount !== 'number') return false;
@@ -145,7 +136,11 @@ export const loadState = async (filePath: string): Promise<UpdateState> => {
   return {
     ...structuredClone(EMPTY_STATE),
     ...partial,
-    email: {...email, graceStartTag: email.graceStartTag ?? null},
+    email: {
+      ...email,
+      graceStartTag: email.graceStartTag ?? null,
+      lastFailureKey: email.lastFailureKey ?? null,
+    },
     execution: partial.execution ?? structuredClone(EMPTY_STATE.execution),
     bootCount: partial.bootCount ?? 0,
     lastResult: partial.lastResult ?? null,

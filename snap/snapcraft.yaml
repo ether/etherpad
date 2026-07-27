@@ -1,22 +1,22 @@
 # snap/snapcraft.yaml — Snap recipe for Etherpad
 #
 # Design notes:
-# - base: core24 chosen because Etherpad requires Node.js >= 25 and
+# - base: core24 chosen because Etherpad requires Node.js >= 24 and
 #   core24 (Ubuntu 24.04 LTS) ships glibc/OpenSSL versions matching modern
-#   Node 25 binaries. core22 also works but ships older TLS/CA bundles.
+#   Node 24 binaries. core22 also works but ships older TLS/CA bundles.
 # - confinement: strict. Etherpad is a pure Node.js HTTP service. The only
 #   native Node module (`rusty-store-kv`) ships as a prebuilt napi-rs
 #   binary, so no node-gyp compile is performed at install time and
 #   strict confinement works cleanly.
 # - We use `dump` + a manual override-build (rather than the npm plugin)
-#   because this repo is a pnpm workspace and we pin Node.js 25 manually.
+#   because this repo is a pnpm workspace and we pin Node.js 24 manually.
 name: etherpad
 title: Etherpad
 summary: Real-time collaborative document editor
 description: |
   Etherpad is a highly customizable open-source online editor providing
   collaborative editing in real-time. This snap bundles Etherpad with a
-  pinned Node.js 25 runtime. On first launch a default `settings.json`
+  pinned Node.js 24 runtime. On first launch a default `settings.json`
   is copied into `$SNAP_COMMON/etc` where it can be edited. Pad data is
   stored in `$SNAP_COMMON/var` and survives snap refreshes.
 
@@ -91,9 +91,9 @@ parts:
     override-build: |
       set -eu
 
-      # -- 1. Install Node.js 25 from the official tarball. Node 25 is the
+      # -- 1. Install Node.js 24 from the official tarball. Node 24 is the
       # minimum supported runtime (see package.json engines.node).
-      NODE_VERSION=25.9.0
+      NODE_VERSION=24.15.0
       ARCH="$(dpkg --print-architecture)"
       case "${ARCH}" in
         amd64) NODE_ARCH=x64 ;;
@@ -109,8 +109,9 @@ parts:
 
       export PATH="${CRAFT_PART_INSTALL}/opt/node/bin:${PATH}"
 
-      # -- 2. Install pnpm via corepack. Node 25 distributions no longer
-      # ship corepack, so install it from npm before activating pnpm.
+      # -- 2. Install pnpm via corepack. Install corepack from npm rather
+      # than relying on the bundled copy so the recipe still works on
+      # Node 25+, where corepack was dropped from the distribution.
       "${CRAFT_PART_INSTALL}/opt/node/bin/npm" install \
         --prefix "${CRAFT_PART_INSTALL}/opt/node" -g corepack@latest
       corepack enable --install-directory "${CRAFT_PART_INSTALL}/opt/node/bin"

@@ -352,3 +352,99 @@ describe('decideTriggerApply', () => {
     expect(d).toEqual({action: 'clear-schedule', reason: 'policy-denied'});
   });
 });
+
+describe('Tier 4 — maintenance-window gating', () => {
+  const release: ReleaseInfo = {
+    tag: 'v2.0.1', version: '2.0.1', body: '', publishedAt: '2026-05-11T00:00:00.000Z',
+    prerelease: false, htmlUrl: 'https://example.com',
+  };
+  const policyAutonomous: PolicyResult = {
+    canNotify: true, canManual: true, canAuto: true, canAutonomous: true, reason: 'ok',
+  };
+  const window = {start: '03:00', end: '05:00', tz: 'utc' as const};
+
+  it('decideSchedule snaps scheduledFor forward to the next window opening', () => {
+    const state: UpdateState = {...EMPTY_STATE, latest: release};
+    const d = decideSchedule({
+      state, now: new Date('2026-05-11T10:00:00.000Z'), policy: policyAutonomous,
+      latest: release, current: '2.0.0', preApplyGraceMinutes: 15, adminEmail: null,
+      maintenanceWindow: window,
+    });
+    expect(d.action).toBe('schedule');
+    if (d.action === 'schedule') {
+      expect(d.newExecution.scheduledFor).toBe('2026-05-12T03:00:00.000Z');
+    }
+  });
+
+  it('decideSchedule keeps scheduledFor at now+grace when grace lands inside the window', () => {
+    const state: UpdateState = {...EMPTY_STATE, latest: release};
+    const d = decideSchedule({
+      state, now: new Date('2026-05-11T03:30:00.000Z'), policy: policyAutonomous,
+      latest: release, current: '2.0.0', preApplyGraceMinutes: 15, adminEmail: null,
+      maintenanceWindow: window,
+    });
+    expect(d.action).toBe('schedule');
+    if (d.action === 'schedule') {
+      expect(d.newExecution.scheduledFor).toBe('2026-05-11T03:45:00.000Z');
+    }
+  });
+
+  it('decideSchedule ignores the window when policy.canAutonomous is false', () => {
+    const state: UpdateState = {...EMPTY_STATE, latest: release};
+    const d = decideSchedule({
+      state, now: new Date('2026-05-11T10:00:00.000Z'),
+      policy: {...policyAutonomous, canAutonomous: false},
+      latest: release, current: '2.0.0', preApplyGraceMinutes: 15, adminEmail: null,
+      maintenanceWindow: window,
+    });
+    expect(d.action).toBe('schedule');
+    if (d.action === 'schedule') {
+      // Standard tier 3 grace, no snap.
+      expect(d.newExecution.scheduledFor).toBe('2026-05-11T10:15:00.000Z');
+    }
+  });
+
+  it('decideTriggerApply defers when canAutonomous + outside window at fire time', () => {
+    const state: UpdateState = {
+      ...EMPTY_STATE, latest: release,
+      execution: {status: 'scheduled', targetTag: 'v2.0.1',
+        scheduledFor: '2026-05-11T03:00:00.000Z', startedAt: '2026-05-11T02:45:00.000Z'},
+    };
+    const d = decideTriggerApply({
+      state, targetTag: 'v2.0.1', policy: policyAutonomous,
+      now: new Date('2026-05-11T10:00:00.000Z'), maintenanceWindow: window,
+    });
+    expect(d.action).toBe('defer');
+    if (d.action === 'defer') {
+      expect(d.nextStart).toBe('2026-05-12T03:00:00.000Z');
+      expect(d.reason).toBe('outside-maintenance-window');
+    }
+  });
+
+  it('decideTriggerApply fires when canAutonomous + inside window', () => {
+    const state: UpdateState = {
+      ...EMPTY_STATE, latest: release,
+      execution: {status: 'scheduled', targetTag: 'v2.0.1',
+        scheduledFor: '2026-05-11T03:00:00.000Z', startedAt: '2026-05-11T02:45:00.000Z'},
+    };
+    const d = decideTriggerApply({
+      state, targetTag: 'v2.0.1', policy: policyAutonomous,
+      now: new Date('2026-05-11T03:30:00.000Z'), maintenanceWindow: window,
+    });
+    expect(d).toEqual({action: 'fire'});
+  });
+
+  it('decideSchedule re-uses graceStartTag dedupe across a defer/re-schedule cycle', () => {
+    const state: UpdateState = {
+      ...EMPTY_STATE, latest: release,
+      email: {...EMPTY_STATE.email, graceStartTag: 'v2.0.1'},
+    };
+    const d = decideSchedule({
+      state, now: new Date('2026-05-11T10:00:00.000Z'), policy: policyAutonomous,
+      latest: release, current: '2.0.0', preApplyGraceMinutes: 15,
+      adminEmail: 'ops@example.com', maintenanceWindow: window,
+    });
+    expect(d.action).toBe('schedule');
+    if (d.action === 'schedule') expect(d.emails).toEqual([]);
+  });
+});

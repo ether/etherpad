@@ -1,7 +1,7 @@
 'use strict';
 
 
-import {PadQueryResult, PadSearchQuery} from "../../types/PadSearchQuery";
+import {PAD_FILTERS, PadFilter, PadQueryResult, PadSearchQuery} from "../../types/PadSearchQuery";
 import log4js from 'log4js';
 
 const fsp = require('fs').promises;
@@ -9,20 +9,77 @@ const hooks = require('../../../static/js/pluginfw/hooks');
 const plugins = require('../../../static/js/pluginfw/plugins');
 import settings, {getEpVersion, getGitCommit, reloadSettings} from '../../utils/Settings';
 import {getLatestVersion} from '../../utils/UpdateCheck';
+import {redactSettings} from '../../utils/AdminSettingsRedact';
 const padManager = require('../../db/PadManager');
+const db = require('../../db/DB');
 const api = require('../../db/API');
 import {deleteRevisions} from '../../utils/Cleanup';
 
 
 const queryPadLimit = 12;
+// Cap on concurrent `padManager.getPad()` calls while hydrating the pad
+// universe for filter chip / non-name sort. The old per-sortBy handlers
+// awaited each getPad sequentially (concurrency = 1); the unified
+// pipeline used to issue Promise.all over the full candidate set, which
+// can fan out to thousands of in-flight DB reads on busy deployments.
+// 16 is empirically enough to saturate a single ueberDB driver without
+// pushing the event loop into back-pressure.
+const PAD_HYDRATE_CONCURRENCY = 16;
 const logger = log4js.getLogger('adminSettings');
+
+// Errors thrown while reading a pad record can embed the raw stored value
+// in their message — e.g. Pad.init's `'pool' in value` TypeError stringifies
+// the offending value ("Cannot use 'in' operator to search for 'pool' in
+// <value>"). For a corrupt record that value may be actual pad text, so
+// logging it verbatim would leak content, bloat the log, and let embedded
+// newlines forge log lines. Reduce any error to its name plus a single-line,
+// length-capped message before logging.
+const safeErr = (err: unknown): string => {
+  const e = err as {name?: unknown, message?: unknown} | null;
+  const name = (e && typeof e.name === 'string' && e.name) || 'Error';
+  const msg = String((e && e.message) ?? err ?? '')
+      .replace(/[\r\n\t]+/g, ' ')
+      .replace(/\s{2,}/g, ' ')
+      .trim()
+      .slice(0, 120);
+  return `${name}: ${msg}`;
+};
+
+// Concurrency-limited Promise.all replacement. Preserves the input
+// order in the returned array (caller slices later). Used by padLoad
+// to bound DB reads during hydration.
+async function mapWithConcurrency<T, R>(
+    items: T[], limit: number, fn: (t: T) => Promise<R>): Promise<R[]> {
+  const out: R[] = new Array(items.length);
+  let next = 0;
+  const worker = async () => {
+    while (true) {
+      const i = next++;
+      if (i >= items.length) return;
+      out[i] = await fn(items[i]);
+    }
+  };
+  const workers = Array.from({length: Math.min(limit, items.length)}, worker);
+  await Promise.all(workers);
+  return out;
+}
 
 
 exports.socketio = (hookName: string, {io}: any) => {
   io.of('/settings').on('connection', (socket: any) => {
     // @ts-ignore
     const {session: {user: {is_admin: isAdmin} = {}} = {}} = socket.conn.request;
-    if (!isAdmin) return;
+    if (!isAdmin) {
+      // Previously this branch silently returned, so a non-admin client
+      // (e.g. a misrouted Traefik / OIDC session that didn't carry the
+      // admin cookie) would connect, emit load/save, and get nothing
+      // back — no error toast, no way to tell the save was ignored. Emit
+      // a dedicated event the SPA can surface, then drop the socket.
+      socket.emit('admin_auth_error',
+          {message: 'Not authenticated as admin. Re-authenticate and retry.'});
+      socket.disconnect(true);
+      return;
+    }
 
     socket.on('load', async (query: string): Promise<any> => {
       let data;
@@ -38,7 +95,8 @@ exports.socketio = (hookName: string, {io}: any) => {
       if (settings.showSettingsInAdminPage === false) {
         socket.emit('settings', {results: 'NOT_ALLOWED', flags});
       } else {
-        socket.emit('settings', {results: data, flags});
+        const resolved = redactSettings(settings);
+        socket.emit('settings', {results: data, resolved, flags});
       }
     });
 
@@ -108,150 +166,184 @@ exports.socketio = (hookName: string, {io}: any) => {
 
 
     socket.on('padLoad', async (query: PadSearchQuery) => {
+     try {
       const {padIDs} = await padManager.listAllPads();
 
-      const data: {
-        total: number,
-        results?: PadQueryResult[]
-      } = {
-        total: padIDs.length,
-      };
-      let result: string[] = padIDs;
-      let maxResult;
-
-      // Filter out matches
+      // ── 1. Pattern filter (cheap, by name only) ─────────────────────
+      let candidateNames: string[] = padIDs;
       if (query.pattern) {
-        result = result.filter((padName: string) => padName.includes(query.pattern));
+        candidateNames = candidateNames.filter(
+            (padName: string) => padName.includes(query.pattern));
       }
 
-      data.total = result.length;
+      // ── 2. Resolve filter chip ──────────────────────────────────────
+      // PadPage sends a chip id; "all" (default) means no additional
+      // filtering. We accept missing values from older clients gracefully.
+      const filter: PadFilter =
+          (query.filter && PAD_FILTERS.includes(query.filter)) ? query.filter : 'all';
 
-      maxResult = result.length - 1;
-      if (maxResult < 0) {
-        maxResult = 0;
+      // ── 3. Decide whether we need full metadata for every candidate ──
+      // The fast path — name-sort with no filter chip — only needs to
+      // hydrate metadata for the 12-row page slice. Any other path
+      // (filter chip OR non-name sort) requires every candidate's revs
+      // / users / lastEdited up front so we can sort and slice against
+      // the right universe. The expensive call is `padManager.getPad`;
+      // user counts come from an in-memory map.
+      const needsFullScan = filter !== 'all' || query.sortBy !== 'padName';
+
+      const loadMeta = async (padName: string): Promise<PadQueryResult> => {
+        // A single unreadable record must not take out the whole listing.
+        // `findKeys('pad:*', '*:*:*')` returns every key under the `pad:`
+        // prefix, including legacy/foreign or migration-corrupted records
+        // (e.g. a value stored as a JSON *string* rather than a pad object,
+        // which makes Pad.init throw `'pool' in value`). Before this guard
+        // one such key rejected the whole `padLoad` handler — the admin
+        // "Manage pads" page then showed *no* pads at all (issue #7935) and
+        // the unhandled rejection could exit the server. Surfacing the bad
+        // pad with zeroed metadata lets an admin see and delete it instead.
+        try {
+          const pad = await padManager.getPad(padName);
+          return {
+            padName,
+            lastEdited: await pad.getLastEdit(),
+            userCount: api.padUsersCount(padName).padUsersCount,
+            revisionNumber: pad.getHeadRevisionNumber(),
+          };
+        } catch (err) {
+          logger.warn(`padLoad: skipping unreadable pad "${padName}": ${safeErr(err)}`);
+          return {padName, lastEdited: 0 as any, userCount: 0, revisionNumber: 0};
+        }
+      };
+
+      // Lazily lifted so we don't load every pad twice on the fast path.
+      let hydrated: PadQueryResult[] | null = null;
+      const hydrateAll = async () => {
+        if (hydrated == null) {
+          hydrated = await mapWithConcurrency(
+              candidateNames, PAD_HYDRATE_CONCURRENCY, loadMeta);
+        }
+        return hydrated;
+      };
+
+      // ── 4. Filter chip — applied to hydrated metadata ────────────────
+      // Bucket boundaries match the client chips in PadPage.tsx so the
+      // counts on the stats cards keep meaning the same thing. Compute
+      // `now` once per request so a pad doesn't slip between buckets
+      // mid-loop.
+      const now = Date.now();
+      const isRecent = (lastEdited: number) => now - lastEdited < 86_400_000 * 7;
+      const isStale  = (lastEdited: number) => now - lastEdited > 86_400_000 * 365;
+      const matchesFilter = (m: PadQueryResult) => {
+        switch (filter) {
+          case 'active': return m.userCount > 0;
+          case 'recent': return isRecent(Number(m.lastEdited));
+          case 'empty':  return m.revisionNumber === 0;
+          case 'stale':  return isStale(Number(m.lastEdited));
+          default:       return true;
+        }
+      };
+
+      // ── 5. Total — i.e. the count the pagination footer reflects ────
+      // For the fast path this is just the pattern-filtered name list;
+      // for full-scan we report the post-chip total.
+      let totalNames: string[] | null = needsFullScan ? null : candidateNames;
+      let postFilterMetas: PadQueryResult[] | null = null;
+      if (needsFullScan) {
+        postFilterMetas = (await hydrateAll()).filter(matchesFilter);
       }
+      const total = needsFullScan ? postFilterMetas!.length : totalNames!.length;
 
-      // Reset to default values if out of bounds
+      // ── 6. Clamp offset/limit ──────────────────────────────────────
+      const maxOffset = Math.max(total - 1, 0);
       if (query.offset && query.offset < 0) {
         query.offset = 0;
-      } else if (query.offset > maxResult) {
-        query.offset = maxResult;
+      } else if (query.offset > maxOffset) {
+        query.offset = maxOffset;
       }
-
       if (query.limit && query.limit < 0) {
-       // Too small
         query.limit = 0;
       } else if (query.limit > queryPadLimit) {
-       // Too big
         query.limit = queryPadLimit;
       }
 
+      // ── 7. Sort + slice ────────────────────────────────────────────
+      const dir = query.ascending ? 1 : -1;
+      const cmpStr = (a: string, b: string) => a < b ? -dir : a > b ? dir : 0;
+      const cmpNum = (a: number, b: number) => a < b ? -dir : a > b ? dir : 0;
 
-      if (query.sortBy === 'padName') {
-        result = result.sort((a, b) => {
-          if (a < b) return query.ascending ? -1 : 1;
-          if (a > b) return query.ascending ? 1 : -1;
-          return 0;
-        }).slice(query.offset, query.offset + query.limit);
-
-        data.results = await Promise.all(result.map(async (padName: string) => {
-          const pad = await padManager.getPad(padName);
-          const revisionNumber = pad.getHeadRevisionNumber()
-          const userCount = api.padUsersCount(padName).padUsersCount;
-          const lastEdited = await pad.getLastEdit();
-
-          return {
-            padName,
-            lastEdited,
-            userCount,
-            revisionNumber
+      let results: PadQueryResult[];
+      if (needsFullScan) {
+        const sorted = postFilterMetas!.sort((a, b) => {
+          switch (query.sortBy) {
+            case 'padName':        return cmpStr(a.padName, b.padName);
+            case 'revisionNumber': return cmpNum(a.revisionNumber, b.revisionNumber);
+            case 'userCount':      return cmpNum(a.userCount, b.userCount);
+            case 'lastEdited':     return cmpStr(String(a.lastEdited), String(b.lastEdited));
+            default:               return 0;
           }
-        }));
-      } else if (query.sortBy === "revisionNumber") {
-        const currentWinners: PadQueryResult[] = []
-        const padMapping = [] as {padId: string, revisionNumber: number}[]
-        for (let res of result) {
-          const pad = await padManager.getPad(res);
-          const revisionNumber = pad.getHeadRevisionNumber()
-          padMapping.push({padId: res, revisionNumber})
-        }
-        padMapping.sort((a, b) => {
-          if (a.revisionNumber < b.revisionNumber) return query.ascending ? -1 : 1;
-          if (a.revisionNumber > b.revisionNumber) return query.ascending ? 1 : -1;
-          return 0;
-        })
-
-       for (const padRetrieval of padMapping.slice(query.offset, query.offset + query.limit)) {
-        let pad = await padManager.getPad(padRetrieval.padId);
-        currentWinners.push({
-         padName: padRetrieval.padId,
-         lastEdited: await pad.getLastEdit(),
-         userCount: api.padUsersCount(pad.padName).padUsersCount,
-         revisionNumber: padRetrieval.revisionNumber
-        })
-       }
-
-       data.results = currentWinners;
-      } else if (query.sortBy === "userCount") {
-       const currentWinners: PadQueryResult[] = []
-       const padMapping = [] as {padId: string, userCount: number}[]
-       for (let res of result) {
-        const userCount = api.padUsersCount(res).padUsersCount
-        padMapping.push({padId: res, userCount})
-       }
-       padMapping.sort((a, b) => {
-        if (a.userCount < b.userCount) return query.ascending ? -1 : 1;
-        if (a.userCount > b.userCount) return query.ascending ? 1 : -1;
-        return 0;
-       })
-
-       for (const padRetrieval of padMapping.slice(query.offset, query.offset + query.limit)) {
-        let pad = await padManager.getPad(padRetrieval.padId);
-        currentWinners.push({
-         padName: padRetrieval.padId,
-         lastEdited: await pad.getLastEdit(),
-         userCount: padRetrieval.userCount,
-         revisionNumber: pad.getHeadRevisionNumber()
-        })
-       }
-       data.results = currentWinners;
-      } else if (query.sortBy === "lastEdited") {
-       const currentWinners: PadQueryResult[] = []
-       const padMapping = [] as {padId: string, lastEdited: string}[]
-       for (let res of result) {
-        const pad = await padManager.getPad(res);
-        const lastEdited = await pad.getLastEdit();
-        padMapping.push({padId: res, lastEdited})
-       }
-       padMapping.sort((a, b) => {
-        if (a.lastEdited < b.lastEdited) return query.ascending ? -1 : 1;
-        if (a.lastEdited > b.lastEdited) return query.ascending ? 1 : -1;
-        return 0;
-       })
-
-       for (const padRetrieval of padMapping.slice(query.offset, query.offset + query.limit)) {
-        let pad = await padManager.getPad(padRetrieval.padId);
-        currentWinners.push({
-         padName: padRetrieval.padId,
-         lastEdited: padRetrieval.lastEdited,
-         userCount: api.padUsersCount(pad.padName).padUsersCount,
-         revisionNumber: pad.getHeadRevisionNumber()
-        })
-       }
-       data.results = currentWinners;
+        });
+        results = sorted.slice(query.offset, query.offset + query.limit);
+      } else {
+        const sliceNames = totalNames!.sort(cmpStr).slice(query.offset, query.offset + query.limit);
+        results = await Promise.all(sliceNames.map(loadMeta));
       }
 
+      const data: {total: number, results?: PadQueryResult[]} = {total, results};
       socket.emit('results:padLoad', data);
+     } catch (err) {
+      // Never leave the SPA hanging on a missing reply (it would show an
+      // empty "No results" state forever) and never let this bubble up to
+      // the process-level unhandledRejection handler, which would exit the
+      // whole server. Always emit a terminal reply for the request.
+      logger.error(`padLoad failed: ${safeErr(err)}`);
+      socket.emit('results:padLoad',
+          {total: 0, results: [], error: safeErr(err)});
+     }
     })
 
 
     socket.on('deletePad', async (padId: string) => {
-      const padExists = await padManager.doesPadExists(padId);
-      if (padExists) {
-        logger.info(`Deleting pad: ${padId}`);
-        const pad = await padManager.getPad(padId);
-        await pad.remove();
+      try {
+        if (await padManager.doesPadExists(padId)) {
+          try {
+            // Healthy pad — full relational cleanup (revs, chat, readonly,
+            // authors, deletion token, hooks).
+            logger.info(`Deleting pad: ${padId}`);
+            const pad = await padManager.getPad(padId);
+            await pad.remove();
+            socket.emit('results:deletePad', padId);
+            return;
+          } catch (err) {
+            // getPad() runs isValidPadId() and rejects ids that are no longer
+            // valid — e.g. legacy '.'/'..' pads created before that validation
+            // was tightened. Don't give up: fall through to the raw key purge
+            // below so the orphan can still be deleted from the admin UI.
+            logger.warn(`Relational cleanup failed for "${padId}" ` +
+                `(${safeErr(err)}); falling back to raw key purge`);
+          }
+        }
+
+        // doesPadExists() is false either because nothing is stored under
+        // this id, or because the record is unreadable (a non-object value
+        // leaves `value.atext` undefined). The latter is exactly what
+        // padLoad now surfaces with zeroed metadata — getPad()/Pad.remove()
+        // would throw on it, so fall back to a raw key purge. Without this
+        // the surfaced corrupt pad is undeletable from the admin UI.
+        const raw = await db.get(`pad:${padId}`);
+        if (raw != null) {
+          logger.info(`Deleting unreadable pad record via raw key purge: ${padId}`);
+          // Best-effort sweep of sub-keys (revs/chat/deletionToken/…) and
+          // the readonly mapping, then the main key + pad-list/cache entry.
+          const subKeys: string[] = (await db.findKeys(`pad:${padId}:*`, null)) || [];
+          await Promise.all(subKeys.map((k) => db.remove(k)));
+          await db.remove(`pad2readonly:${padId}`);
+          await padManager.removePad(padId);
+        }
+        // Always emit a terminal reply (even for an already-absent id) so the
+        // UI clears the row instead of silently doing nothing.
         socket.emit('results:deletePad', padId);
+      } catch (err) {
+        logger.error(`deletePad failed for "${padId}": ${safeErr(err)}`);
       }
     })
 

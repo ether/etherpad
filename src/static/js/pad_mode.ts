@@ -55,6 +55,10 @@ class PadModeController {
   private padId: string;
   private innerHashChangeHandler: (() => void) | null = null;
   private revObserver: MutationObserver | null = null;
+  // Watches the embedded slider's #ui-slider-bar so saved revisions added live
+  // (NEW_SAVEDREV from a collaborator while we're in history mode) get mirrored
+  // onto the outer slider — clientVars only carries the entry-time snapshot.
+  private savedRevObserver: MutationObserver | null = null;
   private syncingHash = false;
 
   // History-mode bridges — populated on enter, torn down on exit.
@@ -62,9 +66,8 @@ class PadModeController {
   private usersSnapshot: string | null = null;
   private chatHeaderSnapshot: {parent: HTMLElement; sibling: Node | null} | null = null;
   private chatHeaderEl: HTMLElement | null = null;
-  private playbackChangeListener: ((e: Event) => void) | null = null;
-  private followChangeListener: ((e: Event) => void) | null = null;
-  // Outer history controls (#history-controls) — bridge listeners.
+  // Every listener we attach to an outer Settings / history control is
+  // tracked here so teardownBridges() can remove them all in one pass.
   private outerControlListeners: Array<{el: HTMLElement; type: string; fn: EventListener}> = [];
 
   constructor() {
@@ -195,6 +198,11 @@ class PadModeController {
     }
     this.revLabel.textContent = '';
     this.dateLabel.textContent = '';
+    const stars = document.getElementById('history-slider-stars');
+    if (stars) {
+      stars.replaceChildren();
+      stars.dataset.sig = '';
+    }
   }
 
   // Restore everything entry-time we stashed: chat message visibility, the
@@ -215,20 +223,20 @@ class PadModeController {
       this.exportSnapshot.forEach((href, anchor) => { anchor.setAttribute('href', href); });
       this.exportSnapshot = null;
     }
-    if (this.playbackChangeListener) {
-      const sel = document.getElementById('history-playbackspeed');
-      if (sel) sel.removeEventListener('change', this.playbackChangeListener);
-      this.playbackChangeListener = null;
-    }
-    if (this.followChangeListener) {
-      const cb = document.getElementById('history-options-followContents');
-      if (cb) cb.removeEventListener('change', this.followChangeListener);
-      this.followChangeListener = null;
-    }
-    // Inner BroadcastSlider has no removeCallback API, but the whole iframe
-    // is destroyed on exit so any callbacks die with it.
+    // Every outer Settings/history control we bound is tracked in one list,
+    // so a single pass tears them all down. (The inner BroadcastSlider has no
+    // removeCallback API, but the whole iframe is destroyed on exit so any
+    // callbacks die with it.)
     this.outerControlListeners.forEach(({el, type, fn}) => el.removeEventListener(type, fn));
     this.outerControlListeners = [];
+  }
+
+  // Attach a listener to an outer control and register it for teardown on
+  // exit. No-ops if the element is missing so callers can stay terse.
+  private bindOuter(el: HTMLElement | null, type: string, fn: EventListener): void {
+    if (!el) return;
+    el.addEventListener(type, fn);
+    this.outerControlListeners.push({el, type, fn});
   }
 
   private mountIframe(rev: number | null): void {
@@ -248,6 +256,10 @@ class PadModeController {
     if (this.revObserver) {
       this.revObserver.disconnect();
       this.revObserver = null;
+    }
+    if (this.savedRevObserver) {
+      this.savedRevObserver.disconnect();
+      this.savedRevObserver = null;
     }
     if (this.iframe) {
       try {
@@ -335,27 +347,21 @@ class PadModeController {
     const rightStep = document.getElementById('history-rightstep') as HTMLButtonElement | null;
     const timer = document.getElementById('history-timer') as HTMLElement | null;
 
-    const bind = (el: HTMLElement | null, type: string, fn: EventListener) => {
-      if (!el) return;
-      el.addEventListener(type, fn);
-      this.outerControlListeners.push({el, type, fn});
-    };
-
-    bind(sliderInput, 'input', () => {
+    this.bindOuter(sliderInput, 'input', () => {
       if (!sliderInput) return;
       const target = Math.max(0, Math.floor(Number(sliderInput.value) || 0));
       try { inner.BroadcastSlider?.setSliderPosition?.(target); } catch (_e) {}
     });
-    bind(playBtn, 'click', () => {
+    this.bindOuter(playBtn, 'click', () => {
       try { inner.BroadcastSlider?.playpause?.(); } catch (_e) {}
     });
     // Inner #leftstep / #rightstep already wire all the step logic; just
     // forward the click so we share the same code path.
-    bind(leftStep, 'click', () => {
+    this.bindOuter(leftStep, 'click', () => {
       try { (innerWin.document.getElementById('leftstep') as HTMLElement | null)?.click(); }
       catch (_e) {}
     });
-    bind(rightStep, 'click', () => {
+    this.bindOuter(rightStep, 'click', () => {
       try { (innerWin.document.getElementById('rightstep') as HTMLElement | null)?.click(); }
       catch (_e) {}
     });
@@ -381,6 +387,10 @@ class PadModeController {
         playBtn.classList.toggle('pause', playing);
         playBtn.setAttribute('aria-pressed', playing ? 'true' : 'false');
       }
+      // Saved-revision markers depend on the slider max, which is only known
+      // once the inner slider has reported its length — render them here so we
+      // pick up the correct positions on first sync and on any max change.
+      this.renderSavedRevisionStars(innerWin);
     };
     // The hook registered earlier in attachInnerBridges already calls
     // onRevChange — piggyback on it for slider input/timer updates by
@@ -393,8 +403,85 @@ class PadModeController {
       }
       BS.onSlider(sync);
       sync(BS.getSliderPosition?.() ?? 0);
+      // Now that the inner slider exists, watch it for live NEW_SAVEDREV stars.
+      this.observeInnerSavedRevisions(innerWin);
     };
     registerSync();
+  }
+
+  // Mirror the embedded timeslider's saved revisions onto the outer slider as
+  // clickable star markers (issue #7946). The inner slider draws its own stars
+  // on #ui-slider-bar, but that DOM is hidden in embed mode, so users only see
+  // the outer #history-slider-input — which had no markers.
+  //
+  // The inner #ui-slider-bar .star elements are the live source of truth: the
+  // timeslider keeps them current as NEW_SAVEDREV messages arrive (each carries
+  // a `pos` attribute = revNum), whereas clientVars.savedRevisions is only the
+  // entry-time snapshot. We read positions from those stars and pull labels
+  // from the snapshot where available. A signature guard keeps this cheap when
+  // sync() fires on every scrub; positions are percentage-based so they reflow
+  // on resize for free.
+  private renderSavedRevisionStars(innerWin: Window): void {
+    const inner: any = innerWin as any;
+    const layer = document.getElementById('history-slider-stars');
+    const sliderInput = document.getElementById('history-slider-input') as HTMLInputElement | null;
+    if (!layer || !sliderInput || !innerWin.document) return;
+
+    const max = Number(sliderInput.max) || 0;
+    const revNums = Array.from(innerWin.document.querySelectorAll('#ui-slider-bar .star'))
+        .map((el) => Number(el.getAttribute('pos')))
+        // max === 0 is a valid single-revision pad: only rev 0 belongs there.
+        .filter((n) => Number.isFinite(n) && n >= 0 && (max === 0 ? n === 0 : n <= max));
+
+    if (revNums.length === 0 || max < 0) {
+      if (layer.childElementCount) layer.replaceChildren();
+      layer.dataset.sig = '';
+      return;
+    }
+
+    // Labels live in the clientVars snapshot, keyed by revNum.
+    const labels = new Map<number, string>();
+    const snapshot = inner.clientVars?.savedRevisions;
+    if (Array.isArray(snapshot)) {
+      for (const r of snapshot) {
+        const n = Number(r && r.revNum);
+        if (Number.isFinite(n) && r && typeof r.label === 'string' && r.label) labels.set(n, r.label);
+      }
+    }
+
+    const sig = `${max}:${[...revNums].sort((a, b) => a - b).join(',')}`;
+    if (layer.dataset.sig === sig) return;
+    layer.dataset.sig = sig;
+    layer.replaceChildren();
+
+    for (const revNum of revNums) {
+      const frac = max === 0 ? 0 : revNum / max;
+      // A purely visual marker (the layer is aria-hidden): keyboard/screen
+      // reader users already reach any revision via the slider and step
+      // buttons, so we mirror the legacy timeslider's mouse-only stars rather
+      // than inject extra tab stops. The hover title aids mouse users; the
+      // click is a convenience to jump straight to the saved point.
+      const star = document.createElement('span');
+      star.className = 'history-star';
+      star.style.left = `${(frac * 100).toFixed(4)}%`;
+      star.title = labels.get(revNum) || `Revision ${revNum}`;
+      star.addEventListener('click', () => {
+        try { inner.BroadcastSlider?.setSliderPosition?.(revNum); } catch (_e) { /* inner gone */ }
+      });
+      layer.appendChild(star);
+    }
+  }
+
+  // Re-render the outer markers whenever the embedded slider adds a star
+  // (NEW_SAVEDREV). Observing the inner #ui-slider-bar covers saved revisions
+  // created live while history mode is open, which sync()'s scrub-driven
+  // callback would otherwise miss until the next slider move.
+  private observeInnerSavedRevisions(innerWin: Window): void {
+    if (this.savedRevObserver) return;
+    const bar = innerWin.document && innerWin.document.getElementById('ui-slider-bar');
+    if (!bar) return;
+    this.savedRevObserver = new MutationObserver(() => { this.renderSavedRevisionStars(innerWin); });
+    this.savedRevObserver.observe(bar, {childList: true});
   }
 
   // Capture the live state we'll restore on exit: live chat message
@@ -501,15 +588,15 @@ class PadModeController {
   // BroadcastSlider state from those controls so the user sees one set of
   // controls regardless of mode.
   private wireSettingsBridges(innerWin: Window): void {
+    const inner: any = innerWin as any;
     const speedSel = document.getElementById('history-playbackspeed') as HTMLSelectElement | null;
     const followCb = document.getElementById('history-options-followContents') as HTMLInputElement | null;
-    const inner: any = innerWin as any;
 
     if (speedSel) {
       // Initial sync: read existing inner cookie/setting if available.
       const innerSpeed = inner.document.getElementById('playbackspeed') as HTMLSelectElement | null;
       if (innerSpeed && innerSpeed.value) speedSel.value = innerSpeed.value;
-      this.playbackChangeListener = () => {
+      this.bindOuter(speedSel, 'change', () => {
         const v = speedSel.value || '100';
         try {
           inner.BroadcastSlider?.setPlaybackSpeed?.(v);
@@ -518,20 +605,34 @@ class PadModeController {
             innerSpeed.dispatchEvent(new Event('change'));
           }
         } catch (_e) {}
-      };
-      speedSel.addEventListener('change', this.playbackChangeListener);
+      });
     }
 
     if (followCb) {
       const innerFollow = inner.document.getElementById('options-followContents') as HTMLInputElement | null;
       if (innerFollow) followCb.checked = !!innerFollow.checked;
-      this.followChangeListener = () => {
+      this.bindOuter(followCb, 'change', () => {
         if (!innerFollow) return;
         innerFollow.checked = followCb.checked;
         innerFollow.dispatchEvent(new Event('change'));
-      };
-      followCb.addEventListener('change', this.followChangeListener);
+      });
     }
+
+    // Authorship colours, font family and line numbers each appear in two
+    // places in the outer Settings UI (the legacy popup ids and the
+    // `#padsettings-…` pane), so bridge every id to the embedded slider's
+    // matching view-setting method.
+    const bridgeView = <T extends HTMLElement>(ids: string[], apply: (el: T) => void) =>
+      ids.forEach((id) => {
+        const el = document.getElementById(id) as T | null;
+        this.bindOuter(el, 'change', () => { try { apply(el!); } catch (_e) {} });
+      });
+    bridgeView<HTMLInputElement>(['options-colorscheck', 'padsettings-options-colorscheck'],
+        (cb) => inner.BroadcastSlider?.setShowAuthorColors?.(cb.checked));
+    bridgeView<HTMLSelectElement>(['viewfontmenu', 'padsettings-viewfontmenu'],
+        (sel) => inner.BroadcastSlider?.setPadFontFamily?.(sel.value));
+    bridgeView<HTMLInputElement>(['options-linenoscheck', 'padsettings-options-linenoscheck'],
+        (cb) => inner.BroadcastSlider?.setShowLineNumbers?.(cb.checked));
   }
 
   private setInnerRevision(rev: number): void {

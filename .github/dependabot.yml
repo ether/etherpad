@@ -18,3 +18,10 @@ updates:
     groups:
       dev-dependencies:
         dependency-type: "development"
+    cooldown:
+      default-days: 1        # fallback for anything not covered below
+      semver-major-days: 7
+      semver-minor-days: 3
+      semver-patch-days: 1
+      include:
+        - "*"

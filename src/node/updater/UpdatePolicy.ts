@@ -1,5 +1,6 @@
 import {compareSemver} from './versionCompare';
-import {InstallMethod, PolicyResult, Tier} from './types';
+import {parseWindow} from './MaintenanceWindow';
+import {InstallMethod, MaintenanceWindow, PolicyResult, Tier} from './types';
 
 // For PR 1 (notify only) the writable list contains only 'git'.
 // PR 2+ may add 'npm' here as the executor learns to handle that path.
@@ -17,19 +18,29 @@ export interface PolicyInput {
    * intervention the terminal state requires.
    */
   executionStatus?: string;
+  /**
+   * Configured maintenance window from `updates.maintenanceWindow`. Tier 4
+   * requires a non-null, parse-valid window. When null or malformed,
+   * canAutonomous degrades to false with a reason of
+   * `maintenance-window-missing` / `maintenance-window-invalid`; the other
+   * permissions still resolve as if tier were `auto`.
+   */
+  maintenanceWindow?: MaintenanceWindow | unknown | null;
 }
 
 /**
  * Decide which update tiers are allowed under the given (installMethod, tier,
- * current, latest, executionStatus). Pure function — no I/O. The single source
- * of truth for "what's allowed in this environment."
+ * current, latest, executionStatus, maintenanceWindow). Pure function — no I/O.
+ * The single source of truth for "what's allowed in this environment."
  *
  * `reason` is one of:
  *   'tier-off' | 'up-to-date' | 'install-method-not-writable'
- *   | 'rollback-failed-terminal' | 'ok'.
+ *   | 'rollback-failed-terminal'
+ *   | 'maintenance-window-missing' | 'maintenance-window-invalid'
+ *   | 'ok'.
  */
 export const evaluatePolicy = ({
-  installMethod, tier, current, latest, executionStatus,
+  installMethod, tier, current, latest, executionStatus, maintenanceWindow,
 }: PolicyInput): PolicyResult => {
   if (tier === 'off') {
     return {canNotify: false, canManual: false, canAuto: false, canAutonomous: false, reason: 'tier-off'};
@@ -46,11 +57,24 @@ export const evaluatePolicy = ({
   }
 
   const terminal = executionStatus === 'rollback-failed';
-  return {
-    canNotify,
-    canManual: tier === 'manual' || tier === 'auto' || tier === 'autonomous',
-    canAuto: !terminal && (tier === 'auto' || tier === 'autonomous'),
-    canAutonomous: !terminal && tier === 'autonomous',
-    reason: terminal ? 'rollback-failed-terminal' : 'ok',
-  };
+  const canManual = tier === 'manual' || tier === 'auto' || tier === 'autonomous';
+  const canAuto = !terminal && (tier === 'auto' || tier === 'autonomous');
+
+  let canAutonomous = false;
+  let windowReason: string | null = null;
+  if (!terminal && tier === 'autonomous') {
+    if (maintenanceWindow == null) {
+      windowReason = 'maintenance-window-missing';
+    } else if (parseWindow(maintenanceWindow) == null) {
+      windowReason = 'maintenance-window-invalid';
+    } else {
+      canAutonomous = true;
+    }
+  }
+
+  const reason = terminal
+    ? 'rollback-failed-terminal'
+    : (windowReason ?? 'ok');
+
+  return {canNotify, canManual, canAuto, canAutonomous, reason};
 };

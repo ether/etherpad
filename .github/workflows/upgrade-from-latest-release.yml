@@ -27,18 +27,18 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Etherpad requires Node >= 25 (see package.json engines.node).
-        node: ${{ fromJSON('[25]') }}
+        # Etherpad requires Node >= 24 (see package.json engines.node).
+        node: ${{ fromJSON('[24]') }}
     steps:
       -
         name: Check out latest release
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
       -
         name: Check out latest release tag
         run: git checkout "$(git tag --list 'v*' --sort=-version:refname | head -n1)"
-      - uses: actions/cache@v5
+      - uses: actions/cache@v6
         name: Cache pnpm store
         with:
           path: ${{ env.PNPM_HOME }}
@@ -50,12 +50,12 @@ jobs:
         with:
           run_install: false
       - name: Use Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: ${{ matrix.node }}
           cache: pnpm
       - name: Install libreoffice
-        uses: awalsh128/cache-apt-pkgs-action@v1.6.0
+        uses: awalsh128/cache-apt-pkgs-action@v1.6.3
         with:
           packages: libreoffice libreoffice-pdfimport
           version: 1.0
@@ -76,7 +76,7 @@ jobs:
           ep_hash_auth
           ep_headings2
           ep_markdown
-          ep_readonly_guest
+          ep_guest
           ep_set_title_on_pad
           ep_spellcheck
           ep_subscript_and_superscript

@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
             repository: ether/etherpad-lite
             path: etherpad
@@ -42,12 +42,12 @@ jobs:
           git checkout develop
           git reset --hard origin/develop
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           repository: ether/ether.github.com
           path: ether.github.com
           token: '${{ secrets.ETHER_RELEASE_TOKEN }}'
-      - uses: actions/cache@v5
+      - uses: actions/cache@v6
         name: Cache pnpm store
         with:
           path: ${{ env.PNPM_HOME }}
@@ -62,9 +62,9 @@ jobs:
           # packageManager in a root package.json.
           package_json_file: etherpad/package.json
       - name: Use Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
-          node-version: 25
+          node-version: 24
           cache: pnpm
           cache-dependency-path: etherpad/pnpm-lock.yaml
       - name: Install dependencies ether.github.com
@@ -82,7 +82,7 @@ jobs:
         with:
           ruby-version: 2.7
 
-      - uses: reitzig/actions-asciidoctor@v2.0.4
+      - uses: reitzig/actions-asciidoctor@v2.0.5
         with:
           version: 2.0.18
       - name: Prepare release

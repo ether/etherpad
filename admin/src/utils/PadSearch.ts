@@ -1,9 +1,12 @@
+export type PadFilter = 'all' | 'active' | 'recent' | 'empty' | 'stale';
+
 export type PadSearchQuery = {
   pattern: string;
   offset: number;
   limit: number;
   ascending: boolean;
   sortBy: string;
+  filter?: PadFilter;
 }
 
 

@@ -12,7 +12,7 @@
 
 // True when applyPadSettings (client + server) preserves keys matching
 // /^ep_[a-z0-9_]+$/ on pad.padOptions. The runtime gate is
-// settings.enablePluginPadOptions (default false), mirrored to clients via
+// settings.enablePluginPadOptions (default true), mirrored to clients via
 // clientVars.enablePluginPadOptions. See doc/plugins.md for the full
 // contract (key namespace, validation, size caps).
 export const padOptionsPluginPassthrough = true;

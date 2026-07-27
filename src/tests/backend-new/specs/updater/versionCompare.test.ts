@@ -1,13 +1,13 @@
-import {describe, it, expect} from 'vitest';
-import {
-  parseSemver,
-  compareSemver,
-  isMajorBehind,
-  parseVulnerableBelow,
-  isVulnerable,
-} from '../../../../node/updater/versionCompare';
+import {describe, expect, it} from 'vitest';
+import {compareSemver, isMinorOrMoreBehind, parseSemver} from '../../../../node/updater/versionCompare';
 
 describe('parseSemver', () => {
+  it('parses standard semver', () => {
+    expect(parseSemver('1.2.3')).toEqual({major: 1, minor: 2, patch: 3});
+  });
+  it('accepts v-prefix and pre-release', () => {
+    expect(parseSemver('v2.7.3-rc.1')).toEqual({major: 2, minor: 7, patch: 3});
+  });
   it('parses a plain version', () => {
     expect(parseSemver('2.7.1')).toEqual({major: 2, minor: 7, patch: 1});
   });
@@ -18,6 +18,11 @@ describe('parseSemver', () => {
     expect(parseSemver('garbage')).toBeNull();
     expect(parseSemver('')).toBeNull();
     expect(parseSemver('2.7')).toBeNull();
+  });
+  it('rejects garbage', () => {
+    expect(parseSemver('not-a-version')).toBeNull();
+    expect(parseSemver('1.2')).toBeNull();
+    expect(parseSemver('2.7.1.4')).toBeNull();
   });
   it('strips prerelease suffix', () => {
     expect(parseSemver('2.7.1-rc.1')).toEqual({major: 2, minor: 7, patch: 1});
@@ -33,6 +38,11 @@ describe('parseSemver', () => {
 });
 
 describe('compareSemver', () => {
+  it('returns -1, 0, 1', () => {
+    expect(compareSemver('1.2.3', '1.2.4')).toBe(-1);
+    expect(compareSemver('1.2.3', '1.2.3')).toBe(0);
+    expect(compareSemver('1.2.4', '1.2.3')).toBe(1);
+  });
   it('orders correctly', () => {
     expect(compareSemver('2.7.1', '2.7.2')).toBe(-1);
     expect(compareSemver('2.7.2', '2.7.1')).toBe(1);
@@ -44,49 +54,26 @@ describe('compareSemver', () => {
   });
 });
 
-describe('isMajorBehind', () => {
-  it('true when at least one major behind', () => {
-    expect(isMajorBehind('2.7.1', '3.0.0')).toBe(true);
-    expect(isMajorBehind('2.7.1', '4.0.0')).toBe(true);
+describe('isMinorOrMoreBehind', () => {
+  it('returns false for equal versions', () => {
+    expect(isMinorOrMoreBehind('3.0.0', '3.0.0')).toBe(false);
   });
-  it('false otherwise', () => {
-    expect(isMajorBehind('2.7.1', '2.99.99')).toBe(false);
-    expect(isMajorBehind('3.0.0', '3.0.0')).toBe(false);
-    expect(isMajorBehind('3.0.0', '2.7.1')).toBe(false);
+  it('returns false for current ahead of latest', () => {
+    expect(isMinorOrMoreBehind('3.1.0', '3.0.5')).toBe(false);
   });
-});
-
-describe('parseVulnerableBelow', () => {
-  it('extracts directive from release body', () => {
-    const body = 'Fixes a few things.\n<!-- updater: vulnerable-below 2.6.4 -->\nMore notes.';
-    expect(parseVulnerableBelow(body)).toBe('2.6.4');
+  it('returns false for patch-only delta', () => {
+    expect(isMinorOrMoreBehind('2.7.3', '2.7.4')).toBe(false);
+    expect(isMinorOrMoreBehind('3.0.1', '3.0.9')).toBe(false);
   });
-  it('tolerates whitespace and casing', () => {
-    expect(parseVulnerableBelow('<!--updater:vulnerable-below 1.0.0-->')).toBe('1.0.0');
-    expect(parseVulnerableBelow('<!-- UPDATER: VULNERABLE-BELOW 1.0.0 -->')).toBe('1.0.0');
+  it('returns true for minor delta', () => {
+    expect(isMinorOrMoreBehind('3.1.0', '3.2.0')).toBe(true);
+    expect(isMinorOrMoreBehind('3.1.5', '3.2.0')).toBe(true);
   });
-  it('returns null when absent or malformed', () => {
-    expect(parseVulnerableBelow('no directive here')).toBeNull();
-    expect(parseVulnerableBelow('<!-- updater: vulnerable-below garbage -->')).toBeNull();
+  it('returns true for major delta', () => {
+    expect(isMinorOrMoreBehind('2.7.3', '3.0.0')).toBe(true);
   });
-});
-
-describe('isVulnerable', () => {
-  it('true if current strictly below any directive threshold', () => {
-    expect(isVulnerable('2.6.3', [
-      {announcedBy: 'v2.7.0', threshold: '2.6.4'},
-    ])).toBe(true);
-  });
-  it('false at or above all thresholds', () => {
-    expect(isVulnerable('2.6.4', [
-      {announcedBy: 'v2.7.0', threshold: '2.6.4'},
-    ])).toBe(false);
-    expect(isVulnerable('2.7.0', [])).toBe(false);
-  });
-  it('handles multiple directives', () => {
-    expect(isVulnerable('1.5.0', [
-      {announcedBy: 'v2.0.0', threshold: '2.0.0'},
-      {announcedBy: 'v3.0.0', threshold: '1.9.0'},
-    ])).toBe(true);
+  it('returns false on unparseable input on either side', () => {
+    expect(isMinorOrMoreBehind('garbage', '3.0.0')).toBe(false);
+    expect(isMinorOrMoreBehind('3.0.0', 'garbage')).toBe(false);
   });
 });

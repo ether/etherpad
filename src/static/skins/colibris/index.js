@@ -70,12 +70,21 @@ window.customStart = () => {
       li.style.cursor = 'pointer';
 
       li.className = 'recent-pad';
-      const padPath = `${window.location.href}p/${pad.name}`;
+      // Normalize the stored name to its decoded form. Entries saved by older
+      // versions may already be URL-encoded; decoding first avoids
+      // double-encoding (e.g. %2F -> %252F) when we build the href below.
+      let padName = pad.name;
+      try {
+        padName = decodeURIComponent(pad.name);
+      } catch {
+        // pad.name is not valid percent-encoding; use it as-is.
+      }
+      const padPath = `${window.location.href}p/${encodeURIComponent(padName)}`;
       const link = document.createElement('a');
       link.style.textDecoration = 'none';
 
       link.href = padPath;
-      link.innerText = pad.name;
+      link.innerText = padName;
       li.appendChild(link);
 
 

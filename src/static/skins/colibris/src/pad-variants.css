@@ -133,6 +133,22 @@
   box-shadow: 0 0 14px 0px var(--super-dark-color);
 }
 
+/* == Root canvas / iOS status-bar safe area (issue #7606) == */
+/* The variant rules above only paint inner containers, leaving the <html> root
+   transparent. iOS Safari fills the status-bar safe area above the page from
+   the ROOT canvas background (not `theme-color`), so a dark-mode pad showed a
+   white strip above the dark toolbar. Paint the root with the TOOLBAR colour
+   (matching `theme-color` and the OP's request that the bar match the toolbar)
+   so the safe area, toolbar, and address bar are one seamless colour. The
+   colours mirror toolbarColorForTokens / skin_toolbar_colors.ts. `color-scheme`
+   keeps UA-painted chrome (overscroll, scrollbars, form controls) in step. */
+html.super-light-toolbar, html.light-toolbar { color-scheme: light; }
+html.super-dark-toolbar, html.dark-toolbar { color-scheme: dark; }
+html.super-light-toolbar { background-color: var(--super-light-color); }
+html.light-toolbar { background-color: var(--light-color); }
+html.super-dark-toolbar { background-color: var(--super-dark-color); }
+html.dark-toolbar { background-color: var(--dark-color); }
+
 
 
 

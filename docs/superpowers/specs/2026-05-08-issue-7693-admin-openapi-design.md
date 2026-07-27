@@ -197,7 +197,7 @@ GET /admin/openapi.json   (CORS: *)
 
 The route is gated by `settings.adminOpenAPI.enabled`, **default `false`**,
 per the project's "new features behind a flag, off by default" policy
-(CONTRIBUTING.md, AGENTS.MD, best_practices.md). When the flag is off,
+(CONTRIBUTING.md, AGENTS.MD). When the flag is off,
 `expressPreSession` returns early and the route is dormant.
 
 When enabled, the route registers in `expressPreSession`, which runs before

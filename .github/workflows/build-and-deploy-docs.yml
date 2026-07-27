@@ -36,15 +36,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
-      - uses: actions/cache@v5
+        uses: actions/checkout@v7
+      - uses: actions/cache@v6
         name: Cache pnpm store
         with:
           path: ~/.pnpm-store
           key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
             ${{ runner.os }}-pnpm-store-
-      - uses: actions/cache@v5
+      - uses: actions/cache@v6
         name: Cache vitepress build
         with:
           path: doc/.vitepress/cache
@@ -56,11 +56,11 @@ jobs:
         with:
           run_install: false
       # Pin Node so the build does not silently fall back to whatever the
-      # runner image ships with. The repo declares engines.node >=25.0.0.
+      # runner image ships with. The repo declares engines.node >=24.0.0.
       - name: Use Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
-          node-version: 25
+          node-version: 24
           cache: pnpm
       - name: Setup Pages
         if: github.event_name == 'push'

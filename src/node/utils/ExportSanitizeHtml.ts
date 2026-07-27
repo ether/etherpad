@@ -208,6 +208,17 @@ export const stripRemoteImages = (html: string): string => {
       if (VOID_TAGS.has(name)) return;
       out += `</${name}>`;
     },
+    // Preserve document-level directives (notably `<!doctype html>`) and
+    // comments. stripRemoteImages() runs on the FULL export document for the
+    // soffice path, so dropping the doctype would flip LibreOffice into quirks
+    // mode. htmlparser2 surfaces the doctype as a processing instruction whose
+    // `data` is e.g. `!doctype html`.
+    onprocessinginstruction(name, data) {
+      out += `<${data}>`;
+    },
+    oncomment(data) {
+      out += `<!--${data}-->`;
+    },
   }, {decodeEntities: false, lowerCaseTags: true});
   parser.write(html);
   parser.end();

@@ -1,6 +1,7 @@
 import {Trans, useTranslation} from "react-i18next";
 import {useEffect, useMemo, useState} from "react";
 import * as Dialog from "@radix-ui/react-dialog";
+import {VisuallyHidden} from "@radix-ui/react-visually-hidden";
 import {ChevronLeft, ChevronRight, Trash2} from "lucide-react";
 import {useStore} from "../store/store.ts";
 import {SearchField} from "../components/SearchField.tsx";
@@ -153,16 +154,20 @@ export const AuthorPage = () => {
       <Dialog.Portal>
         <Dialog.Overlay className="dialog-confirm-overlay"/>
         <Dialog.Content className="dialog-confirm-content">
+          <VisuallyHidden asChild>
+            <Dialog.Title>{t('ep_admin_authors:confirm-dialog-title')}</Dialog.Title>
+          </VisuallyHidden>
+          <VisuallyHidden asChild>
+            <Dialog.Description>{t('ep_admin_authors:confirm-dialog-description')}</Dialog.Description>
+          </VisuallyHidden>
           {dialog.phase === 'loading-preview' && <div>
             <Trans i18nKey="ep_admin_authors:loading-preview" ns="ep_admin_authors"/>
           </div>}
           {(dialog.phase === 'preview' || dialog.phase === 'committing') && (() => {
             const p = dialog.preview;
             return <div>
-              <Dialog.Title asChild>
-                <h3>{t('ep_admin_authors:confirm-preview-title',
-                    {name: p.name || p.authorID})}</h3>
-              </Dialog.Title>
+              <h3>{t('ep_admin_authors:confirm-preview-title',
+                  {name: p.name || p.authorID})}</h3>
               <p>{t('ep_admin_authors:confirm-preview-counters', {
                 tokenMappings: p.removedTokenMappings,
                 externalMappings: p.removedExternalMappings,

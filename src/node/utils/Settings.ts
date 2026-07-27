@@ -35,7 +35,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import {argv} from './Cli'
-import jsonminify from 'jsonminify';
+import {parse as parseJsonc, printParseErrorCode, ParseError} from 'jsonc-parser';
 import log4js from 'log4js';
 import {createHash} from 'node:crypto';
 import randomString from './randomstring';
@@ -116,9 +116,18 @@ const parseSettings = (settingsFilename: string, isSettings: boolean) => {
   }
 
   try {
-    settingsStr = jsonminify(settingsStr).replace(',]', ']').replace(',}', '}');
+    // jsonc-parser tolerates comments and trailing commas, so settings files
+    // can stay annotated. Unlike the old jsonminify + naive ',]'/',}' string
+    // replace, it fixes *every* trailing comma (not just the first of each
+    // kind) and never mangles those sequences when they appear inside strings.
+    const errors: ParseError[] = [];
+    const settings = parseJsonc(settingsStr, errors, {allowTrailingComma: true});
 
-    const settings = JSON.parse(settingsStr);
+    if (errors.length > 0) {
+      const {error, offset} = errors[0];
+      throw new Error(`${printParseErrorCode(error)} at offset ${offset}`);
+    }
+    if (settings === undefined) throw new Error('file is empty or not valid JSON');
 
     logger.info(`${settingsType} loaded from: ${settingsFilename}`);
 
@@ -192,6 +201,10 @@ export type SettingsType = {
     body: string,
     learnMoreUrl: string | null,
     dismissal: 'dismissible' | 'sticky',
+  },
+  privacy: {
+    updateCheck: boolean,
+    pluginCatalog: boolean,
   },
   skinName: string | null,
   skinVariants: string,
@@ -292,6 +305,10 @@ export type SettingsType = {
   sso: {
     issuer: string,
     clients?: {client_id: string}[]
+    // Optional operator-supplied signing keys for the embedded OIDC provider's
+    // cookies. When unset, a secret key is derived from the session secret.
+    // Provide an ordered array `[newKey, ...oldKeys]` to rotate.
+    cookieKeys?: string[]
   },
   showSettingsInAdminPage: boolean,
   cleanup: {
@@ -342,12 +359,31 @@ export type SettingsType = {
     requireSignature: boolean,
     /** Override the OS keyring location (passed to git verify-tag via $GNUPGHOME). */
     trustedKeysPath: string | null,
+    /**
+     * Tier 4: nightly window during which the scheduler is allowed to fire.
+     * Null = tier 4 disabled (canAutonomous is denied with reason
+     * `maintenance-window-missing`). Shape validated at boot by `parseWindow`.
+     */
+    maintenanceWindow: {start: string; end: string; tz: 'local' | 'utc'} | null,
   },
   adminOpenAPI: {
     enabled: boolean,
   },
   adminEmail: string | null,
-  getPublicSettings: () => Pick<SettingsType, "title" | "skinVariants"|"randomVersionString"|"skinName"|"toolbar"| "exposeVersion"| "gitVersion" | "enablePadWideSettings" | "enablePluginPadOptions" | "privacyBanner">,
+  /**
+   * SMTP transport for outbound admin notifications (updater + future
+   * features). Null `host` disables outbound mail — the Notifier still runs
+   * and dedupe state is updated, but messages only log `(would send email)`.
+   * `auth` is optional; omit for unauthenticated relays.
+   */
+  mail: {
+    host: string | null;
+    port: number;
+    secure: boolean;
+    from: string | null;
+    auth: {user: string; pass: string} | null;
+  },
+  getPublicSettings: () => Pick<SettingsType, "title" | "skinVariants"|"randomVersionString"|"skinName"|"toolbar"| "exposeVersion"| "gitVersion" | "enableDarkMode" | "enablePadWideSettings" | "enablePluginPadOptions" | "privacyBanner">,
 }
 
 const settings: SettingsType = {
@@ -412,11 +448,11 @@ const settings: SettingsType = {
   updateServer: "https://static.etherpad.org",
   enableDarkMode: true,
   enablePadWideSettings: true,
-  // New plugin-padOption passthrough is opt-in per AGENTS.MD §52 ("New
-  // features should be placed behind feature flags and disabled by
-  // default"). Flip to true to let plugins (e.g. ep_plugin_helpers'
-  // padToggle) ride the existing padoptions broadcast/persist rail.
-  enablePluginPadOptions: false,
+  // Lets plugins (e.g. ep_plugin_helpers' padToggle / padSelect) ride the
+  // existing padoptions broadcast/persist rail to store pad-wide options
+  // under ep_* keys. Operators who want to lock plugin-driven pad-wide
+  // state out can set this to false in settings.json.
+  enablePluginPadOptions: true,
   allowPadDeletionByAllUsers: false,
   privacyBanner: {
     enabled: false,
@@ -425,6 +461,14 @@ const settings: SettingsType = {
         'See the linked policy for retention and how to request erasure.',
     learnMoreUrl: null,
     dismissal: 'dismissible',
+  },
+  privacy: {
+    // Outbound calls. See PRIVACY.md.
+    // Set to false to disable hourly version check (UpdateCheck.ts).
+    updateCheck: true,
+    // Set to false to disable plugin-catalog fetch from updateServer
+    // (installer.ts). Manual install via CLI still works.
+    pluginCatalog: true,
   },
   /*
  * Skin name.
@@ -536,6 +580,9 @@ const settings: SettingsType = {
     diskSpaceMinMB: 500,
     requireSignature: false,
     trustedKeysPath: null,
+    // Tier 4: night-window during which the scheduler may fire. Null disables tier 4 only.
+    // Example: { start: "03:00", end: "05:00", tz: "local" } or tz: "utc".
+    maintenanceWindow: null,
   },
   /**
    * Admin OpenAPI document endpoint at /admin/openapi.json.
@@ -554,6 +601,19 @@ const settings: SettingsType = {
    * Null disables outbound mail from the updater.
    */
   adminEmail: null,
+  /**
+   * SMTP transport for outbound admin notifications. Null `host` keeps the
+   * legacy log-only behaviour. Set `host`+`from` (and optionally `auth`) to
+   * deliver via nodemailer. The dependency is lazy-loaded — installs without
+   * a mail.host pay no runtime cost.
+   */
+  mail: {
+    host: null,
+    port: 587,
+    secure: false,
+    from: null,
+    auth: null,
+  },
   /**
    * Whether certain shortcut keys are enabled for a user in the pad
    */
@@ -688,9 +748,19 @@ const settings: SettingsType = {
  * Deprecated cookie signing key.
  */
   sessionKey: null,
-  /*
- * Trust Proxy, whether or not trust the x-forwarded-for header.
- */
+  /**
+   * Trust Proxy, whether or not trust the x-forwarded-for header.
+   *
+   * Setting this to `true` also makes Etherpad honor two standard URL-path-
+   * prefix headers from upstream proxies:
+   *   - `X-Forwarded-Prefix` (HAProxy / Traefik convention)
+   *   - `X-Ingress-Path` (Home Assistant supervisor ingress)
+   *
+   * Both are sanitised before use (see src/node/utils/sanitizeProxyPath.ts).
+   * Etherpad's own `x-proxy-path` header is honored regardless of this
+   * setting; the operator is presumed to have configured their proxy
+   * intentionally when sending the custom header.
+   */
   trustProxy: false,
   /*
  * Settings controlling the session cookie issued by Etherpad.
@@ -828,6 +898,9 @@ const settings: SettingsType = {
       title: settings.title,
       skinName: settings.skinName,
       skinVariants: settings.skinVariants,
+      // Needed so pad.html / timeslider.html only emit the dark theme-color
+      // variant when dark mode can actually be reached client-side (#7606).
+      enableDarkMode: settings.enableDarkMode,
       enablePadWideSettings: settings.enablePadWideSettings,
       enablePluginPadOptions: settings.enablePluginPadOptions,
       privacyBanner: getPublicPrivacyBanner(),
@@ -1207,6 +1280,13 @@ export const reloadSettings = () => {
     logger.warn("logLayoutType: " + settings.logLayoutType);
     initLogging(settings.logconfig);
 
+    if (settings.loadTest) {
+      logger.warn(
+        'settings.loadTest is true: SecurityManager.checkAccess() will bypass ' +
+        'authentication and authorization for both HTTP and socket.io requests. ' +
+        'Do NOT enable this in production.');
+    }
+
     if (!settings.skinName) {
         logger.warn('No "skinName" parameter found. Please check out settings.json.template and ' +
             'update your settings.json. Falling back to the default "colibris".');
@@ -1296,6 +1376,41 @@ export const reloadSettings = () => {
       logger.error(`cookie.prefix "${settings.cookie.prefix}" contains invalid characters. ` +
           'Only alphanumeric characters, hyphens, and underscores are allowed. Using empty prefix.');
       settings.cookie.prefix = '';
+    }
+
+    // Warn when an account still uses a placeholder/example password from the
+    // shipped config; these should be changed before the instance is exposed.
+    // Logged loudly (error level in production) rather than throwing, so test
+    // fixtures and existing setups that use placeholder credentials still run.
+    {
+      const weakPasswords = new Set(['changeme1', 'changeme', 'admin', 'password', '']);
+      const users = (settings.users || {}) as Record<string, {password?: string, is_admin?: boolean}>;
+      const offenders = Object.keys(users).filter((name) =>
+        users[name] && typeof users[name].password === 'string' &&
+        weakPasswords.has(users[name].password as string));
+      if (offenders.length) {
+        const msg = `Account(s) using a default/placeholder password: ${offenders.join(', ')}. ` +
+            'Set a strong password (or use the ep_hash_auth plugin) before exposing this instance.';
+        if (process.env.NODE_ENV === 'production') logger.error(msg);
+        else logger.warn(msg);
+      }
+
+      // Same check for OIDC client secrets when SSO is configured: the shipped
+      // templates fall back to placeholder values if ADMIN_SECRET / USER_SECRET
+      // are not provided.
+      const sso = (settings as any).sso;
+      const ssoClients: Array<{client_id?: string, client_secret?: string}> =
+        (sso && Array.isArray(sso.clients)) ? sso.clients : [];
+      const weakSecrets = new Set(['admin', 'user', 'secret', 'changeme', '']);
+      const secretOffenders = ssoClients
+        .filter((c) => c && typeof c.client_secret === 'string' && weakSecrets.has(c.client_secret))
+        .map((c) => c.client_id || '(unnamed client)');
+      if (secretOffenders.length) {
+        const msg = `SSO client(s) using a default/placeholder client_secret: ${secretOffenders.join(', ')}. ` +
+            'Set a strong secret (e.g. via the ADMIN_SECRET / USER_SECRET env vars) before enabling SSO in production.';
+        if (process.env.NODE_ENV === 'production') logger.error(msg);
+        else logger.warn(msg);
+      }
     }
 
     if (settings.dbType === 'dirty') {
