@@ -65,7 +65,19 @@ describe(__filename, function () {
   });
 
   // Hook functions that should work for both synchronous and asynchronous hooks.
-  const supportedSyncHookFunctions = [
+  // A hook function is invoked as fn(hookName, context, cb). These test cases
+  // deliberately vary the arity (with/without cb) and what the function does with
+  // the value (return it, pass it to cb, return a Promise, throw), so the
+  // parameters stay loose and the produced value is unknown until asserted on.
+  type HookFnTestCase = {
+    name: string,
+    fn: (hn: any, ctx: any, cb: any) => unknown,
+    want?: unknown,
+    wantErr?: string,
+    syncOk?: boolean,
+  };
+
+  const supportedSyncHookFunctions: HookFnTestCase[] = [
     {
       name: 'return non-Promise value, with callback parameter',
       fn: (hn:Function, ctx:any, cb:Function) => 'val',
@@ -563,8 +575,7 @@ describe(__filename, function () {
     });
 
     describe('supported hook function styles', function () {
-      // @ts-ignore
-      const supportedHookFunctions = supportedSyncHookFunctions.concat([
+      const supportedHookFunctions: HookFnTestCase[] = supportedSyncHookFunctions.concat([
         {
           name: 'legacy async cb',
           fn: (hn:Function, ctx:any, cb:Function) => { process.nextTick(cb, 'val'); },

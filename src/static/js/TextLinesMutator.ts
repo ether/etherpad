@@ -13,7 +13,10 @@ import {splitTextLines} from "./Changeset";
  */
 class TextLinesMutator {
   private _lines: string[];
-  private _curSplice: [number, number?];
+  // [start index, lines to remove, ...replacement/new lines] — see the comment in
+  // the constructor. The element type was declared as `[number, number?]`, which
+  // is why every access to the line elements below needs a `@ts-ignore`.
+  private _curSplice: [number, number?, ...string[]];
   private _inSplice: boolean;
   private _curLine: number;
   private _curCol: number;
@@ -106,7 +109,8 @@ class TextLinesMutator {
    * close or TODO(doc).
    */
   _leaveSplice() {
-    this._lines.splice(...this._curSplice);
+    const [start, deleteCount = 0, ...newLines] = this._curSplice;
+    this._lines.splice(start, deleteCount, ...newLines);
     this._curSplice.length = 2;
     this._curSplice[0] = this._curSplice[1] = 0;
     this._inSplice = false;
@@ -275,34 +279,34 @@ class TextLinesMutator {
    * @param {string} text - the text to insert
    * @param {number} L - number of newlines in text
    */
-  insert(text: string | any[], L: any) {
+  insert(text: string, L: number) {
     if (!text) return;
     if (!this._inSplice) this._enterSplice();
     if (L) {
-      // @ts-ignore
-      const newLines = splitTextLines(text);
+      // splitTextLines() is a String.match(), so it returns null for a string with
+      // no line content at all. L > 0 means `text` contains a newline, so that
+      // cannot happen here — treat it as "no lines" rather than dereferencing null.
+      const newLines = splitTextLines(text) || [];
       if (this._isCurLineInSplice()) {
         const sline = this._curSplice.length - 1;
-        /** @type {string} */
-        const theLine = this._curSplice[sline];
+        // Everything from index 2 on is a line, and sline is past the two leading
+        // splice arguments whenever the current line is in the splice.
+        const theLine = this._curSplice[sline] as string;
         const lineCol = this._curCol;
         // Insert the chars up to `curCol` and the first new line.
-        // @ts-ignore
         this._curSplice[sline] = theLine.substring(0, lineCol) + newLines[0];
         this._curLine++;
-        newLines!.splice(0, 1);
+        newLines.splice(0, 1);
         // insert the remaining new lines
-        // @ts-ignore
         this._curSplice.push(...newLines);
-        this._curLine += newLines!.length;
+        this._curLine += newLines.length;
         // insert the remaining chars from the "old" line (e.g. the line we were in
         // when we started to insert new lines)
-        // @ts-ignore
         this._curSplice.push(theLine.substring(lineCol));
         this._curCol = 0; // TODO(doc) why is this not set to the length of last line?
       } else {
         this._curSplice.push(...newLines);
-        this._curLine += newLines!.length;
+        this._curLine += newLines.length;
       }
     } else {
       // There are no additional lines. Although the line is put into splice, curLine is not
