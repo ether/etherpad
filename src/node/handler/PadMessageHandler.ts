@@ -48,7 +48,6 @@ const hooks = require('../../static/js/pluginfw/hooks');
 const stats = require('../stats')
 const assert = require('assert').strict;
 import {recordChangesetApply, recordSocketEmit} from '../prom-instruments';
-import {buildNewChangesEmits, type NewChangesItem} from './NewChangesPacker';
 import {RateLimiterMemory} from 'rate-limiter-flexible';
 import {ChangesetRequest, PadUserInfo, SocketClientRequest} from "../types/SocketClientRequest";
 import {APool, AText, PadAuthor, PadType} from "../types/PadType";
@@ -1052,76 +1051,69 @@ exports.updatePadClients = async (pad: PadType) => {
   // but benefit of reusing cached revision object is HUGE
   const revCache:MapArrayType<any> = {};
 
-  // When `settings.newChangesBatch` is true and a recipient is more than one
-  // revision behind, pack the queued revisions into a single NEW_CHANGES_BATCH
-  // emit per recipient. The engine.io WebSocket transport sends one frame per
-  // packet (the polling transport already batches at the HTTP-response layer),
-  // so reducing the packet count translates directly into fewer system calls
-  // on the server and fewer onmessage callbacks on the client.
-  const batchEnabled = settings.newChangesBatch === true;
-
   await Promise.all(roomSockets.map(async (socket) => {
     const sessioninfo = sessioninfos[socket.id];
     // The user might have disconnected since _getRoomSockets() was called.
     if (sessioninfo == null) return;
 
-    // Snapshot the local state so a concurrent updatePadClients() can't make
-    // us double-emit. We hold the "I'm responsible for revs (startRev,
-    // headRev]" claim by reading sessioninfo.rev once and overwriting it
-    // before any await. A second invocation arriving mid-loop will see the
-    // bumped rev and skip those revisions; if our emit fails the catch
-    // below rolls sessioninfo.rev back so they aren't lost.
-    const startRev = sessioninfo.rev;
-    const headRev = pad.getHeadRevisionNumber();
-    if (startRev >= headRev) return;
-    const startTime = sessioninfo.time;
-    // Claim the range immediately so concurrent runs skip it.
-    sessioninfo.rev = headRev;
-
-    // Collect all queued revisions for this socket.
-    const pending: Array<{
-      newRev: number;
-      changeset: string;
-      apool: unknown;
-      author: string;
-      currentTime: number;
-      timeDelta: number;
-    }> = [];
-
+    // One fan-out per socket at a time. Without this, two concurrent
+    // updatePadClients() runs both read `sessioninfo.rev`, both await
+    // pad.getRevision(), and both emit the same revision to the same client
+    // (#7756 lever 3): the loop's read-await-write is not atomic.
+    //
+    // The claim is a separate flag on purpose. `sessioninfo.rev` has to keep
+    // meaning "last revision actually put on the wire" — handleUserChanges
+    // asserts `thisSession.rev === r` before emitting ACCEPT_COMMIT precisely to
+    // guarantee the client sees NEW_CHANGES and ACCEPT_COMMIT in order. Bumping
+    // rev up front to claim a range would satisfy that assert while the
+    // NEW_CHANGES messages are still queued behind an await, which is the
+    // out-of-order delivery the assert exists to prevent.
+    //
+    // A skipped run loses nothing: the run that holds the flag re-reads
+    // getHeadRevisionNumber() every iteration, so it also ships whatever arrived
+    // in the meantime.
+    if (sessioninfo.fanOutInFlight) return;
+    sessioninfo.fanOutInFlight = true;
     try {
-      let previousTime = startTime;
-      for (let r = startRev + 1; r <= headRev; r++) {
+      while (sessioninfo.rev < pad.getHeadRevisionNumber()) {
+        const r = sessioninfo.rev + 1;
         let revision = revCache[r];
         if (!revision) {
           revision = await pad.getRevision(r);
           revCache[r] = revision;
         }
+
         const author = revision.meta.author;
         const revChangeset = revision.changeset;
         const currentTime = revision.meta.timestamp;
-        const forWire = prepareForWire(revChangeset, pad.pool);
-        pending.push({
-          newRev: r,
-          changeset: forWire.translated,
-          apool: forWire.pool,
-          author,
-          currentTime,
-          timeDelta: currentTime - previousTime,
-        });
-        previousTime = currentTime;
-      }
 
-      for (const emit of buildNewChangesEmits(pending, batchEnabled)) {
-        socket.emit('message', emit);
-        recordSocketEmit(emit.data.type);
+        const forWire = prepareForWire(revChangeset, pad.pool);
+        const msg = {
+          type: 'COLLABROOM',
+          data: {
+            type: 'NEW_CHANGES',
+            newRev: r,
+            changeset: forWire.translated,
+            apool: forWire.pool,
+            author,
+            currentTime,
+            timeDelta: currentTime - sessioninfo.time,
+          },
+        };
+        try {
+          socket.emit('message', msg);
+          recordSocketEmit('NEW_CHANGES');
+        } catch (err:any) {
+          messageLogger.error(`Failed to notify user of new revision: ${err.stack || err}`);
+          return;
+        }
+        sessioninfo.time = currentTime;
+        sessioninfo.rev = r;
       }
-      // Only after the wire send succeeds do we commit the new time.
-      sessioninfo.time = previousTime;
-    } catch (err: any) {
-      // Roll back the claim so the next updatePadClients retries these revs.
-      // Only set rev back if no one else has advanced past us in the meantime.
-      if (sessioninfo.rev === headRev) sessioninfo.rev = startRev;
-      messageLogger.error(`Failed to notify user of new revision: ${err.stack || err}`);
+    } finally {
+      // Cleared even on the `return` inside the emit-failure path above, so a
+      // failed send doesn't wedge the socket's fan-out for good.
+      sessioninfo.fanOutInFlight = false;
     }
   }));
 };
