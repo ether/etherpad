@@ -3,22 +3,34 @@
 // One rep.line(div) can be broken in more than one line in the browser.
 // This function is useful to get the caret position of the line as
 // is represented by the browser
+//
+// NOTE: every DOM lookup here has to go through the editor document that is
+// passed in, *not* through the ambient `window` / `document`. This module is
+// bundled into the pad's top-level window, while the caret lives in the
+// ace_inner iframe nested inside ace_outer. Reading the top window's selection
+// always yields an empty selection, which used to make getPosition() return
+// null and crash the callers below (#8038).
 import {Position, RepModel, RepNode} from "./types/RepModel";
 
-export const getPosition = () => {
-  const range = getSelectionRange();
-  // @ts-ignore
-  if (!range || $(range.endContainer).closest('body')[0].id !== 'innerdocbody') return null;
+export const getPosition = (doc: Document): Position | null => {
+  const range = getSelectionRange(doc);
+  if (!range || getBodyOf(range.endContainer)?.id !== 'innerdocbody') return null;
   // When there's a <br> or any element that has no height, we can't get the dimension of the
   // element where the caret is. As we can't get the element height, we create a text node to get
   // the dimensions on the position.
   const clonedRange = createSelectionRange(range);
-  const shadowCaret = $(document.createTextNode('|'));
-  clonedRange.insertNode(shadowCaret[0]);
-  clonedRange.selectNode(shadowCaret[0]);
+  const shadowCaret = doc.createTextNode('|');
+  clonedRange.insertNode(shadowCaret);
+  clonedRange.selectNode(shadowCaret);
   const line = getPositionOfElementOrSelection(clonedRange);
   shadowCaret.remove();
   return line;
+};
+
+// The caret node is usually a text node, so climb to an element first.
+const getBodyOf = (node: Node) => {
+  const element = node.nodeType === Node.ELEMENT_NODE ? node as Element : node.parentElement;
+  return element ? element.closest('body') : null;
 };
 
 const createSelectionRange = (range: Range) => {
@@ -33,7 +45,7 @@ const createSelectionRange = (range: Range) => {
   return clonedRange;
 };
 
-const getPositionOfRepLineAtOffset = (node: any, offset: number) => {
+const getPositionOfRepLineAtOffset = (node: any, offset: number, doc: Document) => {
   // it is not a text node, so we cannot make a selection
   if (node.tagName === 'BR' || node.tagName === 'EMPTY') {
     return getPositionOfElementOrSelection(node);
@@ -43,7 +55,7 @@ const getPositionOfRepLineAtOffset = (node: any, offset: number) => {
     node = node.nextSibling as any;
   }
 
-  const newRange = new Range();
+  const newRange = doc.createRange();
   newRange.setStart(node, offset);
   newRange.setEnd(node, offset);
   const linePosition = getPositionOfElementOrSelection(newRange);
@@ -66,29 +78,31 @@ const getPositionOfElementOrSelection = (element: Range):Position => {
 // where is the top of the previous line
 // [2] the line before is part of another rep line. It's possible this line has different margins
 // height. So we have to get the exactly position of the line
-export const getPositionTopOfPreviousBrowserLine = (caretLinePosition: Position, rep: RepModel) => {
-  let previousLineTop = caretLinePosition.top - caretLinePosition.height; // [1]
-  const isCaretLineFirstBrowserLine = caretLineIsFirstBrowserLine(caretLinePosition.top, rep);
+export const getPositionTopOfPreviousBrowserLine =
+    (caretLinePosition: Position, rep: RepModel, doc: Document) => {
+      let previousLineTop = caretLinePosition.top - caretLinePosition.height; // [1]
+      const isCaretLineFirstBrowserLine =
+        caretLineIsFirstBrowserLine(caretLinePosition.top, rep, doc);
 
-  // the caret is in the beginning of a rep line, so the previous browser line
-  // is the last line browser line of the a rep line
-  if (isCaretLineFirstBrowserLine) { // [2]
-    const lineBeforeCaretLine = rep.selStart[0] - 1;
-    const firstLineVisibleBeforeCaretLine = getPreviousVisibleLine(lineBeforeCaretLine, rep);
-    const linePosition =
-      getDimensionOfLastBrowserLineOfRepLine(firstLineVisibleBeforeCaretLine, rep);
-    previousLineTop = linePosition.top;
-  }
-  return previousLineTop;
-};
+      // the caret is in the beginning of a rep line, so the previous browser line
+      // is the last line browser line of the a rep line
+      if (isCaretLineFirstBrowserLine) { // [2]
+        const lineBeforeCaretLine = rep.selStart[0] - 1;
+        const firstLineVisibleBeforeCaretLine = getPreviousVisibleLine(lineBeforeCaretLine, rep);
+        const linePosition =
+          getDimensionOfLastBrowserLineOfRepLine(firstLineVisibleBeforeCaretLine, rep, doc);
+        previousLineTop = linePosition.top;
+      }
+      return previousLineTop;
+    };
 
-const caretLineIsFirstBrowserLine = (caretLineTop: number, rep: RepModel) => {
+const caretLineIsFirstBrowserLine = (caretLineTop: number, rep: RepModel, doc: Document) => {
   const caretRepLine = rep.selStart[0];
   const lineNode = rep.lines.atIndex(caretRepLine).lineNode;
   const firstRootNode = getFirstRootChildNode(lineNode);
 
   // to get the position of the node we get the position of the first char
-  const positionOfFirstRootNode = getPositionOfRepLineAtOffset(firstRootNode, 1);
+  const positionOfFirstRootNode = getPositionOfRepLineAtOffset(firstRootNode, 1, doc);
   return positionOfFirstRootNode.top === caretLineTop;
 };
 
@@ -101,13 +115,13 @@ const getFirstRootChildNode = (node: RepNode) => {
   }
 };
 
-const getDimensionOfLastBrowserLineOfRepLine = (line: number, rep: RepModel) => {
+const getDimensionOfLastBrowserLineOfRepLine = (line: number, rep: RepModel, doc: Document) => {
   const lineNode = rep.lines.atIndex(line).lineNode;
   const lastRootChildNode = getLastRootChildNode(lineNode);
 
   // we get the position of the line in the last char of it
   const lastRootChildNodePosition =
-    getPositionOfRepLineAtOffset(lastRootChildNode.node, lastRootChildNode.length);
+    getPositionOfRepLineAtOffset(lastRootChildNode.node, lastRootChildNode.length, doc);
   return lastRootChildNodePosition;
 };
 
@@ -127,31 +141,32 @@ const getLastRootChildNode = (node: RepNode) => {
 // So, we can use the caret line to calculate the bottom of the line.
 // [2] the next line is part of another rep line.
 // It's possible this line has different dimensions, so we have to get the exactly dimension of it
-export const getBottomOfNextBrowserLine = (caretLinePosition: Position, rep: RepModel) => {
-  let nextLineBottom = caretLinePosition.bottom + caretLinePosition.height; // [1]
-  const isCaretLineLastBrowserLine =
-    caretLineIsLastBrowserLineOfRepLine(caretLinePosition.top, rep);
+export const getBottomOfNextBrowserLine =
+    (caretLinePosition: Position, rep: RepModel, doc: Document) => {
+      let nextLineBottom = caretLinePosition.bottom + caretLinePosition.height; // [1]
+      const isCaretLineLastBrowserLine =
+        caretLineIsLastBrowserLineOfRepLine(caretLinePosition.top, rep, doc);
 
-  // the caret is at the end of a rep line, so we can get the next browser line dimension
-  // using the position of the first char of the next rep line
-  if (isCaretLineLastBrowserLine) { // [2]
-    const nextLineAfterCaretLine = rep.selStart[0] + 1;
-    const firstNextLineVisibleAfterCaretLine = getNextVisibleLine(nextLineAfterCaretLine, rep);
-    const linePosition =
-      getDimensionOfFirstBrowserLineOfRepLine(firstNextLineVisibleAfterCaretLine, rep);
-    nextLineBottom = linePosition.bottom;
-  }
-  return nextLineBottom;
-};
+      // the caret is at the end of a rep line, so we can get the next browser line dimension
+      // using the position of the first char of the next rep line
+      if (isCaretLineLastBrowserLine) { // [2]
+        const nextLineAfterCaretLine = rep.selStart[0] + 1;
+        const firstNextLineVisibleAfterCaretLine = getNextVisibleLine(nextLineAfterCaretLine, rep);
+        const linePosition =
+          getDimensionOfFirstBrowserLineOfRepLine(firstNextLineVisibleAfterCaretLine, rep, doc);
+        nextLineBottom = linePosition.bottom;
+      }
+      return nextLineBottom;
+    };
 
-const caretLineIsLastBrowserLineOfRepLine = (caretLineTop: number, rep: RepModel) => {
+const caretLineIsLastBrowserLineOfRepLine = (caretLineTop: number, rep: RepModel, doc: Document) => {
   const caretRepLine = rep.selStart[0];
   const lineNode = rep.lines.atIndex(caretRepLine).lineNode;
   const lastRootChildNode = getLastRootChildNode(lineNode);
 
   // we take a rep line and get the position of the last char of it
   const lastRootChildNodePosition =
-    getPositionOfRepLineAtOffset(lastRootChildNode.node, lastRootChildNode.length);
+    getPositionOfRepLineAtOffset(lastRootChildNode.node, lastRootChildNode.length, doc);
   return lastRootChildNodePosition.top === caretLineTop;
 };
 
@@ -181,20 +196,21 @@ export const getNextVisibleLine = (line: number, rep: RepModel): number => {
 
 const isLineVisible = (line: number, rep: RepModel) => rep.lines.atIndex(line).lineNode.offsetHeight > 0;
 
-const getDimensionOfFirstBrowserLineOfRepLine = (line: number, rep: RepModel) => {
+const getDimensionOfFirstBrowserLineOfRepLine = (line: number, rep: RepModel, doc: Document) => {
   const lineNode = rep.lines.atIndex(line).lineNode;
   const firstRootChildNode = getFirstRootChildNode(lineNode);
 
   // we can get the position of the line, getting the position of the first char of the rep line
-  const firstRootChildNodePosition = getPositionOfRepLineAtOffset(firstRootChildNode, 1);
+  const firstRootChildNodePosition = getPositionOfRepLineAtOffset(firstRootChildNode, 1, doc);
   return firstRootChildNodePosition;
 };
 
-const getSelectionRange = () => {
-  if (!window.getSelection) {
-    return;
+const getSelectionRange = (doc: Document) => {
+  const win = doc.defaultView;
+  if (!win || !win.getSelection) {
+    return null;
   }
-  const selection = window.getSelection();
+  const selection = win.getSelection();
   if (selection && selection.type !== 'None' && selection.rangeCount > 0) {
     return selection.getRangeAt(0);
   } else {

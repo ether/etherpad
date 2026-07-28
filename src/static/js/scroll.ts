@@ -1,5 +1,5 @@
 import {getBottomOfNextBrowserLine, getNextVisibleLine, getPosition, getPositionTopOfPreviousBrowserLine, getPreviousVisibleLine} from './caretPosition';
-import {Position, RepModel, RepNode, WindowElementWithScrolling} from "./types/RepModel";
+import {Position, RepModel, RepNode} from "./types/RepModel";
 
 
 class Scroll {
@@ -17,6 +17,15 @@ class Scroll {
     this.doc = this.outerWin.contentDocument!;
     this.rootDocument = document;
   }
+
+  // `outerWin` is the ace_outer *iframe element*, not a window — this module is
+  // bundled into the pad's top-level window and ace2_inner.ts hands us the
+  // element. Scrolling therefore has to go through its contentWindow: calling
+  // scrollTo()/scrollBy() on the element itself silently does nothing, because
+  // an iframe element has no scrollable box of its own.
+  _getOuterWin(): Window | null {
+    return this.outerWin.contentWindow;
+  };
 
   scrollWhenCaretIsInTheLastLineOfViewportWhenNecessary(rep: RepModel, isScrollableEvent: boolean, innerHeight: number) {
     // are we placing the caret on the line at the bottom of viewport?
@@ -52,7 +61,19 @@ class Scroll {
     }
   }
 
+  // The editor document, i.e. the document of the ace_inner iframe nested
+  // inside ace_outer. This module runs in the pad's top-level window, so every
+  // caret measurement has to be made against this document rather than the
+  // ambient one. Resolved on demand because browsers (Firefox in particular)
+  // may replace an iframe's document after load.
+  _getInnerDoc(): Document | null {
+    const innerFrame = this.doc.getElementsByName('ace_inner')[0] as HTMLIFrameElement | undefined;
+    return innerFrame ? innerFrame.contentDocument : null;
+  };
+
   _isCaretAtTheBottomOfViewport(rep: RepModel) {
+    const innerDoc = this._getInnerDoc();
+    if (!innerDoc) return false;
     // computing a line position using getBoundingClientRect() is expensive.
     // (obs: getBoundingClientRect() is called on caretPosition.getPosition())
     // To avoid that, we only call this function when it is possible that the
@@ -66,9 +87,11 @@ class Scroll {
       this._isLinePartiallyVisibleOnViewport(firstLineVisibleAfterCaretLine, rep);
     if (caretLineIsPartiallyVisibleOnViewport || lineAfterCaretLineIsPartiallyVisibleOnViewport) {
       // check if the caret is in the bottom of the viewport
-      const caretLinePosition = getPosition()!;
+      const caretLinePosition = getPosition(innerDoc);
+      // no caret in the pad (e.g. focus is outside the editor), so nothing to scroll to
+      if (!caretLinePosition) return false;
       const viewportBottom = this._getViewPortTopBottom().bottom;
-      const nextLineBottom = getBottomOfNextBrowserLine(caretLinePosition, rep);
+      const nextLineBottom = getBottomOfNextBrowserLine(caretLinePosition, rep, innerDoc);
       return nextLineBottom > viewportBottom;
     }
     return false;
@@ -124,9 +147,9 @@ class Scroll {
   };
 
   _getScrollXY() {
-    const win = this.outerWin as WindowElementWithScrolling;
+    const win = this._getOuterWin();
     const odoc = this.doc;
-    if (typeof (win.pageYOffset) === 'number') {
+    if (win && typeof (win.pageYOffset) === 'number') {
       return {
         x: win.pageXOffset,
         y: win.pageYOffset,
@@ -139,29 +162,33 @@ class Scroll {
         y: docel.scrollTop,
       };
     }
+    return {x: 0, y: 0};
   };
 
   getScrollX() {
-    return this._getScrollXY()!.x;
+    return this._getScrollXY().x;
   };
 
  getScrollY () {
-    return this._getScrollXY()!.y;
+    return this._getScrollXY().y;
   };
 
   setScrollX(x: number) {
-    this.outerWin.scrollTo(x, this.getScrollY());
+    this.setScrollXY(x, this.getScrollY());
   };
 
   setScrollY(y: number) {
-    this.outerWin.scrollTo(this.getScrollX(), y);
+    this.setScrollXY(this.getScrollX(), y);
   };
 
   setScrollXY(x: number, y: number) {
-    this.outerWin.scrollTo(x, y);
+    const win = this._getOuterWin();
+    if (win) win.scrollTo(x, y);
   };
 
   _isCaretAtTheTopOfViewport(rep: RepModel) {
+    const innerDoc = this._getInnerDoc();
+    if (!innerDoc) return false;
     const caretLine = rep.selStart[0];
     const linePrevCaretLine = caretLine - 1;
     const firstLineVisibleBeforeCaretLine =
@@ -171,16 +198,18 @@ class Scroll {
     const lineBeforeCaretLineIsPartiallyVisibleOnViewport =
       this._isLinePartiallyVisibleOnViewport(firstLineVisibleBeforeCaretLine, rep);
     if (caretLineIsPartiallyVisibleOnViewport || lineBeforeCaretLineIsPartiallyVisibleOnViewport) {
-      const caretLinePosition = getPosition(); // get the position of the browser line
+      const caretLinePosition = getPosition(innerDoc); // get the position of the browser line
+      // no caret in the pad (e.g. focus is outside the editor), so nothing to scroll to
+      if (!caretLinePosition) return false;
       const viewportPosition = this._getViewPortTopBottom();
       const viewportTop = viewportPosition.top;
       const viewportBottom = viewportPosition.bottom;
-      const caretLineIsBelowViewportTop = caretLinePosition!.bottom >= viewportTop;
-      const caretLineIsAboveViewportBottom = caretLinePosition!.top < viewportBottom;
+      const caretLineIsBelowViewportTop = caretLinePosition.bottom >= viewportTop;
+      const caretLineIsAboveViewportBottom = caretLinePosition.top < viewportBottom;
       const caretLineIsInsideOfViewport =
         caretLineIsBelowViewportTop && caretLineIsAboveViewportBottom;
       if (caretLineIsInsideOfViewport) {
-        const prevLineTop = getPositionTopOfPreviousBrowserLine(caretLinePosition!, rep);
+        const prevLineTop = getPositionTopOfPreviousBrowserLine(caretLinePosition, rep, innerDoc);
         const previousLineIsAboveViewportTop = prevLineTop < viewportTop;
         return previousLineIsAboveViewportTop;
       }
@@ -229,7 +258,8 @@ class Scroll {
   };
 
   _scrollYPageWithoutAnimation(pixelsToScroll: number) {
-    this.outerWin.scrollBy(0, pixelsToScroll);
+    const win = this._getOuterWin();
+    if (win) win.scrollBy(0, pixelsToScroll);
   };
 
   _scrollYPageWithAnimation(pixelsToScroll: number, durationOfAnimationToShowFocusline: number) {
@@ -260,12 +290,14 @@ class Scroll {
 
 
   scrollNodeVerticallyIntoView(rep: RepModel, innerHeight: number) {
+    const innerDoc = this._getInnerDoc();
+    if (!innerDoc) return;
     const viewport = this._getViewPortTopBottom();
 
     // when the selection changes outside of the viewport the browser automatically scrolls the line
     // to inside of the viewport. Tested on IE, Firefox, Chrome in releases from 2015 until now
     // So, when the line scrolled gets outside of the viewport we let the browser handle it.
-    const linePosition = getPosition();
+    const linePosition = getPosition(innerDoc);
     if (linePosition) {
       const distanceOfTopOfViewport = linePosition.top - viewport.top;
       const distanceOfBottomOfViewport = viewport.bottom - linePosition.bottom - linePosition.height;
@@ -278,9 +310,11 @@ class Scroll {
       } else if (caretIsBelowOfViewport) {
         // setTimeout is required here as line might not be fully rendered onto the pad
         setTimeout(() => {
-          const outer = window.parent;
-          // scroll to the very end of the pad outer
-          outer.scrollTo(0, outer[0].innerHeight);
+          const outer = this._getOuterWin();
+          // scroll to the very end of the pad outer. The inner frame is as tall
+          // as the whole document, so its scrollHeight is the end of the pad;
+          // scrollTo() clamps to the outer frame's maximum scroll offset.
+          if (outer) outer.scrollTo(0, innerDoc.documentElement.scrollHeight);
         }, 150);
         // if the above setTimeout and functionality is removed then hitting an enter
         // key while on the last line wont be an optimal user experience
