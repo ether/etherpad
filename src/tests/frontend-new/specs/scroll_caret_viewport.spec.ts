@@ -76,8 +76,11 @@ const preparePad = async (page: Page, percentageBelowViewport: number) => {
   await body.click();
 
   // Enough lines that the pad overflows the viewport several times over.
-  for (let i = 0; i < LINE_COUNT; i++) {
-    await page.keyboard.type(`line ${i}`);
+  // insertText rather than keyboard.type: per-key events race Etherpad's
+  // input pipeline under Firefox + WITH_PLUGINS load and drop characters.
+  const lines = Array.from({length: LINE_COUNT}, (_v, i) => `line ${i}`);
+  for (let i = 0; i < lines.length; i++) {
+    await page.keyboard.insertText(lines[i]);
     await page.keyboard.press('Enter');
   }
   await waitForStableScroll(page);
