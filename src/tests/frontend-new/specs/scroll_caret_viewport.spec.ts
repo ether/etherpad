@@ -94,31 +94,63 @@ const preparePad = async (page: Page, percentageBelowViewport: number) => {
   return {errors};
 };
 
-// Clicks the line sitting at the very bottom edge of the editor viewport —
-// the case #8038 is about. Clicking through a locator would scroll the target
-// into view first and move the very edge we are aiming at, so this clicks by
-// coordinate instead.
-const clickBottomEdgeOfViewport = async (page: Page) => {
-  const point = await page.evaluate(() => {
+// Puts the caret on the line the editor considers to be at the bottom of the
+// viewport — the case #8038 is about. "At the bottom" is not simply the last
+// visible line: scroll.ts fires when the *next* browser line reaches past the
+// viewport bottom, measured from text rects rather than line boxes, so this
+// mirrors that predicate rather than guessing at a line. Clicking through a
+// locator would scroll the target into view first and move the very edge we
+// are aiming at, so it clicks by coordinate.
+const clickCaretLineAtBottomOfViewport = async (page: Page) => {
+  const target = await page.evaluate(() => {
     const outerFrame = document.getElementsByName('ace_outer')[0] as HTMLIFrameElement;
     const outerWin = outerFrame.contentWindow!;
     const outerDoc = outerWin.document;
     const innerFrame = outerDoc.getElementsByName('ace_inner')[0] as HTMLIFrameElement;
     const innerDoc = innerFrame.contentWindow!.document;
     const frameRect = outerFrame.getBoundingClientRect();
-    const visibleBottom = outerWin.pageYOffset + outerDoc.documentElement.clientHeight;
+
+    // scroll.ts's _getViewPortTopBottom()
+    const editorTop = (document.getElementsByTagName('iframe')[0] as HTMLElement).offsetTop;
+    const padTop = parseInt(outerWin.getComputedStyle(outerFrame).paddingTop) || 0;
+    const viewportBottom = outerWin.pageYOffset +
+        outerDoc.documentElement.clientHeight - editorTop - padTop;
+
+    // caretPosition.ts measures browser lines from the text rect of a line's
+    // first character, not from the line div's box.
+    const firstCharBottom = (line: HTMLElement) => {
+      let node: Node = line;
+      while (node.firstChild) node = node.firstChild;
+      const range = innerDoc.createRange();
+      const length = node.nodeType === Node.TEXT_NODE ? (node as Text).length : 0;
+      range.setStart(node, 0);
+      range.setEnd(node, Math.min(1, length));
+      return range.getBoundingClientRect().bottom;
+    };
+
     const lines = [...innerDoc.body.children].filter(
         (e) => e.tagName === 'DIV') as HTMLElement[];
-    // the line crossing the bottom edge, i.e. the one that is only partly
-    // visible: its next line is the first one below the viewport
-    const straddling = lines.find((l) =>
-      l.offsetTop < visibleBottom && l.offsetTop + l.offsetHeight > visibleBottom);
-    const target = straddling || lines[lines.length - 1];
-    // a few pixels into the visible sliver of that line
-    const y = frameRect.top + (target.offsetTop - outerWin.pageYOffset) + 3;
-    return {x: Math.round(frameRect.left + 80), y: Math.round(y)};
+    // the first line that is itself visible while the line after it reaches
+    // past the bottom edge — exactly when _isCaretAtTheBottomOfViewport() is
+    // true, so clicking here is what the feature reacts to
+    const index = lines.findIndex((line, i) => {
+      if (i + 1 >= lines.length) return false;
+      const top = line.offsetTop;
+      return top >= outerWin.pageYOffset && top < viewportBottom &&
+          firstCharBottom(lines[i + 1]) > viewportBottom;
+    });
+    const geometry = {index, viewportBottom, scrollY: outerWin.pageYOffset,
+      clientHeight: outerDoc.documentElement.clientHeight, lineCount: lines.length};
+    if (index < 0) return {geometry, x: 0, y: 0, found: false};
+
+    const line = lines[index];
+    const y = frameRect.top + (line.offsetTop - outerWin.pageYOffset) +
+        Math.min(6, line.offsetHeight / 2);
+    return {geometry, found: true,
+      x: Math.round(frameRect.left + 80), y: Math.round(y)};
   });
-  await page.mouse.click(point.x, point.y);
+  if (target.found) await page.mouse.click(target.x, target.y);
+  return target;
 };
 
 test.describe('scroll when caret is in the last line of the viewport', () => {
@@ -134,7 +166,7 @@ test.describe('scroll when caret is in the last line of the viewport', () => {
   test('moving the caret to the bottom of the viewport does not throw',
       async ({page}) => {
         const {errors} = await preparePad(page, 0);
-        await clickBottomEdgeOfViewport(page);
+        await clickCaretLineAtBottomOfViewport(page);
         await page.waitForTimeout(500);
         // arrow keys walk the caret across the edge as well
         for (let i = 0; i < 4; i++) {
@@ -155,23 +187,27 @@ test.describe('scroll when caret is in the last line of the viewport', () => {
             'trigger geometry is sub-pixel marginal in Firefox');
         const {errors} = await preparePad(page, 0.6);
 
-        // Whether a given click lands exactly on the line the editor considers
-        // to be at the bottom edge comes down to sub-pixel line geometry, so
-        // try a few times and look for the one big jump: putting the caret
-        // line 60% of a viewport clear of the bottom edge. The browser never
-        // scrolls that far on its own — line by line it moves a line height at
-        // a time — and it only happens when the caret geometry is read from
-        // the editor document.
+        // Landing the caret on the bottom-edge line can take a couple of goes:
+        // each attempt re-measures, and the editor may have scrolled in
+        // between. The jump we are looking for is the caret line being put 60%
+        // of a viewport clear of the bottom edge; the browser never scrolls
+        // that far on its own — line by line it moves a line height at a time
+        // — and it only happens when the caret geometry is read from the
+        // editor document.
         let biggestJump = 0;
+        const attempts = [];
         for (let attempt = 0; attempt < 4 && biggestJump <= 300; attempt++) {
           const before = await getOuterScrollY(page);
-          await clickBottomEdgeOfViewport(page);
+          const target = await clickCaretLineAtBottomOfViewport(page);
           await page.waitForTimeout(750);
-          biggestJump = Math.max(biggestJump, await getOuterScrollY(page) - before);
+          const jump = await getOuterScrollY(page) - before;
+          attempts.push({...target.geometry, before, jump});
+          biggestJump = Math.max(biggestJump, jump);
           await waitForStableScroll(page);
         }
 
-        expect(biggestJump).toBeGreaterThan(300);
+        expect(biggestJump, `attempts: ${JSON.stringify(attempts)}`)
+            .toBeGreaterThan(300);
         expect(errors).toEqual([]);
       });
 });
