@@ -1,3 +1,24 @@
+# 3.3.3
+
+3.3.3 is a security release. It closes a **critical unauthenticated arbitrary-file-read** in the `/static/*` handler (GHSA-mc8w-wjhw-45x5) and bundles the fixes for a batch of privately reported issues that had already landed on `develop`: an OpenID Connect provider hardcoded cookie key and permissive CORS reflection (GHSA-pp5v-mvwg-76mp), session-fixation on authentication (GHSA-73h9-c5xp-gfg4), a same-socket cross-pad write TOCTOU (GHSA-6mcx-x5h6-rpw2), and a pad-id delimiter injection in `copyPad`/`movePad` (GHSA-wg58-mhwv-35pq). Alongside the security work it migrates the server build to TypeScript 7 (`tsgo`), fixes PageDown/PageUp navigation across consecutive long wrapped lines, and makes the docker `plugin_packages` volume mountpoint writable.
+
+### Security
+
+- **Prevent pre-auth path traversal / arbitrary file read in `/static/*` (GHSA-mc8w-wjhw-45x5, #8081).** On POSIX a backslash is an ordinary filename byte, so `sanitizePathname()` deliberately leaves an `..\..\..` segment untouched — but `Minify.ts` then converted backslashes to forward slashes *unconditionally, after* the sanitiser, turning those bytes back into `../` traversal components with no re-check. Because the route is mounted on `expressPreSession` (before the auth middleware), any unauthenticated client could read any file readable by the Etherpad process — e.g. `GET /static/plugins/ep_etherpad-lite/static/..%5C..%5C..%5Cetc/passwd` — escalating via disclosed `settings.json`/`credentials.json`/`/proc/self/environ` to an admin session and, through the plugin installer, RCE. The backslash conversion is now guarded to Windows only (`path.sep === '\\'`), matching the invariant already enforced in `sanitizePathname.ts`. Adds a backend regression test that fails on the pre-fix code. Reported by @gcm-explo1t.
+- **Stop shipping a hardcoded OIDC cookie key and reflecting arbitrary CORS origins (GHSA-pp5v-mvwg-76mp, #8070, #8071, #8072).** The embedded OpenID Connect provider shipped a hardcoded cookie-signing key (allowing forged provider cookies) and `clientBasedCORS` reflected any request `Origin`. The provider now derives its cookie keys from the instance secret, CORS reflection is constrained, the soffice export path strips remote images to match the native path, and public routes that echo `x-proxy-path` set `Vary` to prevent cache poisoning. Reported by meifukun.
+- **Regenerate the session id on authentication (GHSA-73h9-c5xp-gfg4, #8074).** Etherpad did not rotate the session identifier when a user authenticated, so a pre-auth session id fixed by an attacker (most impactfully via `ep_openid_connect` SSO) survived login, enabling session-fixation account/admin takeover. The session id is now regenerated on the authentication boundary.
+- **Apply queued `USER_CHANGES` to the enqueue-time pad (GHSA-6mcx-x5h6-rpw2, #8075).** A same-socket `CLIENT_READY` pad-swap could redirect an already-queued `USER_CHANGES` onto a different (read-only or unauthorized) pad, a cross-pad write. Queued changes are now bound to the pad they were enqueued against.
+- **Reject the ueberdb key delimiter `:` in `copyPad`/`movePad` destination ids (GHSA-wg58-mhwv-35pq, #8073).** A destination id containing `:` could bypass the `force=false` overwrite guard and corrupt another pad's revision records. Such ids are now rejected.
+
+### Notable enhancements
+
+- **Migrate the server build to TypeScript 7 / `tsgo` (#8039).** The server now type-checks and builds under the native-Go TypeScript compiler.
+
+### Notable fixes
+
+- **Editor — PageDown/PageUp now advance across consecutive long wrapped lines (#7555).** Paging no longer stalls when several long soft-wrapped lines follow one another.
+- **Docker — make the `plugin_packages` volume mountpoint writable (#8042).** Mounting a plugin-packages volume no longer fails on a read-only mountpoint.
+
 # 3.3.2
 
 3.3.2 is a bug-fix and dependency-hardening follow-up to 3.3.1. It rounds out the pad-deletion UX rework (suppressing the recovery token for durable identities, keeping the token-less Delete button reachable, and closing a read-only deletion hole), restores the saved-revision markers that went missing from in-pad history mode in 3.3.x, and adds env-var overrides so air-gapped installs can switch off Etherpad's outbound calls without editing the image. It also fixes the `migrateDB` / `importSqlFile` / `migrateDirtyDBtoRealDB` CLI scripts against the promise-based ueberdb2 API, rejects unreachable `.`/`..` pad ids, and clears a batch of dependency security advisories (including CVE-2026-54285). On the CI side it unblocks the installer smoke test (which had been hanging the full 6-hour job ceiling since 3.2.0) and pins ueberdb2 past a startup-exit regression in the packaged boot.
