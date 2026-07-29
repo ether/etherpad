@@ -177,13 +177,18 @@ const _minify = async (req:any, res:any) => {
       const plugin = plugins.plugins[library];
       const pluginPath = plugin.package.realPath;
       filename = path.join(pluginPath, libraryPath);
-      // On Windows, path.relative converts forward slashes to backslashes. Convert them back
-      // because some of the code below assumes forward slashes. Node.js treats both the backlash
-      // and the forward slash characters as pathname component separators on Windows so this does
-      // not change the meaning of the pathname. This conversion does not introduce a directory
-      // traversal vulnerability because all '..\\' substrings have already been removed by
-      // sanitizePathname.
-      filename = filename.replace(/\\/g, '/');
+      // On Windows, path.join converts forward slashes to backslashes. Convert them back because
+      // some of the code below assumes forward slashes. Node.js treats both the backslash and the
+      // forward slash characters as pathname component separators on Windows so this does not
+      // change the meaning of the pathname on Windows.
+      //
+      // THIS CONVERSION MUST ONLY BE DONE ON WINDOWS. On POSIX systems a backslash is an ordinary
+      // filename byte, not a separator, so sanitizePathname() deliberately leaves '..\\' segments
+      // untouched (they are harmless there). Replacing '\\' with '/' unconditionally would turn
+      // those already-sanitized bytes back into '../' path components *after* the traversal check
+      // has run, reintroducing a directory-traversal / arbitrary-file-read vulnerability
+      // (GHSA-mc8w-wjhw-45x5).
+      if (path.sep === '\\') filename = filename.replace(/\\/g, '/');
     } else if (LIBRARY_WHITELIST.indexOf(library) !== -1) {
       // Go straight into node_modules
       // Avoid `require.resolve()`, since 'mustache' and 'mustache/index.js'
