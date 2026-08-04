@@ -23,6 +23,7 @@ const groupManager = require('./GroupManager');
 const CustomError = require('../utils/customError');
 import readOnlyManager from './ReadOnlyManager';
 import randomString from '../utils/randomstring';
+import {SYSTEM_AUTHOR_ID} from '../utils/SystemAuthor';
 const hooks = require('../../static/js/pluginfw/hooks');
 import pad_utils from "../../static/js/pad_utils";
 import {SmartOpAssembler} from "../../static/js/SmartOpAssembler";
@@ -101,8 +102,12 @@ class Pad {
    * setDocAText reconciliation in ace2_inner.ts when loading the pad. Using
    * a fixed system author keeps the AText well-formed without requiring
    * every plugin to allocate its own author up-front.
+   *
+   * Kept as a static for plugin compatibility; the canonical definition (and
+   * the one modules with a circular dependency on Pad must use) lives in
+   * ../utils/SystemAuthor.
    */
-  static readonly SYSTEM_AUTHOR_ID = 'a.etherpad-system';
+  static readonly SYSTEM_AUTHOR_ID = SYSTEM_AUTHOR_ID;
 
   /**
    * Validate that every `+` (insert) op in `aChangeset` carries an

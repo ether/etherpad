@@ -5,6 +5,8 @@ import {MapArrayType} from "../../../node/types/MapType";
 
 const assert = require('assert').strict;
 const common = require('../common');
+const log4js = require('log4js');
+const sinon = require('sinon');
 const padManager = require('../../../node/db/PadManager');
 const plugins = require('../../../static/js/pluginfw/plugin_defs');
 import readOnlyManager from '../../../node/db/ReadOnlyManager';
@@ -334,5 +336,42 @@ describe(__filename, function () {
       assert.equal(pad!.head, rev); // Not incremented.
       assert.equal(pad!.text(), 'hello\n');
     });
+  });
+
+  describe('CLIENT_READY', function () {
+    // Every pad created with non-empty initial text and no authorId — which
+    // includes every pad that gets the default `settings.defaultPadText`
+    // welcome content (#7885) — carries `a.etherpad-system` in its attribute
+    // pool forever. The system author is server-internal bookkeeping, not a
+    // real contributor, so it has no `globalAuthor:` record. Looking it up
+    // like a real author logged an ERROR on every single pad open (#8044).
+    it('does not treat the reserved system author as a missing author',
+        async function () {
+          assert(pad!.getAllAuthors().includes('a.etherpad-system'));
+          // log4js.getLogger() hands out a fresh Logger per call, so spy on the
+          // shared prototype and filter by category to catch the log emitted by
+          // PadMessageHandler's module-scope `messageLogger`.
+          const errorSpy = sinon.spy(log4js.getLogger('message').constructor.prototype, 'error');
+          try {
+            const res = await agent.get(`/p/${padId}`).expect(200);
+            const readySocket = await common.connect(res);
+            try {
+              const {type, data: clientVars} = await common.handshake(readySocket, padId);
+              assert.equal(type, 'CLIENT_VARS');
+              const {historicalAuthorData} = clientVars.collab_client_vars;
+              assert(!('a.etherpad-system' in historicalAuthorData));
+              assert.deepEqual(
+                  errorSpy.getCalls()
+                      .filter((c: any) => c.thisValue.category === 'message')
+                      .map((c: any) => String(c.args[0]))
+                      .filter((m: string) => m.includes('a.etherpad-system')),
+                  []);
+            } finally {
+              readySocket.close();
+            }
+          } finally {
+            errorSpy.restore();
+          }
+        });
   });
 });

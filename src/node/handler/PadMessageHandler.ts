@@ -38,6 +38,7 @@ import settings, {
 } from '../utils/Settings';
 import {anonymizeIp} from '../utils/anonymizeIp';
 import {isAcceptingConnections} from '../updater/SessionDrainer';
+import {SYSTEM_AUTHOR_ID, isSystemAuthor} from '../utils/SystemAuthor';
 const logIp = (ip: string | null | undefined) => anonymizeIp(ip, settings.ipLogging);
 const securityManager = require('../db/SecurityManager');
 const plugins = require('../../static/js/pluginfw/plugin_defs');
@@ -937,12 +938,12 @@ const handleUserChanges = async (socket:any, message: {
       // op that names it is either a confused client or an attempt to
       // launder writes through a reserved attribution slot. Either way,
       // refuse.
-      // Hardcoded mirror of `Pad.SYSTEM_AUTHOR_ID` from src/node/db/Pad.ts.
-      // A `const {Pad} = require('../db/Pad')` at module scope returned
-      // a partially-initialized class here (circular load via padManager),
-      // so the static-field access ended up undefined and short-circuited
-      // the check at runtime. Inline literal is the simplest fix.
-      if (opAuthorId === 'a.etherpad-system') {
+      // `SYSTEM_AUTHOR_ID` comes from the leaf module rather than
+      // `Pad.SYSTEM_AUTHOR_ID`: a `const {Pad} = require('../db/Pad')` at
+      // module scope returned a partially-initialized class here (circular
+      // load via padManager), so the static-field access ended up undefined
+      // and short-circuited the check at runtime.
+      if (opAuthorId === SYSTEM_AUTHOR_ID) {
         throw new Error(`Author ${thisSession.author} attempted to submit changes as the ` +
                         `reserved system author ${opAuthorId} in changeset ${changeset}`);
       }
@@ -1172,7 +1173,13 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
   }
 
   // these db requests all need the pad object (timestamp of latest revision, author data)
-  const authors = pad.getAllAuthors();
+  //
+  // The reserved system author is changeset bookkeeping, not a contributor, and
+  // has no `globalAuthor:` record by design — every pad created with default
+  // content carries it in the pool forever (#7885), so looking it up like a real
+  // author logged a spurious ERROR on every pad open (#8044). Skip it here, the
+  // same way listAuthorsOfPad keeps it out of the public API.
+  const authors = pad.getAllAuthors().filter((id: string) => !isSystemAuthor(id));
 
   // get timestamp of latest revision needed for timeslider
   const currentTime = await pad.getRevisionDate(pad.getHeadRevisionNumber());

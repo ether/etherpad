@@ -32,10 +32,10 @@ const supportedElems = require('../../static/js/contentcollector').supportedElem
 
 const logger = log4js.getLogger('ImportEtherpad');
 
-// Mirror of `Pad.SYSTEM_AUTHOR_ID`. Inlined to avoid a circular import
-// (ImportEtherpad -> Pad -> ImportEtherpad via padManager) at module
-// init time.
-const SYSTEM_AUTHOR_ID = 'a.etherpad-system';
+// Not `Pad.SYSTEM_AUTHOR_ID`: that would be a circular import
+// (ImportEtherpad -> Pad -> ImportEtherpad via padManager) at module init
+// time.
+import {SYSTEM_AUTHOR_ID} from './SystemAuthor';
 
 // A `+` op is "pure newline" (and therefore exempt from the author
 // requirement) iff every character in the op is a newline. The wire-

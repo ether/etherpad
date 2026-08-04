@@ -23,9 +23,9 @@ import jsdom from 'jsdom';
 import {PadType} from "../types/PadType";
 import {Builder} from "../../static/js/Builder";
 
-// Mirror of `Pad.SYSTEM_AUTHOR_ID`. Imported as a literal to avoid a
-// circular require between Pad and ImportHtml during module init.
-const SYSTEM_AUTHOR_ID = 'a.etherpad-system';
+// Not `Pad.SYSTEM_AUTHOR_ID`: importing Pad here would create a circular
+// require between Pad and ImportHtml during module init.
+import {SYSTEM_AUTHOR_ID} from './SystemAuthor';
 
 const apiLogger = log4js.getLogger('ImportHtml');
 let processor:any;

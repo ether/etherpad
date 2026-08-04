@@ -25,9 +25,9 @@ import ChatMessage from '../../static/js/ChatMessage';
 import {Builder} from "../../static/js/Builder";
 import {Attribute} from "../../static/js/types/Attribute";
 
-// Mirror of `Pad.SYSTEM_AUTHOR_ID`. Inlined to avoid a circular load
+// Not `Pad.SYSTEM_AUTHOR_ID`: importing Pad here would be a circular load
 // (API <-> Pad) at module init time.
-const SYSTEM_AUTHOR_ID = 'a.etherpad-system';
+import {SYSTEM_AUTHOR_ID, isSystemAuthor} from '../utils/SystemAuthor';
 import settings from '../utils/Settings';
 const CustomError = require('../utils/customError');
 const padManager = require('./PadManager');
@@ -867,8 +867,7 @@ exports.listAuthorsOfPad = async (padID: string) => {
   // authorId, server-side import flows, plugins like ep_post_data). It is an
   // implementation detail of changeset bookkeeping, not a real contributor, so
   // it should not surface through this public API.
-  const {Pad} = require('./Pad');
-  const authorIDs = pad.getAllAuthors().filter((id: string) => id !== Pad.SYSTEM_AUTHOR_ID);
+  const authorIDs = pad.getAllAuthors().filter((id: string) => !isSystemAuthor(id));
   return {authorIDs};
 };
 

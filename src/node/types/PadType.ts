@@ -11,6 +11,7 @@ export type PadType = {
   getRevisionAuthor: (rev: number)=>Promise<string>,
   getRevision: (rev?: string)=>Promise<any>,
   head: number,
+  getAllAuthors: ()=>string[],
   getAllAuthorColors: ()=>Promise<MapArrayType<string>>,
   remove: ()=>Promise<void>,
   text: ()=>string,
