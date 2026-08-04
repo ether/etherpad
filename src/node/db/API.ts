@@ -766,6 +766,11 @@ Example returns:
 exports.movePad = async (sourceID: string, destinationID: string, force:boolean) => {
   const pad = await getPadSafe(sourceID, true);
   await pad.copy(destinationID, force);
+  // A move is a rename, so the pad's deletion token travels with it: the token
+  // the creator saved keeps working, and returning to the renamed pad does not
+  // hand them a second one (issue #7995). Must run before remove(), which drops
+  // the source pad's token record.
+  await padDeletionManager.transferDeletionToken(sourceID, destinationID);
   await pad.remove();
 };
 

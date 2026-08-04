@@ -645,6 +645,13 @@ Note that all the revisions will be lost! In most of the cases one should use `c
 
 moves a pad. If force is true and the destination pad exists, it will be overwritten.
 
+A move is a rename, so the pad's `deletionToken` travels with it: the token
+issued for `sourceID` keeps working against `destinationID`, and the creator is
+not handed a second token when they open the renamed pad. When `force`
+overwrites an existing destination pad, that pad's own token is discarded along
+with its content. **copyPad** does not do this — a copy is a separate pad and
+gets its own token.
+
 *Example returns:*
 * `{code: 0, message:"ok", data: null}`
 * `{code: 1, message:"padID does not exist", data: null}`

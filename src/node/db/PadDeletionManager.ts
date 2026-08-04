@@ -44,5 +44,23 @@ exports.isValidDeletionToken = async (padId: string, deletionToken: string | nul
   return expected.length === actual.length && crypto.timingSafeEqual(expected, actual);
 };
 
+// Hand the token over to a renamed pad. A move is the same pad under a new id,
+// so the token the creator was told to save must keep working there — and they
+// must not be prompted to save a second one on arrival (issue #7995).
+// Deliberately a move and not a copy: two pads sharing one secret would let a
+// token saved for one of them delete the other, which is why copyPad does not
+// use this.
+exports.transferDeletionToken = async (srcPadId: string, dstPadId: string) => {
+  const stored = await DB.db.get(getDeletionTokenKey(srcPadId));
+  if (stored == null) {
+    // The destination pad is being replaced wholesale, so any token it still
+    // carries belongs to content that no longer exists.
+    await DB.db.remove(getDeletionTokenKey(dstPadId));
+    return;
+  }
+  await DB.db.set(getDeletionTokenKey(dstPadId), stored);
+  await DB.db.remove(getDeletionTokenKey(srcPadId));
+};
+
 exports.removeDeletionToken = async (padId: string) =>
   await DB.db.remove(getDeletionTokenKey(padId));

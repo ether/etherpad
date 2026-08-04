@@ -1,3 +1,9 @@
+# 3.3.4
+
+### Notable fixes
+
+- **API — `movePad` now carries the pad's deletion token to the new id (#7995).** `movePad` is implemented as `copy()` + `remove()`, but `Pad.copy()` only copies the `pad:<id>`, `:revs:N` and `:chat:N` records — never `pad:<id>:deletionToken` — and `remove()` then deleted the source pad's token. The renamed pad therefore had no token at all: the token the creator had been told to save no longer deleted anything, and because the copy keeps the same revision-0 author, their next visit tripped `createDeletionTokenIfAbsent()` and popped a second "save your pad deletion token" modal. The token record is now handed over to the destination as part of the move, so the saved token keeps working and the modal does not reappear. `force`-overwriting an existing destination discards that pad's own token along with its content. `copyPad` is deliberately unchanged — two pads sharing one secret would let a token saved for one delete the other.
+
 # 3.3.3
 
 3.3.3 is a security release. It closes a **critical unauthenticated arbitrary-file-read** in the `/static/*` handler (GHSA-mc8w-wjhw-45x5) and bundles the fixes for a batch of privately reported issues that had already landed on `develop`: an OpenID Connect provider hardcoded cookie key and permissive CORS reflection (GHSA-pp5v-mvwg-76mp), session-fixation on authentication (GHSA-73h9-c5xp-gfg4), a same-socket cross-pad write TOCTOU (GHSA-6mcx-x5h6-rpw2), and a pad-id delimiter injection in `copyPad`/`movePad` (GHSA-wg58-mhwv-35pq). Alongside the security work it migrates the server build to TypeScript 7 (`tsgo`), fixes PageDown/PageUp navigation across consecutive long wrapped lines, and makes the docker `plugin_packages` volume mountpoint writable.
