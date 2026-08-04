@@ -74,6 +74,29 @@ describe(__filename, function () {
     assert.equal(del.body.code, 0, JSON.stringify(del.body));
   });
 
+  it('the transfer never invalidates a token the destination already issued', async function () {
+    // Pad.copy() writes the destination records before movePad transfers the
+    // token, so the creator can open the new id in between and be shown a
+    // freshly minted token. That token has been handed out in plaintext, so the
+    // transfer must leave it alone rather than overwrite it.
+    const srcId = makeId();
+    const dstId = `${srcId}_raced`;
+    const src = await callApi('createPad', {padID: srcId});
+    const srcToken = src.body.data.deletionToken;
+    const dstToken = await padDeletionManager.createDeletionTokenIfAbsent(dstId);
+
+    await padDeletionManager.transferDeletionToken(srcId, dstId);
+
+    assert.equal(await padDeletionManager.isValidDeletionToken(dstId, dstToken), true);
+    assert.equal(await padDeletionManager.isValidDeletionToken(dstId, srcToken), false);
+    // The source token survives the transfer — Pad.remove() drops it when the
+    // move completes, so a move that fails midway leaves the source deletable.
+    assert.equal(await padDeletionManager.isValidDeletionToken(srcId, srcToken), true);
+
+    await padDeletionManager.removeDeletionToken(dstId);
+    await callApi('deletePad', {padID: srcId});
+  });
+
   it('copyPad does NOT share the source deletionToken with the copy', async function () {
     const srcId = makeId();
     const dstId = `${srcId}_copy`;
