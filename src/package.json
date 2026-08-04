@@ -48,7 +48,7 @@
     "http-errors": "^2.0.1",
     "jose": "^6.2.4",
     "js-cookie": "^3.0.8",
-    "jsdom": "^29.1.1",
+    "jsdom": "^30.0.0",
     "jsonc-parser": "^3.3.1",
     "jsonwebtoken": "^9.0.3",
     "jwt-decode": "^4.0.0",
