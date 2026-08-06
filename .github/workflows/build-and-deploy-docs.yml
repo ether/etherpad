@@ -51,7 +51,7 @@ jobs:
           key: ${{ runner.os }}-vitepress-${{ hashFiles('doc/**/*.md', 'doc/.vitepress/config.*') }}
           restore-keys: |
             ${{ runner.os }}-vitepress-
-      - uses: pnpm/action-setup@v6.0.9
+      - uses: pnpm/action-setup@v6.0.10
         name: Install pnpm
         with:
           run_install: false

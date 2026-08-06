@@ -18,7 +18,7 @@ jobs:
       - name: Check out etherpad-lite
         uses: actions/checkout@v7
 
-      - uses: pnpm/action-setup@v6.0.9
+      - uses: pnpm/action-setup@v6.0.10
         name: Install pnpm
         with:
           run_install: false
