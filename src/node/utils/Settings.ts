@@ -909,9 +909,14 @@ export const getPublicPrivacyBanner = () => ({
 });
 
 export default settings;
+
 // CJS compatibility: plugins use require('ep_etherpad-lite/node/utils/Settings')
-// and expect settings properties directly on the module object, not under .default
-if (typeof module !== 'undefined' && module.exports) {
+// and expect settings properties directly on the module object, not under .default.
+// Getter/setter pairs are (re)synchronized whenever settings are loaded so keys
+// added later — especially plugin-specific ep_* hashes from settings.json — are
+// reachable via require(...).ep_myplugin. See issue #8109.
+const syncCjsModuleExports = () => {
+  if (typeof module === 'undefined' || !module.exports) return;
   const currentExports = module.exports;
   for (const key of Object.keys(settings)) {
     if (!(key in currentExports)) {
@@ -923,7 +928,7 @@ if (typeof module !== 'undefined' && module.exports) {
       });
     }
   }
-}
+};
 
 /**
  * This setting is passed with dbType to ueberDB to set up the database
@@ -1454,6 +1459,8 @@ export const reloadSettings = () => {
             .slice(0, 8);
     }
     logger.info(`String used for versioning assets: ${settings.randomVersionString}`);
+
+    syncCjsModuleExports();
 };
 
 export const exportedForTestingOnly = {
