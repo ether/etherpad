@@ -22,6 +22,7 @@
  * limitations under the License.
  */
 
+import {getHomeUrl} from './getHomeUrl';
 import padutils from "./pad_utils";
 const Ace2Editor = require('./ace').Ace2Editor;
 import html10n from '../js/vendors/html10n'
@@ -176,7 +177,7 @@ const padeditor = (() => {
         pad.socket.on('message', (data: any) => {
           if (data && data.disconnect === 'deleted') {
             handled = true;
-            window.location.href = '/';
+            window.location.href = getHomeUrl(window.location.href);
           }
         });
         pad.socket.on('shout', (data: any) => {
@@ -192,7 +193,7 @@ const padeditor = (() => {
           data: {padId: pad.getPadId(), deletionToken: token},
         });
         setTimeout(() => {
-          if (!handled) window.location.href = '/';
+          if (!handled) window.location.href = getHomeUrl(window.location.href);
         }, 5000);
       });
 
@@ -207,7 +208,7 @@ const padeditor = (() => {
           pad.socket.on('message', (data: any) => {
             if (data && data.disconnect === 'deleted') {
               handled = true;
-              window.location.href = '/';
+              window.location.href = getHomeUrl(window.location.href);
             }
           });
           // If the user is not the pad creator, the server sends a shout
@@ -224,7 +225,7 @@ const padeditor = (() => {
           // Fallback: if the server doesn't respond within 5 seconds
           // (e.g. socket dropped), navigate away anyway.
           setTimeout(() => {
-            if (!handled) window.location.href = '/';
+            if (!handled) window.location.href = getHomeUrl(window.location.href);
           }, 5000);
         }
       })

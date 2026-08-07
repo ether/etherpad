@@ -15,4 +15,5 @@ test('should go to home on pad', async ({page}) => {
   await page.waitForURL((url) => !url.pathname.includes('/p/'));
   const url = page.url();
   expect(url).not.toContain('/p/');
-})
+  expect(new URL(url).pathname).toBe('/');
+});

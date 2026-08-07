@@ -24,6 +24,7 @@
  */
 
 const hooks = require('./pluginfw/hooks');
+import {getHomeUrl} from './getHomeUrl';
 import padutils from "./pad_utils";
 const padeditor = require('./pad_editor').padeditor;
 const padsavedrevs = require('./pad_savedrevs');
@@ -481,9 +482,9 @@ exports.padeditbar = new class {
     this.registerDropdownCommand('connectivity');
     this.registerDropdownCommand('import_export');
     this.registerDropdownCommand('embed');
-    this.registerCommand('home', ()=>{
-      window.location.href = new URL('../..', window.location.href).href
-    })
+    this.registerCommand('home', () => {
+      window.location.href = getHomeUrl(window.location.href);
+    });
 
     this.registerCommand('settings', () => {
       this.toggleDropDown('settings');
