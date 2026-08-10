@@ -179,6 +179,14 @@ const checkAccess = async (req:any, res:any, next: Function) => {
   // user, or a privilege/identity change such as non-admin -> admin), which is
   // the point at which the session id must be rotated (see below).
   const prevUser = req.session != null ? req.session.user : null;
+  // Snapshot is_admin flags before authenticate plugins run. Plugins such as
+  // ep_hash_auth's hash_dir path replace settings.users[username] on success
+  // and can drop a pre-declared is_admin: true (issue #8110), which then fails
+  // the /admin-auth/ authorize check with 403. Restore those flags below.
+  const preAuthAdminUsers = new Set(
+      Object.entries(settings.users as Record<string, {is_admin?: boolean} | null | undefined>)
+          .filter(([, user]) => user != null && !!user.is_admin)
+          .map(([username]) => username));
   // If the HTTP basic auth header is present, extract the username and password so it can be given
   // to authn plugins.
   const httpBasicAuth = req.headers.authorization && req.headers.authorization.startsWith('Basic ');
@@ -226,6 +234,15 @@ const checkAccess = async (req:any, res:any, next: Function) => {
   if (req.session.user == null) {
     httpLogger.error('authenticate hook failed to add user settings to session');
     return res.status(500).send('Internal Server Error');
+  }
+  // Restore is_admin when a settings-declared admin was authenticated by a
+  // plugin that rebuilt the user object without carrying the flag forward.
+  const authedUsername = req.session.user.username;
+  if (authedUsername && preAuthAdminUsers.has(authedUsername) && !req.session.user.is_admin) {
+    req.session.user.is_admin = true;
+    if (settings.users[authedUsername] != null) {
+      settings.users[authedUsername].is_admin = true;
+    }
   }
   // Session fixation defense (GHSA-73h9-c5xp-gfg4): rotate the session id
   // whenever authentication changed the principal — an anonymous session
