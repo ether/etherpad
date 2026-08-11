@@ -299,8 +299,8 @@ importers:
         specifier: ^9.0.5
         version: 9.0.5
       oidc-provider:
-        specifier: 9.11.2
-        version: 9.11.2(supports-color@8.1.1)
+        specifier: 9.11.3
+        version: 9.11.3
       openapi-backend:
         specifier: ^5.20.0
         version: 5.20.0
@@ -1148,16 +1148,6 @@ packages:
 
   '@jsdevtools/ono@7.1.3':
     resolution: {integrity: sha512-4JQNk+3mVzK3xh2rqd6RB4J46qUR19azEHBneZyTZM+c456qOrbbM/5xcR8huNCCcbVt7+UmizG6GuUvPvKUYg==}
-
-  '@koa/cors@5.0.0':
-    resolution: {integrity: sha512-x/iUDjcS90W69PryLDIMgFyV21YLTnG9zOpPXS7Bkt2b8AsY3zZsIpOLBkYr9fBcF3HbkKaER5hOBZLfpLgYNw==}
-    engines: {node: '>= 14.0.0'}
-
-  '@koa/router@15.7.0':
-    resolution: {integrity: sha512-WaAlk4TOl/O0rhTpOR0l052gz03syPMmI6Pe2gd7v3ubjfv5UcSGcnb0Y/J5NNC/ln+5FiUqPJTc/a15I+XqAA==}
-    engines: {node: '>= 20'}
-    peerDependencies:
-      koa: ^2.0.0 || ^3.0.0
 
   '@mongodb-js/saslprep@1.4.12':
     resolution: {integrity: sha512-QAfAMwNgnYxZ2C6D1HgeP7Gc4i/uvJRim415PCIL9ptRxWMNbWeLBYb2/9R4pGKny/s1FVu2JA2cxCUBUOggrA==}
@@ -3426,10 +3416,6 @@ packages:
     resolution: {integrity: sha512-kVscqXk4OCp68SZ0dkgEKVi6/8ij300KBWTJq32P/dYeWTSwK41WyTxalN1eRmA5Z9UU/LX9D7FWSmV9SAYx6g==}
     engines: {node: '>=0.10.0'}
 
-  eta@4.6.0:
-    resolution: {integrity: sha512-lW6is4T1NFOYnmqGZIfvixqj7A7sSvScF+DN8EK6K58xI5MZ5UvYe0GjopxOXQtZvUn4eDdVuZ8XSoYWTMEKwA==}
-    engines: {node: '>=20'}
-
   etag@1.8.1:
     resolution: {integrity: sha512-aIL5Fx7mawVa300al2BnEE4iNvo1qETxLrPI/o05L7z6go7fCw1J6EQmbK4FmJ2AS7kgVF/KEZWufBfdClMcPg==}
     engines: {node: '>= 0.6'}
@@ -4500,11 +4486,6 @@ packages:
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
     hasBin: true
 
-  nanoid@6.0.0:
-    resolution: {integrity: sha512-mkUH+rPkwU2qPadJ0oJZOjeZ5Mxn8Q1UhevwkTRWNuUZzyia3h4rhzK39hxaHTk0o2OxB8W2SQ6A8k23ZDi1pQ==}
-    engines: {node: ^22 || ^24 || >=26}
-    hasBin: true
-
   native-duplexpair@1.0.0:
     resolution: {integrity: sha512-E7QQoM+3jvNtlmyfqRZ0/U75VFgCls+fSkbml2MpgWkWyz3ox8Y58gNhfuziuQYGNNQAbFZJQck55LHCnCK6CA==}
 
@@ -4595,8 +4576,8 @@ packages:
     resolution: {integrity: sha512-9miFgM2OFba7hB+pRgvtV84pYTBaoTHohvmIgiRt6dRIzbwEOIaNaP+dIlGs2fNFoB0SeISs0Jz5WFVRid6Xyg==}
     engines: {node: '>=12.20.0'}
 
-  oidc-provider@9.11.2:
-    resolution: {integrity: sha512-Z7CZzWtBfcNMSaIoNJwHmEbla6h4mW73soOAJM4Qo9XDALMgQ1J+amMg/FBZJD1BHoec1KLL5BHFDkvlgeUZqw==}
+  oidc-provider@9.11.3:
+    resolution: {integrity: sha512-ddS33New8tm08oR7mgkfEx+yaCFM5BwnRDuYkuq60XxE2RtuY2p43Sl6/DyuPwXbYeMpovkrrT/y6QYfg4zNag==}
 
   on-finished@2.4.1:
     resolution: {integrity: sha512-oVlzkg3ENAhCk2zdv7IJwd/QUD4z2RxRwpkcGY8psCVcCYZNq4wYnVWALHM+brtuJjePWiYF/ClmuDr8Ch5+kg==}
@@ -4874,10 +4855,6 @@ packages:
   queue@6.0.2:
     resolution: {integrity: sha512-iHZWu+q3IdFZFX36ro/lKBkSvfkztY5Y7HMiPlOUjhupPcG2JMfst2KKEpu5XndviX/3UhFbRngUPNKtgvtZiA==}
 
-  quick-lru@7.3.0:
-    resolution: {integrity: sha512-k9lSsjl36EJdK7I06v7APZCbyGT2vMTsYSRX1Q2nbYmnkBqgUhRkAuzH08Ciotteu/PLJmIF2+tti7o3C/ts2g==}
-    engines: {node: '>=18'}
-
   rambda@7.5.0:
     resolution: {integrity: sha512-y/M9weqWAH4iopRd7EHDEQQvpFPHj1AA3oHozE9tfITHUtTR7Z9PSlIRRG2l1GuW7sefC1cXFfIcF+cgnShdBA==}
 
@@ -4895,10 +4872,6 @@ packages:
   raw-body@3.0.2:
     resolution: {integrity: sha512-K5zQjDllxWkf7Z5xJdV0/B0WTNqx6vxG70zJE4N0kBs4LovmEYWJzQGxC9bS9RAKu3bgM40lrd5zoLJ12MQ5BA==}
     engines: {node: '>= 0.10'}
-
-  raw-body@4.0.0:
-    resolution: {integrity: sha512-TMHtwexrgOt9VJ2E5JF9RO8mRXGNgC5wXvKkc5AVSJUt1L5gxvjg7eiCQl96EqUEpCWrnNEkCnbAplYtyuq1IA==}
-    engines: {node: '>=22'}
 
   react-dom@19.2.8:
     resolution: {integrity: sha512-rVprimfGBG3DR+Tq0IQG2DT5PxKth1WIGDmj5yPmlzr4YBe7uyE+Du4oVqTDXZSHGGGXRtTJEGSSePyQCMBglQ==}
@@ -6653,20 +6626,6 @@ snapshots:
   '@js-joda/core@6.0.1': {}
 
   '@jsdevtools/ono@7.1.3': {}
-
-  '@koa/cors@5.0.0':
-    dependencies:
-      vary: 1.1.2
-
-  '@koa/router@15.7.0(koa@3.2.1)(supports-color@8.1.1)':
-    dependencies:
-      debug: 4.4.3(supports-color@8.1.1)
-      http-errors: 2.0.1
-      koa: 3.2.1
-      koa-compose: 4.1.0
-      path-to-regexp: 8.4.2
-    transitivePeerDependencies:
-      - supports-color
 
   '@mongodb-js/saslprep@1.4.12':
     dependencies:
@@ -8963,8 +8922,6 @@ snapshots:
 
   esutils@2.0.3: {}
 
-  eta@4.6.0: {}
-
   etag@1.8.1: {}
 
   etherpad-cli-client@4.0.3:
@@ -10170,8 +10127,6 @@ snapshots:
 
   nanoid@3.3.18: {}
 
-  nanoid@6.0.0: {}
-
   native-duplexpair@1.0.0: {}
 
   natural-compare@1.4.0: {}
@@ -10255,18 +10210,11 @@ snapshots:
 
   obug@2.1.3: {}
 
-  oidc-provider@9.11.2(supports-color@8.1.1):
+  oidc-provider@9.11.3:
     dependencies:
-      '@koa/cors': 5.0.0
-      '@koa/router': 15.7.0(koa@3.2.1)(supports-color@8.1.1)
       debug: 4.4.3(supports-color@8.1.1)
-      eta: 4.6.0
       jose: 6.2.8
-      jsesc: 3.1.0
       koa: 3.2.1
-      nanoid: 6.0.0
-      quick-lru: 7.3.0
-      raw-body: 4.0.0
     transitivePeerDependencies:
       - supports-color
 
@@ -10587,8 +10535,6 @@ snapshots:
     dependencies:
       inherits: 2.0.4
 
-  quick-lru@7.3.0: {}
-
   rambda@7.5.0: {}
 
   random-bytes@1.0.0: {}
@@ -10603,11 +10549,6 @@ snapshots:
       http-errors: 2.0.1
       iconv-lite: 0.7.3
       unpipe: 1.0.0
-
-  raw-body@4.0.0:
-    dependencies:
-      bytes: 3.1.2
-      http-errors: 2.0.1
 
   react-dom@19.2.8(react@19.2.8):
     dependencies:
