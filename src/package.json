@@ -110,7 +110,7 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/mime-types": "^3.0.1",
     "@types/mocha": "^10.0.9",
-    "@types/node": "^26.1.2",
+    "@types/node": "^26.2.0",
     "@types/nodemailer": "^8.0.1",
     "@types/oidc-provider": "^9.11.1",
     "@types/pdfkit": "^0.17.6",
@@ -131,7 +131,7 @@
     "sinon": "^22.1.0",
     "split-grid": "^1.0.11",
     "supertest": "^7.2.2",
-    "typescript": "^6.0.3",
+    "typescript": "^7.0.2",
     "vitest": "^4.1.10"
   },
   "engines": {
