@@ -868,8 +868,9 @@ const getApiRootForVersion = (version:string, style:any = APIPathStyle.FLAT): st
 const generateServerForApiVersion = (apiRoot:string, req:any): {
   url:string
 } => ({
-  url: `${settings.ssl ? 'https' : 'http'}://${req.headers.host}${apiRoot}`,
+  url: `${req.protocol}://${req.headers.host}${apiRoot}`,
 });
 
 exports.generateDefinitionForVersion = generateDefinitionForVersion;
 exports.APIPathStyle = APIPathStyle;
+exports.generateServerForApiVersion = generateServerForApiVersion;
