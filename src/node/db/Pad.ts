@@ -917,6 +917,39 @@ class Pad {
   }
 
   /**
+   * Scans `0..head` for revisions that are absent or unusable.
+   *
+   * `check()` already trips over these, but only as
+   * `assert(timestamp != null)` part-way through replaying the history --
+   * an assertion about a null timestamp, when what the operator needs to
+   * hear is "revision 600 is missing". This reports the gaps directly so
+   * callers can say something actionable instead. See #8134.
+   *
+   * Cheap relative to check(): it reads one sub-field per revision and
+   * replays nothing.
+   *
+   * @param limit Stop after this many gaps. A pad damaged by a failed
+   *     cleanup can be missing hundreds of revisions and the operator does
+   *     not need them all enumerated.
+   * @returns Ascending revision numbers with no usable stored record.
+   */
+  async findMissingRevisions(limit = 20): Promise<number[]> {
+    const missing: number[] = [];
+    const revs = Stream.range(0, this.getHeadRevisionNumber() + 1)
+        .map(async (r: number) => [r, await this.getRevisionDate(r)])
+        .batch(100).buffer(99);
+    for await (const [r, timestamp] of revs) {
+      // A record that exists but carries no meta.timestamp is just as
+      // unreplayable as one that is absent, and fails check() identically.
+      if (timestamp == null) {
+        missing.push(r);
+        if (missing.length >= limit) break;
+      }
+    }
+    return missing;
+  }
+
+  /**
    * Asserts that all pad data is consistent. Throws if inconsistent.
    */
   async check() {

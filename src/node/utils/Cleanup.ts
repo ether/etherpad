@@ -45,6 +45,22 @@ export const deleteRevisions = async (padId: string, keepRevisions: number): Pro
   logger.debug('Start cleanup revisions', padId)
 
   let pad = await padManager.getPad(padId);
+
+  // Report a damaged history as a damaged history. check() detects it too,
+  // but only as `assert(timestamp != null)` part-way through replaying the
+  // revisions, which tells an operator nothing about which record is bad or
+  // what to do about it. See #8134.
+  const missing = await pad.findMissingRevisions();
+  if (missing.length > 0) {
+    throw new Error(
+        `Pad ${padId} is missing revision(s) ${missing.join(', ')}` +
+        `${missing.length >= 20 ? ' (and possibly more)' : ''}. ` +
+        'Its history cannot be replayed, so revisions cannot be cleaned up. ' +
+        "The pad's current text is unaffected. Rebuild the history with a " +
+        'full compaction (compactPad with no keepRevisions) to make the pad ' +
+        'cleanable again.');
+  }
+
   await pad.check()
 
   logger.debug('Initial pad is valid')
