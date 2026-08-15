@@ -69,7 +69,10 @@ describe(__filename, function () {
       const padRecord = await db.get(`pad:${padId}`);
       assert.equal(padRecord.head, goodHead,
           'persisted head should be rolled back');
-      assert.equal(await db.get(`pad:${padId}:revs:${doomed}`), null,
+      // `== null`, not `assert.equal(..., null)`: the dirty/rusty driver
+      // yields null for an absent key on Linux but undefined on Windows.
+      // Either way the record is not there.
+      assert.ok(await db.get(`pad:${padId}:revs:${doomed}`) == null,
           'the failed revision should not exist');
     });
 
@@ -101,7 +104,7 @@ describe(__filename, function () {
       // The next append reuses the revision number rather than skipping it.
       await pad.appendText('three\n');
       assert.equal(pad.getHeadRevisionNumber(), doomed);
-      assert.notEqual(await db.get(`pad:${padId}:revs:${doomed}`), null);
+      assert.ok(await db.get(`pad:${padId}:revs:${doomed}`) != null);
     });
 
     it('leaves the pad passing check()', async function () {
@@ -177,7 +180,7 @@ describe(__filename, function () {
 
           assert.equal(pad.getHeadRevisionNumber(), goodHead + 1,
               'the revision was stored, so head must stand');
-          assert.notEqual(await db.get(`pad:${padId}:revs:${goodHead + 1}`), null);
+          assert.ok(await db.get(`pad:${padId}:revs:${goodHead + 1}`) != null);
 
           padManager.unloadPad(padId);
           await (await padManager.getPad(padId)).check();
