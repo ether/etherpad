@@ -27,6 +27,7 @@ import {SYSTEM_AUTHOR_ID} from '../utils/SystemAuthor';
 const hooks = require('../../static/js/pluginfw/hooks');
 import pad_utils from "../../static/js/pad_utils";
 import {SmartOpAssembler} from "../../static/js/SmartOpAssembler";
+import Op from "../../static/js/Op";
 import {timesLimit} from "async";
 
 type PadViewSettings = {
@@ -750,7 +751,7 @@ class Pad {
     }
 
     // flush the source pad
-    this.saveToDatabase();
+    await this.saveToDatabase();
 
     // if it's a group pad, let's make sure the group exists.
     const destGroupID = await this.checkIfGroupExistAndReturnIt(destinationID);
@@ -790,19 +791,39 @@ class Pad {
       }
       assem.append(op);
     }
-    assem.endDocument();
-
     // although we have instantiated the dstPad with '\n', an additional '\n' is
     // added internally, so the pad text on the revision 0 is "\n\n"
     const oldLength = 2;
 
-    const newLength = assem.getLengthChange();
-    const newText = oldAText.text;
+    // opsFromAText() intentionally omits the source document's final newline,
+    // so the ops appended above insert oldAText.text minus its last character.
+    // Both of the destination pad's existing newlines would then survive and
+    // the copy would come out one newline longer than the source -- growing
+    // again on every subsequent copy. Delete one of them so the copy's text
+    // matches the source exactly.
+    const dropExtraNewline = new Op('-');
+    dropExtraNewline.chars = 1;
+    dropExtraNewline.lines = 1;
+    assem.append(dropExtraNewline);
+    assem.endDocument();
+
+    // pack() takes the TOTAL length of the new document, not the delta.
+    // Passing the delta (assem.getLengthChange()) produced a changeset whose
+    // header disagreed with its own ops, so every pad produced by this
+    // function failed checkRep() -- and therefore pad.check(), which is what
+    // `cleanup.keepRevisions` runs before it will touch a pad.
+    const newLength = oldLength + assem.getLengthChange();
+    // The char bank holds only the inserted characters, which is the source
+    // text without the final newline that opsFromAText() skipped.
+    const newText = oldAText.text.slice(0, -1);
 
     // create a changeset that removes the previous text and add the newText with
     // all atributes present on the source pad
     const changeset = pack(oldLength, newLength, assem.toString(), newText);
-    dstPad.appendRevision(changeset, authorId);
+    // Must be awaited: an un-awaited rejection here (an invalid changeset,
+    // a failed write) surfaces as an unhandled rejection instead of failing
+    // the copy, which is how the length bug above went unnoticed.
+    await dstPad.appendRevision(changeset, authorId);
 
     await hooks.aCallAll('padCopy', {
       get originalPad() {

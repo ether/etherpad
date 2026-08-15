@@ -615,7 +615,12 @@ describe(__filename, function () {
       res = await agent.get(`${endPoint('getHTML')}?padID=${newPad}`)
           .set("Authorization", (await common.generateJWTToken()))
           .expect(200);
-      const receivedHtml = res.body.data.html.replace('<br><br></body>', '</body>').toLowerCase();
+      // Strips the same single trailing <br> as the direct getHTML test
+      // above. This used to strip '<br><br>': copyPadWithoutHistory packed
+      // a length delta where pack() wanted a total, so every copy came out
+      // one newline longer than its source. Now the copy matches the source
+      // exactly.
+      const receivedHtml = res.body.data.html.replace('<br></body>', '</body>').toLowerCase();
       assert.equal(receivedHtml, expectedHtml);
     });
 

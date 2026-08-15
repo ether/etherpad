@@ -40,23 +40,28 @@ describe(__filename, function () {
       await pad.appendText('marker-gamma\n');
       const before = pad.getHeadRevisionNumber();
       assert.ok(before >= 3, `expected at least 3 revs, got ${before}`);
+      const textBefore = pad.atext.text;
+      padManager.unloadPad(padId);
 
       const result = await api.compactPad(padId);
       assert.deepStrictEqual(result, {ok: true, mode: 'all'});
 
       // Reload: the compacted pad lands at head<=1 (matches the shape
-      // `copyPadWithoutHistory` produces). The content survives — we
-      // don't assert byte-exact equality because Cleanup.deleteAllRevisions
-      // goes through copyPadWithoutHistory twice and may adjust trailing
-      // whitespace; what we care about is that the author-written content
-      // is still there.
+      // `copyPadWithoutHistory` produces).
+      padManager.unloadPad(padId);
       const reloaded = await padManager.getPad(padId);
       assert.ok(reloaded.getHeadRevisionNumber() <= 1,
           `expected head<=1, got ${reloaded.getHeadRevisionNumber()}`);
-      const text = reloaded.atext.text;
-      assert.ok(text.includes('marker-alpha'), 'alpha content preserved');
-      assert.ok(text.includes('marker-beta'), 'beta content preserved');
-      assert.ok(text.includes('marker-gamma'), 'gamma content preserved');
+      // Byte-exact. This used to tolerate "adjusted trailing whitespace"
+      // because deleteAllRevisions goes through copyPadWithoutHistory
+      // twice and each pass added a newline; that was a bug, not a
+      // property of compaction.
+      assert.equal(reloaded.atext.text, textBefore,
+          'compaction must not alter the text');
+      // And the compacted pad must still be checkable, otherwise it could
+      // never be compacted again by keep-count (deleteRevisions calls
+      // pad.check() before it touches anything).
+      await reloaded.check();
     });
 
     it('keeps only the last N revisions when keepRevisions is a number',
