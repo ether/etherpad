@@ -51,6 +51,27 @@ type PadSettings = {
   [pluginKey: string]: any;
 };
 
+// Prefixes an error's message with context, keeping `err.stack` in sync.
+//
+// `err.stack` is rendered from the message when the error is constructed, so
+// assigning to `err.message` alone leaves the stack showing the original,
+// context-free text. Everything that reports a failed `pad.check()` logs
+// `err.stack` (Cleanup.checkTodos and the admin `cleanupPadRevisions`
+// handler both do), so without this the pad/revision that actually failed
+// never reaches the log and admins have to bisect the database by hand.
+// See #8134.
+const addErrorContext = (err: Error, context: string): Error => {
+  const oldMessage = err.message;
+  err.message = `${context} ${oldMessage}`;
+  // Only the first occurrence is replaced, which is the message in the
+  // stack's header line. Guard against an empty message: `''` matches at
+  // offset 0 and would corrupt the stack.
+  if (oldMessage && typeof err.stack === 'string' && err.stack.includes(oldMessage)) {
+    err.stack = err.stack.replace(oldMessage, err.message);
+  }
+  return err;
+};
+
 const PLUGIN_KEY_RE = /^ep_[a-z0-9_]+$/;
 // Per-key serialized JSON size cap: ~64 KB. Pad-wide settings are persisted
 // with the pad and broadcast to every connected client on every change, so
@@ -975,8 +996,7 @@ class Pad {
               isKeyRev ? this._getKeyRevisionAText(r) : null,
             ]);
           } catch (err:any) {
-            err.message = `(pad ${this.id} revision ${r}) ${err.message}`;
-            throw err;
+            throw addErrorContext(err, `(pad ${this.id} revision ${r})`);
           }
         })
         .batch(100).buffer(99);
@@ -1014,8 +1034,7 @@ class Pad {
         atext = applyToAText(changeset, atext, pool);
         if (isKeyRev) assert.deepEqual(keyAText, atext);
       } catch (err:any) {
-        err.message = `(pad ${this.id} revision ${r}) ${err.message}`;
-        throw err;
+        throw addErrorContext(err, `(pad ${this.id} revision ${r})`);
       }
     }
     assert.equal(this.text(), atext.text);
@@ -1032,8 +1051,7 @@ class Pad {
             assert(msg != null);
             assert(msg instanceof ChatMessage);
           } catch (err:any) {
-            err.message = `(pad ${this.id} chat message ${c}) ${err.message}`;
-            throw err;
+            throw addErrorContext(err, `(pad ${this.id} chat message ${c})`);
           }
         })
         .batch(100).buffer(99);
