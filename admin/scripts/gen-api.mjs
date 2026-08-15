@@ -37,9 +37,14 @@ try {
     process.exit(dump.status ?? 1);
   }
 
+  // Run openapi-typescript out of @etherpad/openapi-codegen rather than from
+  // admin. It needs the TypeScript compiler API, which TypeScript 7 (the
+  // native port) does not expose; that package is where its TypeScript is
+  // pinned to a version that still has one. See its README.
   const gen = spawnSync(
     'pnpm',
-    ['exec', 'openapi-typescript', specPath, '-o', outFile],
+    ['--filter', '@etherpad/openapi-codegen', 'exec',
+      'openapi-typescript', specPath, '-o', outFile],
     spawnOpts,
   );
   if (gen.status !== 0) {

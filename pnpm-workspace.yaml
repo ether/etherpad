@@ -4,6 +4,9 @@ packages:
   - bin
   - doc
   - ui
+  # Build-time only: pins the TypeScript that openapi-typescript runs
+  # against, which cannot be TypeScript 7. See its README.
+  - admin/tools/openapi-codegen
 allowBuilds:
   '@scarf/scarf': set this to true or false
   esbuild: set this to true or false
