@@ -4,3 +4,5 @@ installed_plugins.json
 dirty.db
 rusty.db
 update-state.json
+# Runtime update log, written by src/node/updater (see index.ts logPath()).
+log/
