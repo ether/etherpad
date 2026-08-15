@@ -28,6 +28,9 @@ const hooks = require('../../static/js/pluginfw/hooks');
 import pad_utils from "../../static/js/pad_utils";
 import {SmartOpAssembler} from "../../static/js/SmartOpAssembler";
 import {timesLimit} from "async";
+import log4js from 'log4js';
+
+const logger = log4js.getLogger('pad');
 
 type PadViewSettings = {
   showAuthorColors: boolean;
@@ -295,6 +298,9 @@ class Pad {
         this.head !== -1) {
       return this.head;
     }
+    // Snapshot for the rollback below, taken before this.atext is mutated.
+    const prevHead = this.head;
+    const prevAText: AText = {text: this.atext.text, attribs: this.atext.attribs};
     copyAText(newAText, this.atext);
 
     const newRev = ++this.head;
@@ -303,7 +309,19 @@ class Pad {
     if (authorId !== '') this.pool.putAttrib(['author', authorId]);
 
     const hook = this.head === 0 ? 'padCreate' : 'padUpdate';
-    await Promise.all([
+
+    // The revision record and the pad record (which carries `head`) are two
+    // independent writes. If the revision write fails while the pad record
+    // lands, the pad claims a revision that was never stored -- and because
+    // the next successful append writes head+1 straight over it, the gap is
+    // permanent. Any later pad.check() then trips on the missing revision,
+    // which blocks cleanup/compaction forever. See #8134.
+    //
+    // They stay concurrent (sequencing them would add a write round-trip to
+    // every commit on the editing hot path); instead a failure rolls the
+    // in-memory state back and re-persists the pad record, so the pad never
+    // ends up pointing past its own history.
+    const storageWrites = Promise.all([
       // @ts-ignore
       this.db.set(`pad:${this.id}:revs:${newRev}`, {
         changeset: aChangeset,
@@ -317,6 +335,12 @@ class Pad {
         },
       }),
       this.saveToDatabase(),
+    ]);
+
+    // Kept separate from the storage writes: a throwing padUpdate hook (or a
+    // failed author-index update) must not roll back a revision that was
+    // stored successfully. Started here so it still runs concurrently.
+    const sideEffects = Promise.all([
       authorId && authorManager.addPad(authorId, this.id),
       hooks.aCallAll(hook, {
         pad: this,
@@ -336,7 +360,47 @@ class Pad {
         },
       }),
     ]);
+    // Awaited below. Attach a no-op handler so a rejection while we're
+    // awaiting the storage writes isn't reported as unhandled.
+    sideEffects.catch(() => {});
+
+    try {
+      await storageWrites;
+    } catch (err) {
+      await this._rollbackFailedRevision(newRev, prevHead, prevAText);
+      throw err;
+    }
+
+    await sideEffects;
     return newRev;
+  }
+
+  /**
+   * Undoes the in-memory effects of a failed appendRevision and re-persists
+   * the pad record, so `head` never points at a revision that isn't stored.
+   *
+   * The attribute pool is deliberately not rolled back: pool entries are
+   * addressed by position, so removing one would invalidate the attribute
+   * numbers in every changeset already written. A pool author with no
+   * revisions is harmless -- pad.check() derives both sides of its author
+   * comparison from the pool, so they still agree.
+   */
+  private async _rollbackFailedRevision(newRev: number, prevHead: number, prevAText: AText) {
+    this.head = prevHead;
+    copyAText(prevAText, this.atext);
+    try {
+      await this.saveToDatabase();
+    } catch (rollbackErr: any) {
+      // Both writes failed. The pad record may still claim `newRev`, which
+      // is the pre-#8134 behaviour; say so loudly rather than silently
+      // leaving a hole for an admin to find months later via a failed
+      // cleanup run.
+      logger.error(
+          `pad ${this.id}: revision ${newRev} failed to store AND the ` +
+          `rollback of head to ${prevHead} failed. The pad record may claim ` +
+          `a revision that does not exist; run a consistency check on it. ` +
+          `Rollback error: ${rollbackErr.stack || rollbackErr}`);
+    }
   }
 
   toJSON() {
