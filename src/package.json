@@ -106,7 +106,7 @@
     "@types/http-errors": "^2.0.5",
     "@types/jquery": "^4.0.1",
     "@types/js-cookie": "^3.0.6",
-    "@types/jsdom": "^28.0.3",
+    "@types/jsdom": "^30.0.0",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/mime-types": "^3.0.1",
     "@types/mocha": "^10.0.9",
