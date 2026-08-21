@@ -1,6 +1,6 @@
 {
   "devDependencies": {
-    "oxc-minify": "^0.144.0",
+    "oxc-minify": "^0.145.0",
     "vitepress": "^2.0.0-alpha.19"
   },
   "scripts": {
