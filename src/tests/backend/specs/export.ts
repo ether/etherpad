@@ -118,22 +118,139 @@ describe(__filename, function () {
     });
   });
 
-  describe('stripRemoteImages', function () {
-    const {stripRemoteImages} = require('../../../node/utils/ExportSanitizeHtml');
+  describe('sanitizeExportHtml', function () {
+    const {sanitizeExportHtml} = require('../../../node/utils/ExportSanitizeHtml');
+
+    // The export document is handed to a converter that runs server-side and
+    // dereferences subresource URLs, so every one of these would be a request
+    // issued from the server. The list is deliberately broad: the point of the
+    // value-based check is that it does not depend on knowing the attribute
+    // name, so a carrier nobody enumerated here is still denied.
+    const mustNotSurvive: [string, string][] = [
+      ['plain remote src', '<img src="http://evil.example/a.png">'],
+      ['leading space defeats an anchored scheme test',
+        '<img src=" http://evil.example/a.png">'],
+      ['leading tab', '<img src="\thttp://evil.example/a.png">'],
+      ['leading newline', '<img src="\nhttp://evil.example/a.png">'],
+      ['entity-encoded leading space',
+        '<img src="&#32;http://evil.example/a.png">'],
+      ['hex-entity-encoded leading space',
+        '<img src="&#x20;http://evil.example/a.png">'],
+      ['entity-encoded scheme colon',
+        '<img src="http&colon;//evil.example/a.png">'],
+      ['uppercase scheme', '<img src="HTTP://evil.example/a.png">'],
+      ['protocol-relative', '<img src="//evil.example/a.png">'],
+      ['non-http scheme', '<img src="ftp://evil.example/a.png">'],
+      ['srcset', '<img srcset="http://evil.example/a.png 1x">'],
+      ['remote candidate hidden behind a local one in srcset',
+        '<img srcset="/ok.png 1x, http://evil.example/a.png 2x">'],
+      ['video src', '<video src="http://evil.example/a.mp4"></video>'],
+      ['video poster', '<video poster="http://evil.example/a.png"></video>'],
+      ['source srcset',
+        '<picture><source srcset="http://evil.example/a.png"></picture>'],
+      ['audio src', '<audio src="http://evil.example/a.mp3"></audio>'],
+      ['object data', '<object data="http://evil.example/a.svg"></object>'],
+      ['embed src', '<embed src="http://evil.example/a.swf">'],
+      ['iframe src', '<iframe src="http://evil.example/a"></iframe>'],
+      ['link stylesheet',
+        '<link rel="stylesheet" href="http://evil.example/a.css">'],
+      ['url() in a style attribute',
+        '<p style="background-image:url(http://evil.example/a.png)">x</p>'],
+      ['CSS-escaped url() in a style attribute',
+        '<p style="background:\\75 rl(http://evil.example/a.png)">x</p>'],
+      ['url() in a style block',
+        '<style>body{background:url(http://evil.example/a.png)}</style>'],
+      ['@import in a style block',
+        '<style>@import "http://evil.example/a.css";</style>'],
+      ['inline SVG image href',
+        '<svg><image href="http://evil.example/a.png"></image></svg>'],
+      ['input type=image', '<input type="image" src="http://evil.example/a.png">'],
+      ['table background attribute',
+        '<table background="http://evil.example/a.png"></table>'],
+      ['script body', '<script>fetch("http://evil.example/")</script>'],
+    ];
+
+    for (const [name, html] of mustNotSurvive) {
+      it(`drops a remote URL in: ${name}`, function () {
+        assert.doesNotMatch(sanitizeExportHtml(html), /evil\.example/);
+      });
+    }
+
+    it('drops <base>, which would make every relative URL remote', function () {
+      const out = sanitizeExportHtml('<base href="http://evil.example/"><img src="a.png">');
+      assert.doesNotMatch(out, /evil\.example/);
+      assert.doesNotMatch(out, /<base/);
+      // The relative image is still fine — it is <base> that made it dangerous.
+      assert.match(out, /<img src="a\.png">/);
+    });
+
+    it('drops paths that climb out of the converter working directory', function () {
+      // soffice resolves relative URLs against the temp export dir and
+      // html-to-docx readFileSync(path.resolve(src))s them against the cwd.
+      assert.doesNotMatch(
+          sanitizeExportHtml('<img src="../../../../etc/shadow.png">'), /shadow/);
+      assert.doesNotMatch(
+          sanitizeExportHtml('<img src="%2e%2e/%2e%2e/etc/shadow.png">'), /shadow/);
+    });
+
+    it('drops a non-navigational scheme from <a href>', function () {
+      const out = sanitizeExportHtml('<a href="javascript:alert(1)">x</a>');
+      assert.doesNotMatch(out, /javascript:/i);
+      assert.match(out, /x/);
+    });
+
+    it('keeps ordinary hyperlinks — converters do not dereference them',
+        function () {
+          const out = sanitizeExportHtml('<a href="https://example.com/x">link</a>');
+          assert.match(out, /href="https:\/\/example\.com\/x"/);
+          assert.match(out, /link/);
+        });
+
+    it('keeps mailto: links', function () {
+      assert.match(sanitizeExportHtml('<a href="mailto:a@b.co">m</a>'), /mailto:a@b\.co/);
+    });
+
+    it('keeps the manifest <link> the export template emits', function () {
+      const out = sanitizeExportHtml('<link rel="manifest" href="/manifest.json"/>');
+      assert.match(out, /manifest\.json/);
+    });
+
+    it('keeps the style attributes ep_align and core lists emit', function () {
+      assert.match(
+          sanitizeExportHtml('<p style="text-align:center">x</p>'), /text-align:center/);
+      assert.match(
+          sanitizeExportHtml('<ul style="list-style-type: none;"></ul>'),
+          /list-style-type/);
+    });
+
+    it('keeps the author-colour and list-counter CSS in the export head',
+        function () {
+          const css = '<style>.authorA {background-color: #fff}\n' +
+              'ol > li:before{content:counters(item, ".") ". ";}</style>';
+          const out = sanitizeExportHtml(css);
+          assert.match(out, /background-color: #fff/);
+          assert.match(out, /counters\(item/);
+          // CSS must not come back HTML-escaped or the block stops parsing.
+          assert.doesNotMatch(out, /&gt;/);
+        });
+
+    it('keeps the charset declaration', function () {
+      assert.match(sanitizeExportHtml('<meta charset="utf-8"/>'), /charset="utf-8"/);
+    });
 
     it('keeps data: URIs', function () {
-      const out = stripRemoteImages(
+      const out = sanitizeExportHtml(
           '<p>x</p><img src="data:image/png;base64,iVBORw0KGgo=">');
       assert.match(out, /<img[^>]+src="data:image\/png/);
     });
 
     it('keeps relative URLs', function () {
-      const out = stripRemoteImages('<img src="/foo/bar.png">');
+      const out = sanitizeExportHtml('<img src="/foo/bar.png">');
       assert.match(out, /<img[^>]+src="\/foo\/bar\.png"/);
     });
 
     it('drops absolute http(s) URLs and falls back to alt', function () {
-      const out = stripRemoteImages(
+      const out = sanitizeExportHtml(
           '<p>before<img src="https://evil.example/x.png" alt="cat">after</p>');
       assert.doesNotMatch(out, /evil\.example/);
       assert.match(out, /before/);
@@ -142,31 +259,31 @@ describe(__filename, function () {
     });
 
     it('drops protocol-relative URLs', function () {
-      const out = stripRemoteImages('<img src="//evil.example/x.png">');
+      const out = sanitizeExportHtml('<img src="//evil.example/x.png">');
       assert.doesNotMatch(out, /evil\.example/);
     });
 
     it('passes non-image markup through unchanged', function () {
       const html = '<h1>hi</h1><p>body <a href="/x">link</a></p>';
-      assert.strictEqual(stripRemoteImages(html), html);
+      assert.strictEqual(sanitizeExportHtml(html), html);
     });
 
     it('preserves the doctype directive (soffice reads a full document)', function () {
       const html = '<!doctype html><html><body><p>hi</p></body></html>';
-      const out = stripRemoteImages(html);
+      const out = sanitizeExportHtml(html);
       assert.match(out, /<!doctype html>/i);
     });
 
     it('preserves HTML comments', function () {
       const html = '<body><!-- keep me --><p>hi</p></body>';
-      const out = stripRemoteImages(html);
+      const out = sanitizeExportHtml(html);
       assert.match(out, /<!-- keep me -->/);
     });
 
     it('preserves the doctype while still dropping a remote image', function () {
       const html =
           '<!doctype html><html><body><img src="https://evil.example/x.png" alt="a"></body></html>';
-      const out = stripRemoteImages(html);
+      const out = sanitizeExportHtml(html);
       assert.match(out, /<!doctype html>/i);
       assert.doesNotMatch(out, /evil\.example/);
     });
