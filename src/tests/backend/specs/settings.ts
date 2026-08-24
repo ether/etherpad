@@ -4,6 +4,8 @@ const assert = require('assert').strict;
 import {exportedForTestingOnly} from '../../../node/utils/Settings'
 import path from 'path';
 import process from 'process';
+import fs from 'fs';
+import os from 'os';
 
 describe(__filename, function () {
   describe('parseSettings', function () {
@@ -144,6 +146,40 @@ describe(__filename, function () {
         assert.strictEqual(cjs.title, 'cjs-shim-test');
       } finally {
         cjs.title = original;
+      }
+    });
+
+    // Regression test for ether/etherpad#8110.
+    // Plugin configuration lives in top-level `ep_*` blocks in settings.json
+    // (ep_hash_auth.hash_dir, ep_ldapauth.url, …). Those keys don't exist on
+    // the settings object while Settings.ts is still evaluating, so a shim
+    // that only ran once at module scope never defined accessors for them and
+    // every plugin silently fell back to its built-in defaults — for
+    // ep_hash_auth that meant reading hashes from /var/etherpad/users and
+    // rejecting every admin login with a 401.
+    it('exposes plugin ep_* blocks added by a later reloadSettings()', function () {
+      const settingsMod = require('../../../node/utils/Settings');
+      const savedSettingsFile = settingsMod.settingsFilename;
+      const savedCredsFile = settingsMod.credentialsFilename;
+      const tmpFile = path.join(os.tmpdir(), `ep-8110-settings-${process.pid}.json`);
+      fs.writeFileSync(tmpFile, JSON.stringify({
+        ep_regression_8110: {hash_dir: '/srv/etherpad/users'},
+      }));
+      settingsMod.settingsFilename = tmpFile;
+      settingsMod.credentialsFilename = path.join(os.tmpdir(), 'ep-8110-no-credentials.json');
+      try {
+        settingsMod.reloadSettings();
+        assert.deepEqual(settingsMod.ep_regression_8110, {hash_dir: '/srv/etherpad/users'},
+            'plugin ep_* settings must be reachable via CJS require, not just via .default');
+      } finally {
+        // Drop the key from the shared settings object as well as the accessor
+        // the shim installed on module.exports, so later specs see a clean slate.
+        delete (settingsMod.default || settingsMod).ep_regression_8110;
+        delete settingsMod.ep_regression_8110;
+        settingsMod.settingsFilename = savedSettingsFile;
+        settingsMod.credentialsFilename = savedCredsFile;
+        fs.rmSync(tmpFile, {force: true});
+        settingsMod.reloadSettings();
       }
     });
   });
