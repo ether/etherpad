@@ -168,6 +168,25 @@ describe(__filename, function () {
       ['table background attribute',
         '<table background="http://evil.example/a.png"></table>'],
       ['script body', '<script>fetch("http://evil.example/")</script>'],
+      // Percent-escapes decode INTO the ignored range, so stripping only
+      // before percent-decoding leaves the scheme test looking at a string
+      // that still starts with whitespace. (Qodo review on #8154.)
+      ['percent-encoded leading space',
+        '<img src="%20http://evil.example/a.png">'],
+      ['percent-encoded leading tab',
+        '<img src="%09http://evil.example/a.png">'],
+      ['percent-encoded leading newline',
+        '<img src="%0ahttp://evil.example/a.png">'],
+      // A CSS parser resolves escapes and comments before it sees a token, so
+      // neither spelling of `url(` may survive in a <style> block.
+      ['CSS-escaped url() in a style block',
+        '<style>body{background:\\75 rl(http://evil.example/a.png)}</style>'],
+      ['comment-split url() in a style block',
+        '<style>body{background:u/**/rl(http://evil.example/a.png)}</style>'],
+      ['comment-split url() in a style attribute',
+        '<p style="background:u/**/rl(http://evil.example/a.png)">x</p>'],
+      ['CSS-escaped @import in a style block',
+        '<style>\\40 import "http://evil.example/a.css";</style>'],
     ];
 
     for (const [name, html] of mustNotSurvive) {
@@ -198,6 +217,22 @@ describe(__filename, function () {
       assert.doesNotMatch(out, /javascript:/i);
       assert.match(out, /x/);
     });
+
+    it('drops a non-navigational scheme hidden behind percent-encoded space',
+        function () {
+          const out = sanitizeExportHtml('<a href="%20javascript:alert(1)">x</a>');
+          assert.doesNotMatch(out, /javascript/i);
+          assert.match(out, /x/);
+        });
+
+    it('keeps a style block whose escapes are legitimate CSS strings',
+        function () {
+          // `\201C` is a smart quote in `content:` — decoding it into the
+          // emitted CSS would break the declaration, so detection runs on a
+          // copy and the original text is what ships.
+          const css = '<style>q:before{content:"\\201C"}</style>';
+          assert.match(sanitizeExportHtml(css), /\\201C/);
+        });
 
     it('keeps ordinary hyperlinks — converters do not dereference them',
         function () {

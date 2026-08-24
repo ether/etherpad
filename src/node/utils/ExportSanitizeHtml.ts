@@ -198,13 +198,18 @@ const URL_IGNORED_RE = /[\u0000-\u0020\u007f]/g;
 // this check cannot drift from the parser that produced the attributes.
 const canonicalizeUrl = (raw: string): string => {
   const decoded = decodeHTML(raw).replace(URL_IGNORED_RE, '');
+  let pctDecoded: string;
   try {
-    return decodeURIComponent(decoded);
+    pctDecoded = decodeURIComponent(decoded);
   } catch {
     // Malformed percent-escapes: fall back to the undecoded form rather than
     // yielding an empty string, which would read as "safe".
-    return decoded;
+    pctDecoded = decoded;
   }
+  // Strip AGAIN after percent-decoding: `%20`, `%09` and `%0a` decode INTO the
+  // ignored range, so stripping only beforehand would hand the scheme test a
+  // string that still begins with whitespace and reads as "no scheme".
+  return pctDecoded.replace(URL_IGNORED_RE, '');
 };
 
 const SCHEME_RE = /^[a-z][a-z0-9+.-]*:/i;
@@ -259,18 +264,48 @@ const isSafeNavUrl = (raw: string): boolean => {
 // and partially rewriting a declaration list invites exactly the
 // parser-differential bugs this file exists to avoid. The backslash catches
 // CSS escapes (`\75 rl(`) used to spell `url` past a literal match.
-const CSS_FETCH_RE = /url\s*\(|@import|expression\s*\(|\\/i;
+// The backslash catches CSS escapes (`\75 rl(`) and `/*` catches comment
+// splitting (`u/**/rl(`) — both spell `url` past a literal match.
+const CSS_FETCH_RE = /url\s*\(|@import|expression\s*\(|\\|\/\*/i;
 
 // Inside a `<style>` ELEMENT the same constructs are removed surgically
 // instead, because that block also carries the author-colour rules and list
 // counters that make soffice exports render correctly.
 const CSS_IMPORT_RE = /@import[^;]*;?/gi;
 const CSS_URL_RE = /url\s*\(\s*(['"]?)([^)'"]*)\1\s*\)/gi;
+const CSS_COMMENT_RE = /\/\*[\s\S]*?\*\//g;
+const CSS_HEX_ESCAPE_RE = /\\([0-9a-f]{1,6})[ \t\n]?/gi;
 
-const sanitizeCssText = (css: string): string =>
-    css.replace(CSS_IMPORT_RE, '')
-        .replace(CSS_URL_RE, (match, _quote, target) =>
-          (isFetchable(target) ? 'none' : match));
+// A CSS parser resolves `\75` and `/**/` before it sees a token, so detection
+// has to run on the resolved form. This is used for DETECTION ONLY — the text
+// that gets emitted is never the decoded copy, because decoding would corrupt
+// legitimate escapes inside CSS strings (`content: "\201C"`).
+const resolveCssObfuscation = (css: string): string =>
+    css.replace(CSS_COMMENT_RE, '')
+        .replace(CSS_HEX_ESCAPE_RE, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
+        .replace(/\\(.)/g, '$1');
+
+const cssTextFetches = (css: string): boolean => {
+  if (/@import/i.test(css)) return true;
+  for (const m of css.matchAll(new RegExp(CSS_URL_RE.source, 'gi'))) {
+    if (isFetchable(m[2])) return true;
+  }
+  return false;
+};
+
+const sanitizeCssText = (css: string): string => {
+  // Surgical pass: remove the plainly-written forms, keeping the rest of the
+  // block (author colours, list counters) intact.
+  const surgical = css.replace(CSS_IMPORT_RE, '')
+      .replace(CSS_URL_RE, (match, _quote, target) =>
+        (isFetchable(target) ? 'none' : match));
+  // If a fetch still resolves out of an obfuscated form the surgical pass
+  // could not see, the block is not something we can safely rewrite
+  // declaration-by-declaration — drop its contents. Nothing core or any known
+  // plugin emits reaches this, so ordinary exports keep their CSS.
+  if (cssTextFetches(resolveCssObfuscation(surgical))) return '';
+  return surgical;
+};
 
 // Elements that load or execute content, or that change how every other URL in
 // the document resolves. `<base href="http://evil/">` is the important one: it
