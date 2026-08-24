@@ -305,8 +305,8 @@ importers:
         specifier: ^9.0.5
         version: 9.0.5
       oidc-provider:
-        specifier: 9.11.3
-        version: 9.11.3(supports-color@8.1.1)
+        specifier: 9.11.4
+        version: 9.11.4
       openapi-backend:
         specifier: ^5.20.0
         version: 5.20.0
@@ -3866,6 +3866,9 @@ packages:
   isexe@2.0.0:
     resolution: {integrity: sha512-RHxMLp9lnKHGHRng9QFhRCMbYAcVpn69smSGcq3f36xjgVVWThj4qqLbTLlq7Ssj8B+fIQ1EuCEGI2lKsyQeIw==}
 
+  jose@6.2.10:
+    resolution: {integrity: sha512-iiW7J9qRFlGxvCOIBDBDxFePQSn7ZMAnrYGhrrOo6siO/MIqwfyilLR27pkfDgUk+raLuzADS8A3S/KLBisc0g==}
+
   jose@6.2.9:
     resolution: {integrity: sha512-XrchZOFZUl/T3vTwRe8XK+cJrGtMF4th1ARnDfwbBXFKThGhlsxEE4Zu03AD/bjJSt/9jT/mxrOCkJWOg77aPA==}
 
@@ -4424,8 +4427,8 @@ packages:
     resolution: {integrity: sha512-4a+OsYv9UktOJKE+l1A4OufDgdRF9PifWj+tJnHURo/P+WOxpG4GzUFL9qCalmWauao6ogiG+QvnCovwPoyAWA==}
     engines: {node: '>=12.20.0'}
 
-  oidc-provider@9.11.3:
-    resolution: {integrity: sha512-ddS33New8tm08oR7mgkfEx+yaCFM5BwnRDuYkuq60XxE2RtuY2p43Sl6/DyuPwXbYeMpovkrrT/y6QYfg4zNag==}
+  oidc-provider@9.11.4:
+    resolution: {integrity: sha512-OyIl6B0oKrFjGPtcMYZovLpIYJGyrqBHVY7tLY21UZdv9xENgTX/awBn/s1grsqqNH3Oj8yASfLKkeWLex/nQw==}
 
   on-finished@2.4.1:
     resolution: {integrity: sha512-oVlzkg3ENAhCk2zdv7IJwd/QUD4z2RxRwpkcGY8psCVcCYZNq4wYnVWALHM+brtuJjePWiYF/ClmuDr8Ch5+kg==}
@@ -9380,6 +9383,8 @@ snapshots:
 
   isexe@2.0.0: {}
 
+  jose@6.2.10: {}
+
   jose@6.2.9: {}
 
   js-cookie@3.0.8: {}
@@ -9951,10 +9956,10 @@ snapshots:
 
   obug@2.1.4: {}
 
-  oidc-provider@9.11.3(supports-color@8.1.1):
+  oidc-provider@9.11.4:
     dependencies:
       debug: 4.4.3(supports-color@8.1.1)
-      jose: 6.2.9
+      jose: 6.2.10
       koa: 3.2.1
     transitivePeerDependencies:
       - supports-color
