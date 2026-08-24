@@ -248,8 +248,8 @@ importers:
         specifier: ^2.0.1
         version: 2.0.1
       jose:
-        specifier: ^6.2.9
-        version: 6.2.9
+        specifier: ^6.2.10
+        version: 6.2.10
       js-cookie:
         specifier: ^3.0.8
         version: 3.0.8
@@ -306,7 +306,7 @@ importers:
         version: 9.0.5
       oidc-provider:
         specifier: 9.11.4
-        version: 9.11.4
+        version: 9.11.4(supports-color@8.1.1)
       openapi-backend:
         specifier: ^5.20.0
         version: 5.20.0
@@ -3871,9 +3871,6 @@ packages:
 
   jose@6.2.10:
     resolution: {integrity: sha512-iiW7J9qRFlGxvCOIBDBDxFePQSn7ZMAnrYGhrrOo6siO/MIqwfyilLR27pkfDgUk+raLuzADS8A3S/KLBisc0g==}
-
-  jose@6.2.9:
-    resolution: {integrity: sha512-XrchZOFZUl/T3vTwRe8XK+cJrGtMF4th1ARnDfwbBXFKThGhlsxEE4Zu03AD/bjJSt/9jT/mxrOCkJWOg77aPA==}
 
   js-cookie@3.0.8:
     resolution: {integrity: sha512-yeJd4aNAdYZQjaon2bpD/Gb0B/omw7HQOsynXXcOiWVCacbBcPlgn8S/d1X6blFSaHao7ozqtW7NZW19xpCtIw==}
@@ -9388,8 +9385,6 @@ snapshots:
 
   jose@6.2.10: {}
 
-  jose@6.2.9: {}
-
   js-cookie@3.0.8: {}
 
   js-levenshtein@1.1.6: {}
@@ -9959,7 +9954,7 @@ snapshots:
 
   obug@2.1.4: {}
 
-  oidc-provider@9.11.4:
+  oidc-provider@9.11.4(supports-color@8.1.1):
     dependencies:
       debug: 4.4.3(supports-color@8.1.1)
       jose: 6.2.10
