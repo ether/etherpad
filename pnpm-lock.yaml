@@ -305,8 +305,8 @@ importers:
         specifier: ^9.0.5
         version: 9.0.5
       oidc-provider:
-        specifier: 9.11.4
-        version: 9.11.4(supports-color@8.1.1)
+        specifier: 9.11.5
+        version: 9.11.5
       openapi-backend:
         specifier: ^5.20.1
         version: 5.20.1
@@ -4431,8 +4431,8 @@ packages:
     resolution: {integrity: sha512-4a+OsYv9UktOJKE+l1A4OufDgdRF9PifWj+tJnHURo/P+WOxpG4GzUFL9qCalmWauao6ogiG+QvnCovwPoyAWA==}
     engines: {node: '>=12.20.0'}
 
-  oidc-provider@9.11.4:
-    resolution: {integrity: sha512-OyIl6B0oKrFjGPtcMYZovLpIYJGyrqBHVY7tLY21UZdv9xENgTX/awBn/s1grsqqNH3Oj8yASfLKkeWLex/nQw==}
+  oidc-provider@9.11.5:
+    resolution: {integrity: sha512-Q8pqzhtQd42NyUjgxpWqwqX50/YPJ2i1YmhxSEYGYiZit7C1FRG/8RnnSetGzsj5sTuOC4bQbnUeqmmUM1j1fw==}
 
   on-finished@2.4.1:
     resolution: {integrity: sha512-oVlzkg3ENAhCk2zdv7IJwd/QUD4z2RxRwpkcGY8psCVcCYZNq4wYnVWALHM+brtuJjePWiYF/ClmuDr8Ch5+kg==}
@@ -4675,6 +4675,7 @@ packages:
   prom-client@15.1.3:
     resolution: {integrity: sha512-6ZiOBfCywsD4k1BN9IX0uZhF+tJkV8q8llP64G5Hajs4JOeVLPCwpPVcpXy3BwYiUGgyJzsJJQeOIv7+hDSq8g==}
     engines: {node: ^16 || ^18 || >=20}
+    deprecated: prom-client has been replaced by @prometheus-io/client
 
   promise@1.3.0:
     resolution: {integrity: sha512-R9WrbTF3EPkVtWjp7B7umQGVndpsi+rsDAfrR4xAALQpFLa/+2OriecLhawxzvii2gd9+DZFwROWDuUUaqS5yA==}
@@ -9962,7 +9963,7 @@ snapshots:
 
   obug@2.1.4: {}
 
-  oidc-provider@9.11.4(supports-color@8.1.1):
+  oidc-provider@9.11.5:
     dependencies:
       debug: 4.4.3(supports-color@8.1.1)
       jose: 6.2.10

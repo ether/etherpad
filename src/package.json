@@ -65,7 +65,7 @@
     "mysql2": "^3.23.4",
     "nano": "^11.0.7",
     "nodemailer": "^9.0.5",
-    "oidc-provider": "9.11.4",
+    "oidc-provider": "9.11.5",
     "openapi-backend": "^5.20.1",
     "pdfkit": "^0.19.1",
     "pg": "^8.23.0",
