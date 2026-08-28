@@ -85,10 +85,10 @@ importers:
         version: 19.2.5(@types/react@19.2.18)
       '@typescript-eslint/eslint-plugin':
         specifier: ^8.68.0
-        version: 8.68.0(@typescript-eslint/parser@8.68.0(eslint@10.9.1(supports-color@8.1.1))(typescript@7.0.2))(eslint@10.9.1(supports-color@8.1.1))(supports-color@8.1.1)(typescript@7.0.2)
+        version: 8.68.0(@typescript-eslint/parser@8.68.0(eslint@10.9.1(supports-color@8.1.1))(supports-color@8.1.1)(typescript@7.0.2))(eslint@10.9.1(supports-color@8.1.1))(supports-color@8.1.1)(typescript@7.0.2)
       '@typescript-eslint/parser':
         specifier: ^8.68.0
-        version: 8.68.0(eslint@10.9.1(supports-color@8.1.1))(typescript@7.0.2)
+        version: 8.68.0(eslint@10.9.1(supports-color@8.1.1))(supports-color@8.1.1)(typescript@7.0.2)
       '@vitejs/plugin-react':
         specifier: ^6.1.0
         version: 6.1.0(babel-plugin-react-compiler@19.1.0-rc.3)(vite@8.2.2(@types/node@26.3.0)(esbuild@0.28.2)(tsx@4.23.12))
@@ -172,7 +172,7 @@ importers:
         version: 4.23.12
       ueberdb2:
         specifier: 6.1.16
-        version: 6.1.16(@elastic/elasticsearch@9.4.2)(async@3.2.6)(cassandra-driver@4.9.0)(dirty-ts@1.1.8)(mongodb@7.4.0(socks@2.8.9))(mssql@12.7.0)(mysql2@3.24.2(@types/node@26.3.0))(nano@11.0.7)(pg@8.23.0)(redis@6.2.1(@opentelemetry/api@1.9.1))(rethinkdb@2.4.2)(rusty-store-kv@1.3.1)(surrealdb@2.0.8(tslib@2.8.1)(typescript@7.0.2))
+        version: 6.1.16(@elastic/elasticsearch@9.4.2)(async@3.2.6)(cassandra-driver@4.9.0)(dirty-ts@1.1.8)(mongodb@7.6.0(socks@2.8.9))(mssql@12.7.0)(mysql2@3.24.2(@types/node@26.3.0))(nano@11.0.7)(pg@8.23.0)(redis@6.2.1(@opentelemetry/api@1.9.1))(rethinkdb@2.4.2)(rusty-store-kv@1.3.1)(surrealdb@2.0.8(tslib@2.8.1)(typescript@7.0.2))
     devDependencies:
       '@types/node':
         specifier: ^26.3.0
@@ -290,8 +290,8 @@ importers:
         specifier: ^3.0.2
         version: 3.0.2
       mongodb:
-        specifier: ^7.4.0
-        version: 7.4.0(socks@2.8.9)
+        specifier: ^7.6.0
+        version: 7.6.0(socks@2.8.9)
       mssql:
         specifier: ^12.6.0
         version: 12.7.0
@@ -366,7 +366,7 @@ importers:
         version: 4.23.12
       ueberdb2:
         specifier: 6.1.16
-        version: 6.1.16(@elastic/elasticsearch@9.4.2)(async@3.2.6)(cassandra-driver@4.9.0)(dirty-ts@1.1.8)(mongodb@7.4.0(socks@2.8.9))(mssql@12.7.0)(mysql2@3.24.2(@types/node@26.3.0))(nano@11.0.7)(pg@8.23.0)(redis@6.2.1(@opentelemetry/api@1.9.1))(rethinkdb@2.4.2)(rusty-store-kv@1.3.1)(surrealdb@2.0.8(tslib@2.8.1)(typescript@7.0.2))
+        version: 6.1.16(@elastic/elasticsearch@9.4.2)(async@3.2.6)(cassandra-driver@4.9.0)(dirty-ts@1.1.8)(mongodb@7.6.0(socks@2.8.9))(mssql@12.7.0)(mysql2@3.24.2(@types/node@26.3.0))(nano@11.0.7)(pg@8.23.0)(redis@6.2.1(@opentelemetry/api@1.9.1))(rethinkdb@2.4.2)(rusty-store-kv@1.3.1)(surrealdb@2.0.8(tslib@2.8.1)(typescript@7.0.2))
       underscore:
         specifier: 1.13.8
         version: 1.13.8
@@ -4276,15 +4276,15 @@ packages:
     resolution: {integrity: sha512-h0AZ9A7IDVwwHyMxmdMXKy+9oNlF0zFoahHiX3vQ8e3KFcSP3VmsmfvtRSuLPxmyv2vjIDxqty8smTgie/SNRQ==}
     engines: {node: '>=20.19.0'}
 
-  mongodb@7.4.0:
-    resolution: {integrity: sha512-giySkkdYiwoBFo/oCc8nzov3xOYZ/sB8OpAYk5GINRLEjVw0LDsm8xgQL0XMTyU4extQlDZjhdUr1ZEwKFaazw==}
+  mongodb@7.6.0:
+    resolution: {integrity: sha512-WbZ6OCjYw2c53LOjfkQa+reXr7kIiOVpXXglnASFuiMtif0BvsMwHe3ClJHLm1/r7wJFwaasfFtD6iYIktB01g==}
     engines: {node: '>=20.19.0'}
     peerDependencies:
       '@aws-sdk/credential-providers': ^3.806.0
       '@mongodb-js/zstd': ^7.0.0
       gcp-metadata: ^7.0.1
       kerberos: ^7.0.0
-      mongodb-client-encryption: '>=7.0.0 <7.1.0'
+      mongodb-client-encryption: ^7.2.0
       snappy: ^7.3.2
       socks: ^2.8.6
     peerDependenciesMeta:
@@ -7209,10 +7209,10 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@typescript-eslint/eslint-plugin@8.68.0(@typescript-eslint/parser@8.68.0(eslint@10.9.1(supports-color@8.1.1))(typescript@7.0.2))(eslint@10.9.1(supports-color@8.1.1))(supports-color@8.1.1)(typescript@7.0.2)':
+  '@typescript-eslint/eslint-plugin@8.68.0(@typescript-eslint/parser@8.68.0(eslint@10.9.1(supports-color@8.1.1))(supports-color@8.1.1)(typescript@7.0.2))(eslint@10.9.1(supports-color@8.1.1))(supports-color@8.1.1)(typescript@7.0.2)':
     dependencies:
       '@eslint-community/regexpp': 4.12.2
-      '@typescript-eslint/parser': 8.68.0(eslint@10.9.1(supports-color@8.1.1))(typescript@7.0.2)
+      '@typescript-eslint/parser': 8.68.0(eslint@10.9.1(supports-color@8.1.1))(supports-color@8.1.1)(typescript@7.0.2)
       '@typescript-eslint/scope-manager': 8.68.0
       '@typescript-eslint/type-utils': 8.68.0(eslint@10.9.1(supports-color@8.1.1))(supports-color@8.1.1)(typescript@7.0.2)
       '@typescript-eslint/utils': 8.68.0(eslint@10.9.1(supports-color@8.1.1))(typescript@7.0.2)
@@ -7238,11 +7238,11 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@typescript-eslint/parser@8.68.0(eslint@10.9.1(supports-color@8.1.1))(typescript@7.0.2)':
+  '@typescript-eslint/parser@8.68.0(eslint@10.9.1(supports-color@8.1.1))(supports-color@8.1.1)(typescript@7.0.2)':
     dependencies:
       '@typescript-eslint/scope-manager': 8.68.0
       '@typescript-eslint/types': 8.68.0
-      '@typescript-eslint/typescript-estree': 8.68.0(typescript@7.0.2)
+      '@typescript-eslint/typescript-estree': 8.68.0(supports-color@8.1.1)(typescript@7.0.2)
       '@typescript-eslint/visitor-keys': 8.68.0
       debug: 4.4.3(supports-color@8.1.1)
       eslint: 10.9.1(supports-color@8.1.1)
@@ -7250,7 +7250,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@typescript-eslint/project-service@8.68.0(typescript@7.0.2)':
+  '@typescript-eslint/project-service@8.68.0(supports-color@8.1.1)(typescript@7.0.2)':
     dependencies:
       '@typescript-eslint/tsconfig-utils': 8.68.0(typescript@7.0.2)
       '@typescript-eslint/types': 8.68.0
@@ -7288,7 +7288,7 @@ snapshots:
   '@typescript-eslint/type-utils@8.68.0(eslint@10.9.1(supports-color@8.1.1))(supports-color@8.1.1)(typescript@7.0.2)':
     dependencies:
       '@typescript-eslint/types': 8.68.0
-      '@typescript-eslint/typescript-estree': 8.68.0(typescript@7.0.2)
+      '@typescript-eslint/typescript-estree': 8.68.0(supports-color@8.1.1)(typescript@7.0.2)
       '@typescript-eslint/utils': 8.68.0(eslint@10.9.1(supports-color@8.1.1))(typescript@7.0.2)
       debug: 4.4.3(supports-color@8.1.1)
       eslint: 10.9.1(supports-color@8.1.1)
@@ -7316,9 +7316,9 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@typescript-eslint/typescript-estree@8.68.0(typescript@7.0.2)':
+  '@typescript-eslint/typescript-estree@8.68.0(supports-color@8.1.1)(typescript@7.0.2)':
     dependencies:
-      '@typescript-eslint/project-service': 8.68.0(typescript@7.0.2)
+      '@typescript-eslint/project-service': 8.68.0(supports-color@8.1.1)(typescript@7.0.2)
       '@typescript-eslint/tsconfig-utils': 8.68.0(typescript@7.0.2)
       '@typescript-eslint/types': 8.68.0
       '@typescript-eslint/visitor-keys': 8.68.0
@@ -7347,7 +7347,7 @@ snapshots:
       '@eslint-community/eslint-utils': 4.10.1(eslint@10.9.1(supports-color@8.1.1))
       '@typescript-eslint/scope-manager': 8.68.0
       '@typescript-eslint/types': 8.68.0
-      '@typescript-eslint/typescript-estree': 8.68.0(typescript@7.0.2)
+      '@typescript-eslint/typescript-estree': 8.68.0(supports-color@8.1.1)(typescript@7.0.2)
       eslint: 10.9.1(supports-color@8.1.1)
       typescript: 7.0.2
     transitivePeerDependencies:
@@ -9830,7 +9830,7 @@ snapshots:
       '@types/whatwg-url': 13.0.0
       whatwg-url: 14.2.0
 
-  mongodb@7.4.0(socks@2.8.9):
+  mongodb@7.6.0(socks@2.8.9):
     dependencies:
       '@mongodb-js/saslprep': 1.4.12
       bson: 7.3.1
@@ -11117,13 +11117,13 @@ snapshots:
       '@typescript/typescript-win32-arm64': 7.0.2
       '@typescript/typescript-win32-x64': 7.0.2
 
-  ueberdb2@6.1.16(@elastic/elasticsearch@9.4.2)(async@3.2.6)(cassandra-driver@4.9.0)(dirty-ts@1.1.8)(mongodb@7.4.0(socks@2.8.9))(mssql@12.7.0)(mysql2@3.24.2(@types/node@26.3.0))(nano@11.0.7)(pg@8.23.0)(redis@6.2.1(@opentelemetry/api@1.9.1))(rethinkdb@2.4.2)(rusty-store-kv@1.3.1)(surrealdb@2.0.8(tslib@2.8.1)(typescript@7.0.2)):
+  ueberdb2@6.1.16(@elastic/elasticsearch@9.4.2)(async@3.2.6)(cassandra-driver@4.9.0)(dirty-ts@1.1.8)(mongodb@7.6.0(socks@2.8.9))(mssql@12.7.0)(mysql2@3.24.2(@types/node@26.3.0))(nano@11.0.7)(pg@8.23.0)(redis@6.2.1(@opentelemetry/api@1.9.1))(rethinkdb@2.4.2)(rusty-store-kv@1.3.1)(surrealdb@2.0.8(tslib@2.8.1)(typescript@7.0.2)):
     optionalDependencies:
       '@elastic/elasticsearch': 9.4.2
       async: 3.2.6
       cassandra-driver: 4.9.0
       dirty-ts: 1.1.8
-      mongodb: 7.4.0(socks@2.8.9)
+      mongodb: 7.6.0(socks@2.8.9)
       mssql: 12.7.0
       mysql2: 3.24.2(@types/node@26.3.0)
       nano: 11.0.7
