@@ -395,7 +395,7 @@
 	"pad.savedrevs.timeslider": "Puoi vedere le versioni salvate visitando la cronologia",
 	"pad.userlist.entername": "Inserisci il tuo nome",
 	"pad.userlist.unnamed": "senza nome",
-	"pad.userlist.onlineCount": "{[ plurale(count) uno: {{count}} utente connesso, altro: {{count}} utenti connessi ]}",
+	"pad.userlist.onlineCount": "{[ plural(count) one: {{count}} utente connesso, other: {{count}} utenti connessi ]}",
 	"pad.editbar.clearcolors": "Eliminare i colori degli autori sull'intero documento? Questa azione non può essere annullata",
 	"pad.impexp.importbutton": "Importa ora",
 	"pad.impexp.importing": "Importazione in corso...",
