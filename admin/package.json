@@ -43,7 +43,7 @@
     "react-i18next": "^17.0.12",
     "react-router-dom": "^7.18.3",
     "socket.io-client": "^4.8.3",
-    "tsx": "^4.23.12",
+    "tsx": "^4.23.13",
     "typescript": "^7.0.2",
     "vite": "^8.2.2",
     "vite-plugin-babel": "^1.7.3",
