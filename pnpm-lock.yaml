@@ -305,8 +305,8 @@ importers:
         specifier: ^9.0.6
         version: 9.0.6
       oidc-provider:
-        specifier: 9.11.5
-        version: 9.11.5(supports-color@8.1.1)
+        specifier: 9.12.0
+        version: 9.12.0
       openapi-backend:
         specifier: ^5.20.1
         version: 5.20.1
@@ -4427,8 +4427,8 @@ packages:
     resolution: {integrity: sha512-4a+OsYv9UktOJKE+l1A4OufDgdRF9PifWj+tJnHURo/P+WOxpG4GzUFL9qCalmWauao6ogiG+QvnCovwPoyAWA==}
     engines: {node: '>=12.20.0'}
 
-  oidc-provider@9.11.5:
-    resolution: {integrity: sha512-Q8pqzhtQd42NyUjgxpWqwqX50/YPJ2i1YmhxSEYGYiZit7C1FRG/8RnnSetGzsj5sTuOC4bQbnUeqmmUM1j1fw==}
+  oidc-provider@9.12.0:
+    resolution: {integrity: sha512-/u5OCiXsWVedaADO9k3JIwK8oE5BAp9Kdbw105Tg+jIb3K89iwzN61Tmvq/ebCySW42geCJpWN92um58lnLKmw==}
 
   on-finished@2.4.1:
     resolution: {integrity: sha512-oVlzkg3ENAhCk2zdv7IJwd/QUD4z2RxRwpkcGY8psCVcCYZNq4wYnVWALHM+brtuJjePWiYF/ClmuDr8Ch5+kg==}
@@ -9955,7 +9955,7 @@ snapshots:
 
   obug@2.1.4: {}
 
-  oidc-provider@9.11.5(supports-color@8.1.1):
+  oidc-provider@9.12.0:
     dependencies:
       debug: 4.4.3(supports-color@8.1.1)
       jose: 6.2.10
