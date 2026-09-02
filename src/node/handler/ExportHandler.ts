@@ -106,7 +106,7 @@ exports.doExport = async (req: any, res: any, padId: string, readOnlyId: string,
 
     if (goNative) {
       const {
-        stripRemoteImages, extractBody, wrapLooseLines, dropEmptyBlocks,
+        sanitizeExportHtml, extractBody, wrapLooseLines, dropEmptyBlocks,
         applyMonospaceToCode,
       } = require('../utils/ExportSanitizeHtml');
       // The HTML pipeline returns a full document (head, style, body); the
@@ -116,7 +116,7 @@ exports.doExport = async (req: any, res: any, padId: string, readOnlyId: string,
       // stray paragraph breaks at the top of the result.
       // dropEmptyBlocks strips heading-styled blank-line wrappers that
       // ep_headings2 emits between every styled line.
-      const bodyHtml = dropEmptyBlocks(stripRemoteImages(extractBody(html)));
+      const bodyHtml = dropEmptyBlocks(sanitizeExportHtml(extractBody(html)));
       html = null;
       try {
         if (type === 'docx') {
@@ -163,13 +163,13 @@ exports.doExport = async (req: any, res: any, padId: string, readOnlyId: string,
     // for the temp path token (see matching note in ImportHandler.ts).
     const randNum = crypto.randomBytes(16).toString('hex');
     const srcFile = `${tempDirectory}/etherpad_export_${randNum}.html`;
-    // Strip remote <img> tags before handing the document to LibreOffice.
-    // soffice fetches remote image URLs during conversion, so any plugin/hook
-    // that injects an <img src="http://..."> into export HTML would otherwise
-    // turn export into a blind SSRF sink. The native path already does this
-    // (see stripRemoteImages above); apply it here so both paths match.
-    const {stripRemoteImages} = require('../utils/ExportSanitizeHtml');
-    await fsp_writeFile(srcFile, stripRemoteImages(html));
+    // Sanitize before handing the document to LibreOffice. soffice
+    // dereferences subresource URLs during conversion, so any plugin/hook that
+    // splices an attacker-influenced URL into export HTML would otherwise turn
+    // export into a blind SSRF sink. The native path does the same (see
+    // sanitizeExportHtml above); both paths must match.
+    const {sanitizeExportHtml} = require('../utils/ExportSanitizeHtml');
+    await fsp_writeFile(srcFile, sanitizeExportHtml(html));
 
     // ensure html can be collected by the garbage collector
     html = null;

@@ -223,6 +223,9 @@ importers:
       ejs:
         specifier: ^6.0.1
         version: 6.0.1
+      entities:
+        specifier: ^8.0.0
+        version: 8.0.0
       esbuild:
         specifier: ^0.28.2
         version: 0.28.2

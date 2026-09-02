@@ -1,6 +1,7 @@
 'use strict';
 
 import {Parser} from 'htmlparser2';
+import {decodeHTML} from 'entities';
 
 // Pull `<body>...</body>` out of a full HTML document. Etherpad's
 // `getPadHTMLDocument()` returns a complete page — `<head>` with a `<style>`
@@ -157,13 +158,162 @@ export const wrapLooseLines = (html: string): string => {
   return out.join('');
 };
 
-const isLocalSrc = (src: string): boolean => {
-  if (!src) return true;
-  if (src.startsWith('data:')) return true;
-  if (src.startsWith('//')) return false;
-  if (/^[a-z][a-z0-9+.-]*:/i.test(src)) return false;
-  return true;
+// ---------------------------------------------------------------------------
+// Export document sanitizer.
+//
+// Etherpad hands the exported HTML to a converter that runs on the SERVER:
+// html-to-docx and our pdfkit walker in-process, or a LibreOffice subprocess.
+// Both dereference subresource URLs — soffice fetches remote images during
+// conversion, and html-to-docx's image path fetches http(s) and
+// `readFileSync(path.resolve(src))`s everything else — so a URL that survives
+// into this document becomes a request issued from the server's network
+// position rather than the reader's.
+//
+// Core itself never emits a subresource URL that isn't relative. Plugins do:
+// `getLineHTMLForExport`, `exportHTMLAdditionalContent` and `stylesForExport`
+// each splice arbitrary markup or CSS into this document, and what they splice
+// in is usually pad content — i.e. attacker-influenced on any install running
+// such a plugin. Core chooses the converter, so core owns the egress boundary
+// no matter who authored the markup.
+//
+// The rule below is therefore default-deny on the attribute VALUE rather than
+// on the attribute NAME. Anything that canonicalizes to an absolute URL is
+// dropped wherever it appears, so a subresource attribute nobody has thought
+// of yet is denied on arrival instead of after the next report. The only
+// attributes allowed to carry an absolute URL are the navigational ones, which
+// no converter dereferences.
+
+// Characters a URL consumer ignores but a naive prefix test does not. WHATWG
+// URL trims leading/trailing C0-and-space and strips tab/newline from anywhere
+// in the input, so `" http://x"`, `"ht\ttp://x"` and `"http:/\n/x"` all reach
+// the network as the same request. Stripping the whole range everywhere is
+// deliberately more aggressive than any real parser: this is a detector, and
+// it may over-classify but must never under-classify.
+const URL_IGNORED_RE = /[\u0000-\u0020\u007f]/g;
+
+// Undo the encodings a downstream HTML or CSS parser will undo before it sees
+// a URL. The serializer below still emits the ORIGINAL bytes (decodeEntities
+// stays off, so export output round-trips); only the security decision is
+// taken on the decoded view. `decodeHTML` is htmlparser2's own decoder, so
+// this check cannot drift from the parser that produced the attributes.
+const canonicalizeUrl = (raw: string): string => {
+  const decoded = decodeHTML(raw).replace(URL_IGNORED_RE, '');
+  let pctDecoded: string;
+  try {
+    pctDecoded = decodeURIComponent(decoded);
+  } catch {
+    // Malformed percent-escapes: fall back to the undecoded form rather than
+    // yielding an empty string, which would read as "safe".
+    pctDecoded = decoded;
+  }
+  // Strip AGAIN after percent-decoding: `%20`, `%09` and `%0a` decode INTO the
+  // ignored range, so stripping only beforehand would hand the scheme test a
+  // string that still begins with whitespace and reads as "no scheme".
+  return pctDecoded.replace(URL_IGNORED_RE, '');
 };
+
+const SCHEME_RE = /^[a-z][a-z0-9+.-]*:/i;
+
+const hasScheme = (v: string): boolean => SCHEME_RE.test(v) || v.startsWith('//');
+
+// True when resolving this value would take the converter off-box. `data:`
+// carries its payload inline and dereferences nothing.
+const isRemoteUrl = (raw: string): boolean => {
+  const v = canonicalizeUrl(raw);
+  if (!v) return false;
+  if (/^data:/i.test(v)) return false;
+  return hasScheme(v);
+};
+
+// A relative path that climbs out of the directory the converter resolves
+// against. soffice resolves relative URLs against the temp export directory
+// and html-to-docx resolves them against the process cwd, so `../../..`
+// reaches unrelated files on the server and embeds them into the output.
+const escapesBase = (raw: string): boolean =>
+    canonicalizeUrl(raw).split(/[/\\]/).includes('..');
+
+const isFetchable = (raw: string): boolean => isRemoteUrl(raw) || escapesBase(raw);
+
+// Candidate-list attributes (`srcset` and friends) hold several URLs, so a
+// remote one can hide behind a leading local one. Test every token; a stray
+// URL-shaped token in a non-URL attribute only costs that attribute.
+const hasFetchableToken = (value: string): boolean =>
+    value.split(/[\s,]+/).some((t) => t !== '' && isFetchable(t));
+
+// Attributes the converters treat as navigation rather than as a subresource:
+// they become a hyperlink in the .docx/.odt and are never dereferenced during
+// conversion. Pad content is full of these, so they have to survive — but only
+// carrying a scheme that is actually navigational.
+const NAVIGATIONAL_URL_ATTRS: {[tag: string]: Set<string>} = {
+  a: new Set(['href']),
+  area: new Set(['href']),
+};
+
+const NAV_SCHEME_RE = /^(?:https?|mailto|ftp|ftps|tel|news|nntp|xmpp|irc):/i;
+
+const isSafeNavUrl = (raw: string): boolean => {
+  const v = canonicalizeUrl(raw);
+  if (!v) return true;
+  if (v.startsWith('//')) return true;
+  if (!SCHEME_RE.test(v)) return true;
+  return NAV_SCHEME_RE.test(v);
+};
+
+// CSS fetches too, via `url()` and `@import`. A `style` ATTRIBUTE that wants
+// either is dropped whole: nothing core or any known plugin emits needs them,
+// and partially rewriting a declaration list invites exactly the
+// parser-differential bugs this file exists to avoid. The backslash catches
+// CSS escapes (`\75 rl(`) used to spell `url` past a literal match.
+// The backslash catches CSS escapes (`\75 rl(`) and `/*` catches comment
+// splitting (`u/**/rl(`) — both spell `url` past a literal match.
+const CSS_FETCH_RE = /url\s*\(|@import|expression\s*\(|\\|\/\*/i;
+
+// Inside a `<style>` ELEMENT the same constructs are removed surgically
+// instead, because that block also carries the author-colour rules and list
+// counters that make soffice exports render correctly.
+const CSS_IMPORT_RE = /@import[^;]*;?/gi;
+const CSS_URL_RE = /url\s*\(\s*(['"]?)([^)'"]*)\1\s*\)/gi;
+const CSS_COMMENT_RE = /\/\*[\s\S]*?\*\//g;
+const CSS_HEX_ESCAPE_RE = /\\([0-9a-f]{1,6})[ \t\n]?/gi;
+
+// A CSS parser resolves `\75` and `/**/` before it sees a token, so detection
+// has to run on the resolved form. This is used for DETECTION ONLY — the text
+// that gets emitted is never the decoded copy, because decoding would corrupt
+// legitimate escapes inside CSS strings (`content: "\201C"`).
+const resolveCssObfuscation = (css: string): string =>
+    css.replace(CSS_COMMENT_RE, '')
+        .replace(CSS_HEX_ESCAPE_RE, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
+        .replace(/\\(.)/g, '$1');
+
+const cssTextFetches = (css: string): boolean => {
+  if (/@import/i.test(css)) return true;
+  for (const m of css.matchAll(new RegExp(CSS_URL_RE.source, 'gi'))) {
+    if (isFetchable(m[2])) return true;
+  }
+  return false;
+};
+
+const sanitizeCssText = (css: string): string => {
+  // Surgical pass: remove the plainly-written forms, keeping the rest of the
+  // block (author colours, list counters) intact.
+  const surgical = css.replace(CSS_IMPORT_RE, '')
+      .replace(CSS_URL_RE, (match, _quote, target) =>
+        (isFetchable(target) ? 'none' : match));
+  // If a fetch still resolves out of an obfuscated form the surgical pass
+  // could not see, the block is not something we can safely rewrite
+  // declaration-by-declaration — drop its contents. Nothing core or any known
+  // plugin emits reaches this, so ordinary exports keep their CSS.
+  if (cssTextFetches(resolveCssObfuscation(surgical))) return '';
+  return surgical;
+};
+
+// Elements that load or execute content, or that change how every other URL in
+// the document resolves. `<base href="http://evil/">` is the important one: it
+// would turn every relative URL the checks above deliberately allow into a
+// remote fetch. None of these appear in an Etherpad export.
+const FORBIDDEN_TAGS = new Set([
+  'script', 'iframe', 'frame', 'frameset', 'object', 'embed', 'applet', 'base',
+]);
 
 const escapeAttr = (s: string): string =>
     s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
@@ -176,47 +326,74 @@ const VOID_TAGS = new Set([
   'link', 'meta', 'source', 'track', 'wbr',
 ]);
 
-export const stripRemoteImages = (html: string): string => {
+// Keep only the attributes that cannot make the converter dereference
+// anything. Returns the serialized attribute list, already escaped.
+const sanitizeAttribs = (tag: string, attribs: {[k: string]: string}): string => {
+  const navAttrs = NAVIGATIONAL_URL_ATTRS[tag];
   let out = '';
+  for (const [k, v] of Object.entries(attribs)) {
+    const key = k.toLowerCase();
+    if (key === 'style') {
+      if (CSS_FETCH_RE.test(decodeHTML(v))) continue;
+    } else if (navAttrs && navAttrs.has(key)) {
+      if (!isSafeNavUrl(v)) continue;
+    } else if (hasFetchableToken(v)) {
+      continue;
+    }
+    out += ` ${k}="${escapeAttr(v)}"`;
+  }
+  return out;
+};
+
+export const sanitizeExportHtml = (html: string): string => {
+  let out = '';
+  // Depth of the forbidden subtree we are currently inside. Everything —
+  // markup, text and comments — is suppressed while this is non-zero, so
+  // `<script>` bodies don't leak out as document text.
+  let skipDepth = 0;
+  // `<style>` and `<script>` contents arrive as raw text (htmlparser2 does not
+  // decode entities there and neither should the serializer re-escape it, or
+  // `ol > li` would come back out as `ol &gt; li`).
+  let inStyle = false;
   const parser = new Parser({
     onopentag(name, attribs) {
-      if (name === 'img') {
-        const src = attribs.src || '';
-        if (isLocalSrc(src)) {
-          let tag = '<img';
-          for (const [k, v] of Object.entries(attribs)) {
-            tag += ` ${k}="${escapeAttr(v)}"`;
-          }
-          tag += '>';
-          out += tag;
-        } else {
-          out += escapeText(attribs.alt || '');
-        }
+      if (skipDepth > 0 || FORBIDDEN_TAGS.has(name)) {
+        skipDepth++;
         return;
       }
-      let tag = `<${name}`;
-      for (const [k, v] of Object.entries(attribs)) {
-        tag += ` ${k}="${escapeAttr(v)}"`;
+      if (name === 'style') inStyle = true;
+      if (name === 'img' && isFetchable(attribs.src || '')) {
+        // An `<img>` stripped of its src renders as a broken-image box, so
+        // substitute the alt text the way this function always has.
+        out += escapeText(attribs.alt || '');
+        return;
       }
-      tag += '>';
-      out += tag;
+      out += `<${name}${sanitizeAttribs(name, attribs)}>`;
     },
     ontext(text) {
-      out += text;
+      if (skipDepth > 0) return;
+      out += inStyle ? sanitizeCssText(text) : text;
     },
     onclosetag(name) {
+      if (skipDepth > 0) {
+        skipDepth--;
+        return;
+      }
+      if (name === 'style') inStyle = false;
       if (VOID_TAGS.has(name)) return;
       out += `</${name}>`;
     },
     // Preserve document-level directives (notably `<!doctype html>`) and
-    // comments. stripRemoteImages() runs on the FULL export document for the
-    // soffice path, so dropping the doctype would flip LibreOffice into quirks
-    // mode. htmlparser2 surfaces the doctype as a processing instruction whose
+    // comments. This runs on the FULL export document for the soffice path,
+    // so dropping the doctype would flip LibreOffice into quirks mode.
+    // htmlparser2 surfaces the doctype as a processing instruction whose
     // `data` is e.g. `!doctype html`.
     onprocessinginstruction(name, data) {
+      if (skipDepth > 0) return;
       out += `<${data}>`;
     },
     oncomment(data) {
+      if (skipDepth > 0) return;
       out += `<!--${data}-->`;
     },
   }, {decodeEntities: false, lowerCaseTags: true});
@@ -224,3 +401,10 @@ export const stripRemoteImages = (html: string): string => {
   parser.end();
   return out;
 };
+
+/**
+ * @deprecated Kept so out-of-tree callers keep working. The sanitizer covers
+ * every URL-bearing attribute now, not just `<img src>`; use
+ * `sanitizeExportHtml`.
+ */
+export const stripRemoteImages = sanitizeExportHtml;

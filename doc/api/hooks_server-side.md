@@ -856,6 +856,16 @@ exports.exportHTMLAdditionalContent = async (hookName, {padId}) => {
 };
 ```
 
+> **Note:** markup returned by this hook is sanitized before it reaches the
+> office-export converters (DOCX/PDF/ODT/DOC). Those converters run on the
+> server and dereference subresource URLs, so any attribute or CSS `url()`
+> that resolves to an absolute URL — `<img src>`, `srcset`, `poster`,
+> `<link href>`, `style="background:url(...)"` — is removed, along with
+> `<script>`, `<iframe>`, `<object>`, `<embed>` and `<base>`. Relative URLs,
+> `data:` URIs and ordinary `<a href>` hyperlinks are preserved. The plain
+> HTML export is not affected. The same applies to `getLineHTMLForExport` and
+> `stylesForExport`.
+
 ## exportHTMLSend
 
 Called from: `src/node/handler/ExportHandler.ts`

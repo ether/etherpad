@@ -44,6 +44,7 @@
     "express-session": "^1.19.0",
     "formidable": "^3.5.4",
     "html-to-docx": "^1.8.0",
+    "entities": "^8.0.0",
     "htmlparser2": "^12.0.0",
     "http-errors": "^2.0.1",
     "jose": "^6.2.10",
