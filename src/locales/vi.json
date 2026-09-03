@@ -101,7 +101,7 @@
 	"timeslider.month.october": "Tháng Mười",
 	"timeslider.month.november": "Tháng Mười Một",
 	"timeslider.month.december": "Tháng Mười Hai",
-	"timeslider.unnamedauthors": "Không tên {{in a}} {[plural(num) một: tác giả, khác: tác giả]}",
+	"timeslider.unnamedauthors": "Không tên {{in a}} {[plural(num) one: tác giả, other: tác giả ]}",
 	"pad.savedrevs.marked": "Phiên bản này đã được đánh dấu là một phiên bản đã lưu",
 	"pad.userlist.entername": "Nhập tên của bạn",
 	"pad.userlist.unnamed": "Không tên",

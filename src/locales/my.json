@@ -149,7 +149,7 @@
 	"timeslider.month.october": "အောက်တိုဘာ",
 	"timeslider.month.november": "နို​ဝင်​ဘာ​",
 	"timeslider.month.december": "ဒီဇင်ဘာ",
-	"timeslider.unnamedauthors": "{{num}} အမည်မဖော်လိုသူ {[အများကိန်း (num) one: author၊ အခြား: author]}",
+	"timeslider.unnamedauthors": "{{num}} အမည်မဖော်လိုသူ {[plural(num) one: author, other: author ]}",
 	"pad.savedrevs.marked": "ယခုပြန်လည်တည်းဖြတ်မှုအားသိမ်းဆည်းထားသောတည်းဖြတ်မှုတစ်ခုအဖြစ်အမှတ်အသားပြုထားသည်",
 	"pad.savedrevs.timeslider": "timeslider ကိုသွားခြင်းဖြင့်သိမ်းဆည်းထားသောပြန်လည်တည်းဖြတ်ချက်များကိုသင်မြင်နိုင်သည်",
 	"pad.userlist.entername": "မင်းနာမည်ထည့်ပါ",

@@ -197,7 +197,7 @@
 	"timeslider.month.october": "أكتوبر",
 	"timeslider.month.november": "نوفمبر",
 	"timeslider.month.december": "ديسمبر",
-	"timeslider.unnamedauthors": "بدون اسم {{num}} {[plural(num) واحد: كاتب، آخر: مؤلف]}",
+	"timeslider.unnamedauthors": "بدون اسم {{num}} {[plural(num) one: كاتب, other: مؤلف ]}",
 	"pad.savedrevs.marked": "هذا التنقيح محدد الآن كمراجعة محفوظة",
 	"pad.savedrevs.timeslider": "يمكنك عرض المراجعات المحفوظة بزيارة متصفح التاريخ",
 	"pad.userlist.entername": "أدخل اسمك",

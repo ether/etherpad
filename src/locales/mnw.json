@@ -51,7 +51,7 @@
 	"timeslider.month.october": "\nအံက်တဝ်ပါ",
 	"timeslider.month.november": "\nနဝ်ဝေမ်ပါ",
 	"timeslider.month.december": "ဒဳဇြေန်ပါ",
-	"timeslider.unnamedauthors": "{{num}} ဟွံကဵုယၟု {[ဂမၠိုၚ်(num) မွဲ: ကဝိ, တၞဟ်: ကဝိဂမၠိုၚ် ]}",
+	"timeslider.unnamedauthors": "{{num}} ဟွံကဵုယၟု {[plural(num) one: ကဝိ, other: ကဝိဂမၠိုၚ် ]}",
 	"pad.userlist.entername": "စုတ် ယၟုညးလွပ်",
 	"pad.userlist.unnamed": "ဟွံကဵုလဝ်ယၟု",
 	"pad.impexp.importbutton": " မပၠောပ်စုတ် လၟုဟ်",

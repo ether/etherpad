@@ -121,7 +121,7 @@
 	"timeslider.month.october": "oktobra",
 	"timeslider.month.november": "novembra",
 	"timeslider.month.december": "decembra",
-	"timeslider.unnamedauthors": "{{num}} {[plural(num) one: neimenovani autor, plural(num) two: neimenovana autora, plural(num) other: neimenovanih autora ]}",
+	"timeslider.unnamedauthors": "{{num}} {[plural(num) one: neimenovani autor, two: neimenovana autora, other: neimenovanih autora ]}",
 	"pad.savedrevs.marked": "Ova inačica označena je sada kao spremljena",
 	"pad.savedrevs.timeslider": "Možete pogledati spremljene inačice rabeći vremesledni klizač",
 	"pad.userlist.entername": "Upišite svoje ime",

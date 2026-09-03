@@ -158,7 +158,7 @@
 	"timeslider.month.october": "október",
 	"timeslider.month.november": "november",
 	"timeslider.month.december": "december",
-	"timeslider.unnamedauthors": "{{num}} névtelen {[plural(num), one: szerző, other: szerző]}",
+	"timeslider.unnamedauthors": "{{num}} névtelen {[plural(num) one: szerző, other: szerző ]}",
 	"pad.savedrevs.marked": "Ez a revízió mostantól mentettként jelölve",
 	"pad.savedrevs.timeslider": "A mentett revíziókat az időcsúszkán tudod megnézni",
 	"pad.userlist.entername": "Add meg a nevedet",
