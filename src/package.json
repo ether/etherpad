@@ -62,7 +62,7 @@
     "mime-types": "^3.0.2",
     "mongodb": "^7.6.0",
     "mssql": "^12.6.0",
-    "mysql2": "^3.24.2",
+    "mysql2": "^3.24.3",
     "nano": "^11.0.7",
     "nodemailer": "^9.1.0",
     "oidc-provider": "9.12.0",
