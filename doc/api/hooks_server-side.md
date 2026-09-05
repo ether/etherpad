@@ -514,7 +514,7 @@ authnFailure function unless falling back to HTTP basic authentication is
 appropriate upon authentication failure.
 
 This hook is only called if either the `requireAuthentication` setting is true
-or the request is for an `/admin` page.
+or the request is for `/admin-auth` (admin login / session verification).
 
 Calling the provided callback with `[true]` or `[false]` will cause
 authentication to succeed or fail, respectively. Calling the callback with `[]`

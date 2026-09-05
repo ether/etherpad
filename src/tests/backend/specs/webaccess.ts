@@ -375,6 +375,35 @@ describe(__filename, function () {
         await agent.get('/').expect(500);
         assert.deepEqual(callOrder, ['preAuthorize_0', 'preAuthorize_1', 'authenticate_0']);
       });
+
+      // Regression for https://github.com/ether/etherpad/issues/8110 —
+      // ep_hash_auth (hash_dir path) authenticates by replacing
+      // settings.users[username] and can drop a pre-declared is_admin flag.
+      // /admin-auth/ must still admit the user when settings said they were admin.
+      it('POST /admin-auth/ invokes authenticate and preserves settings is_admin (#8110)',
+          async function () {
+            settings.requireAuthentication = false;
+            settings.users = {
+              // Classic ep_hash_auth setup: admin declared in settings, credentials
+              // supplied by the authenticate plugin (no plaintext password here).
+              hashadmin: {is_admin: true},
+            };
+            let authenticateCalled = false;
+            plugins.hooks.authenticate = [makeHook('authenticate',
+                (hookName: string, context: any, cb: Function) => {
+                  authenticateCalled = true;
+                  assert.equal(context.username, 'hashadmin');
+                  assert.equal(context.password, 'secret');
+                  // Mimic ep_hash_auth hash_dir success: rebuild the user object
+                  // without carrying is_admin forward.
+                  settings.users.hashadmin = {username: 'hashadmin', is_admin: false};
+                  context.req.session.user = settings.users.hashadmin;
+                  return cb([true]);
+                })];
+            await agent.post('/admin-auth/').auth('hashadmin', 'secret').expect(200);
+            assert.equal(authenticateCalled, true);
+            assert.equal(settings.users.hashadmin.is_admin, true);
+          });
     });
 
     describe('authorize', function () {
