@@ -1,5 +1,7 @@
 import path from 'node:path';
 import {spawn} from 'node:child_process';
+// cross-spawn resolves .cmd shims such as pnpm on Windows, which child_process.spawn cannot run.
+import crossSpawn from 'cross-spawn';
 import fs from 'node:fs/promises';
 import log4js from 'log4js';
 import settings, {getEpVersion} from '../utils/Settings';
@@ -240,7 +242,7 @@ const startPolling = (): void => {
 export const getRollbackDeps = (): RollbackDeps => ({
   repoDir: settings.root,
   backupDir: path.join(settings.root, 'var', 'update-backup'),
-  spawnFn: spawn as unknown as SpawnFn,
+  spawnFn: crossSpawn as unknown as SpawnFn,
   copyFile: async (src: string, dst: string) => {
     await fs.mkdir(path.dirname(dst), {recursive: true});
     await fs.copyFile(src, dst);
@@ -300,7 +302,7 @@ const buildSchedulerApplyDeps = (): ApplyPipelineDeps => ({
         // pm_on_fail=ignore so a "packageManager" pin mismatch doesn't make pnpm
         // exit non-zero (it would otherwise try to fetch the pinned build, which
         // fails offline) and falsely report pnpm as absent. See #7911.
-        const c = spawn('pnpm', ['--version'],
+        const c = crossSpawn('pnpm', ['--version'],
             {stdio: 'ignore', env: {...process.env, pnpm_config_pm_on_fail: 'ignore'}});
         c.on('close', (code) => resolve(code === 0));
         c.on('error', () => resolve(false));
@@ -346,7 +348,7 @@ const buildSchedulerApplyDeps = (): ApplyPipelineDeps => ({
   executeUpdate: async ({targetTag, initialState}) => executeUpdate({
     repoDir: settings.root,
     backupDir: path.join(settings.root, 'var', 'update-backup'),
-    spawnFn: spawn as unknown as SpawnFn,
+    spawnFn: crossSpawn as unknown as SpawnFn,
     readSha: () => new Promise<string>((resolve, reject) => {
       const c = spawn('git', ['rev-parse', 'HEAD'], {cwd: settings.root, stdio: ['ignore', 'pipe', 'ignore']});
       let out = '';
