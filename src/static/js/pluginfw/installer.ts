@@ -54,10 +54,11 @@ const migratePluginsFromNodeModules = async () => {
   logger.info('start migration of plugins in node_modules');
   // Notes:
   //   * Do not pass `--prod` otherwise `npm ls` will fail if there is no `package.json`.
-  //   * The `--no-production` flag is required (or the `NODE_ENV` environment variable must be
+  //   * The `--no-prod` flag is required (or the `NODE_ENV` environment variable must be
   //     unset or set to `development`) because otherwise `npm ls` will not mention any packages
-  //     that are not included in `package.json` (which is expected to not exist).
-  const cmd = ['pnpm', 'ls', '--long', '--json', '--depth=0', '--no-production'];
+  //     that are not included in `package.json` (which is expected to not exist). pnpm 12 no
+  //     longer accepts the `--no-production` spelling.
+  const cmd = ['pnpm', 'ls', '--long', '--json', '--depth=0', '--no-prod'];
   const [{dependencies = {}}] = JSON.parse(await runCmd(cmd,
       {stdio: [null, 'string']}));
 
