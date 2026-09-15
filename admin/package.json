@@ -39,7 +39,7 @@
     "lucide-react": "^1.45.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
-    "react-hook-form": "^7.87.0",
+    "react-hook-form": "^7.88.0",
     "react-i18next": "^17.0.14",
     "react-router-dom": "^7.18.3",
     "socket.io-client": "^4.8.3",
