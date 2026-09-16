@@ -1,13 +1,12 @@
 name: "Backend tests"
 
 # any branch is useful for testing before a PR is submitted
+# No paths-ignore: the Linux jobs are required status checks on develop (so
+# Dependabot auto-merge waits for them). A skipped workflow never reports, which
+# would leave docs-only PRs blocked forever.
 on:
   push:
-    paths-ignore:
-      - "doc/**"
   pull_request:
-    paths-ignore:
-      - "doc/**"
 
 permissions:
   contents: read

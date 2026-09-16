@@ -26,6 +26,13 @@ updates:
       # `gen:api`. Review TS major bumps manually instead.
       - dependency-name: "typescript"
         update-types: ["version-update:semver-major"]
+      # mocha 12.0.1 require()s the ESM-only find-up@8; under `--import=tsx`
+      # tsx resolves its nested `unicorn-magic` import with require conditions
+      # and mocha dies at startup (ERR_PACKAGE_PATH_NOT_EXPORTED), so no
+      # backend test runs. src/package.json pins 12.0.0; lift once tsx or
+      # mocha fixes it.
+      - dependency-name: "mocha"
+        versions: ["12.0.1"]
     cooldown:
       default-days: 1        # fallback for anything not covered below
       semver-major-days: 7
