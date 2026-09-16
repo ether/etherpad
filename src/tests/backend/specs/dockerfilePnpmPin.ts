@@ -11,12 +11,12 @@
 // download fails and pnpm exits non-zero, surfacing as `Failed to get pnpm
 // version` and breaking offline boots.
 //
-// The image deliberately lags the pin (pnpm 11.1.x enforces a minimum-release-
-// age policy the frozen-lockfile build can't satisfy), so the guard is not to
-// force the versions equal but to neutralise the gap: the Dockerfile must set
-// pnpm_config_pm_on_fail=ignore so pnpm uses the installed version instead of
-// reaching for the network. This test fails if that guard is dropped while a
-// version gap exists.
+// The image and the pin are kept in sync, so the guard is belt-and-suspenders
+// rather than strictly required. It exists to neutralise any future gap: if the
+// image pnpm ever drifts from the "packageManager" pin again, the Dockerfile
+// must set pnpm_config_pm_on_fail=ignore so pnpm uses the installed version
+// instead of reaching for the network. This test fails if that guard is dropped
+// while a version gap exists.
 
 const assert = require('assert').strict;
 import fs from 'fs';

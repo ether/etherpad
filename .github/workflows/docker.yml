@@ -119,7 +119,7 @@ jobs:
         # Regression test for #7718. Reproduces the production
         # docker-compose layout reported in that issue: a named volume
         # mounted on src/plugin_packages with no TTY allocated. Under
-        # the previous `CMD ["pnpm", "run", "prod"]`, pnpm 11's
+        # the previous `CMD ["pnpm", "run", "prod"]`, pnpm's
         # runDepsStatusCheck spuriously decided node_modules was out of
         # sync at boot and tried to wipe + reinstall, aborting with
         # ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY before the HTTP
