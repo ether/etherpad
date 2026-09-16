@@ -32,9 +32,13 @@ const supportedElems = require('../../static/js/contentcollector').supportedElem
 
 const logger = log4js.getLogger('ImportEtherpad');
 
-const isValidColorId = (colorId: unknown) =>
-  (typeof colorId === 'number' && Number.isInteger(colorId) && colorId >= 0) ||
-  (typeof colorId === 'string' && /^(?:\d+|#[0-9a-f]{3}|#[0-9a-f]{6})$/i.test(colorId));
+// A colorId is either an index into the color palette or a #hex color.
+const isValidColorId = (colorId: unknown) => {
+  if (typeof colorId === 'string' && /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(colorId)) return true;
+  const index = typeof colorId === 'string' && /^\d+$/.test(colorId) ? Number(colorId) : colorId;
+  return Number.isInteger(index) &&
+      (index as number) >= 0 && (index as number) < authorManager.getColorPalette().length;
+};
 
 // Not `Pad.SYSTEM_AUTHOR_ID`: that would be a circular import
 // (ImportEtherpad -> Pad -> ImportEtherpad via padManager) at module init

@@ -60,6 +60,17 @@ describe(__filename, function () {
     assert.equal(typeof colorId, 'number');
   });
 
+  it('import replaces an out-of-range palette index', async function () {
+    await importEtherpad.setPadRaw(padId, JSON.stringify(makeExport(999)));
+    const colorId = await authorManager.getAuthorColorId(authorId);
+    assert(colorId >= 0 && colorId < authorManager.getColorPalette().length, `${colorId}`);
+  });
+
+  it('import keeps an in-range palette index', async function () {
+    await importEtherpad.setPadRaw(padId, JSON.stringify(makeExport(3)));
+    assert.equal(await authorManager.getAuthorColorId(authorId), 3);
+  });
+
   it('import keeps valid colorIds', async function () {
     await importEtherpad.setPadRaw(padId, JSON.stringify(makeExport('#abc123')));
     assert.equal(await authorManager.getAuthorColorId(authorId), '#abc123');
