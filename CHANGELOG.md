@@ -1,5 +1,11 @@
 # 3.3.4
 
+3.3.4 is a security release. It closes a stored XSS in the `createDiffHTML` API output (GHSA-6vx2-3gwr-958v).
+
+### Security
+
+- **Neutralize author IDs and colors in HTML diff export (GHSA-6vx2-3gwr-958v).** `getHTMLFromAtext` placed author colors inside a `<style>` block, and author IDs in both the CSS selector and a `<span class>` attribute, with no escaping. Anyone who can import a `.etherpad` file (anonymous by default) could plant a crafted `colorId` or author ID, so the `createDiffHTML` output carried script into any integration that renders it. Export now only emits `#rgb`/`#rrggbb` colors and limits author class names to `[A-Za-z0-9_-]`. As an extra safeguard, `.etherpad` import replaces a malformed `colorId` with a palette color, matching the live socket validation. Adds backend regression tests. Reported by zx (@manus-pi).
+
 ### Notable fixes
 
 - **API — `movePad` now carries the pad's deletion token to the new id (#7995).** `movePad` is implemented as `copy()` + `remove()`, but `Pad.copy()` only copies the `pad:<id>`, `:revs:N` and `:chat:N` records — never `pad:<id>:deletionToken` — and `remove()` then deleted the source pad's token. The renamed pad therefore had no token at all: the token the creator had been told to save no longer deleted anything, and because the copy keeps the same revision-0 author, their next visit tripped `createDeletionTokenIfAbsent()` and popped a second "save your pad deletion token" modal. The token record is now handed over to the destination as part of the move, so the saved token keeps working and the modal does not reappear. `force`-overwriting an existing destination discards that pad's own token along with its content. `copyPad` is deliberately unchanged — two pads sharing one secret would let a token saved for one delete the other.
