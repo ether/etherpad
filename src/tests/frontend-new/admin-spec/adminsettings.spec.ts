@@ -434,6 +434,12 @@ test.describe('admin settings',()=> {
   });
 
   // Regression for https://github.com/ether/etherpad/issues/8211.
+  // settings.json.template also mentions `"defaultPadText"` inside its
+  // documentation comment, which precedes the real key; earlier specs may
+  // also have minified the file onto one line. So take the last match.
+  const lastDefaultPadText = (text: string) =>
+    [...text.matchAll(/"defaultPadText"\s*:\s*("(?:[^"\\]|\\.)*")/g)].pop();
+
   // Form inputs are single-line, so string values are shown and edited in
   // their JSON-escaped form (the same form used in settings.json). Typing
   // `\n` must be saved as the JSON escape `\n` (a newline), not re-escaped
@@ -461,8 +467,8 @@ test.describe('admin settings',()=> {
         .toHaveValue('Welcome\\n\\ntest "quoted" C:\\\\dir\\n');
     await page.getByTestId('mode-toggle-raw').click();
     const after = await page.getByTestId('settings-raw-textarea').inputValue();
-    const m = /^\s*"defaultPadText"\s*:\s*("(?:[^"\\]|\\.)*")/m.exec(after);
-    expect(m).not.toBeNull();
+    const m = lastDefaultPadText(after);
+    expect(m).not.toBeUndefined();
     expect(JSON.parse(m![1])).toEqual('Welcome\n\ntest "quoted" C:\\dir\n');
 
     // Restore
@@ -479,12 +485,11 @@ test.describe('admin settings',()=> {
     const original = await raw.inputValue();
 
     // The shape settings.json.docker uses for defaultPadText.
-    // Anchor to the start of a line so the documentation comment in the
-    // template (` *    "defaultPadText" : ...`) is not the one replaced.
-    const withEnv = original.replace(
-      /^(\s*)"defaultPadText"\s*:\s*"(?:[^"\\]|\\.)*"/m,
-      '$1"defaultPadText": "${DEFAULT_PAD_TEXT:Line 1\\nLine 2}"',
-    );
+    const m = lastDefaultPadText(original);
+    expect(m).not.toBeUndefined();
+    const withEnv = original.slice(0, m!.index) +
+        '"defaultPadText": "${DEFAULT_PAD_TEXT:Line 1\\nLine 2}"' +
+        original.slice(m!.index + m![0].length);
     expect(withEnv).not.toEqual(original);
     await raw.fill(withEnv);
     await saveSettings(page);
