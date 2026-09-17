@@ -31,6 +31,29 @@ test.describe('recent pads after pad deletion', () => {
     await expect(page.locator('.recent-pad a', {hasText: padId})).toHaveCount(0);
   });
 
+  test('legacy URL-encoded recent pad entries are removed too', async ({page}) => {
+    const padId = `FRONTEND_TESTS_notes&ideas_${randomUUID().slice(0, 8)}`;
+    await page.goto(`http://localhost:9001/p/${encodeURIComponent(padId)}`);
+    await page.waitForSelector('#editorcontainer.initialized');
+    await page.locator('#deletiontoken-ack').click();
+    // Older versions stored the encoded name; seed such an entry alongside the
+    // decoded one the current client writes.
+    await page.evaluate((legacyName) => {
+      const pads = JSON.parse(window.localStorage.getItem('recentPads') || '[]');
+      pads.push({name: legacyName, timestamp: new Date(0).toISOString(), members: 1});
+      window.localStorage.setItem('recentPads', JSON.stringify(pads));
+    }, encodeURIComponent(padId));
+
+    await showSettings(page);
+    page.once('dialog', (d) => d.accept());
+    await page.locator('#delete-pad').click();
+    await waitForHome(page);
+
+    const remaining = await recentPadNames(page);
+    expect(remaining).not.toContain(padId);
+    expect(remaining).not.toContain(encodeURIComponent(padId));
+  });
+
   test('deleting with a token on a second device removes it from that device', async ({
     page, browser,
   }) => {

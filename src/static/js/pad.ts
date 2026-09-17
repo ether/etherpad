@@ -307,8 +307,18 @@ const forgetRecentPad = () => {
     const padName = decodeURIComponent(pathSegments[pathSegments.length - 1]);
     const recentPads = JSON.parse(stored);
     if (!Array.isArray(recentPads)) return;
-    localStorage.setItem('recentPads', JSON.stringify(
-        recentPads.filter((p) => p == null || (p.name !== padName && p.name !== pad.getPadId()))));
+    const deleted = new Set([padName, pad.getPadId()]);
+    // Entries written by older versions may hold a URL-encoded name; normalize
+    // the same way the welcome screen does before comparing.
+    const decodeName = (name) => {
+      try {
+        return decodeURIComponent(name);
+      } catch {
+        return name;
+      }
+    };
+    localStorage.setItem('recentPads', JSON.stringify(recentPads.filter(
+        (p) => p == null || !(deleted.has(p.name) || deleted.has(decodeName(p.name))))));
   } catch (err) {
     console.warn('Unable to update recent pads after pad deletion', err);
   }
