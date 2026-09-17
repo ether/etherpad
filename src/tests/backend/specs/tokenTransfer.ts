@@ -44,7 +44,7 @@ describe(__filename, function () {
 
   describe('happy path', function () {
     it('POST returns an id and GET sets the HttpOnly cookie', async function () {
-      const id = await postTransfer('t.abc123', {prefsHttp: 'theme=dark'});
+      const id = await postTransfer('t.abc123', {prefsHttp: '{"theme":"dark"}'});
       const res = await agent.get(`/tokenTransfer/${id}`).expect(200);
 
       // The response body must not contain the raw `token` field —
@@ -57,7 +57,7 @@ describe(__filename, function () {
         throw new Error(
             `expected {ok:true,...} body, got ${JSON.stringify(res.body)}`);
       }
-      if (res.body.prefsHttp !== 'theme=dark') {
+      if (res.body.prefsHttp !== '{"theme":"dark"}') {
         throw new Error(
             `expected prefsHttp to round-trip, got ${JSON.stringify(res.body)}`);
       }
@@ -82,6 +82,102 @@ describe(__filename, function () {
             `expected author cookie to carry the original token, got ${
               tokenCookie}`);
       }
+    });
+  });
+
+  // ether/etherpad#8171: preferences must survive the transfer on both
+  // HTTP (`prefsHttp`) and HTTPS (`prefs`) deployments, and must be encoded
+  // exactly once in the destination cookie so that js-cookie's single
+  // decodeURIComponent() yields parseable JSON (see pad_cookie.ts).
+  describe('preferences transfer (#8171)', function () {
+    const prefsObj = {theme: 'dark', padFontFamily: 'Arial Bold', showChat: true};
+    const prefsJson = JSON.stringify(prefsObj);
+    const wire = encodeURIComponent(prefsJson);
+
+    // Mirror what js-cookie does on the destination: find the cookie in the
+    // Set-Cookie headers and decodeURIComponent() its value once.
+    const readSetCookie = (res: any, name: string): string | undefined => {
+      const setCookie = (res.headers['set-cookie'] || []) as string[];
+      const c = setCookie.find((h) => h.startsWith(`${name}=`));
+      if (c == null) return undefined;
+      return decodeURIComponent(c.slice(name.length + 1).split(';')[0]);
+    };
+    const assertPrefsCookie = (res: any, name: string) => {
+      const value = readSetCookie(res, name);
+      if (value == null) {
+        throw new Error(`expected Set-Cookie for ${name}, got ${
+          JSON.stringify(res.headers['set-cookie'])}`);
+      }
+      let parsed;
+      try {
+        parsed = JSON.parse(value);
+      } catch (err) {
+        throw new Error(`${name} cookie is not parseable JSON after one decode: ${value}`);
+      }
+      if (JSON.stringify(parsed) !== prefsJson) {
+        throw new Error(`expected ${name}=${prefsJson}, got ${value}`);
+      }
+    };
+
+    // Simulate an HTTPS request (e.g. behind a TLS-terminating proxy with
+    // trustProxy enabled) by making Express report X-Forwarded-Proto as
+    // req.protocol. socket.io wraps the server's request listeners, so the
+    // app instance isn't reachable to flip 'trust proxy' directly; patch the
+    // shared request prototype instead and restore it after each test.
+    const expressRequest = require('express').request;
+    const protocolDescriptor = Object.getOwnPropertyDescriptor(expressRequest, 'protocol')!;
+    const simulateHttps = () => {
+      Object.defineProperty(expressRequest, 'protocol', {
+        configurable: true,
+        enumerable: true,
+        get() {
+          return this.get('X-Forwarded-Proto') === 'https'
+            ? 'https' : protocolDescriptor.get!.call(this);
+        },
+      });
+    };
+    afterEach(function () {
+      Object.defineProperty(expressRequest, 'protocol', protocolDescriptor);
+    });
+
+    it('HTTP: prefsHttp cookie wire value is not double-encoded', async function () {
+      const res = await agent.post('/tokenTransfer')
+          .set('Cookie', `${authorCookie('t.http')}; ${cookiePrefix()}prefsHttp=${wire}`)
+          // Legacy client behaviour: the raw (percent-encoded) cookie text.
+          .send({prefsHttp: wire})
+          .expect(200);
+      const get = await agent.get(`/tokenTransfer/${res.body.id}`).expect(200);
+      assertPrefsCookie(get, `${cookiePrefix()}prefsHttp`);
+    });
+
+    it('HTTP: legacy client body without the cookie is decoded once', async function () {
+      const id = await postTransfer('t.http-body', {prefsHttp: wire});
+      const get = await agent.get(`/tokenTransfer/${id}`).expect(200);
+      assertPrefsCookie(get, `${cookiePrefix()}prefsHttp`);
+    });
+
+    it('HTTPS: prefs cookie is transferred and written as prefs', async function () {
+      simulateHttps();
+      const res = await agent.post('/tokenTransfer')
+          .set('X-Forwarded-Proto', 'https')
+          .set('Cookie', `${authorCookie('t.https')}; ${cookiePrefix()}prefs=${wire}`)
+          // The HTTPS page has no prefsHttp cookie, so the client sends nothing.
+          .send({})
+          .expect(200);
+      const get = await agent.get(`/tokenTransfer/${res.body.id}`)
+          .set('X-Forwarded-Proto', 'https')
+          .expect(200);
+      assertPrefsCookie(get, `${cookiePrefix()}prefs`);
+      if (readSetCookie(get, `${cookiePrefix()}prefsHttp`) != null) {
+        throw new Error('HTTPS redemption must not write prefsHttp');
+      }
+    });
+
+    it('ignores preferences that are not a JSON object', async function () {
+      const id = await postTransfer('t.garbage', {prefsHttp: 'not%20json'});
+      const get = await agent.get(`/tokenTransfer/${id}`).expect(200);
+      const value = readSetCookie(get, `${cookiePrefix()}prefsHttp`);
+      if (value) throw new Error(`expected no/empty prefs cookie, got ${value}`);
     });
   });
 
