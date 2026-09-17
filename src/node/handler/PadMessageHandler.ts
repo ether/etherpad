@@ -1057,40 +1057,64 @@ exports.updatePadClients = async (pad: PadType) => {
     // The user might have disconnected since _getRoomSockets() was called.
     if (sessioninfo == null) return;
 
-    while (sessioninfo.rev < pad.getHeadRevisionNumber()) {
-      const r = sessioninfo.rev + 1;
-      let revision = revCache[r];
-      if (!revision) {
-        revision = await pad.getRevision(r);
-        revCache[r] = revision;
-      }
+    // One fan-out per socket at a time. Without this, two concurrent
+    // updatePadClients() runs both read `sessioninfo.rev`, both await
+    // pad.getRevision(), and both emit the same revision to the same client
+    // (#7756 lever 3): the loop's read-await-write is not atomic.
+    //
+    // The claim is a separate flag on purpose. `sessioninfo.rev` has to keep
+    // meaning "last revision actually put on the wire" — handleUserChanges
+    // asserts `thisSession.rev === r` before emitting ACCEPT_COMMIT precisely to
+    // guarantee the client sees NEW_CHANGES and ACCEPT_COMMIT in order. Bumping
+    // rev up front to claim a range would satisfy that assert while the
+    // NEW_CHANGES messages are still queued behind an await, which is the
+    // out-of-order delivery the assert exists to prevent.
+    //
+    // A skipped run loses nothing: the run that holds the flag re-reads
+    // getHeadRevisionNumber() every iteration, so it also ships whatever arrived
+    // in the meantime.
+    if (sessioninfo.fanOutInFlight) return;
+    sessioninfo.fanOutInFlight = true;
+    try {
+      while (sessioninfo.rev < pad.getHeadRevisionNumber()) {
+        const r = sessioninfo.rev + 1;
+        let revision = revCache[r];
+        if (!revision) {
+          revision = await pad.getRevision(r);
+          revCache[r] = revision;
+        }
 
-      const author = revision.meta.author;
-      const revChangeset = revision.changeset;
-      const currentTime = revision.meta.timestamp;
+        const author = revision.meta.author;
+        const revChangeset = revision.changeset;
+        const currentTime = revision.meta.timestamp;
 
-      const forWire = prepareForWire(revChangeset, pad.pool);
-      const msg = {
-        type: 'COLLABROOM',
-        data: {
-          type: 'NEW_CHANGES',
-          newRev: r,
-          changeset: forWire.translated,
-          apool: forWire.pool,
-          author,
-          currentTime,
-          timeDelta: currentTime - sessioninfo.time,
-        },
-      };
-      try {
-        socket.emit('message', msg);
-        recordSocketEmit('NEW_CHANGES');
-      } catch (err:any) {
-        messageLogger.error(`Failed to notify user of new revision: ${err.stack || err}`);
-        return;
+        const forWire = prepareForWire(revChangeset, pad.pool);
+        const msg = {
+          type: 'COLLABROOM',
+          data: {
+            type: 'NEW_CHANGES',
+            newRev: r,
+            changeset: forWire.translated,
+            apool: forWire.pool,
+            author,
+            currentTime,
+            timeDelta: currentTime - sessioninfo.time,
+          },
+        };
+        try {
+          socket.emit('message', msg);
+          recordSocketEmit('NEW_CHANGES');
+        } catch (err:any) {
+          messageLogger.error(`Failed to notify user of new revision: ${err.stack || err}`);
+          return;
+        }
+        sessioninfo.time = currentTime;
+        sessioninfo.rev = r;
       }
-      sessioninfo.time = currentTime;
-      sessioninfo.rev = r;
+    } finally {
+      // Cleared even on the `return` inside the emit-failure path above, so a
+      // failed send doesn't wedge the socket's fan-out for good.
+      sessioninfo.fanOutInFlight = false;
     }
   }));
 };
