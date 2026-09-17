@@ -111,8 +111,16 @@ jobs:
           fi
 
   installer-windows:
-    name: end-to-end install (windows-latest)
+    name: end-to-end install (windows-latest, ${{ matrix.shell }})
     runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # pwsh = PowerShell 7; powershell = Windows PowerShell 5.1, the
+        # default shell on Windows 10/11 and what most `irm | iex` users run.
+        # 5.1 passes native-command arguments differently (it strips embedded
+        # double quotes), so the installer must be exercised under both (#8214).
+        shell: [pwsh, powershell]
     steps:
       - uses: actions/checkout@v7
 
@@ -124,7 +132,7 @@ jobs:
         run: npm install -g pnpm
 
       - name: Run bin/installer.ps1 against this commit
-        shell: pwsh
+        shell: ${{ matrix.shell }}
         env:
           ETHERPAD_DIR: ${{ runner.temp }}\etherpad-installer-test
           ETHERPAD_REPO: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.clone_url || format('{0}/{1}.git', github.server_url, github.repository) }}
