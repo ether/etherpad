@@ -15,6 +15,14 @@ type Props = {
 
 const sanitize = (s: string) => s.replace(/[}]/g, '');
 
+// Decode an escaped default. A `}` (e.g. from `\u007d`) would terminate the
+// `${VAR:default}` placeholder, so treat it as invalid rather than silently
+// dropping it.
+const decodeDefault = (s: string): string | null => {
+  const decoded = unescapeFromInput(s);
+  return decoded === null || decoded.includes('}') ? null : decoded;
+};
+
 const formatDisplay = (v: unknown): string => {
   if (v === null) return 'null';
   if (typeof v === 'string') return v;
@@ -27,13 +35,17 @@ export const EnvPill = ({ placeholder, path, onChange, resolvedValue }: Props) =
   // Normalise it through decode/escape so it matches what StringInput shows
   // (e.g. `https:\/\/` displays as `https://`) — see stringEscapes.ts.
   const rawDefault = placeholder.defaultValue ?? '';
-  const decodedDefault = unescapeFromInput(rawDefault);
+  const decodedDefault = decodeDefault(rawDefault);
   const initial = decodedDefault === null ? rawDefault : escapeForInput(decodedDefault);
   const [draft, setDraft] = useState(initial);
+  const [invalid, setInvalid] = useState(false);
   const focused = useRef(false);
 
   useEffect(() => {
-    if (!focused.current) setDraft(initial);
+    if (!focused.current) {
+      setDraft(initial);
+      setInvalid(false);
+    }
   }, [initial]);
 
   const id = `field-${path.join('.')}`;
@@ -64,16 +76,24 @@ export const EnvPill = ({ placeholder, path, onChange, resolvedValue }: Props) =
         value={draft}
         spellCheck={false}
         aria-label={t('admin_settings.env_pill.input_aria', { variable: placeholder.variable })}
+        aria-invalid={invalid || undefined}
         onFocus={() => { focused.current = true; }}
-        onBlur={() => { focused.current = false; }}
+        onBlur={() => {
+          focused.current = false;
+          // Drop a rejected draft so the field never shows a value that
+          // was not applied to the settings text.
+          setDraft(initial);
+          setInvalid(false);
+        }}
         onChange={e => {
           const v = sanitize(e.target.value);
           setDraft(v);
           // The draft is in escaped form; hand the decoded value to the
           // JSON writer so typed `\n` is stored as `\n`, not `\\n` (#8211).
           // Incomplete escapes (a trailing `\`) are not propagated.
-          const decoded = unescapeFromInput(v);
-          if (decoded !== null) onChange(sanitize(decoded));
+          const decoded = decodeDefault(v);
+          setInvalid(decoded === null);
+          if (decoded !== null) onChange(decoded);
         }}
       />
       {hasResolved && !isRedacted && (
