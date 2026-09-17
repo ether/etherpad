@@ -50,7 +50,7 @@ if (-not (Test-Cmd node)) {
     Write-Fatal "Node.js is required (>= $RequiredNodeMajor). Install it from https://nodejs.org"
 }
 
-$nodeMajor = [int](node -p 'process.versions.node.split(".")[0]')
+$nodeMajor = [int](node -p 'parseInt(process.versions.node)')
 if ($nodeMajor -lt $RequiredNodeMajor) {
     $nodeVer = (node --version)
     Write-Fatal "Node.js >= $RequiredNodeMajor required. You have $nodeVer."
