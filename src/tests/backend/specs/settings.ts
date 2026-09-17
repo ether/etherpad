@@ -149,7 +149,7 @@ describe(__filename, function () {
       }
     });
 
-    // Regression test for ether/etherpad#8110.
+    // Regression test for ether/etherpad#8109 / #8110.
     // Plugin configuration lives in top-level `ep_*` blocks in settings.json
     // (ep_hash_auth.hash_dir, ep_ldapauth.url, …). Those keys don't exist on
     // the settings object while Settings.ts is still evaluating, so a shim
@@ -171,6 +171,12 @@ describe(__filename, function () {
         settingsMod.reloadSettings();
         assert.deepEqual(settingsMod.ep_regression_8110, {hash_dir: '/srv/etherpad/users'},
             'plugin ep_* settings must be reachable via CJS require, not just via .default');
+        assert.ok(Object.keys(settingsMod).includes('ep_regression_8110'),
+            'plugin ep_* key must be enumerable on the CJS module export');
+        if (settingsMod.default != null) {
+          assert.strictEqual(settingsMod.ep_regression_8110, settingsMod.default.ep_regression_8110,
+              'CJS accessor must return the live settings object, not a copy');
+        }
       } finally {
         // Drop the key from the shared settings object as well as the accessor
         // the shim installed on module.exports, so later specs see a clean slate.
