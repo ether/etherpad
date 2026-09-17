@@ -1,3 +1,12 @@
+# 3.3.5
+
+3.3.5 is a bug-fix follow-up to 3.3.4. It fixes a startup crash on fresh installs when pnpm 12 (now pnpm's default release) is installed, and makes the built-in updater work on Windows.
+
+### Notable fixes
+
+- **Fresh installs no longer crash at startup under pnpm 12 (#8232).** On first boot (no `var/installed_plugins.json`), Etherpad runs `pnpm ls` to migrate plugins found in `node_modules`, passing `--no-production`. pnpm 12 renamed that flag to `--no-prod` and rejects the old name, so the server exited with `Error occurred while starting Etherpad` before it bound a port. The call now uses `--no-prod`, which pnpm 10 and 11 also accept. Existing installs were not affected. The repository, release tooling, Docker image and snap also move to pnpm 12.
+- **Updater — spawn pnpm through `cross-spawn` so updates work on Windows (#8218).** On Windows `pnpm` is a `.cmd` shim that plain `child_process.spawn` can't run, so the built-in update actions failed there. Thanks to Kaan Çelebi.
+
 # 3.3.4
 
 3.3.4 is a security release. It closes a stored XSS in the `createDiffHTML` API output (GHSA-6vx2-3gwr-958v).
