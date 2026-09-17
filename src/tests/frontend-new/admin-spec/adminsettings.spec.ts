@@ -433,6 +433,80 @@ test.describe('admin settings',()=> {
     expect(effectiveText).toContain('[REDACTED]');
   });
 
+  // Regression for https://github.com/ether/etherpad/issues/8211.
+  // Form inputs are single-line, so string values are shown and edited in
+  // their JSON-escaped form (the same form used in settings.json). Typing
+  // `\n` must be saved as the JSON escape `\n` (a newline), not re-escaped
+  // to `\\n` (a literal backslash + n).
+  test('#8211 escape sequences typed in a form string field are saved unescaped', async ({page}) => {
+    await page.goto('http://localhost:9001/admin/settings');
+    await page.waitForSelector('[data-testid="settings-form-view"]', {timeout: 30000});
+    await page.getByTestId('mode-toggle-raw').click();
+    const raw = page.getByTestId('settings-raw-textarea');
+    await expect(raw).toBeVisible({timeout: 10000});
+    const original = await raw.inputValue();
+
+    await page.getByTestId('mode-toggle-form').click();
+    const field = page.getByTestId('field-defaultPadText');
+    await expect(field).toBeVisible({timeout: 10000});
+    // Existing newlines are displayed as `\n` rather than silently dropped
+    // by the single-line <input>.
+    await expect(field).toHaveValue(/^Welcome to Etherpad!\\n\\nThis pad text/);
+    await field.fill('Welcome\\n\\ntest "quoted" C:\\\\dir\\n');
+    await saveSettings(page);
+
+    await page.reload();
+    await page.waitForSelector('[data-testid="settings-form-view"]', {timeout: 30000});
+    await expect(page.getByTestId('field-defaultPadText'))
+        .toHaveValue('Welcome\\n\\ntest "quoted" C:\\\\dir\\n');
+    await page.getByTestId('mode-toggle-raw').click();
+    const after = await page.getByTestId('settings-raw-textarea').inputValue();
+    const m = /^\s*"defaultPadText"\s*:\s*("(?:[^"\\]|\\.)*")/m.exec(after);
+    expect(m).not.toBeNull();
+    expect(JSON.parse(m![1])).toEqual('Welcome\n\ntest "quoted" C:\\dir\n');
+
+    // Restore
+    await page.getByTestId('settings-raw-textarea').fill(original);
+    await saveSettings(page);
+  });
+
+  test('#8211 escape sequences typed in an env placeholder default are saved unescaped', async ({page}) => {
+    await page.goto('http://localhost:9001/admin/settings');
+    await page.waitForSelector('[data-testid="settings-form-view"]', {timeout: 30000});
+    await page.getByTestId('mode-toggle-raw').click();
+    const raw = page.getByTestId('settings-raw-textarea');
+    await expect(raw).toBeVisible({timeout: 10000});
+    const original = await raw.inputValue();
+
+    // The shape settings.json.docker uses for defaultPadText.
+    // Anchor to the start of a line so the documentation comment in the
+    // template (` *    "defaultPadText" : ...`) is not the one replaced.
+    const withEnv = original.replace(
+      /^(\s*)"defaultPadText"\s*:\s*"(?:[^"\\]|\\.)*"/m,
+      '$1"defaultPadText": "${DEFAULT_PAD_TEXT:Line 1\\nLine 2}"',
+    );
+    expect(withEnv).not.toEqual(original);
+    await raw.fill(withEnv);
+    await saveSettings(page);
+
+    await page.getByTestId('mode-toggle-form').click();
+    const pill = page.getByTestId('env-defaultPadText');
+    await expect(pill).toBeVisible({timeout: 10000});
+    await expect(pill).toHaveValue('Line 1\\nLine 2');
+    await pill.fill('Welcome\\n\\ntest\\n');
+    await saveSettings(page);
+
+    await page.reload();
+    await page.waitForSelector('[data-testid="settings-form-view"]', {timeout: 30000});
+    await page.getByTestId('mode-toggle-raw').click();
+    const after = await page.getByTestId('settings-raw-textarea').inputValue();
+    expect(after).toContain('"${DEFAULT_PAD_TEXT:Welcome\\n\\ntest\\n}"');
+
+    // Restore
+    await page.getByTestId('settings-raw-textarea').fill(original);
+    await saveSettings(page);
+  });
+
   test('toggling form on broken raw JSON shows parse error banner', async ({page}) => {
     await page.goto('http://localhost:9001/admin/settings');
     // Wait for settings to load (form view renders once socket emits settings).

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { JSONPath } from 'jsonc-parser';
 import type { EnvPlaceholder } from '../envPill';
+import { escapeForInput, unescapeFromInput } from '../stringEscapes';
 
 const REDACTED = '[REDACTED]';
 
@@ -22,7 +23,12 @@ const formatDisplay = (v: unknown): string => {
 
 export const EnvPill = ({ placeholder, path, onChange, resolvedValue }: Props) => {
   const { t } = useTranslation();
-  const initial = placeholder.defaultValue ?? '';
+  // defaultValue is sliced from the raw JSON text, so it is still escaped.
+  // Normalise it through decode/escape so it matches what StringInput shows
+  // (e.g. `https:\/\/` displays as `https://`) — see stringEscapes.ts.
+  const rawDefault = placeholder.defaultValue ?? '';
+  const decodedDefault = unescapeFromInput(rawDefault);
+  const initial = decodedDefault === null ? rawDefault : escapeForInput(decodedDefault);
   const [draft, setDraft] = useState(initial);
   const focused = useRef(false);
 
@@ -63,7 +69,11 @@ export const EnvPill = ({ placeholder, path, onChange, resolvedValue }: Props) =
         onChange={e => {
           const v = sanitize(e.target.value);
           setDraft(v);
-          onChange(v);
+          // The draft is in escaped form; hand the decoded value to the
+          // JSON writer so typed `\n` is stored as `\n`, not `\\n` (#8211).
+          // Incomplete escapes (a trailing `\`) are not propagated.
+          const decoded = unescapeFromInput(v);
+          if (decoded !== null) onChange(sanitize(decoded));
         }}
       />
       {hasResolved && !isRedacted && (
