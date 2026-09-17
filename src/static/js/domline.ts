@@ -218,6 +218,9 @@ domline.createDomLine = (nonEmpty, doesWrap, optBrowser, optDocument) => {
         newHTML += '<br/>';
       }
     }
+    // A line wrapped in block markup (list <ul>/<ol>, plugin headings, etc.)
+    // already carries its own semantics for assistive technology.
+    const hasBlockWrapper = !!(nonEmpty && (preHtml || postHtml));
     if (nonEmpty) {
       newHTML = (preHtml || '') + newHTML + (postHtml || '');
     }
@@ -227,6 +230,17 @@ domline.createDomLine = (nonEmpty, doesWrap, optBrowser, optDocument) => {
       result.node.innerHTML = curHTML;
     }
     if (lineClass != null) result.node.className = lineClass;
+    // Plain lines are <div>s, which AT exposes as anonymous generic
+    // containers, flattening the whole pad into one run of text. Expose each
+    // one as a paragraph so screen readers can step through the pad line by
+    // line (and reach the links inside each line). See #7778.
+    if (document && result.node.setAttribute) {
+      if (hasBlockWrapper) {
+        if (result.node.hasAttribute('role')) result.node.removeAttribute('role');
+      } else if (result.node.getAttribute('role') !== 'paragraph') {
+        result.node.setAttribute('role', 'paragraph');
+      }
+    }
 
     hooks.callAll('acePostWriteDomLineHTML', {
       node: result.node,

@@ -296,6 +296,42 @@ test('innerdocbody does not advertise role=textbox / aria-multiline (#7778)', as
   await expect(body).toHaveAttribute('aria-describedby', 'editor-keyboard-hint');
 });
 
+test('pad lines are exposed to AT as separate paragraphs with navigable links (#7778)', async ({page}) => {
+  // Each line renders as <div class="ace-line">, which the accessibility
+  // tree exposes as an anonymous `generic` container, so screen readers
+  // flatten the pad into one run of text and can't step line by line.
+  // Plain lines carry role="paragraph" so AT gets one paragraph per line;
+  // links inside them stay exposed as links with their visible text.
+  const innerFrame = page.frameLocator('iframe[name="ace_outer"]')
+      .frameLocator('iframe[name="ace_inner"]');
+  const body = innerFrame.locator('#innerdocbody');
+  await body.click();
+  await page.keyboard.press('Control+A');
+  await page.keyboard.press('Delete');
+  for (const [i, line] of ['First line', 'See https://etherpad.org for more', 'Third line'].entries()) {
+    if (i > 0) await page.keyboard.press('Enter');
+    await page.keyboard.insertText(line);
+  }
+  await expect(body.locator('div.ace-line')).toHaveCount(3);
+
+  const paragraphs = body.getByRole('paragraph');
+  await expect(paragraphs).toHaveCount(3);
+  await expect(paragraphs.nth(0)).toHaveText('First line');
+  await expect(paragraphs.nth(2)).toHaveText('Third line');
+  const link = paragraphs.nth(1).getByRole('link', {name: 'https://etherpad.org'});
+  await expect(link).toHaveAttribute('href', 'https://etherpad.org');
+
+  // A list line wraps its content in <ul><li>; it keeps native list
+  // semantics instead of being nested inside a paragraph.
+  await body.locator('div.ace-line').nth(2).click();
+  await page.locator('.buttonicon-insertunorderedlist').click({force: true});
+  const listLine = body.locator('div.ace-line').nth(2);
+  await expect(listLine.locator('ul li')).toHaveCount(1);
+  await expect(listLine).not.toHaveAttribute('role', /.*/);
+  await expect(body.getByRole('paragraph')).toHaveCount(2);
+  await expect(body.getByRole('listitem')).toHaveText('Third line');
+});
+
 test('line-number sidediv is hidden from screen readers (#7255)', async ({page}) => {
   // sidediv lives in the outer ace iframe (ace_outer) — query the frame.
   const outerFrame = page.frameLocator('iframe[name="ace_outer"]');
