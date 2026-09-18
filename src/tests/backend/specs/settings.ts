@@ -146,6 +146,51 @@ describe(__filename, function () {
         cjs.title = original;
       }
     });
+
+    // Regression test for https://github.com/ether/etherpad/issues/8109.
+    // Plugin ep_* hashes are added by storeSettings() inside reloadSettings(),
+    // after the module's initial evaluation. The CJS mirror must be refreshed
+    // on each reload so require(...).ep_myplugin resolves the loaded hash.
+    it('exposes ep_* plugin settings on CJS require after reloadSettings()', function () {
+      const settingsMod = require('../../../node/utils/Settings');
+      const cjs = require('../../../node/utils/Settings');
+      const settingsSingleton = settingsMod.default ?? settingsMod;
+      const envKey = 'EP__ep_test_plugin__allowFeature';
+      const hadEnv = Object.prototype.hasOwnProperty.call(process.env, envKey);
+      const savedEnv = process.env[envKey];
+      const hadEpTestPlugin =
+          Object.prototype.hasOwnProperty.call(settingsSingleton, 'ep_test_plugin');
+      const savedEpTestPlugin = settingsSingleton.ep_test_plugin;
+      const savedSettingsFile = settingsMod.settingsFilename;
+      const savedCredsFile = settingsMod.credentialsFilename;
+      try {
+        process.env[envKey] = 'true';
+        settingsMod.settingsFilename = path.join(__dirname, 'settings.json');
+        settingsMod.credentialsFilename = path.join(__dirname, 'credentials.json');
+        settingsMod.reloadSettings();
+
+        assert.notStrictEqual(cjs.ep_test_plugin, undefined,
+            'ep_test_plugin must be reachable via CJS require after reloadSettings');
+        assert.deepEqual(cjs.ep_test_plugin, {allowFeature: true});
+        assert.ok('ep_test_plugin' in cjs,
+            'ep_test_plugin key must appear on the CJS module export');
+        if (cjs.default != null) {
+          assert.strictEqual(cjs.ep_test_plugin, cjs.default.ep_test_plugin,
+              'CJS ep_test_plugin must reference the same object as default.ep_test_plugin');
+        }
+      } finally {
+        if (hadEnv) process.env[envKey] = savedEnv;
+        else delete process.env[envKey];
+        if (hadEpTestPlugin) {
+          settingsSingleton.ep_test_plugin = savedEpTestPlugin;
+        } else {
+          delete settingsSingleton.ep_test_plugin;
+        }
+        settingsMod.settingsFilename = savedSettingsFile;
+        settingsMod.credentialsFilename = savedCredsFile;
+        settingsMod.reloadSettings();
+      }
+    });
   });
 
   // Regression test for https://github.com/ether/etherpad/issues/7213.
