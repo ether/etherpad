@@ -28,7 +28,31 @@ const padManager = require('../../../node/db/PadManager');
 const plugins = require('../../../static/js/pluginfw/plugin_defs');
 import settings from '../../../node/utils/Settings';
 
-const REMOTE_IMG = '<img src="http://127.0.0.1:39111/ssrf-marker-soffice" alt="probe">';
+const MARKER = 'ssrf-marker-soffice';
+const REMOTE_IMG = `<img src="http://127.0.0.1:39111/${MARKER}" alt="probe">`;
+
+// Payloads that a leading-whitespace / entity trick can smuggle past a filter
+// that tests the raw attribute string with an anchored scheme regex. A URL
+// consumer canonicalizes all of these back to the same request, so each one
+// must be stripped exactly like the plain form above.
+// Reported by Yazan Balawneh (Cystack.ps).
+const BYPASS_PAYLOADS: [string, string][] = [
+  ['leading space', `<img src=" http://127.0.0.1:39111/${MARKER}" alt="probe">`],
+  ['leading tab', `<img src="\thttp://127.0.0.1:39111/${MARKER}" alt="probe">`],
+  ['leading newline', `<img src="\nhttp://127.0.0.1:39111/${MARKER}" alt="probe">`],
+  ['entity-encoded space',
+    `<img src="&#32;http://127.0.0.1:39111/${MARKER}" alt="probe">`],
+  ['entity-encoded colon',
+    `<img src="http&colon;//127.0.0.1:39111/${MARKER}" alt="probe">`],
+  // Carriers the old <img src>-only filter never looked at.
+  ['srcset', `<img srcset="http://127.0.0.1:39111/${MARKER} 1x">`],
+  ['video poster', `<video poster="http://127.0.0.1:39111/${MARKER}"></video>`],
+  ['style url()',
+    `<p style="background-image:url(http://127.0.0.1:39111/${MARKER})">x</p>`],
+];
+
+// What the injecting hook returns; mutated per-case by the tests below.
+let injectedHtml = REMOTE_IMG;
 
 describe(__filename, function () {
   this.timeout(30000);
@@ -58,7 +82,7 @@ describe(__filename, function () {
     capturedHtml = '';
     // Inject a remote image the way a plugin extension point would.
     plugins.hooks.exportHTMLAdditionalContent = [
-      makeHook('exportHTMLAdditionalContent', () => REMOTE_IMG),
+      makeHook('exportHTMLAdditionalContent', () => injectedHtml),
     ];
     // Stand in for LibreOffice: capture what was written, produce a dummy file.
     plugins.hooks.exportConvert = [
@@ -84,6 +108,11 @@ describe(__filename, function () {
     Object.assign(settings, settingsBackup);
   });
 
+  beforeEach(function () {
+    injectedHtml = REMOTE_IMG;
+    capturedHtml = '';
+  });
+
   it('confirms the injected remote image reaches the export HTML', async function () {
     // Sanity check on the harness: the raw HTML export (which is NOT run through
     // the soffice temp-file path) must contain the injected image, proving the
@@ -105,4 +134,19 @@ describe(__filename, function () {
             !/<img[^>]+src\s*=\s*["']?https?:/i.test(capturedHtml),
             `soffice temp file still contains a remote <img src="http...">:\n${capturedHtml}`);
       });
+
+  // The filter this replaces tested the raw `src` string with an anchored
+  // scheme regex, so a single leading space made an absolute URL read as
+  // "local" and it survived into the converter's input. It also only ever
+  // looked at `<img src>`, leaving every other subresource carrier untouched.
+  for (const [name, payload] of BYPASS_PAYLOADS) {
+    it(`strips a remote URL smuggled via ${name}`, async function () {
+      injectedHtml = payload;
+      await agent.get('/p/sofficeSsrfPad/export/odt').expect(200);
+      assert.ok(capturedHtml.length > 0, 'exportConvert hook did not capture any HTML');
+      assert.ok(
+          !capturedHtml.includes(MARKER),
+          `soffice temp file still contains the remote URL:\n${capturedHtml}`);
+    });
+  }
 });
