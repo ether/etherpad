@@ -225,6 +225,7 @@
   "index.copyLink": "2. Copy link",
   "index.copyLinkDescription": "Click on the button below to copy the link to your clipboard.",
   "index.copyLinkButton": "Copy link to clipboard",
+  "index.sessionTransferError": "Unable to transfer the session. Please try again.",
   "index.transferToSystem": "3. Copy session to new system",
   "index.transferToSystemDescription": "Open the copied link in the target browser or device to transfer your session.",
   "index.code": "Code",
