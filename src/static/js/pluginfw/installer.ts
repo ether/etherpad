@@ -25,7 +25,9 @@ import {
 import {
   CatalogEntry,
   filterCatalogEntries,
+  installBlockReason,
   normalizeDeprecation,
+  PluginDeprecatedError,
 } from './pluginCatalogFilter';
 import {InstallerTaskQueue} from './installerTasks';
 
@@ -196,6 +198,11 @@ const DEPRECATION_SWEEP_BUDGET_MS = 15000;
 const DEPRECATION_CONCURRENCY = 8;
 const DEPRECATION_CACHE_MAX = 1000;
 const deprecationCache = new Map<string, {deprecated: string | null, expires: number}>();
+// Lookups that have been started but not finished, so two concurrent sweeps
+// (the admin page fires `getInstalled` and `search` together) join one
+// request per package instead of issuing two. `undefined` means the lookup
+// failed, i.e. the deprecation state is unknown.
+const deprecationInFlight = new Map<string, Promise<string | null | undefined>>();
 
 // Exported for tests; also lets an operator-triggered catalog reload pick up
 // a deprecation published in the last 12 hours.
@@ -232,16 +239,26 @@ export const fetchPluginDeprecations = async (
   // One controller for the whole sweep: if the registry is slow we give up
   // on the remainder rather than making the admin page wait indefinitely.
   const budget = AbortSignal.timeout(DEPRECATION_SWEEP_BUDGET_MS);
+  const lookup = (job: {name: string, version: string, key: string}) => {
+    const started = deprecationInFlight.get(job.key);
+    if (started) return started;
+    const promise = (async () => {
+      const meta = await fetchPluginVersionMeta(job.name, job.version, budget);
+      if (meta === undefined) return undefined; // unknown -> not hidden
+      const deprecated = normalizeDeprecation(meta.deprecated);
+      deprecationCache.set(job.key, {deprecated, expires: Date.now() + DEPRECATION_TTL_MS});
+      return deprecated;
+    })().finally(() => deprecationInFlight.delete(job.key));
+    deprecationInFlight.set(job.key, promise);
+    return promise;
+  };
   let index = 0;
   const worker = async () => {
     while (index < pending.length) {
       if (budget.aborted) return;
       const job = pending[index++];
-      const meta = await fetchPluginVersionMeta(job.name, job.version, budget);
-      if (meta === undefined) continue; // unknown -> not hidden
-      const deprecated = normalizeDeprecation(meta.deprecated);
-      deprecationCache.set(job.key, {deprecated, expires: Date.now() + DEPRECATION_TTL_MS});
-      result.set(job.name, deprecated);
+      const deprecated = await lookup(job);
+      if (deprecated !== undefined) result.set(job.name, deprecated);
     }
   };
   await Promise.all(
@@ -257,18 +274,21 @@ export const install = async (pluginName: string, cb:Function|null = null) => {
   cb = wrapTaskCb(cb);
   logger.info(`Installing plugin ${pluginName}...`);
   try {
+    // A superseded package is refused before any network call, so the block
+    // holds even when npm is unreachable.
+    const known = installBlockReason(pluginName);
+    if (known) throw new PluginDeprecatedError(pluginName, known.detail);
     const meta = await fetchPluginVersionMeta(pluginName);
     const compat = checkEngineCompatibility(meta?.engines?.node, process.version);
     if (!compat.compatible) {
       throw new EngineIncompatibleError(pluginName, compat.required, compat.current);
     }
-    // The catalog does not offer deprecated plugins, but an install can still
-    // be requested by a stale admin page or by an older client. Installing is
-    // an explicit operator action so it is not blocked, only recorded.
-    const deprecation = normalizeDeprecation(meta?.deprecated);
-    if (deprecation) {
-      logger.warn(`Plugin ${pluginName} is deprecated on npm: ${deprecation}`);
-    }
+    // The catalog does not offer deprecated plugins, but a stale admin page,
+    // an older client or a replayed socket event can still ask for one, so
+    // the same policy is applied here (#8246). Deciding from the npm answer
+    // only — an unreachable registry leaves the install to proceed.
+    const deprecated = installBlockReason(pluginName, normalizeDeprecation(meta?.deprecated));
+    if (deprecated) throw new PluginDeprecatedError(pluginName, deprecated.detail);
     await linkInstaller.installPlugin(pluginName);
     logger.info(`Successfully installed plugin ${pluginName}`);
     await hooks.aCallAll('pluginInstall', {pluginName});
@@ -282,6 +302,13 @@ export const install = async (pluginName: string, cb:Function|null = null) => {
 export let availablePlugins:MapArrayType<PackageInfo>|null = null;
 let cacheTimestamp = 0;
 
+// The admin plugin page emits `getInstalled` (which checks for updates) and
+// `search` at the same time on load, and both end up here. Without sharing
+// the in-flight refresh each of them would fetch the feed and sweep npm for
+// the whole catalog independently, roughly doubling the work and the page
+// latency on a cold cache.
+let refreshInFlight: Promise<MapArrayType<PackageInfo>> | null = null;
+
 export const getAvailablePlugins = async (maxCacheAge: number | false) => {
   assertPluginCatalogEnabled();
   const nowTimestamp = Math.round(Date.now() / 1000);
@@ -291,6 +318,19 @@ export const getAvailablePlugins = async (maxCacheAge: number | false) => {
     return availablePlugins;
   }
 
+  if (refreshInFlight) return await refreshInFlight;
+  refreshInFlight = refreshAvailablePlugins();
+  try {
+    return await refreshInFlight;
+  } finally {
+    // Cleared on failure too, so a transient feed outage does not pin every
+    // later caller to the same rejected promise.
+    refreshInFlight = null;
+  }
+};
+
+const refreshAvailablePlugins = async (): Promise<MapArrayType<PackageInfo>> => {
+  const nowTimestamp = Math.round(Date.now() / 1000);
   const pluginsLoaded = await fetch(`${settings.updateServer}/plugins.json`, {headers});
   if (!pluginsLoaded.ok) {
     throw new Error(`HTTP ${pluginsLoaded.status} ${pluginsLoaded.statusText}`);

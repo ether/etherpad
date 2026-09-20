@@ -96,6 +96,32 @@ export const catalogExclusion = (
 };
 
 /**
+ * Why an install must be refused, or null when it may go ahead.
+ *
+ * Hiding a package from the catalog is not enough on its own: a stale admin
+ * page, an older client or a replayed socket event can still ask the server
+ * to install something the refreshed catalog would not offer. The install
+ * path applies the same policy, minus the feed-only `compatibility` signal
+ * which it has no entry for.
+ *
+ * `pnpm run plugins i ep_<name>` goes through LinkInstaller directly and is
+ * deliberately unaffected — an operator on the server can still override.
+ */
+export const installBlockReason = (
+  pluginName: string,
+  npmDeprecation?: string | null,
+): CatalogExclusion | null => catalogExclusion({name: pluginName}, npmDeprecation);
+
+export class PluginDeprecatedError extends Error {
+  public readonly code = 'PLUGIN_DEPRECATED';
+  constructor(public readonly pluginName: string, public readonly detail: string) {
+    super(`Plugin ${pluginName} is no longer maintained and is not offered by the ` +
+          `plugin catalog: ${detail}`);
+    this.name = 'PluginDeprecatedError';
+  }
+}
+
+/**
  * Applies {@link catalogExclusion} to a whole catalog.
  *
  * @param entries catalog keyed by plugin name.

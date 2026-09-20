@@ -7,6 +7,7 @@ import {
   fetchPluginDeprecations,
   getAvailablePlugins,
   getInstalledPluginWarnings,
+  install,
 } from '../../../static/js/pluginfw/installer';
 import settings from '../../../node/utils/Settings';
 
@@ -132,6 +133,49 @@ describe(__filename, function () {
       ok: false, status: 503, statusText: 'Service Unavailable',
     }) as any);
     await assert.rejects(getAvailablePlugins(false), /HTTP 503/);
+  });
+
+  it('shares one refresh between concurrent callers', async function () {
+    // The admin page fires `getInstalled` (which checks for updates) and
+    // `search` at the same time. Without sharing the in-flight refresh both
+    // would fetch the feed and sweep npm for the whole catalog.
+    const fetchStub = stubFetch(() => ({}));
+    const [a, b] = await Promise.all([getAvailablePlugins(false), getAvailablePlugins(false)]);
+    assert.deepEqual(Object.keys(a).sort(), Object.keys(b).sort());
+    const feedCalls = fetchStub.getCalls().filter((c) => String(c.args[0]) === feedUrl);
+    assert.equal(feedCalls.length, 1, 'the feed must be fetched once for both callers');
+    const npmCalls = fetchStub.getCalls().filter((c) => String(c.args[0]).includes('npmjs.org'));
+    assert.equal(npmCalls.length, Object.keys(feed).length, 'one npm lookup per listed plugin');
+  });
+
+  it('does not pin later callers to a failed refresh', async function () {
+    const failing = sinon.stub(global, 'fetch').callsFake(async () => {
+      throw new Error('feed down');
+    });
+    await assert.rejects(getAvailablePlugins(false));
+    failing.restore();
+    stubFetch(() => ({}));
+    const available = await getAvailablePlugins(false);
+    assert.ok(available.ep_align);
+  });
+
+  describe('install refuses what the catalog will not offer', function () {
+    const installOnce = (name: string) => new Promise<any>(
+        (resolve) => install(name, (err: any) => resolve(err)));
+
+    it('refuses a superseded plugin without asking npm', async function () {
+      const fetchStub = stubFetch(() => ({}));
+      const err = await installOnce('ep_adminpads2');
+      assert.equal(err.code, 'PLUGIN_DEPRECATED');
+      assert.equal(fetchStub.callCount, 0, 'the block must hold with no network');
+    });
+
+    it('refuses a plugin npm marks deprecated', async function () {
+      stubFetch(() => ({deprecated: 'unmaintained'}));
+      const err = await installOnce('ep_stale');
+      assert.equal(err.code, 'PLUGIN_DEPRECATED');
+      assert.match(err.message, /unmaintained/);
+    });
   });
 
   describe('getInstalledPluginWarnings', function () {

@@ -45,7 +45,7 @@ pings, no third-party SDKs at runtime.
 | URL       | `https://registry.npmjs.org/<plugin>/<version>` |
 | Frequency | once per listed plugin when an admin opens the plugin manager (cached 12 h), and once per plugin install |
 | Payload   | GET only; same `User-Agent`; only `ep_*` package names are sent |
-| Purpose   | hide plugins npm marks deprecated from the catalog, and refuse to install a plugin whose `engines.node` excludes the running Node |
+| Purpose   | hide plugins npm marks deprecated from the catalog, and refuse to install one that is deprecated or whose `engines.node` excludes the running Node |
 | Disable   | set `privacy.pluginCatalog: false` in `settings.json` — the catalog, and with it the deprecation sweep, is then not used at all. The install-time check only runs when you install a plugin from the admin UI; `pnpm run plugins i` does not make this call |
 | Source    | `src/static/js/pluginfw/installer.ts` |
 

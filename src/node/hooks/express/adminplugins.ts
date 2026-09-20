@@ -52,9 +52,14 @@ exports.socketio = (hookName:string, args:ArgsExpressType, cb:Function) => {
     })
 
     socket.on('getInstalled', async (query: string) => {
-      // send currently installed plugins
-      const installed =
-        Object.keys(pluginDefs.plugins).map((plugin) => pluginDefs.plugins[plugin].package);
+      // Send currently installed plugins. Shallow copies, not the live
+      // package objects from the plugin registry: `updatable` and
+      // `deprecated` are per-response status, and writing them onto the
+      // registry left a stale badge showing after the condition had passed
+      // (e.g. npm un-deprecates, a lookup fails, or the catalog is turned
+      // off).
+      const installed: PackageInfo[] = Object.keys(pluginDefs.plugins)
+          .map((plugin) => ({...pluginDefs.plugins[plugin].package}));
 
       if (settings.privacy.pluginCatalog) {
         const updatable = await checkPluginForUpdates();
@@ -69,8 +74,7 @@ exports.socketio = (hookName:string, args:ArgsExpressType, cb:Function) => {
         }
         installed.forEach((plugin) => {
           plugin.updatable = updatable.includes(plugin.name);
-          const warning = deprecated.get(plugin.name);
-          if (warning) plugin.deprecated = warning;
+          plugin.deprecated = deprecated.get(plugin.name);
         })
       }
       // When the catalog is disabled, `updatable` simply stays unset on

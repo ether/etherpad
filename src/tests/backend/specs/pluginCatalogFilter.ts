@@ -4,7 +4,9 @@ import {strict as assert} from 'assert';
 import {
   catalogExclusion,
   filterCatalogEntries,
+  installBlockReason,
   normalizeDeprecation,
+  PluginDeprecatedError,
   supersededPlugins,
 } from '../../../static/js/pluginfw/pluginCatalogFilter';
 
@@ -113,6 +115,35 @@ describe(__filename, function () {
       filterCatalogEntries(input, new Map([['ep_old', 'gone']]));
       assert.deepEqual(Object.keys(input).sort(),
           ['ep_adminpads2', 'ep_align', 'ep_kaput', 'ep_old']);
+    });
+  });
+
+  describe('installBlockReason', function () {
+    it('refuses a superseded package even with no npm answer at all', function () {
+      // Offline installs must still be refused: the superseded list needs no
+      // network, which is why it is checked before the registry lookup.
+      const out = installBlockReason('ep_adminpads2');
+      assert.equal(out!.cause, 'superseded');
+    });
+
+    it('refuses a package npm marks deprecated', function () {
+      const out = installBlockReason('ep_stale', 'unmaintained');
+      assert.equal(out!.cause, 'deprecated');
+      assert.equal(out!.detail, 'unmaintained');
+    });
+
+    it('allows a healthy package, and one whose npm state is unknown', function () {
+      assert.equal(installBlockReason('ep_align', null), null);
+      assert.equal(installBlockReason('ep_align', undefined), null);
+    });
+  });
+
+  describe('PluginDeprecatedError', function () {
+    it('carries a stable code for the admin UI to map to a message', function () {
+      const err = new PluginDeprecatedError('ep_adminpads2', 'archived upstream');
+      assert.equal(err.code, 'PLUGIN_DEPRECATED');
+      assert.match(err.message, /ep_adminpads2/);
+      assert.match(err.message, /archived upstream/);
     });
   });
 

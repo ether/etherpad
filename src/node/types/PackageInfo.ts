@@ -24,6 +24,8 @@ export type PackageInfo =  {
    * `warning` or `failed`. Feed-provided; see pluginCatalogFilter.ts.
    */
   compatibility?: string,
+  /** Set on *installed* plugins when a newer version is available. */
+  updatable?: boolean,
   /**
    * Set on *installed* plugins that npm marks deprecated or that core knows
    * to be superseded. Carries the human-readable reason. Never set on
