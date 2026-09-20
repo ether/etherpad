@@ -94,3 +94,54 @@ export const isOriginAllowedForOidcClient = (
     }
   });
 };
+
+/**
+ * Constant-time string comparison. Unequal-length inputs short-circuit to
+ * false; callers apply a uniform failure delay, which covers that difference.
+ */
+const constantTimeEquals = (a: string, b: string): boolean => {
+  const ba = Buffer.from(String(a), 'utf8');
+  const bb = Buffer.from(String(b), 'utf8');
+  return ba.length === bb.length && crypto.timingSafeEqual(ba, bb);
+};
+
+/**
+ * Decide whether an interactive OIDC login should be accepted.
+ *
+ * The password comparison used to run the stored value through `String()`, so
+ * an account with no `password` property compared against the literal
+ * `"undefined"`, and one with `"password": null` against `"null"`. Submitting
+ * that literal logged the account in and yielded a JWT carrying its `admin`
+ * claim. Accounts without a usable password arise in practice: the official
+ * container leaves `password` null when `ADMIN_PASSWORD` is unset, and an
+ * `ep_hash_auth` entry replaces `password` with `hash`.
+ *
+ * `webaccess.ts` already fails closed on a nullish password (see the
+ * "login fails if password is nullish" spec); this is the same rule for the
+ * OIDC interaction path. A non-string password (a `hash` entry, or a
+ * misconfigured object/number) is also refused rather than coerced: those
+ * accounts authenticate through the `authenticate` hook, which this path does
+ * not consult. Reported by Wenhao Wu (Southeast University).
+ *
+ * @param users The `settings.users` map.
+ * @param login Submitted username.
+ * @param password Submitted password.
+ * @returns The matched account, or `null` when the login must be refused.
+ */
+export const verifyInteractiveLogin = (
+  users: Readonly<Record<string, unknown>> | null | undefined,
+  login: unknown,
+  password: unknown,
+): (Record<string, unknown> & {username: string}) | null => {
+  if (users == null) return null;
+  const loginStr = String(login ?? '');
+  const passwordStr = String(password ?? '');
+  // Own properties only: `__proto__`, `constructor` and friends are not accounts.
+  if (!Object.prototype.hasOwnProperty.call(users, loginStr)) return null;
+  const user = users[loginStr] as {password?: unknown} | null | undefined;
+  if (user == null) return null;
+  // Fail closed unless the account has a real string password to compare.
+  if (typeof user.password !== 'string') return null;
+  if (!constantTimeEquals(passwordStr, user.password)) return null;
+  return {...(user as Record<string, unknown>), username: loginStr};
+};

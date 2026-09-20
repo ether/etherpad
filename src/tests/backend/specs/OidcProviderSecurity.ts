@@ -14,6 +14,7 @@ const assert = require('assert').strict;
 import {
   resolveOidcCookieKeys,
   isOriginAllowedForOidcClient,
+  verifyInteractiveLogin,
 } from '../../../node/security/OidcProviderSecurity';
 
 describe(__filename, function () {
@@ -123,6 +124,63 @@ describe(__filename, function () {
 
     it('rejects when client has no redirect URIs', function () {
       assert.equal(isOriginAllowedForOidcClient('https://app.example.com', {}), false);
+    });
+  });
+
+  describe('verifyInteractiveLogin', function () {
+    const users = () => ({
+      withPassword: {password: 'correct horse', is_admin: true},
+      noPassword: {is_admin: true},
+      nullPassword: {password: null, is_admin: true},
+      hashOnly: {hash: '$2b$10$abcdefghijklmnopqrstuv', is_admin: true},
+    });
+
+    it('accepts the correct password', function () {
+      const account = verifyInteractiveLogin(users(), 'withPassword', 'correct horse');
+      assert.equal(account!.username, 'withPassword');
+      assert.equal(account!.is_admin, true);
+    });
+
+    it('rejects a wrong password', function () {
+      assert.equal(verifyInteractiveLogin(users(), 'withPassword', 'wrong'), null);
+    });
+
+    // An account with no `password` property used to compare against the
+    // literal string "undefined", so submitting that logged it in and yielded
+    // a JWT carrying its admin claim. Reported by Wenhao Wu.
+    for (const password of ['undefined', 'null', '', 'anything']) {
+      it(`rejects a missing password (submitted ${JSON.stringify(password)})`, function () {
+        assert.equal(verifyInteractiveLogin(users(), 'noPassword', password), null);
+      });
+
+      it(`rejects a null password (submitted ${JSON.stringify(password)})`, function () {
+        assert.equal(verifyInteractiveLogin(users(), 'nullPassword', password), null);
+      });
+
+      it(`rejects a hash-only account (submitted ${JSON.stringify(password)})`, function () {
+        assert.equal(verifyInteractiveLogin(users(), 'hashOnly', password), null);
+      });
+    }
+
+    it('rejects an unknown user', function () {
+      assert.equal(verifyInteractiveLogin(users(), 'nobody', 'correct horse'), null);
+    });
+
+    it('rejects inherited properties such as __proto__ and constructor', function () {
+      for (const login of ['__proto__', 'constructor', 'toString']) {
+        assert.equal(verifyInteractiveLogin(users(), login, 'undefined'), null);
+        assert.equal(verifyInteractiveLogin(users(), login, '[object Object]'), null);
+      }
+    });
+
+    it('rejects a nullish login', function () {
+      assert.equal(verifyInteractiveLogin(users(), null, 'correct horse'), null);
+      assert.equal(verifyInteractiveLogin(users(), undefined, 'undefined'), null);
+    });
+
+    it('rejects when there are no users configured', function () {
+      assert.equal(verifyInteractiveLogin(null, 'withPassword', 'correct horse'), null);
+      assert.equal(verifyInteractiveLogin(undefined, 'withPassword', 'undefined'), null);
     });
   });
 });
