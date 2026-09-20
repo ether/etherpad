@@ -1307,6 +1307,12 @@ a.pm-btn-primary:link, a.pm-btn-primary:visited { color: #fff; }
   color: var(--ep-accent-d);
   border: 1px solid rgba(20,148,116,.25);
 }
+.pm-tag--deprecated {
+  background: rgba(196,92,24,.12);
+  color: #a24a12;
+  border: 1px solid rgba(196,92,24,.35);
+  cursor: help;
+}
 
 /* Toolbar (search + sort) */
 .pm-toolbar {

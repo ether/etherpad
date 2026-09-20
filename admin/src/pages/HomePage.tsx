@@ -247,6 +247,13 @@ export const HomePage = () => {
                     <span className="pm-tag pm-tag--core"><Trans i18nKey="admin_plugins.tag_core"/></span>
                   )}
                   <span className="pm-tag pm-tag--ver">v{plugin.version}</span>
+                  {plugin.deprecated && (
+                    <span
+                      className="pm-tag pm-tag--deprecated"
+                      role="alert"
+                      title={`${t('admin_plugins.deprecated_title')} ${plugin.deprecated}`}
+                    ><Trans i18nKey="admin_plugins.tag_deprecated"/></span>
+                  )}
                 </div>
                 {plugin.description && (
                   <div className="pm-installed-desc">{plugin.description}</div>

@@ -22,6 +22,11 @@ import {
   checkEngineCompatibility,
   EngineIncompatibleError,
 } from './pluginEngineCheck';
+import {
+  CatalogEntry,
+  filterCatalogEntries,
+  normalizeDeprecation,
+} from './pluginCatalogFilter';
 import {InstallerTaskQueue} from './installerTasks';
 
 import {findEtherpadRoot} from '../../../node/utils/AbsolutePaths';
@@ -155,37 +160,114 @@ export const uninstall = async (pluginName: string, cb:Function|null = null) => 
   cb(null);
 };
 
-// Best-effort lookup of the published plugin's engines.node range. Returns
-// undefined on any failure (network, 404, parse error, timeout) so the
-// caller falls through to the existing install path rather than blocking on
-// a flaky registry call. A 5s AbortSignal.timeout guards against a stalled
-// registry hanging the install promise forever — without it the
-// finished:install socket event would never fire and the admin UI would
-// stay spinning indefinitely.
+// Best-effort lookup of the published plugin's metadata (engines.node range
+// and npm deprecation notice). Returns undefined on any failure (network,
+// 404, parse error, timeout) so the caller falls through to the existing
+// install path rather than blocking on a flaky registry call. A 5s
+// AbortSignal.timeout guards against a stalled registry hanging the install
+// promise forever — without it the finished:install socket event would never
+// fire and the admin UI would stay spinning indefinitely.
 const ENGINES_PREFLIGHT_TIMEOUT_MS = 5000;
-const fetchPluginEnginesNode = async (pluginName: string): Promise<string | undefined> => {
+type NpmVersionMeta = {engines?: {node?: string}, deprecated?: unknown};
+const fetchPluginVersionMeta = async (
+  pluginName: string,
+  version = 'latest',
+  signal?: AbortSignal,
+): Promise<NpmVersionMeta | undefined> => {
   try {
     const res = await fetch(
-      `${npmRegistry}/${encodeURIComponent(pluginName)}/latest`,
-      {headers, signal: AbortSignal.timeout(ENGINES_PREFLIGHT_TIMEOUT_MS)},
+      `${npmRegistry}/${encodeURIComponent(pluginName)}/${encodeURIComponent(version)}`,
+      {headers, signal: signal ?? AbortSignal.timeout(ENGINES_PREFLIGHT_TIMEOUT_MS)},
     );
     if (!res.ok) return undefined;
-    const data = await res.json() as {engines?: {node?: string}};
-    return data.engines?.node;
+    return await res.json() as NpmVersionMeta;
   } catch (err) {
-    logger.debug(`engines preflight for ${pluginName} fell through: ${err}`);
+    logger.debug(`npm metadata lookup for ${pluginName}@${version} fell through: ${err}`);
     return undefined;
   }
+};
+
+// Deprecation lookups are cached by name@version because a published version
+// is immutable apart from its deprecation flag, which changes maybe once in
+// a package's lifetime. Without the cache the admin plugin page would hit
+// the npm registry once per listed plugin on every catalog refresh.
+const DEPRECATION_TTL_MS = 12 * 60 * 60 * 1000;
+const DEPRECATION_SWEEP_BUDGET_MS = 15000;
+const DEPRECATION_CONCURRENCY = 8;
+const DEPRECATION_CACHE_MAX = 1000;
+const deprecationCache = new Map<string, {deprecated: string | null, expires: number}>();
+
+// Exported for tests; also lets an operator-triggered catalog reload pick up
+// a deprecation published in the last 12 hours.
+export const clearDeprecationCache = () => deprecationCache.clear();
+
+/**
+ * Looks up the npm deprecation notice for each of the given packages.
+ *
+ * Fail-open by design: a package whose lookup fails (offline, npm blocked by
+ * a firewall, 404, timeout, overall budget exceeded) is simply absent from
+ * the returned map, and the caller then treats it as not deprecated. An
+ * admin behind a firewall gets the full catalog, not an empty one.
+ */
+export const fetchPluginDeprecations = async (
+  pkgs: ReadonlyArray<{name: string, version?: string}>,
+): Promise<Map<string, string | null>> => {
+  const result = new Map<string, string | null>();
+  const pending: Array<{name: string, version: string, key: string}> = [];
+  const now = Date.now();
+  if (deprecationCache.size > DEPRECATION_CACHE_MAX) deprecationCache.clear();
+  for (const pkg of pkgs) {
+    if (!pkg || typeof pkg.name !== 'string') continue;
+    const version = typeof pkg.version === 'string' && pkg.version ? pkg.version : 'latest';
+    const key = `${pkg.name}@${version}`;
+    const cached = deprecationCache.get(key);
+    if (cached && cached.expires > now) {
+      result.set(pkg.name, cached.deprecated);
+    } else {
+      pending.push({name: pkg.name, version, key});
+    }
+  }
+  if (pending.length === 0) return result;
+
+  // One controller for the whole sweep: if the registry is slow we give up
+  // on the remainder rather than making the admin page wait indefinitely.
+  const budget = AbortSignal.timeout(DEPRECATION_SWEEP_BUDGET_MS);
+  let index = 0;
+  const worker = async () => {
+    while (index < pending.length) {
+      if (budget.aborted) return;
+      const job = pending[index++];
+      const meta = await fetchPluginVersionMeta(job.name, job.version, budget);
+      if (meta === undefined) continue; // unknown -> not hidden
+      const deprecated = normalizeDeprecation(meta.deprecated);
+      deprecationCache.set(job.key, {deprecated, expires: Date.now() + DEPRECATION_TTL_MS});
+      result.set(job.name, deprecated);
+    }
+  };
+  await Promise.all(
+    Array.from({length: Math.min(DEPRECATION_CONCURRENCY, pending.length)}, worker));
+  if (budget.aborted && result.size < pkgs.length) {
+    logger.warn('Plugin catalog: npm deprecation lookup timed out; ' +
+                'listing the plugins it could not check.');
+  }
+  return result;
 };
 
 export const install = async (pluginName: string, cb:Function|null = null) => {
   cb = wrapTaskCb(cb);
   logger.info(`Installing plugin ${pluginName}...`);
   try {
-    const enginesNode = await fetchPluginEnginesNode(pluginName);
-    const compat = checkEngineCompatibility(enginesNode, process.version);
+    const meta = await fetchPluginVersionMeta(pluginName);
+    const compat = checkEngineCompatibility(meta?.engines?.node, process.version);
     if (!compat.compatible) {
       throw new EngineIncompatibleError(pluginName, compat.required, compat.current);
+    }
+    // The catalog does not offer deprecated plugins, but an install can still
+    // be requested by a stale admin page or by an older client. Installing is
+    // an explicit operator action so it is not blocked, only recorded.
+    const deprecation = normalizeDeprecation(meta?.deprecated);
+    if (deprecation) {
+      logger.warn(`Plugin ${pluginName} is deprecated on npm: ${deprecation}`);
     }
     await linkInstaller.installPlugin(pluginName);
     logger.info(`Successfully installed plugin ${pluginName}`);
@@ -224,9 +306,69 @@ export const getAvailablePlugins = async (maxCacheAge: number | false) => {
       normalized[key] = entry;
     }
   }
-  availablePlugins = normalized;
+  availablePlugins = await hideUninstallablePlugins(normalized);
   cacheTimestamp = nowTimestamp;
   return availablePlugins;
+};
+
+/**
+ * Drops the feed entries that must not be offered for install: superseded
+ * packages, packages npm marks deprecated, and packages the plugin registry
+ * itself flagged as not working with current Etherpad (#8246).
+ *
+ * Fail-open: if the deprecation sweep throws, the feed-only signals are still
+ * applied and every other plugin stays listed. Emptying the admin catalog
+ * because npm was unreachable would be worse than listing a stale plugin.
+ */
+const hideUninstallablePlugins = async (
+  entries: MapArrayType<PackageInfo>,
+): Promise<MapArrayType<PackageInfo>> => {
+  const list = Object.values(entries) as unknown as CatalogEntry[];
+  let deprecations = new Map<string, string | null>();
+  try {
+    deprecations = await fetchPluginDeprecations(list);
+  } catch (err) {
+    logger.warn(`Plugin catalog: could not check npm deprecations (${err}); ` +
+                'listing all plugins.');
+  }
+  const {kept, excluded} = filterCatalogEntries(
+      entries as unknown as Record<string, CatalogEntry>, deprecations);
+  if (excluded.size > 0) {
+    logger.info(`Plugin catalog: hiding ${excluded.size} plugin(s) that cannot be ` +
+                'installed safely.');
+    for (const [name, exclusion] of excluded) {
+      logger.debug(`Plugin catalog: hiding ${name} (${exclusion.cause}): ${exclusion.detail}`);
+    }
+  }
+  return kept as unknown as MapArrayType<PackageInfo>;
+};
+
+/**
+ * Reasons the given installed plugins should no longer be used, keyed by
+ * plugin name. Used by the admin UI to flag an already-installed plugin that
+ * has since been deprecated or superseded — the catalog filter only stops
+ * *new* installs.
+ */
+export const getInstalledPluginWarnings = async (
+  pkgs: ReadonlyArray<{name: string, version?: string}>,
+): Promise<Map<string, string>> => {
+  const warnings = new Map<string, string>();
+  // ep_etherpad-lite is the core itself, vendored rather than installed from
+  // the registry — asking npm about it is pointless and its answer must never
+  // put a "deprecated" badge on core.
+  pkgs = pkgs.filter((pkg) => pkg && pkg.name && pkg.name !== 'ep_etherpad-lite');
+  if (pkgs.length === 0) return warnings;
+  let deprecations = new Map<string, string | null>();
+  try {
+    deprecations = await fetchPluginDeprecations(pkgs);
+  } catch (err) {
+    logger.warn(`Could not check npm deprecations for installed plugins: ${err}`);
+  }
+  const entries: Record<string, CatalogEntry> = {};
+  for (const pkg of pkgs) if (pkg && pkg.name) entries[pkg.name] = pkg as CatalogEntry;
+  const {excluded} = filterCatalogEntries(entries, deprecations);
+  for (const [name, exclusion] of excluded) warnings.set(name, exclusion.detail);
+  return warnings;
 };
 
 

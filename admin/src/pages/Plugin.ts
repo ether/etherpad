@@ -19,7 +19,13 @@ export type InstalledPlugin = {
   realPath: string,
   version: string,
   description?: string,
-  updatable?: boolean
+  updatable?: boolean,
+  /**
+   * Reason this installed plugin should no longer be used (npm deprecation
+   * message, or core's reason for treating it as superseded). Set by the
+   * server; absent for healthy plugins.
+   */
+  deprecated?: string
 }
 
 

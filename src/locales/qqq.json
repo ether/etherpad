@@ -16,6 +16,7 @@
 	"admin_plugins.installed_uninstall.value": "{{Identical|Uninstall}}",
 	"admin_plugins.last-update": "{{Identical|Last update}}",
 	"admin_plugins.name": "{{Identical|Name}}",
+	"admin_plugins.tag_deprecated": "{{Identical|Deprecated}}",
 	"admin_plugins.version": "{{Identical|Version}}",
 	"admin_settings": "{{identical|Settings}}",
 	"index.newPad": "Used as button text.\nA pad, in the context of Etherpad, is a notepad, something to write on.",
