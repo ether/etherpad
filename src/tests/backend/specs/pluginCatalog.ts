@@ -18,6 +18,7 @@ import settings from '../../../node/utils/Settings';
  */
 describe(__filename, function () {
   const feedUrl = `${settings.updateServer}/plugins.json`;
+  const npmRegistry = 'https://registry.npmjs.org';
 
   // A miniature plugins.json, shaped exactly like the live feed: name,
   // description, time, version, official, downloads, compatibility.
@@ -73,7 +74,9 @@ describe(__filename, function () {
       .callsFake(async (input: any) => {
         const url = String(input);
         if (url === feedUrl) return jsonResponse(feed) as any;
-        const m = /registry\.npmjs\.org\/([^/]+)\/([^/]+)$/.exec(url);
+        const m = url.startsWith(`${npmRegistry}/`)
+          ? /\/([^/]+)\/([^/]+)$/.exec(url)
+          : null;
         if (m) {
           const body = npm(decodeURIComponent(m[1]), decodeURIComponent(m[2]));
           if (body instanceof Error) throw body;
@@ -144,7 +147,8 @@ describe(__filename, function () {
     assert.deepEqual(Object.keys(a).sort(), Object.keys(b).sort());
     const feedCalls = fetchStub.getCalls().filter((c) => String(c.args[0]) === feedUrl);
     assert.equal(feedCalls.length, 1, 'the feed must be fetched once for both callers');
-    const npmCalls = fetchStub.getCalls().filter((c) => String(c.args[0]).includes('npmjs.org'));
+    const npmCalls = fetchStub.getCalls()
+        .filter((c) => String(c.args[0]).startsWith(`${npmRegistry}/`));
     assert.equal(npmCalls.length, Object.keys(feed).length, 'one npm lookup per listed plugin');
   });
 
