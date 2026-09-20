@@ -817,6 +817,43 @@ hello<br>world
               ['Helvetica']);
         });
 
+        it('picks up a font file that appears or changes on disk',
+            async function () {
+              // The font cache keys on mtime+size, so an operator can correct
+              // a wrong path or swap a face in place and the next export uses
+              // it — no restart, and no cached failure to clear.
+              const os = require('os');
+              const fs = require('fs');
+              const path = require('path');
+              const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ep8245-'));
+              const target = path.join(dir, 'face.ttf');
+              const fontDir = path.join(__dirname, '../../../static/font');
+              try {
+                settings.exportPdfFonts = {'Swappable': target};
+                // Nothing there yet: falls back rather than failing.
+                assert.deepStrictEqual(
+                    await baseFonts("<p><span style='font-family:Swappable'>t</span></p>"),
+                    ['Helvetica'], 'a missing file should fall back');
+
+                fs.copyFileSync(path.join(fontDir, 'Quicksand-Regular.ttf'), target);
+                assert.deepStrictEqual(
+                    await baseFonts("<p><span style='font-family:Swappable'>t</span></p>"),
+                    ['Quicksand-Regular'],
+                    'a file appearing at the configured path should be picked up');
+
+                fs.copyFileSync(path.join(fontDir, 'RobotoMono-Regular.ttf'), target);
+                // Guarantee a different mtime even on a coarse-grained clock.
+                const later = new Date(Date.now() + 2000);
+                fs.utimesSync(target, later, later);
+                assert.deepStrictEqual(
+                    await baseFonts("<p><span style='font-family:Swappable'>t</span></p>"),
+                    ['RobotoMono-Regular'],
+                    'a replaced file should not serve the previous bytes');
+              } finally {
+                fs.rmSync(dir, {recursive: true, force: true, maxRetries: 10, retryDelay: 100});
+              }
+            });
+
         it('overrides the built-in mapping for a known family',
             async function () {
               settings.exportPdfFonts = {

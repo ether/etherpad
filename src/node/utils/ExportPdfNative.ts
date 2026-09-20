@@ -228,18 +228,33 @@ const getFontConfig = (): Map<string, PdfFontFiles> => {
 
 // Font files are read once per process; a pad export can reference the same
 // family hundreds of times and every PDFDocument needs its own registration.
-const fontFileCache = new Map<string, Buffer | null>();
+// The cache is keyed by the file's mtime and size as well as its path, so
+// replacing a font in place — or dropping in one whose path was previously
+// wrong — takes effect on the next export without restarting Etherpad.
+// Failures are deliberately not cached, for the same reason.
+const fontFileCache = new Map<string, {stamp: string, buf: Buffer}>();
 
 const readFontFile = (file: string): Buffer | null => {
-  if (fontFileCache.has(file)) return fontFileCache.get(file)!;
-  let buf: Buffer | null = null;
+  let stamp: string;
+  try {
+    const st = fs.statSync(file);
+    stamp = `${st.mtimeMs}:${st.size}`;
+  } catch (err) {
+    logger.warn(`PDF export: cannot read font file "${file}": ${(err as Error).message}`);
+    fontFileCache.delete(file);
+    return null;
+  }
+  const cached = fontFileCache.get(file);
+  if (cached && cached.stamp === stamp) return cached.buf;
+  let buf: Buffer;
   try {
     buf = fs.readFileSync(file);
   } catch (err) {
     logger.warn(`PDF export: cannot read font file "${file}": ${(err as Error).message}`);
-    buf = null;
+    fontFileCache.delete(file);
+    return null;
   }
-  fontFileCache.set(file, buf);
+  fontFileCache.set(file, {stamp, buf});
   return buf;
 };
 
