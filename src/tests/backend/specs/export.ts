@@ -579,5 +579,213 @@ hello<br>world
       assert.notStrictEqual(leftX, rightX,
           `right-aligned <pre> should sit at a different x than left-aligned (left=${leftX} right=${rightX})`);
     });
+
+    // ---------------------------------------------------------------------
+    // Issue #8245: the native PDF path ignored font-family entirely, so any
+    // font a plugin applied (ep_font_family emits
+    // `<span style="font-family:...">` from getLineHTMLForExport) was lost.
+    // ---------------------------------------------------------------------
+    describe('font-family (#8245)', function () {
+      // Every font a PDF draws with is listed as a /BaseFont in a font
+      // dictionary. Reading those names tells us which face pdfkit actually
+      // selected without having to compare rendered pixels. Subset-embedded
+      // fonts carry a six-letter tag prefix (`ABCDEF+Name`), which is
+      // stripped so assertions can name the font.
+      const baseFonts = async (html: string): Promise<string[]> => {
+        const raw = await renderText(html);
+        const names = new Set<string>();
+        const re = /\/BaseFont\s*\/([A-Za-z0-9+#,._-]+)/g;
+        let m: RegExpExecArray | null;
+        while ((m = re.exec(raw)) !== null) {
+          names.add(m[1].replace(/^[A-Z]{6}\+/, ''));
+        }
+        return [...names];
+      };
+
+      it('maps serif, sans-serif and monospace onto distinct built-ins',
+          async function () {
+            const sans = await baseFonts(
+                "<p><span style='font-family:arial'>text</span></p>");
+            const serif = await baseFonts(
+                "<p><span style='font-family:times-new-roman'>text</span></p>");
+            const mono = await baseFonts(
+                "<p><span style='font-family:monospace'>text</span></p>");
+            assert.deepStrictEqual(sans, ['Helvetica']);
+            assert.deepStrictEqual(serif, ['Times-Roman']);
+            assert.deepStrictEqual(mono, ['Courier']);
+          });
+
+      it('maps families with no built-in equivalent by category',
+          async function () {
+            // ep_font_family ships Garamond/Palatino/Bookman (serif) and
+            // Calibri/Avant Garde (sans). None of them is a PDF standard
+            // font, so they render as the nearest built-in category.
+            for (const family of ['garamond', 'palatino', 'bookman']) {
+              assert.deepStrictEqual(
+                  await baseFonts(`<p><span style='font-family:${family}'>t</span></p>`),
+                  ['Times-Roman'], `${family} should render as a serif face`);
+            }
+            for (const family of ['calibri', 'avant-garde']) {
+              assert.deepStrictEqual(
+                  await baseFonts(`<p><span style='font-family:${family}'>t</span></p>`),
+                  ['Helvetica'], `${family} should render as a sans face`);
+            }
+          });
+
+      it('honors bold/italic variants of a mapped family', async function () {
+            assert.deepStrictEqual(
+                await baseFonts("<p><b><span style='font-family:georgia'>t</span></b></p>"),
+                ['Times-Bold']);
+            assert.deepStrictEqual(
+                await baseFonts("<p><i><span style='font-family:georgia'>t</span></i></p>"),
+                ['Times-Italic']);
+            assert.deepStrictEqual(
+                await baseFonts(
+                    "<p><b><i><span style='font-family:georgia'>t</span></i></b></p>"),
+                ['Times-BoldItalic']);
+            assert.deepStrictEqual(
+                await baseFonts(
+                    "<p><b><span style='font-family:courier-new'>t</span></b></p>"),
+                ['Courier-Bold']);
+          });
+
+      it('walks the font-family list and takes the first known family',
+          async function () {
+            assert.deepStrictEqual(
+                await baseFonts(
+                    '<p><span style="font-family:\'Nonexistent Face\', Georgia, serif">' +
+                    't</span></p>'),
+                ['Times-Roman']);
+          });
+
+      it('reads font-family from a data attribute too', async function () {
+            // Plugins using exportHtmlAdditionalTagsWithData produce
+            // `<span data-...="value">` rather than an inline style.
+            assert.deepStrictEqual(
+                await baseFonts('<p><span data-font-family="monospace">t</span></p>'),
+                ['Courier']);
+          });
+
+      it('falls back without throwing for an unknown family', async function () {
+            const buf = await htmlToPdfBuffer(
+                "<p><span style='font-family:Totally Made Up Face'>t</span></p>");
+            assert.strictEqual(buf.slice(0, 5).toString('ascii'), '%PDF-');
+            assert.deepStrictEqual(
+                await baseFonts(
+                    "<p><span style='font-family:Totally Made Up Face'>t</span></p>"),
+                ['Helvetica'], 'unknown families should inherit the enclosing font');
+          });
+
+      it('is not fooled by Object.prototype property names', async function () {
+            // Family names come from pad content, so a lookup that used a
+            // plain `in`/property read would report a hit for names like
+            // "constructor" or "toString".
+            for (const family of ['constructor', 'toString', '__proto__',
+              'hasOwnProperty']) {
+              assert.deepStrictEqual(
+                  await baseFonts(`<p><span style='font-family:${family}'>t</span></p>`),
+                  ['Helvetica'], `"${family}" must not resolve to a font`);
+            }
+          });
+
+      it('leaves an unstyled document on the default font', async function () {
+            assert.deepStrictEqual(
+                await baseFonts('<h1>Title</h1><p>Body <b>bold</b> <i>it</i></p>'),
+                ['Helvetica', 'Helvetica-Bold', 'Helvetica-Oblique']);
+            // Tag-driven monospace still works exactly as before.
+            assert.deepStrictEqual(
+                await baseFonts('<p>a <code>x = 1</code></p>'),
+                ['Helvetica', 'Courier']);
+          });
+
+      it('does not let a font-family style leak into the rendered text',
+          async function () {
+            const raw = await renderText(
+                "<p><span style='font-family:garamond'>visible</span></p>");
+            const visible = decodeVisibleText(raw);
+            assert.match(visible, /visible/);
+            assert.doesNotMatch(visible, /garamond/i);
+            assert.doesNotMatch(visible, /font-family/i);
+          });
+
+      describe('exportPdfFonts setting', function () {
+        const {exportedForTesting} =
+            require('../../../node/utils/ExportPdfNative');
+        let fontsBackup: any;
+
+        beforeEach(function () {
+          fontsBackup = settings.exportPdfFonts;
+          exportedForTesting.clearFontCache();
+        });
+
+        afterEach(function () {
+          settings.exportPdfFonts = fontsBackup;
+          exportedForTesting.clearFontCache();
+        });
+
+        it('embeds an operator-registered font file', async function () {
+          // Reuses a font already shipped for the skins rather than adding
+          // one; any readable TTF would do.
+          settings.exportPdfFonts = {
+            Quicksand: {
+              regular: 'src/static/font/Quicksand-Regular.ttf',
+              bold: 'src/static/font/Quicksand-Bold.ttf',
+            },
+          };
+          assert.deepStrictEqual(
+              await baseFonts("<p><span style='font-family:Quicksand'>t</span></p>"),
+              ['Quicksand-Regular']);
+          assert.deepStrictEqual(
+              await baseFonts(
+                  "<p><b><span style='font-family:quicksand'>t</span></b></p>"),
+              ['Quicksand-Bold']);
+          // No italic file configured: degrade to the regular face rather
+          // than dropping the font.
+          assert.deepStrictEqual(
+              await baseFonts(
+                  "<p><i><span style='font-family:QUICKSAND'>t</span></i></p>"),
+              ['Quicksand-Regular']);
+        });
+
+        it('accepts a bare path as the regular face', async function () {
+          settings.exportPdfFonts = {
+            'My Face': 'src/static/font/Quicksand-Regular.ttf',
+          };
+          assert.deepStrictEqual(
+              await baseFonts("<p><span style='font-family:my-face'>t</span></p>"),
+              ['Quicksand-Regular']);
+        });
+
+        it('falls back to the configured built-in when the file is missing',
+            async function () {
+              settings.exportPdfFonts = {
+                Ghost: {regular: '/nonexistent/ghost.ttf', fallback: 'courier'},
+              };
+              const buf = await htmlToPdfBuffer(
+                  "<p><span style='font-family:Ghost'>t</span></p>");
+              assert.strictEqual(buf.slice(0, 5).toString('ascii'), '%PDF-');
+              assert.deepStrictEqual(
+                  await baseFonts("<p><span style='font-family:Ghost'>t</span></p>"),
+                  ['Courier']);
+            });
+
+        it('falls back when the file is not a font', async function () {
+          settings.exportPdfFonts = {Bogus: {regular: 'package.json'}};
+          assert.deepStrictEqual(
+              await baseFonts("<p><span style='font-family:Bogus'>t</span></p>"),
+              ['Helvetica']);
+        });
+
+        it('overrides the built-in mapping for a known family',
+            async function () {
+              settings.exportPdfFonts = {
+                Arial: 'src/static/font/Quicksand-Regular.ttf',
+              };
+              assert.deepStrictEqual(
+                  await baseFonts("<p><span style='font-family:arial'>t</span></p>"),
+                  ['Quicksand-Regular']);
+            });
+      });
+    });
   });
 });

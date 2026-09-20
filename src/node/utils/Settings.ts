@@ -277,6 +277,13 @@ export type SettingsType = {
   minify: boolean,
   soffice: string | null,
   docxExport: boolean,
+  exportPdfFonts: MapArrayType<string | {
+    regular?: string,
+    bold?: string,
+    italic?: string,
+    boldItalic?: string,
+    fallback?: string,
+  }>,
   allowUnknownFileEnds: boolean,
   loglevel: string,
   logLayoutType: string,
@@ -686,6 +693,12 @@ const settings: SettingsType = {
    * Set to false to revert to legacy .doc output.
    */
   docxExport: true,
+  /**
+   * Extra font files the built-in (no-LibreOffice) PDF exporter may embed,
+   * keyed by CSS font-family name. Empty by default: without it the exporter
+   * maps every family onto pdfkit's built-in Helvetica/Times/Courier.
+   */
+  exportPdfFonts: {},
   /**
    * Should we support none natively supported file types on import?
    */

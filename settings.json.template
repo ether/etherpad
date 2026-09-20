@@ -513,6 +513,38 @@
   "docxExport": true,
 
   /*
+   * Extra fonts the built-in PDF exporter may embed.
+   *
+   * When LibreOffice ("soffice") is not configured, PDF export is rendered
+   * in-process. That renderer only has the PDF standard fonts available, so
+   * it maps every CSS font-family onto Helvetica (sans-serif), Times (serif)
+   * or Courier (monospace). Use this setting to give it real font files for
+   * families that need their exact face.
+   *
+   * Keys are CSS font-family names as they appear in the pad (matching is
+   * case-insensitive and treats "-", "_" and spaces alike, so "Times New
+   * Roman" and "times-new-roman" are the same key). Values are either a path
+   * to a single TTF/OTF, or an object with per-variant paths. Relative paths
+   * resolve against the Etherpad root. "fallback" picks the built-in family
+   * ("helvetica", "times" or "courier") used if a file is missing.
+   *
+   * Etherpad ships no fonts for this; point it at fonts you are licensed to
+   * embed.
+   *
+   *   "exportPdfFonts": {
+   *     "Garamond": {
+   *       "regular":    "/usr/share/fonts/truetype/EBGaramond-Regular.ttf",
+   *       "bold":       "/usr/share/fonts/truetype/EBGaramond-Bold.ttf",
+   *       "italic":     "/usr/share/fonts/truetype/EBGaramond-Italic.ttf",
+   *       "boldItalic": "/usr/share/fonts/truetype/EBGaramond-BoldItalic.ttf",
+   *       "fallback":   "times"
+   *     },
+   *     "Inter": "/usr/share/fonts/truetype/Inter-Regular.ttf"
+   *   }
+   */
+  "exportPdfFonts": {},
+
+  /*
    * txt, doc, docx, rtf, odt, html & htm
    */
   "allowUnknownFileEnds": true,
