@@ -658,6 +658,47 @@ hello<br>world
                 ['Times-Roman']);
           });
 
+      it('applies CSS declaration order and !important', async function () {
+            // A style attribute can repeat the declaration; the last one wins
+            // unless an earlier one is flagged !important.
+            assert.deepStrictEqual(
+                await baseFonts(
+                    "<p><span style='font-family:monospace;font-family:georgia'>" +
+                    't</span></p>'),
+                ['Times-Roman'], 'the last declaration should win');
+            assert.deepStrictEqual(
+                await baseFonts(
+                    "<p><span style='font-family:monospace !important;" +
+                    "font-family:georgia'>t</span></p>"),
+                ['Courier'], '!important should beat a later declaration');
+            // The flag itself must not end up in the lookup key.
+            assert.deepStrictEqual(
+                await baseFonts(
+                    "<p><span style='font-family: georgia !important'>t</span></p>"),
+                ['Times-Roman']);
+            assert.deepStrictEqual(
+                await baseFonts(
+                    "<p><span style='text-align:right;font-family:monospace'>" +
+                    't</span></p>'),
+                ['Courier'], 'a preceding declaration must not hide it');
+          });
+
+      it('keeps code/pre monospace when an explicit family is unknown',
+          async function () {
+            // An unresolvable family leaves the element on whatever font it
+            // would otherwise use — Courier for code-like tags, the enclosing
+            // font elsewhere.
+            assert.deepStrictEqual(
+                await baseFonts(
+                    "<p><code style='font-family:Totally Made Up'>x</code></p>"),
+                ['Courier']);
+            assert.deepStrictEqual(
+                await baseFonts(
+                    "<p><span style='font-family:georgia'>" +
+                    "<span style='font-family:Totally Made Up'>t</span></span></p>"),
+                ['Times-Roman']);
+          });
+
       it('reads font-family from a data attribute too', async function () {
             // Plugins using exportHtmlAdditionalTagsWithData produce
             // `<span data-...="value">` rather than an inline style.

@@ -139,13 +139,29 @@ export const normalizeFamilyName = (raw: string): string =>
 // Pull the value of the `font-family` declaration out of a style attribute.
 // Anchored on a declaration boundary so `-font-family` or a value containing
 // the text cannot match.
-const FONT_FAMILY_DECL_RE = /(?:^|;)\s*font-family\s*:\s*([^;]+)/i;
+const FONT_FAMILY_DECL_RE = /(?:^|;)\s*font-family\s*:\s*([^;]+)/gi;
+const IMPORTANT_RE = /\s*!\s*important\s*$/i;
 
 export const parseFontFamily = (style: string | undefined): string[] => {
   if (!style) return [];
-  const m = FONT_FAMILY_DECL_RE.exec(style);
-  if (!m) return [];
-  return m[1].split(',').map(normalizeFamilyName).filter((s) => s !== '');
+  // A style attribute may carry the declaration more than once. CSS resolves
+  // that by taking the last one, except that an `!important` declaration
+  // beats any later non-important one, so track both candidates. The
+  // `!important` flag itself is stripped before the value is normalised —
+  // otherwise the lookup key would be `serif !important` and match nothing.
+  let last: string | undefined;
+  let lastImportant: string | undefined;
+  FONT_FAMILY_DECL_RE.lastIndex = 0;
+  let m: RegExpExecArray | null;
+  while ((m = FONT_FAMILY_DECL_RE.exec(style)) !== null) {
+    const raw = m[1];
+    const value = raw.replace(IMPORTANT_RE, '');
+    if (value !== raw) lastImportant = value;
+    last = value;
+  }
+  const winner = lastImportant !== undefined ? lastImportant : last;
+  if (winner === undefined) return [];
+  return winner.split(',').map(normalizeFamilyName).filter((s) => s !== '');
 };
 
 export interface PdfFontFiles {
@@ -484,8 +500,13 @@ export const htmlToPdfBuffer = (html: string): Promise<Buffer> =>
         // after the switch. ep_font_family rewrites its attributes into
         // `<span style="font-family:...">` in getLineHTMLForExport; plugins
         // that use exportHtmlAdditionalTagsWithData instead emit
-        // `<span data-font-family="...">`, so accept both. Unknown families
-        // resolve to undefined and inherit the enclosing font.
+        // `<span data-font-family="...">`, so accept both.
+        //
+        // A family that resolves to nothing leaves the font untouched, i.e.
+        // whatever this element would have used anyway: the enclosing font
+        // for ordinary elements, and Courier for `code`/`pre`/`tt`/`kbd`/
+        // `samp`, which is deliberate — an unreadable font name is no reason
+        // to render code in a proportional face.
         const styleFamily = resolveFamilyList(parseFontFamily(attribs.style));
         if (styleFamily) {
           next.fontFamily = styleFamily;

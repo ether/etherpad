@@ -95,8 +95,9 @@ standard fonts are guaranteed to be present. A `font-family` applied in the
 pad (for example by `ep_font_family`) is mapped onto the closest built-in
 family — Helvetica for sans-serif faces, Times for serif faces, Courier for
 monospace ones — so serif, sans and monospace text stay visually distinct
-even though the exact face is not embedded. Families that are not recognised
-inherit the surrounding font instead of changing it.
+even though the exact face is not embedded. A family that is not recognised
+leaves the text on whatever font it would otherwise use — the surrounding
+font, or monospace inside `<code>`/`<pre>` — rather than changing it.
 
 To embed a real face, list the font files under `exportPdfFonts` in
 `settings.json`:
