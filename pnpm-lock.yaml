@@ -469,8 +469,8 @@ importers:
         specifier: 9.12.2
         version: 9.12.2(supports-color@8.1.1)
       openapi-backend:
-        specifier: ^5.20.3
-        version: 5.20.3
+        specifier: ^5.21.0
+        version: 5.21.0
       pdfkit:
         specifier: ^0.20.2
         version: 0.20.2
@@ -4559,8 +4559,8 @@ packages:
     resolution: {integrity: sha512-YgBpdJHPyQ2UE5x+hlSXcnejzAvD0b22U2OuAP+8OnlJT+PjWPxtgmGqKKc+RgTM63U9gN0YzrYc71R2WT/hTA==}
     engines: {node: '>=18'}
 
-  openapi-backend@5.20.3:
-    resolution: {integrity: sha512-K1Nqb8Nd9sfaI/eD6plU63xHqKvH4w9t7xPgd4Fy1SahXEGnN8sZZQpx561zYE8S+z1ouAO4Hvf1rgbITEArQw==}
+  openapi-backend@5.21.0:
+    resolution: {integrity: sha512-WtlJWSXfJfPxavP+byXhDJQSR4cU9l8r/BZIu9UojJjPeFoVne+evr4Z9UhAhQm0UQi3aKSUziExvA6ypOvWEQ==}
     engines: {node: '>=20.0.0'}
 
   openapi-fetch@0.17.0:
@@ -9980,7 +9980,7 @@ snapshots:
       is-inside-container: 1.0.0
       wsl-utils: 0.1.0
 
-  openapi-backend@5.20.3:
+  openapi-backend@5.21.0:
     dependencies:
       '@apidevtools/json-schema-ref-parser': 11.9.3
       ajv: 8.20.0
