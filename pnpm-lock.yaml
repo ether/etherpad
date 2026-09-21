@@ -249,7 +249,7 @@ importers:
         version: 8.70.0(eslint@10.10.0(supports-color@8.1.1))(supports-color@8.1.1)(typescript@7.0.2)
       '@vitejs/plugin-react':
         specifier: ^6.1.1
-        version: 6.1.1(babel-plugin-react-compiler@19.1.0-rc.3)(vite@8.3.0(@types/node@26.6.1)(esbuild@0.28.2)(tsx@4.23.13))
+        version: 6.1.1(babel-plugin-react-compiler@19.1.0-rc.3)(vite@8.3.0(@types/node@26.6.1)(esbuild@0.28.2)(tsx@4.23.15))
       babel-plugin-react-compiler:
         specifier: 19.1.0-rc.3
         version: 19.1.0-rc.3
@@ -290,17 +290,17 @@ importers:
         specifier: ^4.8.3
         version: 4.8.3(supports-color@8.1.1)
       tsx:
-        specifier: ^4.23.13
-        version: 4.23.13
+        specifier: ^4.23.15
+        version: 4.23.15
       typescript:
         specifier: ^7.0.2
         version: 7.0.2
       vite:
         specifier: ^8.3.0
-        version: 8.3.0(@types/node@26.6.1)(esbuild@0.28.2)(tsx@4.23.13)
+        version: 8.3.0(@types/node@26.6.1)(esbuild@0.28.2)(tsx@4.23.15)
       vite-plugin-babel:
         specifier: ^1.7.3
-        version: 1.7.3(@babel/core@8.0.1)(vite@8.3.0(@types/node@26.6.1)(esbuild@0.28.2)(tsx@4.23.13))
+        version: 1.7.3(@babel/core@8.0.1)(vite@8.3.0(@types/node@26.6.1)(esbuild@0.28.2)(tsx@4.23.15))
       zustand:
         specifier: ^5.0.15
         version: 5.0.15(@types/react@19.3.0)(react@19.3.0)(use-sync-external-store@1.7.0(react@19.3.0))
@@ -326,8 +326,8 @@ importers:
         specifier: ^7.8.5
         version: 7.8.5
       tsx:
-        specifier: ^4.23.13
-        version: 4.23.13
+        specifier: ^4.23.15
+        version: 4.23.15
       ueberdb2:
         specifier: 6.1.16
         version: 6.1.16(@elastic/elasticsearch@9.5.1(supports-color@8.1.1))(async@3.2.6)(cassandra-driver@4.9.0)(dirty-ts@1.1.8)(mongodb@7.6.0(socks@2.8.9))(mssql@12.7.2(supports-color@8.1.1))(mysql2@3.24.4(@types/node@26.6.1))(nano@11.0.7)(pg@8.23.0)(redis@6.2.1(@opentelemetry/api@1.9.1))(rethinkdb@2.4.2)(rusty-store-kv@1.3.1)(surrealdb@2.0.8(tslib@2.8.1)(typescript@7.0.2))
@@ -523,8 +523,8 @@ importers:
         specifier: 0.6.8
         version: 0.6.8
       tsx:
-        specifier: 4.23.13
-        version: 4.23.13
+        specifier: 4.23.15
+        version: 4.23.15
       ueberdb2:
         specifier: 6.1.16
         version: 6.1.16(@elastic/elasticsearch@9.5.1(supports-color@8.1.1))(async@3.2.6)(cassandra-driver@4.9.0)(dirty-ts@1.1.8)(mongodb@7.6.0(socks@2.8.9))(mssql@12.7.2(supports-color@8.1.1))(mysql2@3.24.4(@types/node@26.6.1))(nano@11.0.7)(pg@8.23.0)(redis@6.2.1(@opentelemetry/api@1.9.1))(rethinkdb@2.4.2)(rusty-store-kv@1.3.1)(surrealdb@2.0.8(tslib@2.8.1)(typescript@7.0.2))
@@ -651,7 +651,7 @@ importers:
         version: 7.0.2
       vitest:
         specifier: ^5.0.1
-        version: 5.0.1(@opentelemetry/api@1.9.1)(@types/node@26.6.1)(jsdom@30.0.1(@noble/hashes@1.8.0))(vite@8.3.0(@types/node@26.6.1)(esbuild@0.28.2)(tsx@4.23.13))
+        version: 5.0.1(@opentelemetry/api@1.9.1)(@types/node@26.6.1)(jsdom@30.0.1(@noble/hashes@1.8.0))(vite@8.3.0(@types/node@26.6.1)(esbuild@0.28.2)(tsx@4.23.15))
 
   ui:
     devDependencies:
@@ -5454,6 +5454,11 @@ packages:
     engines: {node: '>=18.0.0'}
     hasBin: true
 
+  tsx@4.23.15:
+    resolution: {integrity: sha512-Yiex1Ovn8z2xPpOWckIiysV1SSyRMY9BkLF++q0yKiDxCqRhosKfMg3janKkiLBwZ5c/YryloKwGZcrEmtwxKw==}
+    engines: {node: '>=18.0.0'}
+    hasBin: true
+
   type-check@0.4.0:
     resolution: {integrity: sha512-XleUoc9uwGXqjWwXaUTZAmzMcFZ5858QA2vvx1Ur5xIcixXIP+8LnFDgRplU30us6teqdlskFfu+ae4K79Ooew==}
     engines: {node: '>= 0.8.0'}
@@ -7562,10 +7567,10 @@ snapshots:
   '@unrs/rspack-resolver-binding-win32-x64-msvc@1.3.0':
     optional: true
 
-  '@vitejs/plugin-react@6.1.1(babel-plugin-react-compiler@19.1.0-rc.3)(vite@8.3.0(@types/node@26.6.1)(esbuild@0.28.2)(tsx@4.23.13))':
+  '@vitejs/plugin-react@6.1.1(babel-plugin-react-compiler@19.1.0-rc.3)(vite@8.3.0(@types/node@26.6.1)(esbuild@0.28.2)(tsx@4.23.15))':
     dependencies:
       '@rolldown/pluginutils': 1.0.1
-      vite: 8.3.0(@types/node@26.6.1)(esbuild@0.28.2)(tsx@4.23.13)
+      vite: 8.3.0(@types/node@26.6.1)(esbuild@0.28.2)(tsx@4.23.15)
     optionalDependencies:
       babel-plugin-react-compiler: 19.1.0-rc.3
 
@@ -7575,14 +7580,14 @@ snapshots:
       vite: 8.3.0(@types/node@26.6.1)(esbuild@0.28.2)(tsx@4.23.13)
       vue: 3.5.42(typescript@7.0.2)
 
-  '@vitest/mocker@5.0.1(vite@8.3.0(@types/node@26.6.1)(esbuild@0.28.2)(tsx@4.23.13))':
+  '@vitest/mocker@5.0.1(vite@8.3.0(@types/node@26.6.1)(esbuild@0.28.2)(tsx@4.23.15))':
     dependencies:
       '@jridgewell/trace-mapping': 0.3.31
       '@vitest/spy': 5.0.1
       estree-walker: 3.0.3
       magic-string: 1.4.1
     optionalDependencies:
-      vite: 8.3.0(@types/node@26.6.1)(esbuild@0.28.2)(tsx@4.23.13)
+      vite: 8.3.0(@types/node@26.6.1)(esbuild@0.28.2)(tsx@4.23.15)
 
   '@vitest/spy@5.0.1': {}
 
@@ -11011,6 +11016,13 @@ snapshots:
       esbuild: 0.28.2
     optionalDependencies:
       fsevents: 2.3.3
+    optional: true
+
+  tsx@4.23.15:
+    dependencies:
+      esbuild: 0.28.2
+    optionalDependencies:
+      fsevents: 2.3.3
 
   type-check@0.4.0:
     dependencies:
@@ -11241,10 +11253,10 @@ snapshots:
       x-is-array: 0.1.0
       x-is-string: 0.1.0
 
-  vite-plugin-babel@1.7.3(@babel/core@8.0.1)(vite@8.3.0(@types/node@26.6.1)(esbuild@0.28.2)(tsx@4.23.13)):
+  vite-plugin-babel@1.7.3(@babel/core@8.0.1)(vite@8.3.0(@types/node@26.6.1)(esbuild@0.28.2)(tsx@4.23.15)):
     dependencies:
       '@babel/core': 8.0.1
-      vite: 8.3.0(@types/node@26.6.1)(esbuild@0.28.2)(tsx@4.23.13)
+      vite: 8.3.0(@types/node@26.6.1)(esbuild@0.28.2)(tsx@4.23.15)
 
   vite@8.3.0(@types/node@26.6.1)(esbuild@0.28.2)(tsx@4.23.13):
     dependencies:
@@ -11258,6 +11270,19 @@ snapshots:
       esbuild: 0.28.2
       fsevents: 2.3.3
       tsx: 4.23.13
+
+  vite@8.3.0(@types/node@26.6.1)(esbuild@0.28.2)(tsx@4.23.15):
+    dependencies:
+      lightningcss: 1.33.0
+      picomatch: 4.0.7
+      postcss: 8.5.28
+      rolldown: 1.2.8
+      tinyglobby: 0.2.17
+    optionalDependencies:
+      '@types/node': 26.6.1
+      esbuild: 0.28.2
+      fsevents: 2.3.3
+      tsx: 4.23.15
 
   vitepress@2.0.0-alpha.20(@types/node@26.6.1)(change-case@5.4.4)(esbuild@0.28.2)(jwt-decode@4.0.0)(postcss@8.5.28)(tsx@4.23.13)(typescript@7.0.2):
     dependencies:
@@ -11306,10 +11331,10 @@ snapshots:
       - universal-cookie
       - yaml
 
-  vitest@5.0.1(@opentelemetry/api@1.9.1)(@types/node@26.6.1)(jsdom@30.0.1(@noble/hashes@1.8.0))(vite@8.3.0(@types/node@26.6.1)(esbuild@0.28.2)(tsx@4.23.13)):
+  vitest@5.0.1(@opentelemetry/api@1.9.1)(@types/node@26.6.1)(jsdom@30.0.1(@noble/hashes@1.8.0))(vite@8.3.0(@types/node@26.6.1)(esbuild@0.28.2)(tsx@4.23.15)):
     dependencies:
       '@types/chai': 5.2.3
-      '@vitest/mocker': 5.0.1(vite@8.3.0(@types/node@26.6.1)(esbuild@0.28.2)(tsx@4.23.13))
+      '@vitest/mocker': 5.0.1(vite@8.3.0(@types/node@26.6.1)(esbuild@0.28.2)(tsx@4.23.15))
       chai: 6.2.2
       es-module-lexer: 2.3.2
       expect-type: 1.4.0
@@ -11320,7 +11345,7 @@ snapshots:
       tinybench: 6.1.4
       tinyexec: 1.3.0
       tinyglobby: 0.2.17
-      vite: 8.3.0(@types/node@26.6.1)(esbuild@0.28.2)(tsx@4.23.13)
+      vite: 8.3.0(@types/node@26.6.1)(esbuild@0.28.2)(tsx@4.23.15)
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@opentelemetry/api': 1.9.1
