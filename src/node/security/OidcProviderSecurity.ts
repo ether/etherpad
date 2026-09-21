@@ -141,7 +141,9 @@ export const verifyInteractiveLogin = (
   const user = users[loginStr] as {password?: unknown} | null | undefined;
   if (user == null) return null;
   // Fail closed unless the account has a real string password to compare.
-  if (typeof user.password !== 'string') return null;
+  // An empty string is not a usable password: it authenticates anyone who
+  // submits nothing, which is never what an operator means by `"password": ""`.
+  if (typeof user.password !== 'string' || user.password === '') return null;
   if (!constantTimeEquals(passwordStr, user.password)) return null;
   return {...(user as Record<string, unknown>), username: loginStr};
 };

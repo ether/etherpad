@@ -121,6 +121,17 @@ describe(__filename, function () {
       await agent.get('/admin-auth/').auth('admin', 'admin-password').expect(200);
     });
 
+    describe('login fails if password is an empty string', function () {
+      // Reported by Wenhao Wu alongside GHSA-62cj-9j72-mfrh.
+      for (const creds of ['admin:', 'admin', 'admin:anything']) {
+        it(`credentials: ${creds}`, async function () {
+          settings.users.admin.password = '';
+          const encCreds = Buffer.from(creds).toString('base64');
+          await agent.get('/admin-auth/').set('Authorization', `Basic ${encCreds}`).expect(401);
+        });
+      }
+    });
+
     describe('login fails if password is nullish', function () {
       for (const adminPassword of [undefined, null]) {
         // https://tools.ietf.org/html/rfc7617 says that the username and password are sent as

@@ -162,6 +162,16 @@ describe(__filename, function () {
       });
     }
 
+    // Reported by Wenhao Wu alongside GHSA-62cj-9j72-mfrh: an account with
+    // `"password": ""` authenticated anyone who submitted an empty password,
+    // on both this path and HTTP Basic. Only misconfiguration produces it,
+    // but it should fail closed.
+    it('rejects an empty-string password', function () {
+      const u = {empty: {password: '', is_admin: true}};
+      assert.equal(verifyInteractiveLogin(u, 'empty', ''), null);
+      assert.equal(verifyInteractiveLogin(u, 'empty', 'anything'), null);
+    });
+
     it('rejects an unknown user', function () {
       assert.equal(verifyInteractiveLogin(users(), 'nobody', 'correct horse'), null);
     });
