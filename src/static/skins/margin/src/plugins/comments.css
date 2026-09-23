@@ -1,0 +1,112 @@
+.sidebar-comment .btn {
+  margin-top: 10px;
+  padding: 3px 8px;
+  font-size: .9rem;
+  margin: 10px 0 5px 0;
+}
+.sidebar-comment .btn.btn-primary:not(#comment-create-btn) {
+  background-color: #576273;
+  background-color: var(--text-soft-color);
+}
+.sidebar-comment .suggestion-create {
+  margin-top: 10px;
+}
+.suggestion-display .from-value, .suggestion-display .to-value {
+  color: #64d29b;
+  color: var(--primary-color);
+  font-weight: bold;
+  opacity: 1;
+}
+.suggestion-display .from-value {
+  margin-right: 5px;
+}
+.comment-actions-wrapper .buttonicon {
+  opacity: .8;
+}
+.comment-actions-wrapper .buttonicon:hover {
+  opacity: 1;
+}
+.comment-actions-wrapper .comment-edit {
+  margin-right: 5px;
+}
+[type="checkbox"] + label.label-suggestion-checkbox {
+  margin-left: 5px;
+  padding-left: 2.4rem;
+}
+.sidebar-comment .full-display-content {
+  margin-left: -10px;
+  box-shadow: none;
+  background-color: #f2f3f4;
+  background-color: var(--bg-soft-color);
+  border: 1px solid #ffffff;
+  border: 1px solid var(--bg-color);
+}
+.comment-reply {
+  border-top: 1px solid #ffffff;
+  border-top: 1px solid var(--bg-color);
+  background-color: inherit;
+}
+.comment-reply textarea, .comment-reply input[type="text"] {
+  background-color: #ffffff;
+  background-color: var(--bg-color);
+}
+.btn.revert-suggestion-btn {
+  padding-left: 0;
+}
+.comment-edit-form {
+  margin-top: 15px;
+}
+
+/* MODAL */
+.comment-modal .full-display-content {
+  box-shadow: none;
+  margin: 0 !important;
+  border: none;
+  background-color: #ffffff;
+  background-color: var(--bg-color);
+}
+.comment-modal .comment-modal-comment {
+  padding: 0;
+}
+.comment-modal .comment-reply textarea, .comment-modal .comment-reply input[type="text"] {
+  background-color: #f2f3f4;
+  background-color: var(--bg-soft-color);
+}
+.comment-modal .comment-reply {
+  border-top: 1px solid #f2f3f4;
+  border-top: 1px solid var(--bg-soft-color);
+}
+.comment-modal .full-display-content .comment-title-wrapper,
+.comment-modal .full-display-content .comment-reply {
+  padding: 15px;
+}
+
+
+/* NEW COMMENT POPUP */
+.new-comment-popup textarea {
+  background-color: #f2f3f4;
+  background-color: var(--bg-soft-color);
+}
+.new-comment-popup .suggestion {
+  margin-bottom: 10px;
+}
+
+
+/* EDITOR COMMENTEED LINE */
+#innerdocbody .ace-line .comment {
+  background-color: #fffacc;
+  color: var(--super-dark-color);
+}
+
+
+@media (min-width: 1200px) {
+  #comments {
+    width: 300px;
+  }
+  .sidebar-comment .full-display-content {
+    margin-left: 10px;
+  }
+  .compact-display-content {
+    padding-left: 20px;
+  }
+}

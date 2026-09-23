@@ -1,0 +1,21 @@
+#toc {
+  padding: 20px 20px 10px 10px !important;
+  min-width: 146px !important;
+  background-color: transparent !important;
+  border: none !important;
+  order: -2;
+}
+
+#tocItems {
+  line-height: 40px !important;
+}
+
+.plugin-ep_resizable_bars #toc {
+  min-width: 186px !important;
+}
+
+@media (max-width: 1200px) {
+  #toc {
+    padding-top: 10px !important
+  }
+}
