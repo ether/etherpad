@@ -50,6 +50,10 @@ const hideSessionTransferError = (element: HTMLElement | null) => {
   element.style.display = 'none';
 };
 
+const isValidTransferId = (id: unknown): id is string =>
+  typeof id === 'string' &&
+  /^([0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})$/i.test(id);
+
 function handleTransferOfSession() {
   const transferNowButton = document.querySelector('[data-l10n-id="index.transferSessionNow"]')! as HTMLButtonElement;
 
@@ -84,8 +88,7 @@ function handleTransferOfSession() {
       }
       const transferData = responseData as Record<string, unknown>;
       if (!responseData || typeof responseData !== 'object' ||
-          !('id' in responseData) || typeof transferData.id !== 'string' ||
-          transferData.id.trim() === '') {
+          !('id' in responseData) || !isValidTransferId(transferData.id)) {
         throw new Error(sessionTransferErrorFallback());
       }
 
@@ -114,10 +117,11 @@ function handleTransferOfSession() {
   });
 }
 
-const isValidTransferCode = (code: string) => code.length === 36;
+const isValidTransferCode = (code: string) => isValidTransferId(code);
 
 async function redeemTransferCode(
     code: string,
+    codeInputField: HTMLInputElement,
     transferSessionButton: HTMLButtonElement,
     errorElement: HTMLElement | null) {
   hideSessionTransferError(errorElement);
@@ -138,7 +142,7 @@ async function redeemTransferCode(
     }
     window.location.reload()
   } catch (err) {
-    transferSessionButton.disabled = !isValidTransferCode(code);
+    transferSessionButton.disabled = !isValidTransferCode(codeInputField.value);
     showSessionTransferError(
         errorElement,
         err instanceof Error && err.message ? err.message : sessionTransferErrorFallback());
@@ -186,6 +190,7 @@ const handleMenuBarClicked = () => {
       const code = codeInputField.value;
       redeemTransferCode(
           code,
+          codeInputField,
           transferSessionButton,
           document.getElementById('receive-session-error'));
     });

@@ -1,7 +1,7 @@
 import {type Page, test, expect} from '@playwright/test';
 
 test.describe('Session Transfer Functionality', () => {
-  const validCode = '12345678-1234-5678-1234-567812345678';
+  const validCode = '550e8400-e29b-41d4-a716-446655440000';
 
   test.beforeEach(async ({ page, context }) => {
     await context.addCookies([
@@ -36,14 +36,12 @@ test.describe('Session Transfer Functionality', () => {
       .click();
   };
 
-  test('should open settings dialog and transfer session', async ({
-                                                                    page,
-                                                                  }) => {
+  test('should open settings dialog and transfer session', async ({page}) => {
     await page.route('**/tokenTransfer', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ id: 'transfer-id-12345678-1234-5678' }),
+        body: JSON.stringify({id: '550e8400-e29b-41d4-a716-446655440000'}),
       });
     });
 
@@ -52,6 +50,7 @@ test.describe('Session Transfer Functionality', () => {
     const transferButton = page.locator(
       '[data-l10n-id="index.transferSessionNow"]'
     );
+
     await expect(transferButton).toBeVisible();
 
     await transferButton.click();
@@ -158,7 +157,7 @@ test.describe('Session Transfer Functionality', () => {
   });
 
   test('should copy transfer ID to clipboard', async ({ page }) => {
-    const transferId = 'abc123-transfer-id-xyz789';
+    const transferId = '550e8400-e29b-41d4-a716-446655440000';
 
     await page.route('**/tokenTransfer', async (route) => {
       await route.fulfill({
@@ -350,4 +349,57 @@ test.describe('Session Transfer Functionality', () => {
 
     await expect(dialog).not.toBeVisible();
   });
+
+  test('should treat create transfer 2xx with an invalid id as a failure', async ({page}) => {
+    await page.route('**/tokenTransfer', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({id: 'not-a-valid-transfer-id'}),
+      });
+    });
+
+  await openSettingsDialog(page);
+
+  const transferButton = page.locator(
+    '[data-l10n-id="index.transferSessionNow"]'
+  );
+
+  await transferButton.click();
+
+  await expect(page.locator('#copy-link-section')).toBeHidden();
+  await expect(transferButton).not.toBeDisabled();
+  await expect(page.locator('#transfer-session-error')).toBeVisible();
+});
+test('should disable transfer button when code becomes invalid during a failed request',
+    async ({page}) => {
+  let continueRequest!: () => void;
+
+  await page.route(`**/tokenTransfer/${validCode}`, async (route) => {
+    await new Promise<void>((resolve) => {
+      continueRequest = resolve;
+    });
+    await route.fulfill({
+      status: 404,
+      contentType: 'application/json',
+      body: JSON.stringify({error: 'Token not found'}),
+    });
+  });
+
+  await openReceiveSession(page);
+
+  const codeInput = page.locator('#codeInput');
+  const transferButton = page.locator('#transferSessionButton');
+
+  await codeInput.fill(validCode);
+  await expect(transferButton).not.toBeDisabled();
+
+  await transferButton.click();
+
+  await codeInput.fill('invalid-code');
+  continueRequest();
+
+  await expect(transferButton).toBeDisabled();
+  await expect(page.locator('#receive-session-error')).toHaveText('Token not found');
+});
 });
