@@ -197,9 +197,13 @@ const checkAccess = async (req:any, res:any, next: Function) => {
     // @ts-ignore
     const {[ctx.username]: {password} = {}} = settings.users as SettingsUser;
 
+    // An empty password is refused for the same reason a nullish one is: it
+    // would let anyone in who submits nothing. Only explicit misconfiguration
+    // produces `"password": ""`, but it should fail closed either way.
     if (!httpBasicAuth ||
         !ctx.username ||
-        password == null || password.toString() !== ctx.password) {
+        password == null || password.toString() === '' ||
+        password.toString() !== ctx.password) {
       httpLogger.info(
           `Failed authentication from IP ${anonymizeIp(req.ip, settings.ipLogging)}`);
       if (await aCallFirst0('authnFailure', {req, res})) return;

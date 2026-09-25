@@ -159,7 +159,7 @@
 	"timeslider.month.october": "Tışrino Verên",
 	"timeslider.month.november": "Tışrino Peyên",
 	"timeslider.month.december": "Kanun",
-	"timeslider.unnamedauthors": "{{num}} unnamed {[plural(num) zu: nuştoğ, zewbi: nustoği ]}",
+	"timeslider.unnamedauthors": "{{num}} unnamed {[plural(num) one: nuştoğ, other: nustoği ]}",
 	"pad.savedrevs.marked": "Eno vurriyayış henda qeyd bıyaye yew vurriyayış deyne nışan bıyo",
 	"pad.savedrevs.timeslider": "Xızberê zemani ziyer kerdış ra şıma şenê revizyonanê qeyd bıyayan bıvinê",
 	"pad.userlist.entername": "Namey xo cıkewe",

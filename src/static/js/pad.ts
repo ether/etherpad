@@ -295,6 +295,35 @@ const showDeletionTokenModalIfPresent = () => {
   });
 };
 
+// Drop the current pad from the "Recent pads" list shown on the welcome
+// screen once the server reports it deleted, so the homepage no longer offers
+// a link that would silently recreate it (issue #8201). The name is derived
+// from the URL path the same way the entry was stored.
+const forgetRecentPad = () => {
+  try {
+    const stored = localStorage.getItem('recentPads');
+    if (stored == null) return;
+    const pathSegments = window.location.pathname.split('/');
+    const padName = decodeURIComponent(pathSegments[pathSegments.length - 1]);
+    const recentPads = JSON.parse(stored);
+    if (!Array.isArray(recentPads)) return;
+    const deleted = new Set([padName, pad.getPadId()]);
+    // Entries written by older versions may hold a URL-encoded name; normalize
+    // the same way the welcome screen does before comparing.
+    const decodeName = (name) => {
+      try {
+        return decodeURIComponent(name);
+      } catch {
+        return name;
+      }
+    };
+    localStorage.setItem('recentPads', JSON.stringify(recentPads.filter(
+        (p) => p == null || !(deleted.has(p.name) || deleted.has(decodeName(p.name))))));
+  } catch (err) {
+    console.warn('Unable to update recent pads after pad deletion', err);
+  }
+};
+
 const sendClientReady = (isReconnect) => {
   let padId = document.location.pathname.substring(document.location.pathname.lastIndexOf('/') + 1);
   // unescape necessary due to Safari and Opera interpretation of spaces
@@ -476,6 +505,7 @@ const handshake = async () => {
       }
 
     } else if (obj.disconnect) {
+      if (obj.disconnect === 'deleted') forgetRecentPad();
       padconnectionstatus.disconnected(obj.disconnect);
       socket.disconnect();
 

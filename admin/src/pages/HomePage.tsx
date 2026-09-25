@@ -71,9 +71,11 @@ export const HomePage = () => {
     }
     const onFinishedInstall = (data: {plugin: string; code?: string | null; error?: string | null}) => {
       if (data?.error) {
-        const key = data.code === 'PLUGIN_REQUIRES_NEWER_ETHERPAD'
-          ? 'admin_plugins.install_error_requires_newer_etherpad'
-          : 'admin_plugins.install_error'
+        const errorKeys: Record<string, string> = {
+          PLUGIN_REQUIRES_NEWER_ETHERPAD: 'admin_plugins.install_error_requires_newer_etherpad',
+          PLUGIN_DEPRECATED: 'admin_plugins.install_error_deprecated',
+        }
+        const key = (data.code && errorKeys[data.code]) || 'admin_plugins.install_error'
         useStore.getState().setToastState({
           open: true,
           title: t(key, {plugin: data.plugin, error: data.error}),
@@ -247,6 +249,13 @@ export const HomePage = () => {
                     <span className="pm-tag pm-tag--core"><Trans i18nKey="admin_plugins.tag_core"/></span>
                   )}
                   <span className="pm-tag pm-tag--ver">v{plugin.version}</span>
+                  {plugin.deprecated && (
+                    <span
+                      className="pm-tag pm-tag--deprecated"
+                      role="alert"
+                      title={`${t('admin_plugins.deprecated_title')} ${plugin.deprecated}`}
+                    ><Trans i18nKey="admin_plugins.tag_deprecated"/></span>
+                  )}
                 </div>
                 {plugin.description && (
                   <div className="pm-installed-desc">{plugin.description}</div>

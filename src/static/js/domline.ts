@@ -27,6 +27,11 @@ const Security = require('./security');
 const hooks = require('./pluginfw/hooks');
 const _ = require('./underscore');
 const lineAttributeMarker = require('./linestylefilter').lineAttributeMarker;
+
+// Elements that give a line its own AT semantics, so it must not also be
+// exposed as role="paragraph" (#7778).
+const semanticBlockSelector =
+    'p,ul,ol,li,dl,h1,h2,h3,h4,h5,h6,pre,blockquote,table,figure,hr';
 const noop = () => {};
 
 
@@ -227,6 +232,20 @@ domline.createDomLine = (nonEmpty, doesWrap, optBrowser, optDocument) => {
       result.node.innerHTML = curHTML;
     }
     if (lineClass != null) result.node.className = lineClass;
+    // Plain lines are <div>s, which AT exposes as anonymous generic
+    // containers, flattening the whole pad into one run of text. Expose each
+    // one as a paragraph so screen readers can step through the pad line by
+    // line (and reach the links inside each line). See #7778.
+    // Lines whose markup already carries block semantics (lists, headings from
+    // ep_headings2, etc.) keep those instead. Inline or styling-only wrappers
+    // added by plugins don't count, so those lines stay paragraphs.
+    if (document && result.node.setAttribute) {
+      if (result.node.querySelector(semanticBlockSelector)) {
+        if (result.node.hasAttribute('role')) result.node.removeAttribute('role');
+      } else if (result.node.getAttribute('role') !== 'paragraph') {
+        result.node.setAttribute('role', 'paragraph');
+      }
+    }
 
     hooks.callAll('acePostWriteDomLineHTML', {
       node: result.node,

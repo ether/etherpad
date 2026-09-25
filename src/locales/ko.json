@@ -100,7 +100,7 @@
 	"admin_plugins.last-update": "마지막 업데이트",
 	"admin_plugins.name": "이름",
 	"admin_plugins.page-title": "플러그인 관리자 - 이더패드",
-	"admin_plugins.reload_catalog": "카탈로그 새로고침",
+	"admin_plugins.reload_catalog": "카탈로그 새로 고침",
 	"admin_plugins.search_npm": "npm에서 검색",
 	"admin_plugins.sort_ascending": "오름차순 정렬",
 	"admin_plugins.sort_descending": "내림차순 정렬",

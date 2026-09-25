@@ -22,7 +22,8 @@ jobs:
     if: |
       (github.event_name != 'pull_request')
       || (github.event.pull_request.head.repo.id != github.event.pull_request.base.repo.id)
-    name: Linux with Plugins
+    # Distinct from Backend tests' "Linux with Plugins", a required check on develop.
+    name: Upgrade from release with Plugins
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -45,7 +46,7 @@ jobs:
           key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
             ${{ runner.os }}-pnpm-store-
-      - uses: pnpm/action-setup@v6.0.10
+      - uses: pnpm/action-setup@v6.1.0
         name: Install pnpm
         with:
           run_install: false

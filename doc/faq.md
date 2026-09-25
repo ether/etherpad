@@ -88,6 +88,44 @@ Supported export types:
 to point at a LibreOffice executable. See the office-format notes in the
 [Docker chapter](./docker.md).
 
+### Fonts in native PDF export
+
+Without LibreOffice, PDF export is rendered in-process and only the PDF
+standard fonts are guaranteed to be present. A `font-family` applied in the
+pad (for example by `ep_font_family`) is mapped onto the closest built-in
+family — Helvetica for sans-serif faces, Times for serif faces, Courier for
+monospace ones — so serif, sans and monospace text stay visually distinct
+even though the exact face is not embedded. A family that is not recognised
+leaves the text on whatever font it would otherwise use — the surrounding
+font, or monospace inside `<code>`/`<pre>` — rather than changing it.
+
+To embed a real face, list the font files under `exportPdfFonts` in
+`settings.json`:
+
+```json
+"exportPdfFonts": {
+  "Garamond": {
+    "regular":    "/usr/share/fonts/truetype/EBGaramond-Regular.ttf",
+    "bold":       "/usr/share/fonts/truetype/EBGaramond-Bold.ttf",
+    "italic":     "/usr/share/fonts/truetype/EBGaramond-Italic.ttf",
+    "boldItalic": "/usr/share/fonts/truetype/EBGaramond-BoldItalic.ttf",
+    "fallback":   "times"
+  },
+  "Inter": "/usr/share/fonts/truetype/Inter-Regular.ttf"
+}
+```
+
+Keys are CSS family names; matching ignores case and treats `-`, `_` and
+spaces alike, so `Times New Roman` and `times-new-roman` are the same key. A
+bare string value is used for every variant. Relative paths resolve against
+the Etherpad root, and `fallback` chooses the built-in family (`helvetica`,
+`times` or `courier`) to use if a file is missing or unreadable — a bad font
+path degrades the export, it never fails it. Etherpad ships no fonts for this
+setting; point it at fonts you are licensed to embed.
+
+Configuring `soffice` bypasses all of this: LibreOffice renders PDFs with the
+fonts installed on the server.
+
 ## How do I list all pads?
 
 The recommended way is the HTTP API method `listAllPads`, combined with `jq`:

@@ -204,7 +204,7 @@ try {
   run('git pull --ff-only', {cwd: '../ether.github.com/'});
   console.log('Committing documentation...');
   run(`cp -R out/doc/ ../ether.github.com/public/doc/v'${newVersion}'`);
-  // pnpm 11 refuses `pnpm version` on a dirty tree (the doc copy above
+  // pnpm refuses `pnpm version` on a dirty tree (the doc copy above
   // dirties it) even with --no-git-tag-version, so write the bump with jq —
   // same pattern used for the etherpad package.json files at the top of
   // this script. The git add+commit below picks up both the bump and the

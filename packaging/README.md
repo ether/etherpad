@@ -19,7 +19,7 @@ Built artefacts land in `./dist/`.
 
 ## Building locally
 
-Prereqs: Node 24 (current LTS; matches `engines.node` floor), pnpm 11.1.2+, nfpm.
+Prereqs: Node 24 (current LTS; matches `engines.node` floor), pnpm 12+, nfpm.
 
 ```sh
 pnpm install --frozen-lockfile

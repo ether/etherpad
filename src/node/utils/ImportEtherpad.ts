@@ -32,6 +32,14 @@ const supportedElems = require('../../static/js/contentcollector').supportedElem
 
 const logger = log4js.getLogger('ImportEtherpad');
 
+// A colorId is either an index into the color palette or a #hex color.
+const isValidColorId = (colorId: unknown) => {
+  if (typeof colorId === 'string' && /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(colorId)) return true;
+  const index = typeof colorId === 'string' && /^\d+$/.test(colorId) ? Number(colorId) : colorId;
+  return Number.isInteger(index) &&
+      (index as number) >= 0 && (index as number) < authorManager.getColorPalette().length;
+};
+
 // Not `Pad.SYSTEM_AUTHOR_ID`: that would be a circular import
 // (ImportEtherpad -> Pad -> ImportEtherpad via padManager) at module init
 // time.
@@ -239,6 +247,7 @@ exports.setPadRaw = async (padId: string, r: string, authorId = '') => {
   await padDb.init();
   try {
     const processRecord = async (key:string, value: null|{
+      colorId?: unknown,
       padIDs: string|Record<string, unknown>,
       pool: AttributePool
     }) => {
@@ -258,6 +267,12 @@ exports.setPadRaw = async (padId: string, r: string, authorId = '') => {
           return;
         }
         value.padIDs = {[padId]: 1};
+        // The live socket path only accepts palette indices and #hex colors; hold imported
+        // records to the same rule so a crafted colorId can't reach HTML/CSS sinks.
+        if (!isValidColorId(value.colorId)) {
+          logger.warn(`(pad ${padId}) replacing malformed colorId on imported author ${id}`);
+          value.colorId = Math.floor(Math.random() * authorManager.getColorPalette().length);
+        }
       } else if (padKeyPrefixes.includes(prefix)) {
         checkOriginalPadId(id);
         if (prefix === 'pad' && keyParts.length === 2) {

@@ -152,7 +152,7 @@
 	"timeslider.month.october": "Tetor",
 	"timeslider.month.november": "Nëntor",
 	"timeslider.month.december": "Dhjetor",
-	"timeslider.unnamedauthors": "{{num}} i paemër {[plural(num) një: autor, tjetër:{{num}} autorë ]}",
+	"timeslider.unnamedauthors": "{{num}} i paemër {[plural(num) one: autor, other: autorë ]}",
 	"pad.savedrevs.marked": "Ky rishikim tani është shënuar si rishikim i ruajtur",
 	"pad.savedrevs.timeslider": "Rishikimet e ruajtura mund t’i shihni duke vizituar rrjedhën kohore",
 	"pad.userlist.entername": "Jepni emrin tuaj",

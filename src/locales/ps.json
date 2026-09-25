@@ -215,7 +215,7 @@
 	"timeslider.month.october": "اکتوبر",
 	"timeslider.month.november": "نومبر",
 	"timeslider.month.december": "ډېسمبر",
-	"timeslider.unnamedauthors": "{{num}} بې نومه {[ډېرگړي(num) يو: ليکوال، نور: ليکوالان ]}",
+	"timeslider.unnamedauthors": "{{num}} بې نومه {[plural(num) one: ليکوال, other: ليکوالان ]}",
 	"pad.savedrevs.marked": "اوس دا بياليدنه د يوې خوندي شوې بياليدنې په توگه په نښه شوه",
 	"pad.userlist.entername": "نوم مو ورکړئ",
 	"pad.userlist.unnamed": "بې نومه",

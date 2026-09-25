@@ -4,7 +4,13 @@ import {ArgsExpressType} from "../../types/ArgsExpressType";
 import {ErrorCaused} from "../../types/ErrorCaused";
 import {QueryType} from "../../types/QueryType";
 
-import {getAvailablePlugins, install, search, uninstall} from "../../../static/js/pluginfw/installer";
+import {
+  getAvailablePlugins,
+  getInstalledPluginWarnings,
+  install,
+  search,
+  uninstall,
+} from "../../../static/js/pluginfw/installer";
 import {PackageData, PackageInfo} from "../../types/PackageInfo";
 import semver from 'semver';
 import log4js from 'log4js';
@@ -46,14 +52,29 @@ exports.socketio = (hookName:string, args:ArgsExpressType, cb:Function) => {
     })
 
     socket.on('getInstalled', async (query: string) => {
-      // send currently installed plugins
-      const installed =
-        Object.keys(pluginDefs.plugins).map((plugin) => pluginDefs.plugins[plugin].package);
+      // Send currently installed plugins. Shallow copies, not the live
+      // package objects from the plugin registry: `updatable` and
+      // `deprecated` are per-response status, and writing them onto the
+      // registry left a stale badge showing after the condition had passed
+      // (e.g. npm un-deprecates, a lookup fails, or the catalog is turned
+      // off).
+      const installed: PackageInfo[] = Object.keys(pluginDefs.plugins)
+          .map((plugin) => ({...pluginDefs.plugins[plugin].package}));
 
       if (settings.privacy.pluginCatalog) {
         const updatable = await checkPluginForUpdates();
+        // An installed plugin that has since been deprecated or superseded is
+        // flagged in the UI: the catalog filter only stops new installs, it
+        // cannot help an admin who installed the plugin before (#8246).
+        let deprecated = new Map<string, string>();
+        try {
+          deprecated = await getInstalledPluginWarnings(installed);
+        } catch (err) {
+          logger.warn(`Could not check installed plugins for deprecation: ${err}`);
+        }
         installed.forEach((plugin) => {
           plugin.updatable = updatable.includes(plugin.name);
+          plugin.deprecated = deprecated.get(plugin.name);
         })
       }
       // When the catalog is disabled, `updatable` simply stays unset on

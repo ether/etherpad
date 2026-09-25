@@ -15,6 +15,18 @@ You can also browse to `http://yourEtherpadInstan.ce/admin/plugins`, which will
 list all installed plugins and those available on npm. It even provides
 functionality to search through all available plugins.
 
+The catalog does not offer every package it knows about. A plugin is left out
+when npm marks the published version as deprecated, when the plugin registry
+could not get it working against the current Etherpad release, or when it is
+on Etherpad's short list of superseded packages that break a working install
+(`src/static/js/pluginfw/pluginCatalogFilter.ts`). An already-installed plugin
+in that state is flagged as deprecated in the *Installed plugins* list rather
+than hidden. The admin UI also refuses to install such a plugin, so a stale
+page cannot get one in through the back door. Nothing is hidden or refused on
+a failed lookup — if the npm registry cannot be reached the full catalog is
+listed and installs proceed — and `pnpm run plugins i ep_<name>` on the server
+installs it anyway, for an operator who knows what they are doing.
+
 ## Folder structure
 
 Ideally a plugin has the following folder structure:

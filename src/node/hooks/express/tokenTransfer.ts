@@ -6,6 +6,10 @@ import settings from '../../utils/Settings';
 
 type TokenTransferRequest = {
   token: string;
+  // Decoded JSON text of the client preferences (not cookie wire bytes).
+  // Named after the legacy HTTP cookie for compatibility with records and
+  // clients that pre-date ether/etherpad#8171; it holds the preferences for
+  // HTTP and HTTPS alike.
   prefsHttp: string,
   // Optional because legacy records from older code paths persisted
   // without it. The GET handler treats absent/non-numeric createdAt as
@@ -22,6 +26,37 @@ const tokenTransferKey = (id: string) => `tokenTransfer::${id}`;
 // should not be redeemable indefinitely.
 const TRANSFER_TTL_MS = 5 * 60 * 1000;
 
+// The pad client (pad_cookie.ts) stores preferences in `prefs` over HTTPS and
+// in `prefsHttp` over HTTP (see doc/cookies.md).
+const prefsCookieName = (secure: boolean) => secure ? 'prefs' : 'prefsHttp';
+
+// Returns canonical JSON text for a preferences object, or '' if `value` is
+// not one. Accepts decoded JSON (e.g. from cookie-parser) as well as the raw
+// percent-encoded cookie text that older clients read from document.cookie,
+// so the value is decoded exactly once before res.cookie() re-encodes it.
+const parsePrefsObject = (text: string): string => {
+  try {
+    const parsed = JSON.parse(text);
+    if (parsed != null && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      return JSON.stringify(parsed);
+    }
+  } catch (err) {
+    // Not JSON.
+  }
+  return '';
+};
+
+const normalizePrefs = (value: unknown): string => {
+  if (typeof value !== 'string' || value === '') return '';
+  const direct = parsePrefsObject(value);
+  if (direct) return direct;
+  try {
+    return parsePrefsObject(decodeURIComponent(value));
+  } catch (err) {
+    return ''; // Malformed percent-encoding.
+  }
+};
+
 export const expressCreateServer =  (hookName:string, {app}:ArgsExpressType) => {
   app.post('/tokenTransfer', async (req: any, res) => {
     // The author token is HttpOnly (ether/etherpad#6701 PR3) so the browser
@@ -36,10 +71,21 @@ export const expressCreateServer =  (hookName:string, {app}:ArgsExpressType) => 
       return res.status(400).send({error: 'No author cookie to transfer'});
     }
 
+    // Prefer the preferences cookie the request itself carries (decoded by
+    // cookie-parser), trying the name for the request's protocol first. The
+    // client-supplied body value is only a fallback.
+    const secure = Boolean(req.secure);
+    const cookieCandidates = [prefsCookieName(secure), prefsCookieName(!secure)]
+        .flatMap((name) => [`${cp}${name}`, name])
+        .map((name) => req.cookies?.[name]);
+    const prefs = [...cookieCandidates, body.prefsHttp]
+        .map(normalizePrefs)
+        .find((v) => v !== '') || '';
+
     const id = crypto.randomUUID();
     const token: TokenTransferRequest = {
       token: authorToken,
-      prefsHttp: body.prefsHttp || '',
+      prefsHttp: prefs,
       createdAt: Date.now(),
     };
 
@@ -84,13 +130,23 @@ export const expressCreateServer =  (hookName:string, {app}:ArgsExpressType) => 
       secure: Boolean(req.secure),
       sameSite: 'lax',
     });
-    // prefsHttp is intentionally JS-readable — do NOT mark HttpOnly.
-    res.cookie(`${p}prefsHttp`, tokenData.prefsHttp, {
-      path: '/', maxAge: 1000 * 60 * 60 * 24 * 365,
-    });
+    // Preferences are intentionally JS-readable — do NOT mark HttpOnly. Write
+    // them under the name the pad client reads for this protocol, and pass
+    // decoded JSON so res.cookie() performs the only encoding step
+    // (ether/etherpad#8171). Skip the cookie when there is nothing to
+    // transfer so existing preferences on this device are left untouched.
+    const prefs = normalizePrefs(tokenData.prefsHttp);
+    if (prefs) {
+      res.cookie(`${p}${prefsCookieName(Boolean(req.secure))}`, prefs, {
+        path: '/',
+        maxAge: 1000 * 60 * 60 * 24 * 365,
+        secure: Boolean(req.secure),
+        sameSite: 'lax',
+      });
+    }
     // Body must NOT echo the author token — the HttpOnly cookie above
     // is the only channel. Body advertises only the non-secret prefs
     // the client needs to wire up locally.
-    res.send({ok: true, prefsHttp: tokenData.prefsHttp});
+    res.send({ok: true, prefsHttp: prefs});
   })
 }

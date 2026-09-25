@@ -106,7 +106,7 @@
 	"timeslider.month.october": "ဢွၵ်ႇထူဝ်ႇပႃႇ",
 	"timeslider.month.november": "ၼူဝ်ႇဝႅမ်ႇပႃႇ",
 	"timeslider.month.december": "တီႇသႅမ်ႇပႃႇ",
-	"timeslider.unnamedauthors": "{{num}} ဢမ်ႇသႂ်ႇၸိုဝ်ႈ {[plural(num) ၼိုင်ႈ: ၽူႈတႅမ်ႈလိၵ်ႈ, တၢင်ႇၸိူဝ်း: ၽူႈတႅမ်ႈလိၵ်ႈၶဝ် ]}",
+	"timeslider.unnamedauthors": "{{num}} ဢမ်ႇသႂ်ႇၸိုဝ်ႈ {[plural(num) one: ၽူႈတႅမ်ႈလိၵ်ႈ, other: ၽူႈတႅမ်ႈလိၵ်ႈၶဝ် ]}",
 	"pad.savedrevs.marked": "ဢၼ်မႄးဝႆႉၼႆႉ ယၢမ်းလဵဝ် ၶိုၼ်းမႄး ၵဵပ်းသိမ်းဝႆႉ ၸိူင်ႉၼင်ႇဢၼ်ၼိုင်ႈ",
 	"pad.savedrevs.timeslider": "ၸဝ်ႈၵဝ်ႇတေတူၺ်းလႆႈ ဢၼ်ၶိုၼ်းမႄးသိမ်းဝႆႉၼၼ်ႉယူႇ ပေႃးၶဝ်ႈတူၺ်းတီႈ ၶၢဝ်းယၢမ်းထေႃပူၼ်ႉ",
 	"pad.userlist.entername": "ပေႃႇသႂ်ႇပၼ် ၸိုဝ်ႈၽူႈၸႂ်ႉတိုဝ်း ၸဝ်ႈၵဝ်ႇ",

@@ -277,6 +277,13 @@ export type SettingsType = {
   minify: boolean,
   soffice: string | null,
   docxExport: boolean,
+  exportPdfFonts: MapArrayType<string | {
+    regular?: string,
+    bold?: string,
+    italic?: string,
+    boldItalic?: string,
+    fallback?: string,
+  }>,
   allowUnknownFileEnds: boolean,
   loglevel: string,
   logLayoutType: string,
@@ -687,6 +694,12 @@ const settings: SettingsType = {
    */
   docxExport: true,
   /**
+   * Extra font files the built-in (no-LibreOffice) PDF exporter may embed,
+   * keyed by CSS font-family name. Empty by default: without it the exporter
+   * maps every family onto pdfkit's built-in Helvetica/Times/Courier.
+   */
+  exportPdfFonts: {},
+  /**
    * Should we support none natively supported file types on import?
    */
   allowUnknownFileEnds: true,
@@ -911,19 +924,27 @@ export const getPublicPrivacyBanner = () => ({
 export default settings;
 // CJS compatibility: plugins use require('ep_etherpad-lite/node/utils/Settings')
 // and expect settings properties directly on the module object, not under .default
-if (typeof module !== 'undefined' && module.exports) {
+//
+// Must be re-run after every settings load: keys that only exist because the
+// operator put them in settings.json — notably the top-level `ep_*` blocks that
+// plugins read their own configuration from (ep_hash_auth, ep_ldapauth, …) —
+// are not present on `settings` while this module is still evaluating, so a
+// one-shot pass at module scope would leave them permanently invisible to
+// require() consumers (ether/etherpad#8110).
+export const syncCjsExports = () => {
+  if (typeof module === 'undefined' || !module.exports) return;
   const currentExports = module.exports;
   for (const key of Object.keys(settings)) {
-    if (!(key in currentExports)) {
-      Object.defineProperty(currentExports, key, {
-        get: () => (settings as any)[key],
-        set: (v: any) => { (settings as any)[key] = v; },
-        enumerable: true,
-        configurable: true,
-      });
-    }
+    if (key in currentExports) continue;
+    Object.defineProperty(currentExports, key, {
+      get: () => (settings as any)[key],
+      set: (v: any) => { (settings as any)[key] = v; },
+      enumerable: true,
+      configurable: true,
+    });
   }
-}
+};
+syncCjsExports();
 
 /**
  * This setting is passed with dbType to ueberDB to set up the database
@@ -1454,6 +1475,11 @@ export const reloadSettings = () => {
             .slice(0, 8);
     }
     logger.info(`String used for versioning assets: ${settings.randomVersionString}`);
+
+    // Expose any newly-seen top-level keys (plugin `ep_*` blocks, …) on
+    // module.exports so `require('ep_etherpad-lite/node/utils/Settings')`
+    // sees them. See syncCjsExports() above.
+    syncCjsExports();
 };
 
 export const exportedForTestingOnly = {

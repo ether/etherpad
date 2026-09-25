@@ -54,7 +54,7 @@ jobs:
           key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
             ${{ runner.os }}-pnpm-store-
-      - uses: pnpm/action-setup@v6.0.10
+      - uses: pnpm/action-setup@v6.1.0
         name: Install pnpm
         with:
           run_install: false
@@ -69,7 +69,7 @@ jobs:
           cache-dependency-path: etherpad/pnpm-lock.yaml
       - name: Install dependencies ether.github.com
         # ether.github.com depends on sharp (Next.js image pipeline), whose
-        # install script must run to fetch the platform binary. pnpm 11
+        # install script must run to fetch the platform binary. pnpm
         # turned ignored-builds into an error; allow all builds for this
         # external repo since we don't control its pnpm-workspace.yaml.
         run: pnpm install --frozen-lockfile --config.dangerously-allow-all-builds=true

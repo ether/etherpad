@@ -81,7 +81,12 @@ const getHTMLFromAtext = async (pad:PadType, atext: AText, authorColors?: string
   const anumMap:MapArrayType<number> = {};
   let css = '';
 
-  const stripDotFromAuthorID = (id: string) => id.replace(/\./g, '_');
+  // Author IDs (from the attribute pool) and author colors (from globalAuthor records) are
+  // attacker-controllable via .etherpad import and end up inside a <style> block and a class
+  // attribute, so constrain both to characters that cannot break out of those contexts.
+  const stripDotFromAuthorID = (id: string) => id.replace(/[^A-Za-z0-9_-]/g, '_');
+  const isSafeCssColor = (color: unknown) =>
+    typeof color === 'string' && /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(color);
 
   if (authorColors) {
     css += '<style>\n';
@@ -97,7 +102,9 @@ const getHTMLFromAtext = async (pad:PadType, atext: AText, authorColors?: string
         const newLength = props.push(propName);
         anumMap[a] = newLength - 1;
 
-        css += `.${propName} {background-color: ${authorColors[attr[1]]}}\n`;
+        // @ts-ignore
+        const color = authorColors[attr[1]];
+        if (isSafeCssColor(color)) css += `.${propName} {background-color: ${color}}\n`;
       } else if (attr[0] === 'removed') {
         const propName = 'removed';
         const newLength = props.push(propName);

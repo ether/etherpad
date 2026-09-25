@@ -3,6 +3,8 @@
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import {spawn} from 'node:child_process';
+// cross-spawn resolves .cmd shims such as pnpm on Windows, which child_process.spawn cannot run.
+import crossSpawn from 'cross-spawn';
 import log4js from 'log4js';
 import {ArgsExpressType} from '../../types/ArgsExpressType';
 import settings, {getEpVersion} from '../../utils/Settings';
@@ -87,7 +89,7 @@ const buildPreflightDeps = (installMethod: ReturnType<typeof getDetectedInstallM
     // pm_on_fail=ignore so a "packageManager" pin mismatch doesn't make pnpm
     // exit non-zero (it would otherwise try to fetch the pinned build, which
     // fails offline) and falsely report pnpm as absent. See #7911.
-    const c = spawn('pnpm', ['--version'],
+    const c = crossSpawn('pnpm', ['--version'],
         {stdio: 'ignore', env: {...process.env, pnpm_config_pm_on_fail: 'ignore'}});
     c.on('close', (code) => resolve(code === 0));
     c.on('error', () => resolve(false));
@@ -231,7 +233,7 @@ export const expressCreateServer = (
           executeUpdate: async ({targetTag: tag, initialState}) => executeUpdate({
             repoDir: settings.root,
             backupDir: backupDir(),
-            spawnFn: spawn as unknown as SpawnFn,
+            spawnFn: crossSpawn as unknown as SpawnFn,
             readSha: () => new Promise<string>((resolve, reject) => {
               const c = spawn('git', ['rev-parse', 'HEAD'],
                               {cwd: settings.root, stdio: ['ignore', 'pipe', 'ignore']});

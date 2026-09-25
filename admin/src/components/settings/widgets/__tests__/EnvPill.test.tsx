@@ -84,3 +84,22 @@ test('renders null resolved value as the string null', () => {
   } as any));
   assert.ok(html.includes('null'), `expected "null" in ${html}`);
 });
+
+// https://github.com/ether/etherpad/issues/8211
+test('shows escaped defaults in their escaped form', () => {
+  const html = wrap(React.createElement(EnvPill, {
+    placeholder: { variable: 'DEFAULT_PAD_TEXT', defaultValue: 'Line 1\\nLine 2 https:\\/\\/x' },
+    path: ['defaultPadText'],
+    onChange: () => {},
+  }));
+  assert.ok(html.includes('value="Line 1\\nLine 2 https://x"'), html);
+});
+
+test('keeps a default whose decoded form contains } in raw form', () => {
+  const html = wrap(React.createElement(EnvPill, {
+    placeholder: { variable: 'X', defaultValue: 'a\\u007db' },
+    path: ['x'],
+    onChange: () => {},
+  }));
+  assert.ok(html.includes('value="a\\u007db"'), html);
+});

@@ -50,9 +50,16 @@ if (-not (Test-Cmd node)) {
     Write-Fatal "Node.js is required (>= $RequiredNodeMajor). Install it from https://nodejs.org"
 }
 
-$nodeMajor = [int](node -p 'process.versions.node.split(".")[0]')
+# Parse `node --version` (e.g. "v24.15.0") in PowerShell rather than passing a
+# JS snippet to `node -p`: Windows PowerShell 5.1 strips embedded double quotes
+# from native-command arguments, which mangled the snippet into a SyntaxError
+# and made every Node version look too old (#8214).
+$nodeVer = "$(node --version)".Trim()
+if (-not ($nodeVer -match '^v(\d+)\.')) {
+    Write-Fatal "Could not determine the Node.js version (got '$nodeVer'). Node.js >= $RequiredNodeMajor is required."
+}
+$nodeMajor = [int]$Matches[1]
 if ($nodeMajor -lt $RequiredNodeMajor) {
-    $nodeVer = (node --version)
     Write-Fatal "Node.js >= $RequiredNodeMajor required. You have $nodeVer."
 }
 

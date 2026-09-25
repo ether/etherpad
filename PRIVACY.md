@@ -10,7 +10,9 @@ scope — audit any plugin you install.
 
 Etherpad ships with two outbound calls to `etherpad.org`. Both are
 documented below. Both can be disabled with a single config value each.
-No analytics, no usage pings, no third-party SDKs at runtime.
+It also queries the public npm registry, but only while an admin is using
+the plugin manager — never on a plain pad server. No analytics, no usage
+pings, no third-party SDKs at runtime.
 
 ## Outbound calls
 
@@ -35,6 +37,20 @@ No analytics, no usage pings, no third-party SDKs at runtime.
 | Purpose   | list installable `ep_*` plugins in the admin UI |
 | Disable   | set `privacy.pluginCatalog: false` in `settings.json` (manual install via CLI still works) |
 | Source    | `src/static/js/pluginfw/installer.ts` |
+
+### 3. Plugin deprecation and engine check
+
+| | |
+|---|---|
+| URL       | `https://registry.npmjs.org/<plugin>/<version>` |
+| Frequency | once per listed plugin when an admin opens the plugin manager (cached 12 h), and once per plugin install |
+| Payload   | GET only; same `User-Agent`; only `ep_*` package names are sent |
+| Purpose   | hide plugins npm marks deprecated from the catalog, and refuse to install one that is deprecated or whose `engines.node` excludes the running Node |
+| Disable   | set `privacy.pluginCatalog: false` in `settings.json` — the catalog, and with it the deprecation sweep, is then not used at all. The install-time check only runs when you install a plugin from the admin UI; `pnpm run plugins i` does not make this call |
+| Source    | `src/static/js/pluginfw/installer.ts` |
+
+Failures here are non-fatal by design: if npm is unreachable the catalog is
+still listed in full and installs still proceed.
 
 ## What we removed
 

@@ -147,7 +147,7 @@
 	"timeslider.month.october": "Yarkomaa",
 	"timeslider.month.november": "Jolal",
 	"timeslider.month.december": "Bowte",
-	"timeslider.unnamedauthors": "{{num}} innitaaka {[plural(num) goo: ballifo, goɗɗo: wallifɓe]}",
+	"timeslider.unnamedauthors": "{{num}} innitaaka {[plural(num) one: ballifo, other: wallifɓe ]}",
 	"pad.savedrevs.marked": "Ndee yamre maantaama jooni ko baylital danndangal",
 	"pad.savedrevs.timeslider": "Aɗa waawi yiyde baylitte danndaaɗe so yillaade daasorde tuma ndee",
 	"pad.userlist.entername": " Naatnu innde maa",

@@ -126,7 +126,7 @@
 	"timeslider.month.october": "octombrie",
 	"timeslider.month.november": "noiembrie",
 	"timeslider.month.december": "decembrie",
-	"timeslider.unnamedauthors": "{{num}} anonim {[plural (num) unul: autor, altul: autori ]}",
+	"timeslider.unnamedauthors": "{{num}} anonim {[plural(num) one: autor, other: autori ]}",
 	"pad.savedrevs.marked": "Această revizie este marcată acum ca o revizuire salvată",
 	"pad.savedrevs.timeslider": "Puteți vedea reviziile salvate accesând cursorul de timp",
 	"pad.userlist.entername": "Introduceți numele dumneavoastră",

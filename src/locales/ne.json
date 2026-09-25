@@ -27,7 +27,7 @@
 	"admin_pads.all_pads": "सबै प्याडहरू",
 	"admin_pads.bulk.cleanup_history": "इतिहास खाली गर्नुहोस्",
 	"admin_pads.bulk.clear_selection": "चयन खाली गर्नुहोस्",
-	"admin_pads.bulk.delete": "मेट्नुहोस्",
+	"admin_pads.bulk.delete": "मेटाउनुहोस्",
 	"admin_pads.cancel": "रद्द गर्नुहोस्",
 	"admin_pads.col.pad": "प्याड",
 	"admin_pads.col.revisions": "संशोधनहरू",

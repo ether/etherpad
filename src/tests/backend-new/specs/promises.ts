@@ -84,7 +84,7 @@ describe(__filename, function () {
     });
 
     it('rejects total > 0, concurrency === 0', async function () {
-      expect(timesLimit(total, 0, makePromise)).rejects.toThrow(RangeError);
+      await expect(timesLimit(total, 0, makePromise)).rejects.toThrow(RangeError);
     });
   });
 });

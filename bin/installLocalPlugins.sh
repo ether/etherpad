@@ -39,7 +39,9 @@ if [ ! -z "${ETHERPAD_LOCAL_PLUGINS}" ]; then
     plugin=$(trim "$plugin")
     if [ -d "local_plugins/${plugin}" ]; then
       echo "Installing plugin: '${plugin}'"
-      pnpm install -w ${PNPM_OPTIONS:-} "local_plugins/${plugin}/"
+      # The `./` prefix is required: without it pnpm treats `local_plugins/<pkg>`
+      # as a scoped package name (or git URL) rather than a local directory.
+      pnpm install -w ${PNPM_OPTIONS:-} "./local_plugins/${plugin}/"
     else
       ( echo "Error. Directory 'local_plugins/${plugin}' for local plugin " \
              "'${plugin}' missing" >&2 )

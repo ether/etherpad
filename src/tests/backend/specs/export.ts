@@ -118,22 +118,174 @@ describe(__filename, function () {
     });
   });
 
-  describe('stripRemoteImages', function () {
-    const {stripRemoteImages} = require('../../../node/utils/ExportSanitizeHtml');
+  describe('sanitizeExportHtml', function () {
+    const {sanitizeExportHtml} = require('../../../node/utils/ExportSanitizeHtml');
+
+    // The export document is handed to a converter that runs server-side and
+    // dereferences subresource URLs, so every one of these would be a request
+    // issued from the server. The list is deliberately broad: the point of the
+    // value-based check is that it does not depend on knowing the attribute
+    // name, so a carrier nobody enumerated here is still denied.
+    const mustNotSurvive: [string, string][] = [
+      ['plain remote src', '<img src="http://evil.example/a.png">'],
+      ['leading space defeats an anchored scheme test',
+        '<img src=" http://evil.example/a.png">'],
+      ['leading tab', '<img src="\thttp://evil.example/a.png">'],
+      ['leading newline', '<img src="\nhttp://evil.example/a.png">'],
+      ['entity-encoded leading space',
+        '<img src="&#32;http://evil.example/a.png">'],
+      ['hex-entity-encoded leading space',
+        '<img src="&#x20;http://evil.example/a.png">'],
+      ['entity-encoded scheme colon',
+        '<img src="http&colon;//evil.example/a.png">'],
+      ['uppercase scheme', '<img src="HTTP://evil.example/a.png">'],
+      ['protocol-relative', '<img src="//evil.example/a.png">'],
+      ['non-http scheme', '<img src="ftp://evil.example/a.png">'],
+      ['srcset', '<img srcset="http://evil.example/a.png 1x">'],
+      ['remote candidate hidden behind a local one in srcset',
+        '<img srcset="/ok.png 1x, http://evil.example/a.png 2x">'],
+      ['video src', '<video src="http://evil.example/a.mp4"></video>'],
+      ['video poster', '<video poster="http://evil.example/a.png"></video>'],
+      ['source srcset',
+        '<picture><source srcset="http://evil.example/a.png"></picture>'],
+      ['audio src', '<audio src="http://evil.example/a.mp3"></audio>'],
+      ['object data', '<object data="http://evil.example/a.svg"></object>'],
+      ['embed src', '<embed src="http://evil.example/a.swf">'],
+      ['iframe src', '<iframe src="http://evil.example/a"></iframe>'],
+      ['link stylesheet',
+        '<link rel="stylesheet" href="http://evil.example/a.css">'],
+      ['url() in a style attribute',
+        '<p style="background-image:url(http://evil.example/a.png)">x</p>'],
+      ['CSS-escaped url() in a style attribute',
+        '<p style="background:\\75 rl(http://evil.example/a.png)">x</p>'],
+      ['url() in a style block',
+        '<style>body{background:url(http://evil.example/a.png)}</style>'],
+      ['@import in a style block',
+        '<style>@import "http://evil.example/a.css";</style>'],
+      ['inline SVG image href',
+        '<svg><image href="http://evil.example/a.png"></image></svg>'],
+      ['input type=image', '<input type="image" src="http://evil.example/a.png">'],
+      ['table background attribute',
+        '<table background="http://evil.example/a.png"></table>'],
+      ['script body', '<script>fetch("http://evil.example/")</script>'],
+      // Percent-escapes decode INTO the ignored range, so stripping only
+      // before percent-decoding leaves the scheme test looking at a string
+      // that still starts with whitespace. (Qodo review on #8154.)
+      ['percent-encoded leading space',
+        '<img src="%20http://evil.example/a.png">'],
+      ['percent-encoded leading tab',
+        '<img src="%09http://evil.example/a.png">'],
+      ['percent-encoded leading newline',
+        '<img src="%0ahttp://evil.example/a.png">'],
+      // A CSS parser resolves escapes and comments before it sees a token, so
+      // neither spelling of `url(` may survive in a <style> block.
+      ['CSS-escaped url() in a style block',
+        '<style>body{background:\\75 rl(http://evil.example/a.png)}</style>'],
+      ['comment-split url() in a style block',
+        '<style>body{background:u/**/rl(http://evil.example/a.png)}</style>'],
+      ['comment-split url() in a style attribute',
+        '<p style="background:u/**/rl(http://evil.example/a.png)">x</p>'],
+      ['CSS-escaped @import in a style block',
+        '<style>\\40 import "http://evil.example/a.css";</style>'],
+    ];
+
+    for (const [name, html] of mustNotSurvive) {
+      it(`drops a remote URL in: ${name}`, function () {
+        assert.doesNotMatch(sanitizeExportHtml(html), /evil\.example/);
+      });
+    }
+
+    it('drops <base>, which would make every relative URL remote', function () {
+      const out = sanitizeExportHtml('<base href="http://evil.example/"><img src="a.png">');
+      assert.doesNotMatch(out, /evil\.example/);
+      assert.doesNotMatch(out, /<base/);
+      // The relative image is still fine — it is <base> that made it dangerous.
+      assert.match(out, /<img src="a\.png">/);
+    });
+
+    it('drops paths that climb out of the converter working directory', function () {
+      // soffice resolves relative URLs against the temp export dir and
+      // html-to-docx readFileSync(path.resolve(src))s them against the cwd.
+      assert.doesNotMatch(
+          sanitizeExportHtml('<img src="../../../../etc/shadow.png">'), /shadow/);
+      assert.doesNotMatch(
+          sanitizeExportHtml('<img src="%2e%2e/%2e%2e/etc/shadow.png">'), /shadow/);
+    });
+
+    it('drops a non-navigational scheme from <a href>', function () {
+      const out = sanitizeExportHtml('<a href="javascript:alert(1)">x</a>');
+      assert.doesNotMatch(out, /javascript:/i);
+      assert.match(out, /x/);
+    });
+
+    it('drops a non-navigational scheme hidden behind percent-encoded space',
+        function () {
+          const out = sanitizeExportHtml('<a href="%20javascript:alert(1)">x</a>');
+          assert.doesNotMatch(out, /javascript/i);
+          assert.match(out, /x/);
+        });
+
+    it('keeps a style block whose escapes are legitimate CSS strings',
+        function () {
+          // `\201C` is a smart quote in `content:` — decoding it into the
+          // emitted CSS would break the declaration, so detection runs on a
+          // copy and the original text is what ships.
+          const css = '<style>q:before{content:"\\201C"}</style>';
+          assert.match(sanitizeExportHtml(css), /\\201C/);
+        });
+
+    it('keeps ordinary hyperlinks — converters do not dereference them',
+        function () {
+          const out = sanitizeExportHtml('<a href="https://example.com/x">link</a>');
+          assert.match(out, /href="https:\/\/example\.com\/x"/);
+          assert.match(out, /link/);
+        });
+
+    it('keeps mailto: links', function () {
+      assert.match(sanitizeExportHtml('<a href="mailto:a@b.co">m</a>'), /mailto:a@b\.co/);
+    });
+
+    it('keeps the manifest <link> the export template emits', function () {
+      const out = sanitizeExportHtml('<link rel="manifest" href="/manifest.json"/>');
+      assert.match(out, /manifest\.json/);
+    });
+
+    it('keeps the style attributes ep_align and core lists emit', function () {
+      assert.match(
+          sanitizeExportHtml('<p style="text-align:center">x</p>'), /text-align:center/);
+      assert.match(
+          sanitizeExportHtml('<ul style="list-style-type: none;"></ul>'),
+          /list-style-type/);
+    });
+
+    it('keeps the author-colour and list-counter CSS in the export head',
+        function () {
+          const css = '<style>.authorA {background-color: #fff}\n' +
+              'ol > li:before{content:counters(item, ".") ". ";}</style>';
+          const out = sanitizeExportHtml(css);
+          assert.match(out, /background-color: #fff/);
+          assert.match(out, /counters\(item/);
+          // CSS must not come back HTML-escaped or the block stops parsing.
+          assert.doesNotMatch(out, /&gt;/);
+        });
+
+    it('keeps the charset declaration', function () {
+      assert.match(sanitizeExportHtml('<meta charset="utf-8"/>'), /charset="utf-8"/);
+    });
 
     it('keeps data: URIs', function () {
-      const out = stripRemoteImages(
+      const out = sanitizeExportHtml(
           '<p>x</p><img src="data:image/png;base64,iVBORw0KGgo=">');
       assert.match(out, /<img[^>]+src="data:image\/png/);
     });
 
     it('keeps relative URLs', function () {
-      const out = stripRemoteImages('<img src="/foo/bar.png">');
+      const out = sanitizeExportHtml('<img src="/foo/bar.png">');
       assert.match(out, /<img[^>]+src="\/foo\/bar\.png"/);
     });
 
     it('drops absolute http(s) URLs and falls back to alt', function () {
-      const out = stripRemoteImages(
+      const out = sanitizeExportHtml(
           '<p>before<img src="https://evil.example/x.png" alt="cat">after</p>');
       assert.doesNotMatch(out, /evil\.example/);
       assert.match(out, /before/);
@@ -142,31 +294,31 @@ describe(__filename, function () {
     });
 
     it('drops protocol-relative URLs', function () {
-      const out = stripRemoteImages('<img src="//evil.example/x.png">');
+      const out = sanitizeExportHtml('<img src="//evil.example/x.png">');
       assert.doesNotMatch(out, /evil\.example/);
     });
 
     it('passes non-image markup through unchanged', function () {
       const html = '<h1>hi</h1><p>body <a href="/x">link</a></p>';
-      assert.strictEqual(stripRemoteImages(html), html);
+      assert.strictEqual(sanitizeExportHtml(html), html);
     });
 
     it('preserves the doctype directive (soffice reads a full document)', function () {
       const html = '<!doctype html><html><body><p>hi</p></body></html>';
-      const out = stripRemoteImages(html);
+      const out = sanitizeExportHtml(html);
       assert.match(out, /<!doctype html>/i);
     });
 
     it('preserves HTML comments', function () {
       const html = '<body><!-- keep me --><p>hi</p></body>';
-      const out = stripRemoteImages(html);
+      const out = sanitizeExportHtml(html);
       assert.match(out, /<!-- keep me -->/);
     });
 
     it('preserves the doctype while still dropping a remote image', function () {
       const html =
           '<!doctype html><html><body><img src="https://evil.example/x.png" alt="a"></body></html>';
-      const out = stripRemoteImages(html);
+      const out = sanitizeExportHtml(html);
       assert.match(out, /<!doctype html>/i);
       assert.doesNotMatch(out, /evil\.example/);
     });
@@ -578,6 +730,292 @@ hello<br>world
       const rightX = (rightRaw.match(/1 0 0 1 (\d+(?:\.\d+)?)/) || [])[1];
       assert.notStrictEqual(leftX, rightX,
           `right-aligned <pre> should sit at a different x than left-aligned (left=${leftX} right=${rightX})`);
+    });
+
+    // ---------------------------------------------------------------------
+    // Issue #8245: the native PDF path ignored font-family entirely, so any
+    // font a plugin applied (ep_font_family emits
+    // `<span style="font-family:...">` from getLineHTMLForExport) was lost.
+    // ---------------------------------------------------------------------
+    describe('font-family (#8245)', function () {
+      // Every font a PDF draws with is listed as a /BaseFont in a font
+      // dictionary. Reading those names tells us which face pdfkit actually
+      // selected without having to compare rendered pixels. Subset-embedded
+      // fonts carry a six-letter tag prefix (`ABCDEF+Name`), which is
+      // stripped so assertions can name the font.
+      const baseFonts = async (html: string): Promise<string[]> => {
+        const raw = await renderText(html);
+        const names = new Set<string>();
+        const re = /\/BaseFont\s*\/([A-Za-z0-9+#,._-]+)/g;
+        let m: RegExpExecArray | null;
+        while ((m = re.exec(raw)) !== null) {
+          names.add(m[1].replace(/^[A-Z]{6}\+/, ''));
+        }
+        return [...names];
+      };
+
+      it('maps serif, sans-serif and monospace onto distinct built-ins',
+          async function () {
+            const sans = await baseFonts(
+                "<p><span style='font-family:arial'>text</span></p>");
+            const serif = await baseFonts(
+                "<p><span style='font-family:times-new-roman'>text</span></p>");
+            const mono = await baseFonts(
+                "<p><span style='font-family:monospace'>text</span></p>");
+            assert.deepStrictEqual(sans, ['Helvetica']);
+            assert.deepStrictEqual(serif, ['Times-Roman']);
+            assert.deepStrictEqual(mono, ['Courier']);
+          });
+
+      it('maps families with no built-in equivalent by category',
+          async function () {
+            // ep_font_family ships Garamond/Palatino/Bookman (serif) and
+            // Calibri/Avant Garde (sans). None of them is a PDF standard
+            // font, so they render as the nearest built-in category.
+            for (const family of ['garamond', 'palatino', 'bookman']) {
+              assert.deepStrictEqual(
+                  await baseFonts(`<p><span style='font-family:${family}'>t</span></p>`),
+                  ['Times-Roman'], `${family} should render as a serif face`);
+            }
+            for (const family of ['calibri', 'avant-garde']) {
+              assert.deepStrictEqual(
+                  await baseFonts(`<p><span style='font-family:${family}'>t</span></p>`),
+                  ['Helvetica'], `${family} should render as a sans face`);
+            }
+          });
+
+      it('honors bold/italic variants of a mapped family', async function () {
+            assert.deepStrictEqual(
+                await baseFonts("<p><b><span style='font-family:georgia'>t</span></b></p>"),
+                ['Times-Bold']);
+            assert.deepStrictEqual(
+                await baseFonts("<p><i><span style='font-family:georgia'>t</span></i></p>"),
+                ['Times-Italic']);
+            assert.deepStrictEqual(
+                await baseFonts(
+                    "<p><b><i><span style='font-family:georgia'>t</span></i></b></p>"),
+                ['Times-BoldItalic']);
+            assert.deepStrictEqual(
+                await baseFonts(
+                    "<p><b><span style='font-family:courier-new'>t</span></b></p>"),
+                ['Courier-Bold']);
+          });
+
+      it('walks the font-family list and takes the first known family',
+          async function () {
+            assert.deepStrictEqual(
+                await baseFonts(
+                    '<p><span style="font-family:\'Nonexistent Face\', Georgia, serif">' +
+                    't</span></p>'),
+                ['Times-Roman']);
+          });
+
+      it('applies CSS declaration order and !important', async function () {
+            // A style attribute can repeat the declaration; the last one wins
+            // unless an earlier one is flagged !important.
+            assert.deepStrictEqual(
+                await baseFonts(
+                    "<p><span style='font-family:monospace;font-family:georgia'>" +
+                    't</span></p>'),
+                ['Times-Roman'], 'the last declaration should win');
+            assert.deepStrictEqual(
+                await baseFonts(
+                    "<p><span style='font-family:monospace !important;" +
+                    "font-family:georgia'>t</span></p>"),
+                ['Courier'], '!important should beat a later declaration');
+            // The flag itself must not end up in the lookup key.
+            assert.deepStrictEqual(
+                await baseFonts(
+                    "<p><span style='font-family: georgia !important'>t</span></p>"),
+                ['Times-Roman']);
+            assert.deepStrictEqual(
+                await baseFonts(
+                    "<p><span style='text-align:right;font-family:monospace'>" +
+                    't</span></p>'),
+                ['Courier'], 'a preceding declaration must not hide it');
+          });
+
+      it('keeps code/pre monospace when an explicit family is unknown',
+          async function () {
+            // An unresolvable family leaves the element on whatever font it
+            // would otherwise use — Courier for code-like tags, the enclosing
+            // font elsewhere.
+            assert.deepStrictEqual(
+                await baseFonts(
+                    "<p><code style='font-family:Totally Made Up'>x</code></p>"),
+                ['Courier']);
+            assert.deepStrictEqual(
+                await baseFonts(
+                    "<p><span style='font-family:georgia'>" +
+                    "<span style='font-family:Totally Made Up'>t</span></span></p>"),
+                ['Times-Roman']);
+          });
+
+      it('reads font-family from a data attribute too', async function () {
+            // Plugins using exportHtmlAdditionalTagsWithData produce
+            // `<span data-...="value">` rather than an inline style.
+            assert.deepStrictEqual(
+                await baseFonts('<p><span data-font-family="monospace">t</span></p>'),
+                ['Courier']);
+          });
+
+      it('falls back without throwing for an unknown family', async function () {
+            const buf = await htmlToPdfBuffer(
+                "<p><span style='font-family:Totally Made Up Face'>t</span></p>");
+            assert.strictEqual(buf.slice(0, 5).toString('ascii'), '%PDF-');
+            assert.deepStrictEqual(
+                await baseFonts(
+                    "<p><span style='font-family:Totally Made Up Face'>t</span></p>"),
+                ['Helvetica'], 'unknown families should inherit the enclosing font');
+          });
+
+      it('is not fooled by Object.prototype property names', async function () {
+            // Family names come from pad content, so a lookup that used a
+            // plain `in`/property read would report a hit for names like
+            // "constructor" or "toString".
+            for (const family of ['constructor', 'toString', '__proto__',
+              'hasOwnProperty']) {
+              assert.deepStrictEqual(
+                  await baseFonts(`<p><span style='font-family:${family}'>t</span></p>`),
+                  ['Helvetica'], `"${family}" must not resolve to a font`);
+            }
+          });
+
+      it('leaves an unstyled document on the default font', async function () {
+            assert.deepStrictEqual(
+                await baseFonts('<h1>Title</h1><p>Body <b>bold</b> <i>it</i></p>'),
+                ['Helvetica', 'Helvetica-Bold', 'Helvetica-Oblique']);
+            // Tag-driven monospace still works exactly as before.
+            assert.deepStrictEqual(
+                await baseFonts('<p>a <code>x = 1</code></p>'),
+                ['Helvetica', 'Courier']);
+          });
+
+      it('does not let a font-family style leak into the rendered text',
+          async function () {
+            const raw = await renderText(
+                "<p><span style='font-family:garamond'>visible</span></p>");
+            const visible = decodeVisibleText(raw);
+            assert.match(visible, /visible/);
+            assert.doesNotMatch(visible, /garamond/i);
+            assert.doesNotMatch(visible, /font-family/i);
+          });
+
+      describe('exportPdfFonts setting', function () {
+        const {exportedForTesting} =
+            require('../../../node/utils/ExportPdfNative');
+        let fontsBackup: any;
+
+        beforeEach(function () {
+          fontsBackup = settings.exportPdfFonts;
+          exportedForTesting.clearFontCache();
+        });
+
+        afterEach(function () {
+          settings.exportPdfFonts = fontsBackup;
+          exportedForTesting.clearFontCache();
+        });
+
+        it('embeds an operator-registered font file', async function () {
+          // Reuses a font already shipped for the skins rather than adding
+          // one; any readable TTF would do.
+          settings.exportPdfFonts = {
+            Quicksand: {
+              regular: 'src/static/font/Quicksand-Regular.ttf',
+              bold: 'src/static/font/Quicksand-Bold.ttf',
+            },
+          };
+          assert.deepStrictEqual(
+              await baseFonts("<p><span style='font-family:Quicksand'>t</span></p>"),
+              ['Quicksand-Regular']);
+          assert.deepStrictEqual(
+              await baseFonts(
+                  "<p><b><span style='font-family:quicksand'>t</span></b></p>"),
+              ['Quicksand-Bold']);
+          // No italic file configured: degrade to the regular face rather
+          // than dropping the font.
+          assert.deepStrictEqual(
+              await baseFonts(
+                  "<p><i><span style='font-family:QUICKSAND'>t</span></i></p>"),
+              ['Quicksand-Regular']);
+        });
+
+        it('accepts a bare path as the regular face', async function () {
+          settings.exportPdfFonts = {
+            'My Face': 'src/static/font/Quicksand-Regular.ttf',
+          };
+          assert.deepStrictEqual(
+              await baseFonts("<p><span style='font-family:my-face'>t</span></p>"),
+              ['Quicksand-Regular']);
+        });
+
+        it('falls back to the configured built-in when the file is missing',
+            async function () {
+              settings.exportPdfFonts = {
+                Ghost: {regular: '/nonexistent/ghost.ttf', fallback: 'courier'},
+              };
+              const buf = await htmlToPdfBuffer(
+                  "<p><span style='font-family:Ghost'>t</span></p>");
+              assert.strictEqual(buf.slice(0, 5).toString('ascii'), '%PDF-');
+              assert.deepStrictEqual(
+                  await baseFonts("<p><span style='font-family:Ghost'>t</span></p>"),
+                  ['Courier']);
+            });
+
+        it('falls back when the file is not a font', async function () {
+          settings.exportPdfFonts = {Bogus: {regular: 'package.json'}};
+          assert.deepStrictEqual(
+              await baseFonts("<p><span style='font-family:Bogus'>t</span></p>"),
+              ['Helvetica']);
+        });
+
+        it('picks up a font file that appears or changes on disk',
+            async function () {
+              // The font cache keys on mtime+size, so an operator can correct
+              // a wrong path or swap a face in place and the next export uses
+              // it — no restart, and no cached failure to clear.
+              const os = require('os');
+              const fs = require('fs');
+              const path = require('path');
+              const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ep8245-'));
+              const target = path.join(dir, 'face.ttf');
+              const fontDir = path.join(__dirname, '../../../static/font');
+              try {
+                settings.exportPdfFonts = {'Swappable': target};
+                // Nothing there yet: falls back rather than failing.
+                assert.deepStrictEqual(
+                    await baseFonts("<p><span style='font-family:Swappable'>t</span></p>"),
+                    ['Helvetica'], 'a missing file should fall back');
+
+                fs.copyFileSync(path.join(fontDir, 'Quicksand-Regular.ttf'), target);
+                assert.deepStrictEqual(
+                    await baseFonts("<p><span style='font-family:Swappable'>t</span></p>"),
+                    ['Quicksand-Regular'],
+                    'a file appearing at the configured path should be picked up');
+
+                fs.copyFileSync(path.join(fontDir, 'RobotoMono-Regular.ttf'), target);
+                // Guarantee a different mtime even on a coarse-grained clock.
+                const later = new Date(Date.now() + 2000);
+                fs.utimesSync(target, later, later);
+                assert.deepStrictEqual(
+                    await baseFonts("<p><span style='font-family:Swappable'>t</span></p>"),
+                    ['RobotoMono-Regular'],
+                    'a replaced file should not serve the previous bytes');
+              } finally {
+                fs.rmSync(dir, {recursive: true, force: true, maxRetries: 10, retryDelay: 100});
+              }
+            });
+
+        it('overrides the built-in mapping for a known family',
+            async function () {
+              settings.exportPdfFonts = {
+                Arial: 'src/static/font/Quicksand-Regular.ttf',
+              };
+              assert.deepStrictEqual(
+                  await baseFonts("<p><span style='font-family:arial'>t</span></p>"),
+                  ['Quicksand-Regular']);
+            });
+      });
     });
   });
 });

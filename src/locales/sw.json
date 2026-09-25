@@ -151,7 +151,7 @@
 	"timeslider.month.october": "Oktoba",
 	"timeslider.month.november": "Novemba",
 	"timeslider.month.december": "Desemba",
-	"timeslider.unnamedauthors": "{{num}} haijatajwa jina {[wingi (num) moja: mwandishi, mwingine: waandishi]}",
+	"timeslider.unnamedauthors": "{{num}} haijatajwa jina {[plural(num) one: mwandishi, other: waandishi ]}",
 	"pad.savedrevs.marked": "Marekebisho haya sasa yamewekwa alama kama marekebisho yaliyohifadhiwa",
 	"pad.savedrevs.timeslider": "Unaweza kuona marekebisho yaliyohifadhiwa kwa kutembelea mpangilio wa nyakati",
 	"pad.userlist.entername": "Ingiza jina lako",

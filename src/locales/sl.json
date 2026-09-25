@@ -155,7 +155,7 @@
 	"timeslider.month.october": "oktobra",
 	"timeslider.month.november": "novembra",
 	"timeslider.month.december": "decembra",
-	"timeslider.unnamedauthors": "{{num}} {[plural(num) one: neimenovan avtor, plural(num) two: neimenovana avtorja, plural(num) few: neimenovani avtorji, other: neimenovanih avtorjev ]}",
+	"timeslider.unnamedauthors": "{{num}} {[plural(num) one: neimenovan avtor, two: neimenovana avtorja, few: neimenovani avtorji, other: neimenovanih avtorjev ]}",
 	"pad.savedrevs.marked": "Ta redakcija je zdaj označena kot shranjena redakcija",
 	"pad.savedrevs.timeslider": "Shranjene redakcije si lahko ogledate z odprtjem časovnega traku",
 	"pad.userlist.entername": "Vnesite svoje ime",
