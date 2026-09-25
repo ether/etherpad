@@ -228,6 +228,7 @@
   "index.copyLink": "2. Copy the transfer code",
   "index.copyLinkDescription": "Click on the button below to copy the transfer code to your clipboard. The code can only be used once and expires after 5 minutes.",
   "index.copyLinkButton": "Copy code to clipboard",
+  "index.sessionTransferError": "Unable to transfer the session. Please try again.",
   "index.transferToSystem": "3. Paste the transfer code",
   "index.transferToSystemDescription": "Paste the transfer code you copied on the other browser or device into the field below.",
   "index.code": "Code",
