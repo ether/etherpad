@@ -532,8 +532,8 @@ importers:
         specifier: 1.13.8
         version: 1.13.8
       undici:
-        specifier: ^8.10.2
-        version: 8.10.2
+        specifier: ^8.11.0
+        version: 8.11.0
       wtfnode:
         specifier: ^0.10.1
         version: 0.10.1
@@ -5723,8 +5723,8 @@ packages:
     resolution: {integrity: sha512-cRZYrTDwWznlnRiPjggAGxZXanty6M8RV1ff8Wm4LWXBp7/IG8v5DnOm74DtUBp9OONpK75YlPnIjQqX0dBDtA==}
     engines: {node: '>=20.18.1'}
 
-  undici@8.10.2:
-    resolution: {integrity: sha512-/y4/bH9YNU5hi9NIrpOuvGXFcxrj3CMrV+/AYpowAYTpHn8gX/XPFjNy766FPoYY0miQhdW977JFWKGNhBdwyQ==}
+  undici@8.11.0:
+    resolution: {integrity: sha512-AdzuGcAkzhbha3GgCSoUBx2P0quwym6qdFNCQz/fDGZc8w9XJ741wHUbt2kTmfPz+ZIOMkySFkiY7RXmiDDC8w==}
     engines: {node: '>=22.19.0'}
 
   unicode-properties@1.4.1:
@@ -6122,7 +6122,7 @@ snapshots:
     dependencies:
       '@types/json-schema': 7.0.15
       js-yaml: 5.4.2
-      undici: 8.10.2
+      undici: 8.11.0
 
   '@asamuzakjp/css-color@7.0.0':
     dependencies:
@@ -9699,7 +9699,7 @@ snapshots:
       parse5: 8.0.1
       saxes: 6.0.0
       tough-cookie: 6.0.2
-      undici: 8.10.2
+      undici: 8.11.0
       w3c-xmlserializer: 6.0.0
       webidl-conversions: 8.0.1
       whatwg-mimetype: 5.0.0
@@ -11449,7 +11449,7 @@ snapshots:
 
   undici@7.28.0: {}
 
-  undici@8.10.2: {}
+  undici@8.11.0: {}
 
   unicode-properties@1.4.1:
     dependencies:
