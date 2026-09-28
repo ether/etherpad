@@ -211,11 +211,11 @@ importers:
         specifier: ^1.3.7
         version: 1.3.7(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       '@tanstack/react-query':
-        specifier: ^5.103.2
-        version: 5.103.2(react@19.3.0)
+        specifier: ^5.103.3
+        version: 5.103.3(react@19.3.0)
       '@tanstack/react-query-devtools':
         specifier: ^5.103.3
-        version: 5.103.3(@tanstack/react-query@5.103.2(react@19.3.0))(@types/react@19.3.0)(csstype@3.2.3)(react@19.3.0)
+        version: 5.103.3(@tanstack/react-query@5.103.3(react@19.3.0))(@types/react@19.3.0)(csstype@3.2.3)(react@19.3.0)
       jsonc-parser:
         specifier: ^3.3.1
         version: 3.3.1
@@ -224,7 +224,7 @@ importers:
         version: 0.17.0
       openapi-react-query:
         specifier: ^0.5.4
-        version: 0.5.4(@tanstack/react-query@5.103.2(react@19.3.0))(openapi-fetch@0.17.0)
+        version: 0.5.4(@tanstack/react-query@5.103.3(react@19.3.0))(openapi-fetch@0.17.0)
     devDependencies:
       '@radix-ui/react-dialog':
         specifier: ^1.1.23
@@ -1923,9 +1923,6 @@ packages:
     resolution: {integrity: sha512-aPkUQctDzpXLSWhlx7jUDi3mInsI18xcnrK1hvIyIa88ab1ax88cACr7xU+BKMCGB4NZYNwh4SoNSEbv3RY2NA==}
     engines: {node: '>=20'}
 
-  '@tanstack/query-core@5.103.2':
-    resolution: {integrity: sha512-I8DkFXls5jXLqtm8+QpOhEmG07hIblhSZFzafg9wHsMSEvMzULy9hK17wU1T/ahfhMbtITJhbxutwwCoihkR7A==}
-
   '@tanstack/query-core@5.103.3':
     resolution: {integrity: sha512-w6gJ5Alt+s55Wuok6/aURtR3AufW3PuNjnM0b3RC1xUz3MVA0EC9j7U3texGftvtOTYWiPVvQzCZjv3Cvzwc/g==}
 
@@ -1939,8 +1936,8 @@ packages:
       '@types/react': ^18 || ^19
       react: ^18 || ^19
 
-  '@tanstack/react-query@5.103.2':
-    resolution: {integrity: sha512-B+fWiYZBc+0uUD5zDZAeLw9dKj7XEsdnuu6zRZ+no6LNKpeE3P3bJ+N6HINjcIlWR6fW3vUoTneEaGa2V6ehqw==}
+  '@tanstack/react-query@5.103.3':
+    resolution: {integrity: sha512-QJMF0QUwJaFm6rrYAq1mlYyMsdiqd9w6gAsFSy+F+8g6/8pQrRy9u3a2yQGpSAmMO4DAZmRHwFZ8UulLaJkBmg==}
     peerDependencies:
       react: ^18 || ^19
 
@@ -7154,8 +7151,6 @@ snapshots:
     dependencies:
       remove-accents: 0.5.0
 
-  '@tanstack/query-core@5.103.2': {}
-
   '@tanstack/query-core@5.103.3': {}
 
   '@tanstack/query-devtools@5.103.3(csstype@3.2.3)':
@@ -7174,18 +7169,18 @@ snapshots:
     transitivePeerDependencies:
       - csstype
 
-  '@tanstack/react-query-devtools@5.103.3(@tanstack/react-query@5.103.2(react@19.3.0))(@types/react@19.3.0)(csstype@3.2.3)(react@19.3.0)':
+  '@tanstack/react-query-devtools@5.103.3(@tanstack/react-query@5.103.3(react@19.3.0))(@types/react@19.3.0)(csstype@3.2.3)(react@19.3.0)':
     dependencies:
       '@tanstack/query-devtools': 5.103.3(csstype@3.2.3)
-      '@tanstack/react-query': 5.103.2(react@19.3.0)
+      '@tanstack/react-query': 5.103.3(react@19.3.0)
       '@types/react': 19.3.0
       react: 19.3.0
     transitivePeerDependencies:
       - csstype
 
-  '@tanstack/react-query@5.103.2(react@19.3.0)':
+  '@tanstack/react-query@5.103.3(react@19.3.0)':
     dependencies:
-      '@tanstack/query-core': 5.103.2
+      '@tanstack/query-core': 5.103.3
       react: 19.3.0
 
   '@tediousjs/connection-string@1.1.0': {}
@@ -10072,9 +10067,9 @@ snapshots:
     dependencies:
       openapi-typescript-helpers: 0.1.0
 
-  openapi-react-query@0.5.4(@tanstack/react-query@5.103.2(react@19.3.0))(openapi-fetch@0.17.0):
+  openapi-react-query@0.5.4(@tanstack/react-query@5.103.3(react@19.3.0))(openapi-fetch@0.17.0):
     dependencies:
-      '@tanstack/react-query': 5.103.2(react@19.3.0)
+      '@tanstack/react-query': 5.103.3(react@19.3.0)
       openapi-fetch: 0.17.0
       openapi-typescript-helpers: 0.1.0
 
