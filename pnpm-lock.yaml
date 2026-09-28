@@ -287,8 +287,8 @@ importers:
         specifier: ^7.18.4
         version: 7.18.4(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       socket.io-client:
-        specifier: ^4.8.3
-        version: 4.8.3(supports-color@8.1.1)
+        specifier: ^4.8.4
+        version: 4.8.4(supports-color@8.1.1)
       tsx:
         specifier: ^4.23.15
         version: 4.23.15
@@ -511,8 +511,8 @@ importers:
         specifier: ^4.8.4
         version: 4.8.4(supports-color@8.1.1)
       socket.io-client:
-        specifier: ^4.8.3
-        version: 4.8.3(supports-color@8.1.1)
+        specifier: ^4.8.4
+        version: 4.8.4(supports-color@8.1.1)
       superagent:
         specifier: 10.4.1
         version: 10.4.1(supports-color@8.1.1)
@@ -5234,8 +5234,8 @@ packages:
   socket.io-adapter@2.5.8:
     resolution: {integrity: sha512-6Oy52pbg+kvdCVvjcN+FnY7BvxZ7cIHNScbvztT/It5d0vbwoJoVZmF2gjJmnV0/4WlXRfG15zc45ySk9Ah8bw==}
 
-  socket.io-client@4.8.3:
-    resolution: {integrity: sha512-uP0bpjWrjQmUt5DTHq9RuoCBdFJF10cdX9X+a368j/Ft0wmaVgxlrjvK3kjvgCODOMMOz9lcaRzxmso0bTWZ/g==}
+  socket.io-client@4.8.4:
+    resolution: {integrity: sha512-7wjKAvVXYOJsbmUgkWbnhPD4bFpkqrUR0++XOjpGFmqDqsqV1CI93VTraeExLxpjxEqrWgFoSRZu1ihjLWfkAA==}
     engines: {node: '>=10.0.0'}
 
   socket.io-parser@4.2.6:
@@ -8777,7 +8777,7 @@ snapshots:
 
   etherpad-cli-client@4.0.3(supports-color@8.1.1):
     dependencies:
-      socket.io-client: 4.8.3(supports-color@8.1.1)
+      socket.io-client: 4.8.4(supports-color@8.1.1)
       superagent: 10.4.1(supports-color@8.1.1)
     transitivePeerDependencies:
       - bufferutil
@@ -10818,7 +10818,7 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  socket.io-client@4.8.3(supports-color@8.1.1):
+  socket.io-client@4.8.4(supports-color@8.1.1):
     dependencies:
       '@socket.io/component-emitter': 3.1.2
       debug: 4.4.3(supports-color@8.1.1)
