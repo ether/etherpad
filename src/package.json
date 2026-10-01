@@ -133,7 +133,7 @@
     "split-grid": "^1.0.11",
     "supertest": "^7.3.0",
     "typescript": "^7.0.2",
-    "vitest": "^5.0.2"
+    "vitest": "^5.0.3"
   },
   "engines": {
     "node": ">=24.0.0",
