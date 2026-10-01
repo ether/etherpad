@@ -83,7 +83,7 @@
     "socket.io": "^4.8.4",
     "socket.io-client": "^4.8.4",
     "superagent": "10.4.1",
-    "surrealdb": "^2.0.8",
+    "surrealdb": "^2.0.9",
     "tinycon": "0.6.8",
     "tsx": "4.23.15",
     "ueberdb2": "6.1.16",
