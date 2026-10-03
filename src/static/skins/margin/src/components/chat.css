@@ -1,0 +1,91 @@
+#chatbox {
+  background-color: transparent !important;
+  color: var(--text-color);
+}
+.chat-content {
+  background: none;
+  padding: 0;
+  width: 400px;
+  height: 300px;
+  background-color: #f2f3f4;
+  background-color: var(--bg-soft-color);
+}
+
+.chat-content, #chaticon {
+  box-shadow: 0 0 0 1px rgba(99, 114, 130, 0.16), 0 8px 16px rgba(27, 39, 51, 0.08);
+  border: none;
+}
+
+#chaticon {
+  padding: 10px 20px;
+  background-color: #f2f3f4;
+  background-color: var(--bg-soft-color);
+  color: #485365;
+  color: var(--text-color);
+  right: 30px;
+}
+
+#chatbox.stickyChat .chat-content {
+  border: none;
+  box-shadow: none;
+  background-color: #f2f3f4;
+  background-color: var(--bg-soft-color);
+}
+
+#titlebar {
+  bottom: 0;
+  line-height: 44px;
+  height: 44px;
+  padding: 0 7px;
+  z-index: 20000;
+}
+
+#titlelabel, #chatlabel {
+  text-transform: uppercase;
+  font-weight: bold;
+}
+
+#titlebar #titlelabel { font-size: 16px; }
+#chatlabel { margin-right: 15px; }
+
+#chattext {
+  padding: 0;
+  border-top: 1px solid #ffffff;
+  border-top: 1px solid var(--bg-color);
+  border-bottom: 1px solid #ffffff;
+  border-bottom: 1px solid var(--bg-color);
+  background-color: inherit;
+  color: inherit;
+}
+#chattext p {
+  padding: 4px 10px;
+}
+#chattext:not(.authorColors) p:first-child {
+  padding-top: 10px;
+}
+#chattext:not(.authorColors) p:last-child {
+  padding-bottom: 10px;
+}
+
+#chatinputbox {
+  padding: 8px;
+}
+#chatinputbox #chatinput {
+  background-color: #ffffff;
+  background-color: var(--bg-color);
+}
+
+@media (prefers-reduced-motion) {
+  .chat-content {
+    transform: scale(1);
+    transition: none;
+  }
+}
+
+@media (max-width: 800px) {
+  #chaticon {
+    right: 0;
+  }
+
+  .stick-to-screen-btn { display: none; }
+}

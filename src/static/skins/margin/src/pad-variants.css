@@ -1,0 +1,228 @@
+/* =========================== */
+/* === Super Light Toolbar === */
+/* =========================== */
+.super-light-toolbar .toolbar, .super-light-toolbar .popup-content, .super-light-toolbar #pad_title  {
+  --text-color: var(--super-dark-color);
+  --text-soft-color: var(--dark-color);
+  --border-color: #e4e6e9;
+  --bg-soft-color: var(--light-color);
+  --bg-color: var(--super-light-color);
+}
+/* ===================== */
+/* === Light Toolbar === */
+/* ===================== */
+.light-toolbar .toolbar, .light-toolbar .popup-content, .light-toolbar #pad_title {
+  --text-color: var(--super-dark-color);
+  --text-soft-color: var(--dark-color);
+  --border-color: var(--middle-color);
+  --bg-soft-color: var(--super-light-color);
+  --bg-color: var(--light-color);
+}
+/* ========================== */
+/* === Super Dark Toolbar === */
+/* ========================== */
+.super-dark-toolbar .toolbar, .super-dark-toolbar .popup-content, .super-dark-toolbar #pad_title {
+  --text-color: var(--super-light-color);
+  --text-soft-color: var(--light-color);
+  --border-color: var(--dark-color);
+  --bg-soft-color: var(--dark-color);
+  --bg-color: var(--super-dark-color);
+}
+.super-dark-toolbar.super-dark-editor .popup-content {
+  border: 1px solid var(--dark-color);
+  box-shadow: none;
+}
+/* ==================== */
+/* === Dark Toolbar === */
+/* ==================== */
+.dark-toolbar .toolbar, .dark-toolbar .popup-content, .dark-toolbar #pad_title  {
+  --text-color: var(--super-light-color);
+  --text-soft-color: var(--light-color);
+  --border-color: var(--super-dark-color);
+  --bg-soft-color: var(--super-dark-color);
+  --bg-color: var(--dark-color);
+}
+
+
+
+
+
+/* ============================ */
+/* == Super Light Background == */
+/* ============================ */
+.super-light-background #editorcontainerbox, .super-light-background #sidediv,
+.super-light-background #chatbox, .super-light-background #outerdocbody, .super-light-background {
+  --text-color: var(--super-dark-color);
+  --text-soft-color: var(--dark-color);
+  --border-color: #e4e6e9;
+  --bg-soft-color: var(--light-color);
+  --bg-color: var(--super-light-color);
+}
+.super-light-background  body, .full-width-editor.super-light-editor body:not(.comments-active) {
+  --scrollbar-bg: var(--super-light-color);
+  --scrollbar-track: var(--light-color);
+  --scrollbar-thumb: var(--dark-color);
+}
+.super-light-background .compact-display-content {
+  background-color: var(--super-light-color);
+}
+/* ====================== */
+/* == Light Background == */
+/* ====================== */
+.light-background #editorcontainerbox, .light-background #sidediv,
+.light-background #chatbox, .light-background #outerdocbody, .light-background {
+  --text-color: var(--super-dark-color);
+  --text-soft-color: var(--dark-color);
+  --border-color: var(--middle-color);
+  --bg-soft-color: var(--super-light-color);
+  --bg-color: var(--light-color);
+}
+.light-background  body, .full-width-editor.light-editor body:not(.comments-active) {
+  --scrollbar-bg: var(--light-color);
+  --scrollbar-track: var(--super-light-color);
+  --scrollbar-thumb: var(--dark-color);
+}
+.light-background .compact-display-content {
+  background-color: var(--light-color);
+}
+/* =========================== */
+/* == Super Dark Background == */
+/* =========================== */
+.super-dark-background #editorcontainerbox, .super-dark-background #sidediv,
+.super-dark-background #chatbox, .super-dark-background #outerdocbody, .super-dark-background {
+  --text-color: var(--super-light-color);
+  --text-soft-color: var(--light-color);
+  --border-color: var(--dark-color);
+  --bg-soft-color: var(--dark-color);
+  --bg-color: var(--super-dark-color);
+}
+.super-dark-background body, .full-width-editor.super-dark-editor body:not(.comments-active) {
+  --scrollbar-bg: var(--super-dark-color);
+  --scrollbar-track: var(--dark-color);
+  --scrollbar-thumb: var(--light-color);
+}
+.super-dark-background .compact-display-content {
+  background-color: var(--super-dark-color);
+}
+/* Special combinaison with toolbar */
+.super-dark-background.super-dark-toolbar .popup-content {
+  border: 1px solid var(--dark-color);
+  box-shadow: none;
+}
+/* ===================== */
+/* == Dark Background == */
+/* ===================== */
+.dark-background #editorcontainerbox, .dark-background #sidediv,
+.dark-background #chatbox, .dark-background #outerdocbody, .dark-background  {
+  --text-color: var(--super-light-color);
+  --text-soft-color: var(--light-color);
+  --border-color: var(--super-dark-color);
+  --bg-soft-color: var(--super-dark-color);
+  --bg-color: var(--dark-color);
+}
+.dark-background  body, .full-width-editor.dark-editor body:not(.comments-active) {
+  --scrollbar-bg: var(--dark-color);
+  --scrollbar-track: var(--super-dark-color);
+  --scrollbar-thumb: var(--light-color);
+}
+.dark-background .compact-display-content {
+  background-color: var(--dark-color);
+}
+/* Special combinaison with toolbar */
+.dark-background.dark-toolbar .popup-content, .dark-editor.dark-toolbar .popup-content {
+  box-shadow: 0 0 14px 0px var(--super-dark-color);
+}
+
+
+
+
+
+/* ======================== */
+/* == Super Light Editor == */
+/* ======================== */
+.super-light-editor #outerdocbody iframe, .super-light-editor #outerdocbody > #innerdocbody {
+  --bg-color: var(--super-light-color);
+}
+.super-light-editor #innerdocbody {
+  --text-color: var(--super-dark-color);
+}
+/* ================== */
+/* == Light Editor == */
+/* ================== */
+.light-editor #outerdocbody iframe, .light-editor #outerdocbody > #innerdocbody {
+  --bg-color: var(--light-color);
+}
+.light-editor #innerdocbody {
+  --text-color: var(--super-dark-color);
+}
+/* ======================= */
+/* == Super Dark Editor == */
+/* ======================= */
+.super-dark-editor #outerdocbody iframe, .super-dark-editor #outerdocbody > #innerdocbody {
+  --bg-color: var(--super-dark-color);
+}
+.super-dark-editor #innerdocbody {
+  --text-color: var(--super-light-color);
+}
+/* ================= */
+/* == Dark Editor == */
+/* ================= */
+.dark-editor #outerdocbody iframe, .dark-editor #outerdocbody > #innerdocbody {
+  --bg-color: var(--dark-color);
+}
+.dark-editor #innerdocbody {
+  --text-color: var(--super-light-color);
+}
+
+
+/* ======================================== */
+/* == Combinaison with background/editor == */
+/* ======================================== */
+.super-light-editor.super-light-background #outerdocbody,
+.light-editor.light-background #outerdocbody,
+.super-dark-editor.super-dark-background #outerdocbody,
+.dark-editor.dark-background #outerdocbody {
+  padding-top: 0;
+}
+@media (min-width: 1001px) {
+  .super-light-editor.super-light-background,
+  .light-editor.light-background,
+  .super-dark-editor.super-dark-background,
+  .dark-editor.dark-background {
+    --editor-horizontal-padding: 20px;
+    --editor-vertical-padding: 5px;
+  }
+}
+
+/* ===================================== */
+/* == Combinaison with toolbar/editor == */
+/* ===================================== */
+.super-light-editor.super-light-toolbar .toolbar,
+.light-editor.light-toolbar .toolbar,
+.super-dark-editor.super-dark-toolbar .toolbar,
+.dark-editor.dark-toolbar .toolbar {
+  --toolbar-border: 1px solid var(--border-color);
+}
+
+
+/* ======================= */
+/* == Full Width Editor == */
+/* ======================= */
+.full-width-editor #outerdocbody iframe, .full-width-editor #outerdocbody > #innerdocbody {
+  max-width: none !important;
+  border-radius: 0;
+}
+.full-width-editor #outerdocbody {
+  padding: 0;
+  margin: 0;
+}
+@media (min-width: 1001px) {
+  .full-width-editor {
+    --editor-horizontal-padding: 20px !important;
+    --editor-vertical-padding: 5px !important;
+  }
+}
+.full-width-editor ::-webkit-scrollbar-track,
+.full-width-editor ::-webkit-scrollbar-thumb {
+  border-radius: 0px;
+}

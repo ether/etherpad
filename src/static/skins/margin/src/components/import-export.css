@@ -1,0 +1,5 @@
+#importmessagefail {
+  margin-top: 10px;
+}
+
+#importsubmitinput[disabled] { opacity: .6; }
