@@ -154,8 +154,13 @@ domline.createDomLine = (nonEmpty, doesWrap, optBrowser, optDocument) => {
     }
     if (cls.indexOf('tag') >= 0) {
       cls = cls.replace(/(^| )tag:(\S+)/g, (x0, space, tag) => {
-        if (!simpleTags) simpleTags = [];
-        simpleTags.push(tag.toLowerCase());
+        // The tag name is emitted raw as `<${tag}>`, so only accept a bare
+        // element name; anything else (e.g. `img/src=x/onerror=...` forged via
+        // an attribute-pool value) is dropped rather than rendered.
+        if (/^[a-z][a-z0-9]*$/i.test(tag)) {
+          if (!simpleTags) simpleTags = [];
+          simpleTags.push(tag.toLowerCase());
+        }
         return space + tag;
       });
     }

@@ -84,10 +84,15 @@ linestylefilter.getLineStyleFilter = (lineLength, aline, textAndClassFunc, apool
         if (key === 'author') {
           classes += ` ${linestylefilter.getAuthorClassName(value)}`;
         } else if (key === 'list') {
-          classes += ` list:${value}`;
+          // `classes` is a space-delimited token list that domline.appendSpan
+          // parses back (`tag:`, `url:`, `start:`, ...). Pool values are
+          // attacker-controlled, so a value containing whitespace could smuggle
+          // in a forged token such as `tag:img/onerror=...`. Only emit
+          // values of the expected shape.
+          if (/^[\w-]+$/.test(value)) classes += ` list:${value}`;
         } else if (key === 'start') {
           // Needed to introduce the correct Ordered list item start number on import
-          classes += ` start:${value}`;
+          if (/^\d+$/.test(value)) classes += ` start:${value}`;
         } else if (linestylefilter.ATTRIB_CLASSES[key]) {
           classes += ` ${linestylefilter.ATTRIB_CLASSES[key]}`;
         } else {
