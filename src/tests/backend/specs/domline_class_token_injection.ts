@@ -47,7 +47,34 @@ const renderCls = (txt: string, cls: string) => {
   return domLine.node as HTMLElement;
 };
 
+// Return the class strings linestylefilter builds for one attributed span,
+// without going through domline (so its tag-name check can't mask a
+// regression in the pool-value filter).
+const classesFor = (attribs: [string, string][]) => {
+  const apool = new AttributePool();
+  const nums = attribs.map((a) => apool.putAttrib(a));
+  const aline = `${nums.map((n) => `*${n.toString(36)}`).join('')}+5|1+1`;
+  const seen: string[] = [];
+  const filter = linestylefilter.getLineStyleFilter(
+      5, aline, (_txt: string, cls: string) => { seen.push(cls); }, apool);
+  filter('hello', '');
+  return seen.join(' ');
+};
+
 describe(__filename, function () {
+  it('linestylefilter never emits a start/list value containing whitespace', async function () {
+    for (const key of ['start', 'list']) {
+      const cls = classesFor([[key, `1 tag:b`]]);
+      assert.ok(!/(^| )tag:/.test(cls), `${key}: forged token in class string: ${cls}`);
+    }
+  });
+
+  it('linestylefilter keeps legitimate start values, including negative ones', async function () {
+    assert.match(classesFor([['start', '3']]), /(^| )start:3( |$)/);
+    assert.match(classesFor([['start', '-2']]), /(^| )start:-2( |$)/);
+    assert.match(classesFor([['list', 'number1']]), /(^| )list:number1( |$)/);
+  });
+
   it('a start value containing a space cannot forge a tag: token', async function () {
     const node = renderWithAttribs('hello', [['start', `1 ${PAYLOAD}`]]);
     assert.equal(node.querySelector('img'), null,

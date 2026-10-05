@@ -92,7 +92,7 @@ linestylefilter.getLineStyleFilter = (lineLength, aline, textAndClassFunc, apool
           if (/^[\w-]+$/.test(value)) classes += ` list:${value}`;
         } else if (key === 'start') {
           // Needed to introduce the correct Ordered list item start number on import
-          if (/^\d+$/.test(value)) classes += ` start:${value}`;
+          if (/^-?\d+$/.test(value)) classes += ` start:${value}`;
         } else if (linestylefilter.ATTRIB_CLASSES[key]) {
           classes += ` ${linestylefilter.ATTRIB_CLASSES[key]}`;
         } else {
