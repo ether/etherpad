@@ -1,5 +1,11 @@
 # 3.3.7
 
+3.3.7 is a security release. It closes a stored XSS in the pad and timeslider renderer (GHSA-4mx2-rqx5-2pp6).
+
+### Security
+
+- **Renderer — attribute-pool values can no longer forge class tokens (GHSA-4mx2-rqx5-2pp6, #8302).** `linestylefilter` appended the `start` and `list` line-attribute values verbatim to the space-delimited class string that `domline` parses back, and `domline` emits any `tag:` token in that string as a raw element. A `start` value containing a space, which can be planted through a crafted changeset or `.etherpad` import, therefore smuggled in a token such as `tag:img/src=x/onerror=...` and rendered a live element with a live event handler for every viewer of the pad and its timeslider. This is the same function as GHSA-f7h5-v9hm-548j but a different token. `start` is now emitted only when it is an integer and `list` only when it is a plain list type, and `domline` accepts only a bare element name (letters, digits and hyphens) for `tag:` tokens, which also covers class strings contributed by plugins. Reported by @arpitjain099.
+
 ### Notable fixes
 
 - **Auth — an empty-string password is refused on both login paths (#8261).** A `settings.users` entry configured as `"password": ""` authenticated anyone who submitted an empty password, on the OIDC interaction path and on HTTP Basic. Both already failed closed for a nullish password; an empty string slipped through because it is a string and compares equal to an empty submission. Only explicit misconfiguration produces it, so this is hardening rather than a vulnerability. Reported by Wenhao Wu (Southeast University) while verifying the fix for GHSA-62cj-9j72-mfrh.
