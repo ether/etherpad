@@ -157,7 +157,7 @@ domline.createDomLine = (nonEmpty, doesWrap, optBrowser, optDocument) => {
         // The tag name is emitted raw as `<${tag}>`, so only accept a bare
         // element name; anything else (e.g. `img/src=x/onerror=...` forged via
         // an attribute-pool value) is dropped rather than rendered.
-        if (/^[a-z][a-z0-9]*$/i.test(tag)) {
+        if (/^[a-z][a-z0-9-]*$/i.test(tag)) {
           if (!simpleTags) simpleTags = [];
           simpleTags.push(tag.toLowerCase());
         }

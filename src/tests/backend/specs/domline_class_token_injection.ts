@@ -79,6 +79,11 @@ describe(__filename, function () {
     assert.ok(node.querySelector('i'), node.innerHTML);
   });
 
+  it('hyphenated custom tag names still render (ep_font_family)', async function () {
+    const node = renderCls('hello', 'tag:fonttimes-new-roman');
+    assert.ok(node.querySelector('fonttimes-new-roman'), node.innerHTML);
+  });
+
   it('legitimate numbered list with a start value still renders', async function () {
     const domLine = newDomLine();
     const apool = new AttributePool();
