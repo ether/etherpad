@@ -51,7 +51,7 @@
 /* == Super Light Background == */
 /* ============================ */
 .super-light-background #editorcontainerbox, .super-light-background #sidediv,
-.super-light-background #chatbox, .super-light-background #outerdocbody, .super-light-background {
+.super-light-background #chatbox, .super-light-background #outerdocbody, html.super-light-background {
   --text-color: var(--super-dark-color);
   --text-soft-color: var(--dark-color);
   --border-color: #e4e6e9;
@@ -70,7 +70,7 @@
 /* == Light Background == */
 /* ====================== */
 .light-background #editorcontainerbox, .light-background #sidediv,
-.light-background #chatbox, .light-background #outerdocbody, .light-background {
+.light-background #chatbox, .light-background #outerdocbody, html.light-background {
   --text-color: var(--super-dark-color);
   --text-soft-color: var(--dark-color);
   --border-color: var(--middle-color);
@@ -89,7 +89,7 @@
 /* == Super Dark Background == */
 /* =========================== */
 .super-dark-background #editorcontainerbox, .super-dark-background #sidediv,
-.super-dark-background #chatbox, .super-dark-background #outerdocbody, .super-dark-background {
+.super-dark-background #chatbox, .super-dark-background #outerdocbody, html.super-dark-background {
   --text-color: var(--super-light-color);
   --text-soft-color: var(--light-color);
   --border-color: var(--dark-color);
@@ -113,7 +113,7 @@
 /* == Dark Background == */
 /* ===================== */
 .dark-background #editorcontainerbox, .dark-background #sidediv,
-.dark-background #chatbox, .dark-background #outerdocbody, .dark-background  {
+.dark-background #chatbox, .dark-background #outerdocbody, html.dark-background {
   --text-color: var(--super-light-color);
   --text-soft-color: var(--light-color);
   --border-color: var(--super-dark-color);
