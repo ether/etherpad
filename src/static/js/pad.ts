@@ -262,6 +262,11 @@ const normalizeChatOptions = (options) => {
 const showDeletionTokenModalIfPresent = () => {
   const token: string | null = (window as any).clientVars?.padDeletionToken;
   if (!token) return;
+  // Operators can hide the interrupting modal without widening deletion rights
+  // (issue #7996): the token is still issued and still works, it is just not
+  // pushed in the creator's face on arrival. Keep it in clientVars so a
+  // settings panel or other UI can still surface it on demand.
+  if ((window as any).clientVars?.suppressPadDeletionTokenModal) return;
   const $modal = $('#deletiontoken-modal');
   const $input = $('#deletiontoken-value');
   const $copy = $('#deletiontoken-copy');

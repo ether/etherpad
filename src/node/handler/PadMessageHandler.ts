@@ -1393,6 +1393,12 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
       // "Delete with token" (issue #7926). See showDeletionTokenModalIfPresent.
       canDeleteWithoutToken,
       canDeletePad,
+      // When true the client skips the one-time "Save your pad deletion token"
+      // modal even though a token was issued (issue #7996). The token stays in
+      // padDeletionToken below so a client that wants to surface it elsewhere
+      // (e.g. a settings panel) still can; only the interrupting modal is
+      // suppressed.
+      suppressPadDeletionTokenModal: settings.suppressPadDeletionTokenModal,
       // Allow-listed copy — settings.privacyBanner could carry extra nested
       // keys from a hand-edited settings.json; sending those by reference
       // would leak them to every browser. See getPublicPrivacyBanner().

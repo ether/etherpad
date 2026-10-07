@@ -706,6 +706,15 @@
   "allowPadDeletionByAllUsers": false,
 
   /*
+   * Do not show the one-time "Save your pad deletion token" modal to the pad
+   * creator. Unlike allowPadDeletionByAllUsers this does NOT let other users
+   * delete the pad: the token is still issued and can still be used to delete
+   * the pad from another device, it is simply not displayed on arrival. Useful
+   * when the modal confuses users who will never need the token (issue #7996).
+   */
+  "suppressPadDeletionTokenModal": false,
+
+  /*
    * Time (in seconds) to automatically reconnect pad when a "Force reconnect"
    * message is shown to user.
    *
