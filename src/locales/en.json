@@ -296,6 +296,8 @@
   "pad.deletionToken.deleteWithToken": "Delete Pad with Token",
   "pad.deletionToken.tokenFieldLabel": "Pad deletion token",
   "pad.deletionToken.tokenValueLabel": "Your pad deletion token (read-only)",
+  "pad.deletionToken.reveal": "Show the pad deletion token",
+  "pad.deletionToken.revealHelp": "This token is the only way to delete this pad if you lose your browser session or switch device. It is shown only during this session, so save it somewhere safe.",
   "pad.deletionToken.invalid": "That token is not valid for this pad.",
   "pad.deletionToken.notCreator": "You are not the creator of this pad, so you cannot delete it.",
   "pad.settings.about": "About",
