@@ -72,7 +72,7 @@
 
 @media (prefers-reduced-motion) {
   .popup>.popup-content {
-    transform: scale(1);
+    transform: none;
     transition: none;
   }
   .nice-select .list {
