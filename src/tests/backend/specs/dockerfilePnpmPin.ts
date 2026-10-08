@@ -77,4 +77,28 @@ describe(__filename, function () {
           'would not reach runtime.');
     });
   });
+
+  describe('PnpmVersion build-arg scope (issue #8210)', function () {
+    // Docker resolves a `ARG` declared before the first `FROM` only in the
+    // "global scope" that precedes every stage. Inside a stage it expands to an
+    // empty string unless the stage redeclares it, so `npm install -g pnpm@${PnpmVersion}`
+    // silently becomes `npm install -g pnpm@` (i.e. latest) and a version passed
+    // via --build-arg is ignored. Each stage that installs pnpm must redeclare
+    // the ARG.
+    it('redeclares ARG PnpmVersion in every stage that installs pnpm', function () {
+      const dockerfile = readRepoFile('Dockerfile');
+      // Split into `FROM`-delimited stages, keeping each stage's text.
+      const stages = dockerfile.split(/^(?=FROM\s)/m).map((s) => s.trim()).filter(Boolean);
+      const offenders = stages.filter((stage) => {
+        if (!/npm install -g pnpm@\$\{PnpmVersion\}/.test(stage)) return false;
+        // Confirm the ARG is declared *in this stage*, not merely referenced.
+        return !/^ARG PnpmVersion\b/m.test(stage);
+      });
+      assert.equal(offenders.length, 0,
+          'Each build stage that runs `npm install -g pnpm@${PnpmVersion}` must ' +
+          'redeclare `ARG PnpmVersion`; without it ${PnpmVersion} is empty and ' +
+          'the pinned version from --build-arg is ignored (issue #8210). ' +
+          `Offending stage(s): ${offenders.map((s) => s.split('\n')[0]).join(', ')}`);
+    });
+  });
 });
