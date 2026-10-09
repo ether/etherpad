@@ -12,9 +12,15 @@ ARG BUILD_ENV=git
 # by the `minimumReleaseAgeExclude` list in pnpm-workspace.yaml, so the image no
 # longer needs to lag the pin the way it did during the pnpm 11.1.x era — see
 # ether/etherpad#7911.
+#
+# This default is only visible before the first FROM. Each build stage that
+# installs pnpm must redeclare the ARG, otherwise ${PnpmVersion} expands to an
+# empty string inside the stage and `npm install -g pnpm@` installs the latest
+# release instead of the pinned one.
 ARG PnpmVersion=12.4.2
 
 FROM node:24-alpine AS adminbuild
+ARG PnpmVersion
 # Install pnpm directly via npm (rather than via corepack) so the same
 # image recipe keeps working on Node 25+, where corepack has been
 # dropped from the distribution. The node:24-alpine image also bundles
@@ -31,6 +37,7 @@ RUN pnpm run build:ui
 
 
 FROM node:24-alpine AS build
+ARG PnpmVersion
 LABEL maintainer="Etherpad team, https://github.com/ether/etherpad"
 
 # The image's pnpm matches the "packageManager" pin (see the ARG note above),
