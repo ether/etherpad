@@ -177,6 +177,12 @@ jobs:
           docker rm -f test-offline >/dev/null 2>&1 || true
           [ "$ok" = "1" ] || exit 1
 
+      - name: Regression — read-only root and persistent migration state (#8084)
+        working-directory: etherpad
+        env:
+          ETHERPAD_TEST_IMAGE: ${{ env.TEST_TAG }}
+        run: node --test src/tests/container/readonly-root.mjs
+
   build-test-local-plugin:
     # Regression coverage for #7687: the Docker image's
     # `bin/installLocalPlugins.sh` step runs as the `etherpad` user and

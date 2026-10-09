@@ -99,6 +99,59 @@ docker run --detach --publish <DESIRED_PORT>:9001 <YOUR_USERNAME>/etherpad
 
 And point your browser to `http://<YOUR_IP>:<DESIRED_PORT>`
 
+### Read-only root filesystem (core-only deployment)
+
+The image can run as UID 5001 with a read-only root filesystem. Etherpad still
+needs writable runtime directories: `/tmp`, `/opt/etherpad-lite/var` (including
+the SQLite database and plugin migration state), and
+`/opt/etherpad-lite/src/plugin_packages`. For a core-only deployment:
+
+```bash
+docker run --detach --name etherpad --read-only --user 5001:0 \
+  --cap-drop ALL --security-opt no-new-privileges \
+  --tmpfs /tmp:rw,nosuid,nodev,size=96m,mode=1777 \
+  --mount type=volume,source=etherpad-var,target=/opt/etherpad-lite/var \
+  --tmpfs /opt/etherpad-lite/src/plugin_packages:rw,nosuid,nodev,size=48m,uid=5001,gid=0 \
+  --env DB_TYPE=sqlite --env DB_FILENAME=var/etherpad.sq3 \
+  --env PRIVACY_PLUGIN_CATALOG=false --env PRIVACY_UPDATE_CHECK=false \
+  --env UPDATES_TIER=off \
+  --publish 127.0.0.1:9001:9001 etherpad/etherpad:3.3.7
+```
+
+This example disables online update/catalog checks and exposes the service only
+on the host loopback interface. Keep the `etherpad-var` volume to preserve data.
+Existing bind mounts must be writable by UID 5001; Docker initializes a new named
+volume from the image's directory ownership.
+
+This is not a guarantee for third-party plugins, legacy plugin migrations, or
+runtime plugin installation: those can require additional writable paths. The
+plugin directory above is temporary and intentionally empty; use a separate
+tested deployment plan if plugins are needed. Read-only settings also cannot be
+saved through the admin settings editor.
+
+For issue [#8084](https://github.com/ether/etherpad/issues/8084), the official
+3.3.3 image fails on first boot while `pnpm ls` opens its package-store SQLite
+index for writing. The same core-only layout boots and restarts with the official
+3.3.7 image. Do not make the entire root filesystem writable just to work around
+the older startup failure; first test an updated image against your own data and
+plugins. These two versions do not establish the first fixed release.
+
+To test an already-built image (requires Node.js and Docker, no dependency install):
+
+```bash
+ETHERPAD_TEST_IMAGE=etherpad/etherpad:3.3.7 node --test src/tests/container/readonly-root.mjs
+```
+
+The test creates an isolated core-only instance without external networking or
+published ports, verifies HTTP health and the home page, then restarts it using
+the same data volume and checks that migration state is retained. It removes only
+its own container and temporary volume. It does not test collaborative editing
+or third-party plugin behavior.
+It reports the shutdown exit code separately: the tested 3.3.7 image's cleanup
+watchdog exits with code 1 on both writable and read-only roots, even though HTTP
+and database shutdown complete. A passing restart test is not a clean-shutdown
+guarantee.
+
 ## Options available by default
 
 The `settings.json.docker` available by default allows to control almost every setting via environment variables.
