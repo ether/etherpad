@@ -96,6 +96,7 @@ export type ClientVarPayload = {
   numConnectedUsers: number
   canDeletePad?: boolean,
   padDeletionToken?: string | null,
+  suppressPadDeletionTokenModal?: boolean,
   sofficeAvailable: string
   plugins: {
     plugins:  MapArrayType<any>

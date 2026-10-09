@@ -256,12 +256,44 @@ const normalizeChatOptions = (options) => {
   return options;
 };
 
+// When suppressPadDeletionTokenModal is on (#7996) the creator still receives
+// the token in clientVars on first arrival, but the modal that would normally
+// display it is hidden. The server keeps only a hash, so if the creator does
+// not save it during this session it can never be recovered. Expose it in the
+// pad settings panel instead of interrupting them: fill the reveal input and
+// unhide the disclosure so it can be opened, read and copied on demand. Only
+// the session that actually received a token under suppression gets this.
+const revealDeletionTokenInSettings = (token: string) => {
+  const $details = $('#delete-pad-token-reveal');
+  if ($details.length === 0) return;
+  $('#delete-pad-token-reveal-value').val(token);
+  $details.prop('hidden', false);
+  $('#delete-pad-token-reveal-copy').off('click.gdpr').on('click.gdpr', async () => {
+    const $copy = $('#delete-pad-token-reveal-copy');
+    try {
+      await navigator.clipboard.writeText(token);
+    } catch (_e) {
+      ($('#delete-pad-token-reveal-value')[0] as HTMLInputElement).select();
+      document.execCommand('copy');
+    }
+    $copy.text(html10n.get('pad.deletionToken.copied'));
+  });
+};
+
 // Surfaces the one-time pad deletion token when the server sends it in
 // clientVars (creator session, first CLIENT_READY). The token is cleared from
 // clientVars on acknowledgement so it is not re-exposed to later code paths.
 const showDeletionTokenModalIfPresent = () => {
   const token: string | null = (window as any).clientVars?.padDeletionToken;
   if (!token) return;
+  // Operators can hide the interrupting modal without widening deletion rights
+  // (issue #7996): the token is still issued and still works, it is just not
+  // pushed in the creator's face on arrival. Keep it in clientVars so the
+  // settings panel can still surface it on demand.
+  if ((window as any).clientVars?.suppressPadDeletionTokenModal) {
+    revealDeletionTokenInSettings(token);
+    return;
+  }
   const $modal = $('#deletiontoken-modal');
   const $input = $('#deletiontoken-value');
   const $copy = $('#deletiontoken-copy');

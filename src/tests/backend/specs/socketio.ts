@@ -518,6 +518,8 @@ describe(__filename, function () {
     beforeEach(async function () {
       // @ts-ignore - public setting toggled per test
       settings.allowPadDeletionByAllUsers = false;
+      // @ts-ignore - public setting toggled per test
+      settings.suppressPadDeletionTokenModal = false;
       // The outer harness only backs up preAuthorize/authenticate/authorize, so
       // manage getAuthorId ourselves to avoid leaking it into later specs.
       getAuthorIdBackup = plugins.hooks.getAuthorId;
@@ -653,6 +655,26 @@ describe(__filename, function () {
           assert.equal(cv.data.padDeletionToken, null);
           assert.equal(cv.data.canDeleteWithoutToken, true);
           assert.equal(cv.data.canDeletePad, true);
+        });
+
+    it('suppressPadDeletionTokenModal keeps the token but hides the modal (#7996)',
+        async function () {
+          // @ts-ignore - public setting toggled per test
+          settings.suppressPadDeletionTokenModal = true;
+          const res = await agent.get('/p/pad').expect(200);
+          socket = await common.connect(res);
+          const cv: any = await common.handshake(socket, 'pad');
+          assert.equal(cv.type, 'CLIENT_VARS');
+          // The token must still be issued so it can be used to delete the pad
+          // from another device — only the interrupting modal is suppressed.
+          assert.equal(typeof cv.data.padDeletionToken, 'string');
+          assert.ok(cv.data.padDeletionToken.length >= 32);
+          assert.equal(cv.data.suppressPadDeletionTokenModal, true);
+          // Crucially, this must NOT widen deletion rights the way
+          // allowPadDeletionByAllUsers does: the creator still needs the token
+          // on a second device, and other users still cannot delete.
+          assert.equal(cv.data.canDeleteWithoutToken, false);
+          assert.equal(cv.data.canDeletePad, true, 'creator can still delete');
         });
   });
 

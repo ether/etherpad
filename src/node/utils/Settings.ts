@@ -195,6 +195,7 @@ export type SettingsType = {
   enablePadWideSettings: boolean,
   enablePluginPadOptions: boolean,
   allowPadDeletionByAllUsers: boolean,
+  suppressPadDeletionTokenModal: boolean,
   privacyBanner: {
     enabled: boolean,
     title: string,
@@ -460,6 +461,10 @@ const settings: SettingsType = {
   // state out can set this to false in settings.json.
   enablePluginPadOptions: true,
   allowPadDeletionByAllUsers: false,
+  // Hides the one-time "Save your pad deletion token" modal for creators
+  // without opening deletion to all users (issue #7996). The token is still
+  // issued and still works — it just stops interrupting every new creator.
+  suppressPadDeletionTokenModal: false,
   privacyBanner: {
     enabled: false,
     title: 'Privacy notice',
