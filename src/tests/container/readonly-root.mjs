@@ -15,6 +15,25 @@ const docker = (...args) => {
   return result.stdout.trim();
 };
 
+export const cleanupDockerResources = (run, {container, volume}, diagnostic) => {
+  const errors = [];
+  const attempt = (...args) => {
+    try {
+      run(...args);
+    } catch (error) {
+      errors.push(error);
+      diagnostic(`Cleanup: ${error.message}`);
+    }
+  };
+  if (container) {
+    // An already-stopped container needs no stop. Force removal also handles a
+    // failed stop, and volume removal is still attempted if removal fails.
+    attempt('rm', '--force', container);
+  }
+  if (volume) attempt('volume', 'rm', volume);
+  return errors;
+};
+
 test('read-only root: first boot and restart preserve plugin migration state', {
   skip: image ? false : 'Set ETHERPAD_TEST_IMAGE to a locally available Etherpad image',
   timeout: 180000,
@@ -23,6 +42,7 @@ test('read-only root: first boot and restart preserve plugin migration state', {
   const volume = `${name}-var`;
   let volumeCreated = false;
   let containerCreated = false;
+  let testFailed = false;
   const state = () => JSON.parse(docker('inspect', '--format', '{{json .State}}', name));
   const logs = () => docker('logs', name);
   const waitForHealth = async () => {
@@ -101,12 +121,17 @@ test('read-only root: first boot and restart preserve plugin migration state', {
     assert.equal((logs().match(/start migration of plugins in node_modules/g) || []).length,
         firstMigrationCount, 'restart must not migrate again');
     t.diagnostic('Restart: HTTP health and home OK; migration not repeated.');
+  } catch (error) {
+    testFailed = true;
+    throw error;
   } finally {
     // Names are generated for this test only. Never remove existing user data.
-    if (containerCreated) {
-      docker('stop', '--time', '15', name);
-      docker('rm', name);
+    const cleanupErrors = cleanupDockerResources(docker, {
+      container: containerCreated ? name : null,
+      volume: volumeCreated ? volume : null,
+    }, (message) => t.diagnostic(message));
+    if (!testFailed && cleanupErrors.length) {
+      throw new AggregateError(cleanupErrors, 'Docker test resource cleanup failed');
     }
-    if (volumeCreated) docker('volume', 'rm', volume);
   }
 });

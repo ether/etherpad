@@ -181,7 +181,9 @@ jobs:
         working-directory: etherpad
         env:
           ETHERPAD_TEST_IMAGE: ${{ env.TEST_TAG }}
-        run: node --test src/tests/container/readonly-root.mjs
+        run: |
+          env -u ETHERPAD_TEST_IMAGE node --test src/tests/container/readonly-cleanup.test.mjs
+          node --test src/tests/container/readonly-root.mjs
 
   build-test-local-plugin:
     # Regression coverage for #7687: the Docker image's
