@@ -364,7 +364,8 @@
   "pad.gritter.unacceptedCommit.text": "Your recent edit is still not saved. Reconnect and try again.",
 
   "pad.share": "Share this pad",
-  "pad.share.readonly": "Read only",
+  "pad.share.readonly": "Use read-only link",
+  "pad.share.readonly-explanation": "This only changes the link and embed code shown here. Keep the editable link to make changes; anyone with that link can still edit the pad.",
   "pad.share.link": "Link",
   "pad.share.emebdcode": "Embed URL",
   "pad.chat": "Chat",

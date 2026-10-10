@@ -579,8 +579,9 @@
           <% e.begin_block("embedPopup"); %>
           <h1 id="embed-title" data-l10n-id="pad.share"></h1>
           <div id="embedreadonly" class="acl-write">
-              <input type="checkbox" id="readonlyinput">
+              <input type="checkbox" id="readonlyinput" aria-describedby="readonly-explanation">
               <label for="readonlyinput" data-l10n-id="pad.share.readonly"></label>
+              <p id="readonly-explanation" data-l10n-id="pad.share.readonly-explanation"></p>
           </div>
           <div id="linkcode">
               <h2 data-l10n-id="pad.share.link"></h2>
