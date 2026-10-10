@@ -12,7 +12,7 @@ test.beforeEach(async ({page}) => {
 test('explains that read-only sharing selects a link, not pad permissions', async ({page}) => {
   const checkbox = page.getByRole('checkbox', {name: 'Use read-only link', exact: true});
   const explanation = 'This only changes the link and embed code shown here. ' +
-    'Keep the editable link to make changes; anyone with that link can still edit the pad.';
+    'Keep the editable link to make changes; people with permission to edit can still use that link.';
   await expect(checkbox).toBeAttached();
   await expect(page.locator('#readonly-explanation')).toHaveText(explanation);
   await expect(page.locator('#readonly-explanation')).toBeVisible();

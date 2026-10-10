@@ -365,7 +365,7 @@
 
   "pad.share": "Share this pad",
   "pad.share.readonly": "Use read-only link",
-  "pad.share.readonly-explanation": "This only changes the link and embed code shown here. Keep the editable link to make changes; anyone with that link can still edit the pad.",
+  "pad.share.readonly-explanation": "This only changes the link and embed code shown here. Keep the editable link to make changes; people with permission to edit can still use that link.",
   "pad.share.link": "Link",
   "pad.share.emebdcode": "Embed URL",
   "pad.chat": "Chat",
