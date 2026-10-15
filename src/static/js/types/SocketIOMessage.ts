@@ -69,6 +69,10 @@ export type ClientVarPayload = {
     learnMoreUrl: string | null,
     dismissal: 'dismissible' | 'sticky',
   },
+  // Set by pad retention (settings.padRetention); null when there's nothing to tell the user.
+  padRetention?: null |
+    {state: 'expiring', msRemaining: number} |
+    {state: 'expired', deleteAfterDays: number},
   padId: string,
   colorPalette: string[],
   accountPrivs: {

@@ -304,6 +304,36 @@
   },
 
   /*
+   * Pad retention: delete pads nobody has edited for `deleteAfterDays` days.
+   *
+   * Deletion is permanent: revisions, chat and the read-only link all go, and
+   * no copy is kept. Export anything you need first.
+   *
+   * enabled            - off by default.
+   * dryRun             - while true, only log the pads that would be deleted.
+   *                      Check the log, then set it to false.
+   * deleteAfterDays    - days without an edit before a pad is deleted. A pad
+   *                      that was never edited counts from when it was created.
+   * warnBeforeDays     - show a notice in pads this close to deletion
+   *                      (0 = never).
+   * sweepIntervalHours - how often to check every pad. Pads are also checked
+   *                      when someone opens them.
+   * excludeGroupPads   - leave group pads (g.xxx$name) alone. Integrations such
+   *                      as Nextcloud and Moodle create these and keep their own
+   *                      links to them.
+   * excludePattern     - regex of pad IDs to keep, e.g. "^(welcome|rules)$".
+   */
+  "padRetention": {
+    "enabled": false,
+    "dryRun": true,
+    "deleteAfterDays": 365,
+    "warnBeforeDays": 7,
+    "sweepIntervalHours": 1,
+    "excludeGroupPads": true,
+    "excludePattern": null
+  },
+
+  /*
    * GDPR Art. 17 author erasure REST endpoint (anonymizeAuthor).
    *
    * Disabled by default — enable only when an operator process exists to

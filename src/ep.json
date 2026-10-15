@@ -110,6 +110,13 @@
       }
     },
     {
+      "name": "padRetention",
+      "hooks": {
+        "expressCreateServer": "ep_etherpad-lite/node/utils/PadRetention",
+        "shutdown": "ep_etherpad-lite/node/utils/PadRetention"
+      }
+    },
+    {
       "name": "updateStatus",
       "post": ["ep_etherpad-lite/admin"],
       "hooks": {

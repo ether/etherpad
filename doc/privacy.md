@@ -95,6 +95,59 @@ deletion is covered separately by the deletion-token mechanism in
 the rest of the GDPR work is tracked in
 [ether/etherpad#6701](https://github.com/ether/etherpad/issues/6701).
 
+## Pad retention (optional)
+
+Etherpad keeps every pad forever unless you tell it otherwise. The
+`padRetention` block in `settings.json` deletes pads nobody has edited
+for a set number of days:
+
+```jsonc
+"padRetention": {
+  "enabled": true,
+  "dryRun": false,
+  "deleteAfterDays": 90,
+  "warnBeforeDays": 7,
+  "sweepIntervalHours": 1,
+  "excludeGroupPads": true,
+  "excludePattern": null
+}
+```
+
+It is **off by default**. When you first turn it on, leave
+`"dryRun": true` (the default). Etherpad then only logs the pads it
+would delete (`would delete pad <id>`), plus a summary after each sweep.
+Check the list, then set `"dryRun": false`.
+
+How it works:
+
+- Only edits count. Opening, reading or chatting in a pad doesn't keep it
+  alive. A pad that was never edited counts from when it was created.
+- Every pad is checked every `sweepIntervalHours`, starting a minute after
+  Etherpad starts. A pad is also checked when someone opens it, so an
+  overdue pad never loads with its old content.
+- Deletion is permanent and complete, the same as the `deletePad` API:
+  revisions, chat, the read-only link and the group entry are removed,
+  and plugins clean up their own data through the `padRemove` hook.
+  No copy is kept. Anyone still in the pad is disconnected.
+- Someone opening a pad inside the last `warnBeforeDays` days sees a
+  notice saying when it will be deleted, so they can edit or export it.
+  Someone opening a pad that has just been deleted is told why it is
+  new. Set `warnBeforeDays` to `0` to turn the warning off.
+- Group pads (`g.xxxxxxxxxxxxxxxx$name`) are skipped while
+  `excludeGroupPads` is `true`. Integrations such as Nextcloud and
+  Moodle create these pads through the API and keep their own links to
+  them. Only turn this off if those integrations expect pads to
+  disappear.
+- `excludePattern` is a regular expression for pad IDs to keep, for
+  example `"^(welcome|rules)$"`.
+
+If a value is invalid (for example a negative number, or a pattern that
+isn't a valid regex), Etherpad logs an error at startup and leaves
+retention off.
+
+Pair this with the [privacy banner](#privacy-banner-optional) to tell
+users how long pads are kept.
+
 ## Privacy banner (optional)
 
 The `privacyBanner` block in `settings.json` lets you display a short

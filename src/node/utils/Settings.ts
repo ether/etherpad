@@ -321,6 +321,15 @@ export type SettingsType = {
     enabled: boolean,
     keepRevisions: number,
   },
+  padRetention: {
+    enabled: boolean,
+    dryRun: boolean,
+    deleteAfterDays: number,
+    warnBeforeDays: number,
+    sweepIntervalHours: number,
+    excludeGroupPads: boolean,
+    excludePattern: string | null,
+  },
   gdprAuthorErasure: {
     enabled: boolean,
   },
@@ -796,6 +805,20 @@ const settings: SettingsType = {
   cleanup: {
     enabled: false,
     keepRevisions: 100,
+  },
+  /*
+   * Delete pads nobody has edited for `deleteAfterDays`. Off by default, and
+   * dry-run (log only) until `dryRun` is also set to false. See
+   * src/node/utils/PadRetention.ts and doc/privacy.md.
+   */
+  padRetention: {
+    enabled: false,
+    dryRun: true,
+    deleteAfterDays: 365,
+    warnBeforeDays: 7,
+    sweepIntervalHours: 1,
+    excludeGroupPads: true,
+    excludePattern: null,
   },
   /*
    * GDPR Art. 17 author erasure REST endpoint (anonymizeAuthor).

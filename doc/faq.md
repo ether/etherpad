@@ -240,3 +240,10 @@ These tools require `cleanup.enabled = true` in `settings.json` and are
 **destructive** — history is collapsed or trimmed. Export anything you can't
 afford to lose via the pad's `/export/etherpad` route first. The same primitive
 is available over the wire as the `compactPad` HTTP API method. See the [CLI chapter](./cli.md) for full details.
+
+## How do I delete pads nobody uses any more?
+
+Turn on `padRetention` in `settings.json`. It deletes pads that nobody has
+edited for `deleteAfterDays` days, and warns people who open a pad that is
+about to go. It starts in dry-run mode, which only logs what it would
+delete. See [Pad retention](./privacy.md#pad-retention-optional).
