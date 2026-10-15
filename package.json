@@ -17,6 +17,7 @@
     "test": "pnpm --filter ep_etherpad-lite run test",
     "test-utils": "pnpm --filter ep_etherpad-lite run test-utils",
     "test-container": "pnpm --filter ep_etherpad-lite run test-container",
+    "test-container-readonly": "node --test src/tests/container/readonly-root.mjs",
     "dev": "pnpm --filter ep_etherpad-lite run dev",
     "prod": "pnpm --filter ep_etherpad-lite run prod",
     "ts-check": "pnpm --filter ep_etherpad-lite run ts-check",
