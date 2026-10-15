@@ -69,6 +69,14 @@ const socketSessionMiddleware = (args: any) => (socket: any, next: Function) => 
 };
 
 export const expressCreateServer = (hookName:string, args:ArgsExpressType, cb:Function) => {
+  // Engine.io socket flush deferral (#7756 / #7767). Apply BEFORE building
+  // the socket.io Server so the patched Socket prototype is in effect when
+  // the Server creates its engine.
+  if (settings.engineFlushDefer === true) {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    require('../../utils/EngineFlushDeferral').installEngineFlushDeferral();
+  }
+
   // init socket.io and redirect all requests to the MessageHandler
   // there shouldn't be a browser that isn't compatible to all
   // transports in this list at once
