@@ -1,0 +1,82 @@
+.gritter-item:not(.error) .popup-content{
+  background-color: #64d29b;
+  background-color: var(--primary-color);
+  color: #ffffff;
+  color: var(--super-light-color);
+}
+.gritter-item .popup-content {
+  padding: 15px;
+  box-shadow: 0 0 0 1px rgba(99, 114, 130, 0.16), 0 8px 16px rgba(27, 39, 51, 0.08);
+}
+#gritter-container.bottom .gritter-item .popup-content {
+  margin-top: 10px;
+}
+#gritter-container.top .gritter-item .popup-content {
+  margin-bottom: 10px;
+}
+.gritter-item p {
+  margin: 0 !important;
+}
+.gritter-item .gritter-title {
+  margin-bottom: 10px;
+}
+.gritter-item .gritter-close {
+  margin-left: 15px;
+  margin-right: 0px;
+}
+.gritter-item:not(.error) .gritter-close .buttonicon {
+  color: #ffffff;
+  color: var(--super-light-color);
+}
+
+/* CHAT GRIITER ITEM */
+.gritter-item.chat-gritter-msg:not(.error) .popup-content {
+  background-color: white;
+  background-color: var(--bg-color);
+  color: #485365;
+  color: var(--text-color);
+}
+.gritter-item.chat-gritter-msg .gritter-content {
+  text-align: left;
+}
+.gritter-item.chat-gritter-msg .author-name {
+  font-weight: bold;
+  margin-right: 5px;
+}
+.gritter-item.chat-gritter-msg:not(.error) .gritter-close .buttonicon {
+  color: #485365;
+  color: var(--text-color);
+}
+
+.gritter-item.saved-revision {
+  max-width: 600px;
+}
+
+#gritter-container.top .gritter-item.popup > .popup-content {
+  transform: scale(0.8) translateY(-100px);
+}
+#gritter-container.bottom .gritter-item.popup > .popup-content {
+  transform: scale(0.8) translateY(0px);
+}
+
+.gritter-item.popup.popup-show > .popup-content {
+  transform: scale(1) translateY(0) !important;
+  transition: all 0.4s cubic-bezier(0.74, -0.05, 0.27, 1.75) !important;
+}
+@media (prefers-reduced-motion) {
+  #gritter-container.top .gritter-item.popup > .popup-content {
+    transform: scale(1) translateY(0px) !important;
+  }
+  #gritter-container.bottom .gritter-item.popup > .popup-content {
+    transform: scale(1) translateY(0px) !important;
+  }
+  .gritter-item.popup.popup-show > .popup-content {
+    transform: scale(1) translateY(0px) !important;
+    transition: none;
+  }
+}
+
+/* for ep_deleted_after_delay */
+.gritter-item #close_expiration_notif {
+  display: none;
+}

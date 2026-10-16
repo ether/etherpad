@@ -1,0 +1,48 @@
+#outerdocbody {
+  margin: 0 auto;
+  padding-top: 20px;
+  width: 100%;
+}
+
+#editorcontainerbox {
+  background-color: #f2f3f4;
+  background-color: var(--bg-color);
+  color: var(--text-color);
+}
+
+#editorcontainerbox .sticky-container {
+  width: 250px;
+}
+
+#outerdocbody iframe, #outerdocbody > #innerdocbody {
+  max-width: 900px;
+  padding: 40px 55px;
+  padding-left: var(--editor-horizontal-padding);
+  padding-right: var(--editor-horizontal-padding);
+  padding-top: var(--editor-vertical-padding);
+  padding-bottom: var(--editor-vertical-padding);
+  box-shadow: none;
+  border: 0;
+  border-radius: 8px 8px 0 0;
+  background-color: #ffffff;
+  background-color: var(--bg-color);
+  color: #485365;
+  color: var(--text-color);
+}
+#sidediv {
+  /* Padding must be the same than editor, otherwise it creates problem */
+  padding-top: 40px; /* = #innerdocbody iframe vertical padding */
+  padding-bottom: 40px;
+  padding-top: calc(var(--editor-vertical-padding) + 15px);
+  padding-bottom: calc(var(--editor-vertical-padding) + 15px);
+}
+
+@media (max-width:1000px) {
+  #outerdocbody {
+    padding-top: 0;
+  }
+  #outerdocbody iframe, #outerdocbody > #innerdocbody {
+    max-width: none;
+    border-radius: 0;
+  }
+}
