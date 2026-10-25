@@ -105,6 +105,25 @@ describe(__filename, function () {
       assert.equal(data[`pad:${padId}`].head, bound);
     });
 
+    it('limits exported chat to messages posted by revNum', async function () {
+      const pad = await padManager.getPad(padId);
+      await addRevs(pad, 3);
+      const bound = pad.head;
+      const boundTime = await pad.getRevisionDate(bound);
+      await pad.appendChatMessage('before', 'a.before', boundTime - 1);
+      await pad.appendChatMessage('at', 'a.at', boundTime);
+      await pad.appendChatMessage('after', 'a.after', boundTime + 1);
+      await addRevs(pad, 2);
+      const data = await exportEtherpad.getPadRaw(padId, null, bound);
+      const chatKeys =
+          Object.keys(data).filter((k) => k.startsWith(`pad:${padId}:chat:`)).sort();
+      assert.deepEqual(chatKeys, [`pad:${padId}:chat:0`, `pad:${padId}:chat:1`]);
+      assert.equal(data[`pad:${padId}`].chatHead, 1);
+      // An unbounded export still carries the whole chat history.
+      const full = await exportEtherpad.getPadRaw(padId, null);
+      assert(`pad:${padId}:chat:2` in full);
+    });
+
     it('treats a revNum above head as equivalent to full history', async function () {
       const pad = await padManager.getPad(padId);
       await addRevs(pad, 3);

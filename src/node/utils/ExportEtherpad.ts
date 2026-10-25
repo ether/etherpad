@@ -36,6 +36,18 @@ exports.getPadRaw = async (padId:string, readOnlyId:string, revNum?: number) => 
   const effectiveHead: number = (revNum == null || revNum > padHead) ? padHead : revNum;
   const isRevBound = revNum != null && revNum < padHead;
   const boundAtext = isRevBound ? await pad.getInternalRevisionAText(effectiveHead) : null;
+  // Chat is stored in posting order, so the bounded window is every message
+  // posted no later than the bound revision.
+  let chatHead: number = pad.chatHead;
+  if (isRevBound) {
+    const revTime = await pad.getRevisionDate(effectiveHead);
+    chatHead = -1;
+    while (revTime != null && chatHead < pad.chatHead) {
+      const msg = await pad.db.get(`pad:${padId}:chat:${chatHead + 1}`);
+      if (msg == null || !(msg.time <= revTime)) break;
+      chatHead++;
+    }
+  }
   const pluginRecords = await Promise.all(customPrefixes.map(async (customPrefix:string) => {
     const srcPfx = `${customPrefix}:${padId}`;
     const dstPfx = `${customPrefix}:${readOnlyId || padId}`;
@@ -59,7 +71,7 @@ exports.getPadRaw = async (padId:string, readOnlyId:string, revNum?: number) => 
       })()];
     }
     for (let i = 0; i <= effectiveHead; ++i) yield [`${dstPfx}:revs:${i}`, pad.getRevision(i)];
-    for (let i = 0; i <= pad.chatHead; ++i) yield [`${dstPfx}:chat:${i}`, pad.getChatMessage(i)];
+    for (let i = 0; i <= chatHead; ++i) yield [`${dstPfx}:chat:${i}`, pad.getChatMessage(i)];
     for (const gen of pluginRecords) yield* gen;
   })();
   // When rev-bound, serialize a shallow-cloned pad object with head/atext
@@ -67,7 +79,7 @@ exports.getPadRaw = async (padId:string, readOnlyId:string, revNum?: number) => 
   // toJSON() returns a plain object suitable for spreading; the live Pad
   // instance is kept for the exportEtherpad hook below.
   const serializedPad = isRevBound
-      ? {...(pad.toJSON()), head: effectiveHead, atext: boundAtext}
+      ? {...(pad.toJSON()), head: effectiveHead, atext: boundAtext, chatHead}
       : pad;
   const data = {[dstPfx]: serializedPad};
   for (const [dstKey, p] of new Stream(records).batch(100).buffer(99)) data[dstKey] = await p;
