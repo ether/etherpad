@@ -124,6 +124,30 @@ describe(__filename, function () {
       assert(`pad:${padId}:chat:2` in full);
     });
 
+    it('drops chat posted after the last edit when revNum is the head', async function () {
+      const pad = await padManager.getPad(padId);
+      await addRevs(pad, 2);
+      const headTime = await pad.getRevisionDate(pad.head);
+      await pad.appendChatMessage('at', 'a.at', headTime);
+      await pad.appendChatMessage('later', 'a.later', headTime + 1);
+      const data = await exportEtherpad.getPadRaw(padId, null, pad.head);
+      assert(`pad:${padId}:chat:0` in data);
+      assert(!(`pad:${padId}:chat:1` in data));
+      assert.equal(data[`pad:${padId}`].chatHead, 0);
+    });
+
+    it('keeps in-window chat that follows an out-of-order later timestamp', async function () {
+      const pad = await padManager.getPad(padId);
+      await addRevs(pad, 2);
+      const headTime = await pad.getRevisionDate(pad.head);
+      await pad.appendChatMessage('future', 'a.future', headTime + 1000);
+      await pad.appendChatMessage('past', 'a.past', headTime - 1000);
+      const data = await exportEtherpad.getPadRaw(padId, null, pad.head);
+      assert.equal(data[`pad:${padId}:chat:0`].text, 'past');
+      assert(!(`pad:${padId}:chat:1` in data));
+      assert.equal(data[`pad:${padId}`].chatHead, 0);
+    });
+
     it('treats a revNum above head as equivalent to full history', async function () {
       const pad = await padManager.getPad(padId);
       await addRevs(pad, 3);
