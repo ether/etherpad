@@ -26,6 +26,13 @@ describe('getReturnToPadUrl', () => {
         .toBe('https://pad.example/p/testpad');
   });
 
+  it('ignores same-origin referrers that are not this pad page', () => {
+    for (const ref of ['https://pad.example/p/testpad/timeslider?embed=1',
+      'https://pad.example/p/testpad/export/html', 'https://pad.example/p/otherpad']) {
+      expect(getReturnToPadUrl(ref, ts)).toBe('https://pad.example/p/testpad');
+    }
+  });
+
   it('keeps a reverse-proxy prefix', () => {
     expect(getReturnToPadUrl('', 'https://h.example/etherpad/p/a%20b/timeslider?embed=1#x'))
         .toBe('https://h.example/etherpad/p/a%20b');
