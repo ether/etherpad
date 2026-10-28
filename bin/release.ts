@@ -194,10 +194,10 @@ try {
   console.log(`Creating ${newVersion} tag...`);
   run(`git tag -a '${newVersion}' -m '${newVersion}'`);
   run(`git tag -a 'v${newVersion}' -m 'v${newVersion}'`);
+  // develop requires linear history, so it is not merged back from master: it
+  // keeps the "bump version" commit made above and is pushed as a fast-forward.
   console.log('Switching back to develop...');
   run('git checkout develop');
-  console.log('Merging master into develop...');
-  run('git merge --no-ff --no-edit master');
 } catch (err:any) {
   console.error(err.toString());
   console.warn('Resetting repository...');
