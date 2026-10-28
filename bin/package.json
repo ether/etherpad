@@ -1,6 +1,6 @@
 {
   "name": "bin",
-  "version": "3.3.10",
+  "version": "3.3.11",
   "description": "",
   "main": "checkAllPads.js",
   "directories": {
