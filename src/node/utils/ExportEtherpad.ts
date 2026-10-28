@@ -36,6 +36,17 @@ exports.getPadRaw = async (padId:string, readOnlyId:string, revNum?: number) => 
   const effectiveHead: number = (revNum == null || revNum > padHead) ? padHead : revNum;
   const isRevBound = revNum != null && revNum < padHead;
   const boundAtext = isRevBound ? await pad.getInternalRevisionAText(effectiveHead) : null;
+  // Any rev-specific export (including rev == head) only carries chat posted
+  // no later than that revision. Chat timestamps can be supplied through the
+  // API, so filter on the timestamp rather than stopping at the first later
+  // message, and renumber the kept messages so the export stays contiguous.
+  let boundChat: any[] | null = null;
+  if (revNum != null && revNum <= padHead) {
+    const revTime = await pad.getRevisionDate(effectiveHead);
+    const msgs = await Promise.all(
+        Array.from({length: pad.chatHead + 1}, (_, i) => pad.getChatMessage(i)));
+    boundChat = revTime == null ? [] : msgs.filter((m: any) => m != null && m.time <= revTime);
+  }
   const pluginRecords = await Promise.all(customPrefixes.map(async (customPrefix:string) => {
     const srcPfx = `${customPrefix}:${padId}`;
     const dstPfx = `${customPrefix}:${readOnlyId || padId}`;
@@ -59,15 +70,23 @@ exports.getPadRaw = async (padId:string, readOnlyId:string, revNum?: number) => 
       })()];
     }
     for (let i = 0; i <= effectiveHead; ++i) yield [`${dstPfx}:revs:${i}`, pad.getRevision(i)];
-    for (let i = 0; i <= pad.chatHead; ++i) yield [`${dstPfx}:chat:${i}`, pad.getChatMessage(i)];
+    if (boundChat) {
+      for (let i = 0; i < boundChat.length; ++i) yield [`${dstPfx}:chat:${i}`, boundChat[i]];
+    } else {
+      for (let i = 0; i <= pad.chatHead; ++i) yield [`${dstPfx}:chat:${i}`, pad.getChatMessage(i)];
+    }
     for (const gen of pluginRecords) yield* gen;
   })();
   // When rev-bound, serialize a shallow-cloned pad object with head/atext
   // rewritten so the import side reconstructs the pad at the requested rev.
   // toJSON() returns a plain object suitable for spreading; the live Pad
   // instance is kept for the exportEtherpad hook below.
-  const serializedPad = isRevBound
-      ? {...(pad.toJSON()), head: effectiveHead, atext: boundAtext}
+  const serializedPad = (isRevBound || boundChat)
+      ? {
+        ...(pad.toJSON()),
+        ...(isRevBound ? {head: effectiveHead, atext: boundAtext} : {}),
+        ...(boundChat ? {chatHead: boundChat.length - 1} : {}),
+      }
       : pad;
   const data = {[dstPfx]: serializedPad};
   for (const [dstKey, p] of new Stream(records).batch(100).buffer(99)) data[dstKey] = await p;

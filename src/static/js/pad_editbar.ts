@@ -25,6 +25,7 @@
 
 const hooks = require('./pluginfw/hooks');
 import {getHomeUrl} from './getHomeUrl';
+import {getReturnToPadUrl} from './timesliderReturnUrl';
 import padutils from "./pad_utils";
 const padeditor = require('./pad_editor').padeditor;
 const padsavedrevs = require('./pad_savedrevs');
@@ -603,14 +604,7 @@ exports.padeditbar = new class {
     });
 
     this.registerCommand('timeslider_returnToPad', (cmd) => {
-      if (document.referrer.length > 0 &&
-          document.referrer.substring(document.referrer.lastIndexOf('/') - 1,
-              document.referrer.lastIndexOf('/')) === 'p') {
-        document.location = document.referrer;
-      } else {
-        document.location = document.location.href
-            .substring(0, document.location.href.lastIndexOf('/'));
-      }
+      document.location = getReturnToPadUrl(document.referrer, document.location.href);
     });
   }
 }();

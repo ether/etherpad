@@ -1,3 +1,12 @@
+# 3.3.12
+
+3.3.12 is a security release. It closes an open redirect in the timeslider's "Return to pad" button (GHSA-35rj-7vrx-29wq) and stops revision-bound `.etherpad` exports from leaking later chat.
+
+### Security
+
+- **Timeslider — "Return to pad" no longer follows a cross-origin referrer (GHSA-35rj-7vrx-29wq).** The button navigated to `document.referrer` whenever the character before its last `/` was `p`, so a link from `https://attacker/p/login` to `/p/<pad>/timeslider?embed=1` sent the user back to the attacker's site when they clicked it. The referrer is now only followed when it is a pad page on the same origin; otherwise the button returns to the pad. Reported by @sun1024.
+- **Export — revision-bound `.etherpad` exports only include chat up to that revision.** Exporting `/p/<pad>/<rev>/export/etherpad` shipped the pad's entire chat history, including messages posted after that revision. Reported by @temantih.
+
 # 3.3.11
 
 3.3.11 is a security release. It stops clients that connect without an author token from all sharing one author (GHSA-746x-9w89-7xv6).
