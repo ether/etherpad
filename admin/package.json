@@ -41,7 +41,7 @@
     "react-dom": "^19.3.1",
     "react-hook-form": "^7.91.0",
     "react-i18next": "^17.1.9",
-    "react-router-dom": "^7.18.4",
+    "react-router-dom": "^7.18.5",
     "socket.io-client": "^4.8.4",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
