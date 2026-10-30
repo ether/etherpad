@@ -47,7 +47,7 @@
     "entities": "^8.1.0",
     "htmlparser2": "^12.0.0",
     "http-errors": "^2.0.1",
-    "jose": "^6.2.13",
+    "jose": "^6.2.14",
     "js-cookie": "^3.0.8",
     "jsdom": "^30.1.3",
     "jsonc-parser": "^3.3.1",
