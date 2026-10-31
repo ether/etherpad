@@ -10,6 +10,7 @@
 const assert = require('assert').strict;
 const common = require('../common');
 const padManager = require('../../../node/db/PadManager');
+const padMessageHandler = require('../../../node/handler/PadMessageHandler');
 const plugins = require('../../../static/js/pluginfw/plugin_defs');
 
 describe(__filename, function () {
@@ -18,6 +19,7 @@ describe(__filename, function () {
   let padId: string;
   const sockets: any[] = [];
   let hooksBackup: any;
+  let updatePadClientsBackup: any;
 
   before(async function () {
     agent = await common.init();
@@ -25,6 +27,7 @@ describe(__filename, function () {
 
   beforeEach(async function () {
     hooksBackup = {handleMessageSecurity: plugins.hooks.handleMessageSecurity};
+    updatePadClientsBackup = padMessageHandler.updatePadClients;
     padId = common.randomString();
     pad = await padManager.getPad(padId, '\n');
     await pad.setText('\n');
@@ -32,6 +35,7 @@ describe(__filename, function () {
 
   afterEach(async function () {
     Object.assign(plugins.hooks, hooksBackup);
+    padMessageHandler.updatePadClients = updatePadClientsBackup;
     for (const s of sockets.splice(0)) s.close();
     if (pad != null) await pad.remove();
     pad = null;
@@ -74,8 +78,18 @@ describe(__filename, function () {
     await reachedP;
 
     // Somebody joins while the change is in flight.
+    let catchUpDone: () => void;
+    const catchUpDoneP = new Promise<void>((r) => { catchUpDone = r; });
+    padMessageHandler.updatePadClients = async (...args: any[]) => {
+      const result = await updatePadClientsBackup(...args);
+      catchUpDone();
+      return result;
+    };
     await join();
-    await new Promise((r) => setTimeout(r, 300));
+    // CLIENT_VARS is emitted before handleClientReady() performs its catch-up.
+    // Wait for updatePadClients() itself so this test cannot release the writer
+    // before the join handler reaches the raced operation.
+    await catchUpDoneP;
     release!();
     await new Promise((r) => setTimeout(r, 500));
 
