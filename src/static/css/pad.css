@@ -310,10 +310,27 @@ body.history-mode #history-controls { display: flex; }
   clip: rect(0 0 0 0); overflow: hidden;
 }
 .history-speed {
-  flex: 0 0 auto;
+  /* niceSelect's own .nice-select rule (pad/form.css) sets min-width: 100px,
+   * which combined with flex:0 0 auto kept Speed from shrinking below 100px.
+   * #editbar's "does everything fit" check (checkAllIconsAreDisplayedInToolbar)
+   * only measures the live-mode .menu_left formatting toolbar, which is
+   * display:none in history mode, and only re-runs on a window 'resize' —
+   * never on switching into history mode, and not on a container (e.g. an
+   * embedding iframe) narrowing without the outer window resizing. So
+   * whenever #history-controls ends up with less width than its content
+   * needs without that check re-running, the non-shrinking 100px+ Speed box
+   * had nowhere to go but to overflow onto the adjacent, fixed-width
+   * menu_right icon buttons (issue #8382). */
+  flex: 0 1 130px;
+  min-width: 60px;
   font-size: 13px;
   padding: 2px 4px;
   max-width: 130px;
+  /* niceSelect's own .current label is nowrap + overflow:visible, so once the
+   * box itself shrinks below the label's natural width ("Original speed"),
+   * clip it instead of letting the text spill past the box onto menu_right. */
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Responsive — Follow + Speed inherit .hide-for-mobile (already collapses */
