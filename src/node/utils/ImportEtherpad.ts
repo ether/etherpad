@@ -241,6 +241,13 @@ exports.setPadRaw = async (padId: string, r: string, authorId = '') => {
   // First validate and transform values. Do not commit any records to the database yet in case
   // there is a problem with the data.
 
+  // Security metadata comes from the target pad, never from the file: `.etherpad` exports carry
+  // only the pad record, revisions, chat and authors, and an importer only needs write access.
+  const targetPad = await db.get(`pad:${padId}`) as Record<string, any> | null;
+  const targetRev0 = await db.get(`pad:${padId}:revs:0`) as Record<string, any> | null;
+  const creatorId = targetRev0 != null ? targetRev0.meta?.author ?? '' : authorId;
+  const importerIsCreator = targetPad == null || (authorId !== '' && creatorId === authorId);
+
   const data = new Map();
   const existingAuthors = new Set();
   const padDb = new Database('memory', {data});
@@ -275,6 +282,20 @@ exports.setPadRaw = async (padId: string, r: string, authorId = '') => {
         }
       } else if (padKeyPrefixes.includes(prefix)) {
         checkOriginalPadId(id);
+        if (prefix === 'pad' && keyParts.length !== 2 &&
+            !(keyParts.length === 4 && ['revs', 'chat'].includes(keyParts[2]) &&
+              /^\d+$/.test(keyParts[3]))) {
+          logger.warn(`(pad ${padId}) ignoring unexpected pad record in import: ${key}`);
+          return;
+        }
+        // The rev 0 author is the pad's creator, who may delete the pad and change pad-wide
+        // settings. Only the creator may import a file that hands that role to someone else.
+        if (prefix === 'pad' && keyParts[2] === 'revs' && keyParts[3] === '0' &&
+            !importerIsCreator && ((value as any).meta?.author ?? '') !== creatorId) {
+          throw Object.assign(
+              new Error('only the pad creator can import a file with a different creator'),
+              {code: 'ECREATOR'});
+        }
         if (prefix === 'pad' && keyParts.length === 2) {
           const pool = new AttributePool().fromJsonable(value.pool);
           const unsupportedElements = new Set();
@@ -285,6 +306,12 @@ exports.setPadRaw = async (padId: string, r: string, authorId = '') => {
             logger.warn(`(pad ${padId}) unsupported attributes (try installing a plugin): ` +
                         `${[...unsupportedElements].join(', ')}`);
           }
+          const {atext, pool: rawPool, head, chatHead, savedRevisions, padSettings} = value as any;
+          value = Object.fromEntries(Object.entries({
+            atext, pool: rawPool, head, chatHead, savedRevisions,
+            publicStatus: targetPad?.publicStatus === true,
+            padSettings: importerIsCreator ? padSettings : targetPad?.padSettings,
+          }).filter(([, v]) => v !== undefined)) as any;
         }
         keyParts[1] = padId;
         key = keyParts.join(':');

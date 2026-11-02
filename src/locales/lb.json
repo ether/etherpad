@@ -33,6 +33,7 @@
 	"admin_pads.relative.years": "Viru(n) {{count}} Joer",
 	"admin_pads.revisions_count": "{{count}} Versiounen",
 	"admin_pads.selected_count": "{{count}} ausgewielt",
+	"admin_pads.show": "Weisen",
 	"admin_pads.sort.revision_number": "Versiounen",
 	"admin_pads.sort.user_count": "Benotzer",
 	"admin_pads.stats.active_users": "Aktiv Benotzer",

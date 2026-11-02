@@ -214,6 +214,108 @@ describe(__filename, function () {
     });
   });
 
+  describe('security metadata is not taken from the file', function () {
+    const crypto = require('crypto');
+    const padDeletionManager = require('../../../node/db/PadDeletionManager');
+    const sha256 = (s: string) => crypto.createHash('sha256').update(s, 'utf8').digest('hex');
+    let creatorId: string;
+    let importerId: string;
+
+    // An export whose only revision was written by `rev0Author`.
+    const makeAuthoredExport = (rev0Author: string): MapArrayType<any> => {
+      const pool = {numToAttrib: {0: ['author', rev0Author]}, nextNum: 1};
+      const atext = {text: 'foo\n', attribs: '*0+3|1+1'};
+      return {
+        'pad:testing': {atext, pool, head: 0, chatHead: -1, savedRevisions: []},
+        [`globalAuthor:${rev0Author}`]: {
+          colorId: '#000000', name: 'new', timestamp: 1598747784631, padIDs: 'testing',
+        },
+        'pad:testing:revs:0': {
+          changeset: 'Z:1>3*0+3$foo',
+          meta: {author: rev0Author, timestamp: 1597632398288, pool, atext},
+        },
+      };
+    };
+
+    const importAndReload = async (records: MapArrayType<any>, authorId: string) => {
+      await importEtherpad.setPadRaw(padId, JSON.stringify(records), authorId);
+      padManager.unloadPad(padId);
+      return await padManager.getPad(padId);
+    };
+
+    beforeEach(async function () {
+      creatorId = makeAuthorId();
+      importerId = makeAuthorId();
+      await padManager.getPad(padId, '\n', creatorId);
+    });
+
+    it('ignores a deletionToken record and keeps the existing token', async function () {
+      const token = await padDeletionManager.createDeletionTokenIfAbsent(padId);
+      await importAndReload({
+        ...makeAuthoredExport(creatorId),
+        'pad:testing:deletionToken': {createdAt: 0, hash: sha256('attackertoken')},
+      }, importerId);
+      assert(!await padDeletionManager.isValidDeletionToken(padId, 'attackertoken'));
+      assert(await padDeletionManager.isValidDeletionToken(padId, token));
+    });
+
+    it('ignores pad sub-keys other than revs and chat', async function () {
+      const exp = makeAuthoredExport(creatorId);
+      await importAndReload({
+        ...exp,
+        'pad:testing': {...exp['pad:testing'], chatHead: 0},
+        'pad:testing:foo': {x: 1},
+        'pad:testing:revs:foo': {x: 1},
+        'pad:testing:chat:0': {text: 'hi', authorId: creatorId, time: 1},
+      }, importerId);
+      assert(await db.get(`pad:${padId}:foo`) == null);
+      assert(await db.get(`pad:${padId}:revs:foo`) == null);
+      assert.equal((await db.get(`pad:${padId}:chat:0`)).text, 'hi');
+    });
+
+    it('does not let the file make a pad public', async function () {
+      const exp = makeAuthoredExport(creatorId);
+      const pad = await importAndReload(
+          {...exp, 'pad:testing': {...exp['pad:testing'], publicStatus: true}}, importerId);
+      assert.equal(pad.getPublicStatus(), false);
+    });
+
+    it('keeps the target pad public status', async function () {
+      const target = await padManager.getPad(padId);
+      await target.setPublicStatus(true);
+      const pad = await importAndReload(makeAuthoredExport(creatorId), importerId);
+      assert.equal(pad.getPublicStatus(), true);
+    });
+
+    it('rejects a file that changes the creator unless the creator imports it', async function () {
+      await assert.rejects(
+          importEtherpad.setPadRaw(padId, JSON.stringify(makeAuthoredExport(importerId)), importerId),
+          {code: 'ECREATOR'});
+      padManager.unloadPad(padId);
+      assert.equal(await (await padManager.getPad(padId)).getRevisionAuthor(0), creatorId);
+      const pad = await importAndReload(makeAuthoredExport(importerId), creatorId);
+      assert.equal(await pad.getRevisionAuthor(0), importerId);
+    });
+
+    it('keeps the target pad settings when the importer is not the creator', async function () {
+      const exp = makeAuthoredExport(creatorId);
+      const pad = await importAndReload({
+        ...exp,
+        'pad:testing': {...exp['pad:testing'], padSettings: {enforceSettings: true}},
+      }, importerId);
+      assert.equal(pad.getPadSettings().enforceSettings, false);
+    });
+
+    it('takes pad settings from the file when the importer is the creator', async function () {
+      const exp = makeAuthoredExport(creatorId);
+      const pad = await importAndReload({
+        ...exp,
+        'pad:testing': {...exp['pad:testing'], padSettings: {enforceSettings: true}},
+      }, creatorId);
+      assert.equal(pad.getPadSettings().enforceSettings, true);
+    });
+  });
+
   describe('exportEtherpadAdditionalContent', function () {
     let hookBackup: Function;
 

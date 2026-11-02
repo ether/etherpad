@@ -183,8 +183,10 @@ describe(__filename, function () {
 
               it('re-import to read-write pad ID gives 200 OK', async function () {
                 // The new pad ID must differ from testPadId because Etherpad refuses to import
-                // .etherpad files on top of a pad that already has edits.
-                let req = agent.post(`/p/${testPadId}_import/import`)
+                // .etherpad files on top of a pad that already has edits. Each import also gets
+                // its own pad: a cookie-less request is a new author, and only a pad's creator may
+                // import a .etherpad file that names a different creator.
+                let req = agent.post(`/p/${testPadId}_import_${exportType}/import`)
                     .set("authorization", await common.generateJWTToken())
                     .attach('file', Buffer.from(text), {
                       filename: `/test.${exportType}`,
@@ -313,9 +315,13 @@ describe(__filename, function () {
       });
     }); // End of LibreOffice tests.
 
+    // A fresh pad: each cookie-less request is a new author, and only a pad's creator may import a
+    // .etherpad file that names a different creator.
+    const etherpadPadId = `${testPadId}_etherpad`;
+
     it('Tries to import .etherpad', async function () {
       this.timeout(3000);
-      await agent.post(`/p/${testPadId}/import`)
+      await agent.post(`/p/${etherpadPadId}/import`)
           .set("authorization", await common.generateJWTToken())
           .attach('file', etherpadDoc, {
             filename: '/test.etherpad',
@@ -332,7 +338,7 @@ describe(__filename, function () {
 
     it('exports Etherpad', async function () {
       this.timeout(3000);
-      await agent.get(`/p/${testPadId}/export/etherpad`)
+      await agent.get(`/p/${etherpadPadId}/export/etherpad`)
           .set("authorization", await common.generateJWTToken())
           .buffer(true).parse(superagent.parse.text)
           .expect(200)
@@ -341,11 +347,29 @@ describe(__filename, function () {
 
     it('exports HTML for this Etherpad file', async function () {
       this.timeout(3000);
-      await agent.get(`/p/${testPadId}/export/html`)
+      await agent.get(`/p/${etherpadPadId}/export/html`)
           .set("authorization", await common.generateJWTToken())
           .expect(200)
           .expect('content-type', 'text/html; charset=utf-8')
           .expect(/<ul class="bullet"><li><ul class="bullet"><li>hello<\/ul><\/li><\/ul>/);
+    });
+
+    it('rejects a .etherpad import that would change the creator', async function () {
+      this.timeout(3000);
+      // Each cookie-less request is a different author, so this pad's creator isn't the importer.
+      const padId = `${testPadId}_creator`;
+      await agent.post(`/p/${padId}/import`)
+          .set("authorization", await common.generateJWTToken())
+          .attach('file', padText, {filename: '/test.txt', contentType: 'text/plain'})
+          .expect(200);
+      await agent.post(`/p/${padId}/import`)
+          .set("authorization", await common.generateJWTToken())
+          .attach('file', etherpadDoc, {
+            filename: '/test.etherpad',
+            contentType: 'application/etherpad',
+          })
+          .expect(400)
+          .expect((res:any) => assert.equal(res.body.message, 'permission'));
     });
 
     it('Tries to import unsupported file type', async function () {

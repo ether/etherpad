@@ -1,3 +1,11 @@
+# 3.3.13
+
+3.3.13 is a security release. It stops `.etherpad` imports from setting a pad's ownership, privacy or deletion token (GHSA-qq7c-m9pc-7q7v).
+
+### Security
+
+- **Import — `.etherpad` files can no longer change who owns a pad, make it public or plant a deletion token (GHSA-qq7c-m9pc-7q7v).** Importing a `.etherpad` file into a pad with fewer than 10 revisions wrote every `pad:<id>:*` record in the file and every field of the pad record. Anyone who could edit a new pad could replace the creator's deletion token with their own, make a private group pad public, or name themselves as the pad's creator. Imports now only take the pad text, revisions and chat. The pad keeps its public status, pad-wide settings come from the file only when the creator imports it, and a file that names a different creator can only be imported by the pad's creator. Reported by @barnessomer.
+
 # 3.3.12
 
 3.3.12 is a security release. It closes an open redirect in the timeslider's "Return to pad" button (GHSA-35rj-7vrx-29wq) and stops revision-bound `.etherpad` exports from leaking later chat.

@@ -16,6 +16,10 @@
 		]
 	},
 	"admin.page-title": "Yönetim Panosu - Etherpad",
+	"admin.loading": "Yükleniyor…",
+	"admin.loading_description": "Sayfa yüklenirken lütfen bekleyin.",
+	"admin.toggle_sidebar": "Kenar çubuğunu aç/kapat",
+	"admin.shout": "İletişim",
 	"admin_plugins": "Eklenti yöneticisi",
 	"admin_plugins.available": "Mevcut eklentiler",
 	"admin_plugins.available_not-found": "Eklenti bulunamadı.",
