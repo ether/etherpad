@@ -448,6 +448,7 @@
   "pad.impexp.convertFailed": "We were not able to import this file. Please use a different document format or copy paste manually",
   "pad.impexp.padHasData": "We were not able to import this file because this Pad has already had changes, please import to a new pad",
   "pad.impexp.uploadFailed": "The upload failed, please try again",
+  "pad.impexp.permission": "We were not able to import this file because it would change who created this pad. Only the pad's creator can import it.",
   "pad.impexp.importfailed": "Import failed",
   "pad.impexp.copypaste": "Please copy paste",
   "pad.impexp.exportdisabled": "Exporting as {{type}} format is disabled. Please contact your system administrator for details.",

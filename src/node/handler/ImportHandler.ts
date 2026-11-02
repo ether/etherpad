@@ -218,7 +218,12 @@ const doImport = async (req:any, res:any, padId:string, authorId:string) => {
     }
     const text = await fs.readFile(srcFile, 'utf8');
     directDatabaseAccess = true;
-    await importEtherpad.setPadRaw(padId, text, authorId);
+    try {
+      await importEtherpad.setPadRaw(padId, text, authorId);
+    } catch (err: any) {
+      if (err.code === 'ECREATOR') throw new ImportError('permission', err.message);
+      throw err;
+    }
   }
 
   // convert file to html if necessary

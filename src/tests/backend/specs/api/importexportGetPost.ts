@@ -183,8 +183,10 @@ describe(__filename, function () {
 
               it('re-import to read-write pad ID gives 200 OK', async function () {
                 // The new pad ID must differ from testPadId because Etherpad refuses to import
-                // .etherpad files on top of a pad that already has edits.
-                let req = agent.post(`/p/${testPadId}_import/import`)
+                // .etherpad files on top of a pad that already has edits. Each import also gets
+                // its own pad: a cookie-less request is a new author, and only a pad's creator may
+                // import a .etherpad file that names a different creator.
+                let req = agent.post(`/p/${testPadId}_import_${exportType}/import`)
                     .set("authorization", await common.generateJWTToken())
                     .attach('file', Buffer.from(text), {
                       filename: `/test.${exportType}`,
