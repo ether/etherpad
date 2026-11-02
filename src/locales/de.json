@@ -298,7 +298,7 @@
 	"pad.retention.expiring.days": "Dieses Pad wird gelöscht, wenn es in den nächsten {{count}} {[ plural(count) one: day, other: days ]} nicht bearbeitet wird. Bearbeiten oder exportieren Sie es, um Ihre Arbeit zu sichern.",
 	"pad.retention.expiring.hours": "Dieses Pad wird gelöscht, wenn es in den nächsten {{count}} Stunden nicht bearbeitet wird. Bearbeiten oder exportieren Sie es, um Ihre Arbeit zu sichern.",
 	"pad.retention.expired.title": "Pad gelöscht",
-	"pad.retention.expired.text": "Der vorherige Inhalt dieses Pads wurde gelöscht, da er für {{count}} {[ plural(count) one: day, other: days ]} nicht bearbeitet wurde. Dies ist ein neues Pad.",
+	"pad.retention.expired.text": "Der vorherige Inhalt dieses Pads wurde gelöscht, da er für {{count}} {[ plural(count) one: Tag, other: Tage ]} nicht bearbeitet wurde. Dies ist ein neues Pad.",
 	"pad.deletionToken.modalTitle": "Speichere deinen Pad-Löschtoken.",
 	"pad.deletionToken.modalBody": "Dieses Token ist die einzige Möglichkeit, dieses Pad zu löschen, falls Deine Browsersitzung unterbrochen wird oder Du das Gerät wechselst. Speichere es an einem sicheren Ort – es wird hier nur einmal angezeigt.",
 	"pad.deletionToken.copy": "Kopieren",
