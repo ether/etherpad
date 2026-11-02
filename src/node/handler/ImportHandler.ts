@@ -212,15 +212,17 @@ const doImport = async (req:any, res:any, padId:string, authorId:string) => {
     // Use '\n' to avoid the default pad text if the pad doesn't yet exist.
     const pad = await padManager.getPad(padId, '\n', authorId);
     const headCount = pad.head;
-    if (headCount >= 10) {
-      logger.warn('Aborting direct database import attempt of a pad that already has content');
-      throw new ImportError('padHasData');
-    }
-    const text = await fs.readFile(srcFile, 'utf8');
-    directDatabaseAccess = true;
     try {
+      if (headCount >= 10) {
+        logger.warn('Aborting direct database import attempt of a pad that already has content');
+        throw new ImportError('padHasData');
+      }
+      const text = await fs.readFile(srcFile, 'utf8');
+      directDatabaseAccess = true;
       await importEtherpad.setPadRaw(padId, text, authorId);
     } catch (err: any) {
+      // Rejected imports must not leave the upload behind.
+      await rm(srcFile);
       if (err.code === 'ECREATOR') throw new ImportError('permission', err.message);
       throw err;
     }
