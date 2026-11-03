@@ -6,3 +6,8 @@ rusty.db
 update-state.json
 # Runtime update log, written by src/node/updater (see index.ts logPath()).
 log/
+# Files the updater writes while it runs (src/node/updater). Preflight also
+# filters these out of its dirty-tree check; see UPDATER_OWNED_PATHS (#8411).
+update.lock
+update-state.json.tmp
+update-backup/

@@ -1,3 +1,4 @@
+import {spawn} from 'node:child_process';
 import semver from 'semver';
 import {InstallMethod} from './types';
 import type {VerifyResult} from './trustedKeys';
@@ -43,6 +44,48 @@ export interface PreflightDeps {
 }
 
 export type PreflightResult = {ok: true} | {ok: false; reason: PreflightReason; detail?: string};
+
+/**
+ * Paths (relative to the repo root, as `git status --porcelain` prints them)
+ * that the updater itself creates or rewrites while it runs. They must never
+ * count as local modifications: the pipeline takes `var/update.lock` *before*
+ * preflight runs, so an install whose `.gitignore` predates this list would
+ * otherwise always fail with `dirty-working-tree` (#8411). Entries ending in
+ * `/` match everything below that directory. `var/.gitignore` lists the same
+ * paths; this filter is the safety net for older checkouts and custom
+ * ignore rules.
+ */
+export const UPDATER_OWNED_PATHS: readonly string[] = [
+  'var/update.lock',
+  'var/update-state.json',
+  'var/update-state.json.tmp',
+  'var/update-backup/',
+  'var/log/',
+];
+
+const isUpdaterOwned = (p: string): boolean => UPDATER_OWNED_PATHS.some(
+    (owned) => owned.endsWith('/') ? p === owned || p.startsWith(owned) : p === owned);
+
+/**
+ * True when `git status --porcelain` output contains nothing but
+ * updater-owned paths. Exported for tests.
+ */
+export const isPorcelainClean = (porcelain: string): boolean => porcelain
+    .split('\n')
+    .map((l) => l.replace(/\r$/, ''))
+    .filter((l) => l.trim().length > 0)
+    // Porcelain v1: two status columns, a space, then the path.
+    .every((l) => isUpdaterOwned(l.slice(3)));
+
+/** Runs `git status --porcelain` in `repoDir` and applies `isPorcelainClean`. */
+export const gitWorkingTreeClean = (repoDir: string): Promise<boolean> =>
+  new Promise<boolean>((resolve) => {
+    const c = spawn('git', ['status', '--porcelain'], {cwd: repoDir});
+    let out = '';
+    c.stdout.on('data', (b) => { out += b.toString(); });
+    c.on('close', (code) => resolve(code === 0 && isPorcelainClean(out)));
+    c.on('error', () => resolve(false));
+  });
 
 const WRITABLE_METHODS: ReadonlySet<Exclude<InstallMethod, 'auto'>> = new Set(['git']);
 

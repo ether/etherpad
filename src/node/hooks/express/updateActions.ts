@@ -8,13 +8,15 @@ import crossSpawn from 'cross-spawn';
 import log4js from 'log4js';
 import {ArgsExpressType} from '../../types/ArgsExpressType';
 import settings, {getEpVersion} from '../../utils/Settings';
-import {getDetectedInstallMethod, stateFilePath, getRollbackDeps, notifyApplyFailure} from '../../updater';
+import {
+  getDetectedInstallMethod, stateFilePath, getRollbackDeps, notifyApplyFailure, isVerificationArmed,
+} from '../../updater';
 import {evaluatePolicy} from '../../updater/UpdatePolicy';
 import {loadState, saveState} from '../../updater/state';
 import {acquireLock, releaseLock} from '../../updater/lock';
 import {executeUpdate, SpawnFn} from '../../updater/UpdateExecutor';
 import {createDrainer, DrainBroadcastKey, Drainer} from '../../updater/SessionDrainer';
-import {runPreflight} from '../../updater/preflight';
+import {gitWorkingTreeClean, runPreflight} from '../../updater/preflight';
 import {verifyReleaseTag} from '../../updater/trustedKeys';
 import {tailLines, appendLine} from '../../updater/updateLog';
 import {performRollback} from '../../updater/RollbackHandler';
@@ -68,13 +70,7 @@ const broadcastShout = (key: DrainBroadcastKey, values: Record<string, unknown>)
 
 const buildPreflightDeps = (installMethod: ReturnType<typeof getDetectedInstallMethod>) => ({
   installMethod,
-  workingTreeClean: () => new Promise<boolean>((resolve) => {
-    const c = spawn('git', ['status', '--porcelain'], {cwd: settings.root});
-    let out = '';
-    c.stdout.on('data', (b) => { out += b.toString(); });
-    c.on('close', () => resolve(out.trim().length === 0));
-    c.on('error', () => resolve(false));
-  }),
+  workingTreeClean: () => gitWorkingTreeClean(settings.root),
   freeDiskMB: async (): Promise<number> => {
     try {
       const s = await (fs as any).statfs?.(settings.root);
@@ -357,7 +353,13 @@ export const expressCreateServer = (
     if (!requireAdmin(req, res)) return;
     const state = await loadState(stateFilePath());
     const terminal: ReadonlySet<string> = new Set(['rollback-failed', 'preflight-failed', 'rolled-back']);
-    if (!terminal.has(state.execution.status)) {
+    // A `pending-verification` left behind once this process is already up
+    // and serving (no health-check timer armed) can never resolve on its
+    // own, and it blocks Apply. Let the admin clear it (#8412). While the
+    // boot health check is still armed the state is live, so refuse.
+    const stalePending =
+        state.execution.status === 'pending-verification' && !isVerificationArmed();
+    if (!terminal.has(state.execution.status) && !stalePending) {
       return res.status(409).json({error: 'not-terminal', status: state.execution.status});
     }
     await saveState(stateFilePath(), {...state, execution: {status: 'idle'}, bootCount: 0});

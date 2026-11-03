@@ -137,7 +137,11 @@ export const UpdatePage = () => {
     && !us.lockHeld
     && !upToDate;
   const showCancel = status === 'preflight' || status === 'draining' || status === 'scheduled';
-  const showAcknowledge = status === 'preflight-failed' || status === 'rolled-back' || status === 'rollback-failed';
+  // pending-verification is included so a status stuck there after the
+  // server is back up can be cleared (#8412); the server refuses while the
+  // boot health check is still armed.
+  const showAcknowledge = status === 'preflight-failed' || status === 'rolled-back' ||
+    status === 'rollback-failed' || status === 'pending-verification';
 
   // Optional-chain the execution lookup: some integration-test stubs of
   // /admin/update/status omit Tier 2/3 fields entirely (see

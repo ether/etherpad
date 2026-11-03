@@ -17,7 +17,7 @@ import {createSchedulerRunner, decideSchedule, decideTriggerApply, SchedulerRunn
 import {parseWindow} from './MaintenanceWindow';
 import {applyUpdate, ApplyPipelineDeps} from './applyPipeline';
 import {acquireLock, releaseLock} from './lock';
-import {runPreflight} from './preflight';
+import {gitWorkingTreeClean, runPreflight} from './preflight';
 import {verifyReleaseTag} from './trustedKeys';
 import {createDrainer} from './SessionDrainer';
 import {appendLine} from './updateLog';
@@ -30,18 +30,26 @@ let detectedMethod: Exclude<InstallMethod, 'auto'> = 'managed';
 let timer: NodeJS.Timeout | null = null;
 let initialTimer: NodeJS.Timeout | null = null;
 let checkInFlight = false;
-let inMemoryState: UpdateState | null = null;
 let pendingVerification: CheckResult | null = null;
 let scheduler: SchedulerRunner | null = null;
 
 export const stateFilePath = () => path.join(settings.root, 'var', 'update-state.json');
 
-/** Returns the current state from memory; loads on first call. */
-export const getCurrentState = async (): Promise<UpdateState> => {
-  if (inMemoryState) return inMemoryState;
-  inMemoryState = await loadState(stateFilePath());
-  return inMemoryState;
-};
+/**
+ * Returns the current persisted state. Always reads from disk: the HTTP
+ * handlers, apply pipeline, scheduler and RollbackHandler all write the
+ * file directly, so an in-process cache goes stale and writing it back
+ * clobbers their transitions (#8412: the first version check overwrote
+ * `verified` with the boot-time `pending-verification` snapshot).
+ */
+export const getCurrentState = (): Promise<UpdateState> => loadState(stateFilePath());
+
+/**
+ * True while this process has a pending-verification health-check timer
+ * armed (between boot and markBootHealthy). Used by the acknowledge route to
+ * refuse clearing a verification that is still genuinely in progress.
+ */
+export const isVerificationArmed = (): boolean => pendingVerification?.armed === true;
 
 export const getDetectedInstallMethod = () => detectedMethod;
 
@@ -122,12 +130,15 @@ const performCheck = async (): Promise<void> => {
     // getCurrentState() can throw on a non-ENOENT fs error from loadState();
     // it must run inside the try/finally so checkInFlight is always cleared,
     // otherwise a one-time permission error permanently disables polling.
-    const state = await getCurrentState();
+    const before = await getCurrentState();
     const result = await checkLatestRelease({
       fetcher: realFetcher,
-      prevEtag: state.lastEtag,
+      prevEtag: before.lastEtag,
       repo: settings.updates.githubRepo,
     });
+    // Re-read after the network round trip so a transition persisted by
+    // another writer while the fetch was in flight is not overwritten.
+    const state = await getCurrentState();
     const now = new Date();
     state.lastCheckAt = now.toISOString();
 
@@ -282,13 +293,7 @@ const buildSchedulerApplyDeps = (): ApplyPipelineDeps => ({
     },
     {
       installMethod: detectedMethod,
-      workingTreeClean: () => new Promise<boolean>((resolve) => {
-        const c = spawn('git', ['status', '--porcelain'], {cwd: settings.root});
-        let out = '';
-        c.stdout.on('data', (b) => { out += b.toString(); });
-        c.on('close', () => resolve(out.trim().length === 0));
-        c.on('error', () => resolve(false));
-      }),
+      workingTreeClean: () => gitWorkingTreeClean(settings.root),
       freeDiskMB: async (): Promise<number> => {
         try {
           const s = await (fs as any).statfs?.(settings.root);
