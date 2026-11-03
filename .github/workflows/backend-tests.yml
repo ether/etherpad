@@ -120,6 +120,8 @@ jobs:
         name: Install Etherpad plugins
         run: >
           pnpm add -w
+          ep_ai_core
+          ep_ai_mcp
           ep_align
           ep_author_hover
           ep_cursortrace
@@ -259,6 +261,8 @@ jobs:
         name: Install Etherpad plugins
         run: >
           pnpm add -w
+          ep_ai_core
+          ep_ai_mcp
           ep_align
           ep_author_hover
           ep_cursortrace
