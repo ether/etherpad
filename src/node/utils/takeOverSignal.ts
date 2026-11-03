@@ -16,8 +16,13 @@ export const takeOverSignal = (
     onRemove: (signal: NodeJS.Signals, listener: (...args: any[]) => any) => void =
       (s, l) => { process.off(s, l); },
 ) => {
-  process.on(signal, listener);
+  if (!process.listeners(signal).includes(listener)) process.on(signal, listener);
   for (const other of process.listeners(signal)) {
     if (other !== listener) onRemove(signal, other as (...args: any[]) => any);
+  }
+  // Drop duplicate registrations of `listener` so it runs once per signal. process.off() removes
+  // one registration at a time, so at least one always remains.
+  while (process.listeners(signal).filter((l) => l === listener).length > 1) {
+    process.off(signal, listener);
   }
 };

@@ -26,6 +26,20 @@ describe('takeOverSignal', () => {
     expect(before).toBeGreaterThan(0);
   });
 
+  it('keeps a single registration if the listener was already subscribed', () => {
+    const a = () => {};
+    let calls = 0;
+    const b = () => { calls++; };
+    added.push(a, b);
+    process.on(signal, b);
+    process.on(signal, a);
+    process.on(signal, b);
+    takeOverSignal(signal, b);
+    expect(process.listeners(signal)).toEqual([b]);
+    process.emit(signal, signal);
+    expect(calls).toBe(1);
+  });
+
   // https://github.com/ether/etherpad/issues/8421
   // On Windows process.kill() terminates the process instead of raising a catchable signal.
   it.skipIf(process.platform === 'win32')('does not drop a signal that is pending while listeners are replaced', () => {
