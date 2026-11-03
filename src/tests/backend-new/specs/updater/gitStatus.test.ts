@@ -28,4 +28,9 @@ describe('git status parsing for the updater preflight', () => {
   it('unquotes paths that git escaped', () => {
     expect(parsePorcelainPaths('?? "a file with spaces.txt"\n')).toEqual(['a file with spaces.txt']);
   });
+
+  it('does not ignore a path that merely ends with the lock name', () => {
+    expect(parsePorcelainPaths('?? var/update.lock \n')).toEqual(['var/update.lock ']);
+    expect(parsePorcelainPaths('?? "var/update.lock "\n')).toEqual(['var/update.lock ']);
+  });
 });

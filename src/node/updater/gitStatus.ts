@@ -20,7 +20,9 @@ export const UPDATER_OWNED_PATHS: readonly string[] = ['var/update.lock'];
 export const parsePorcelainPaths = (porcelain: string): string[] =>
   porcelain
       .split('\n')
-      .map((line) => line.replace(/\r$/, '').trimEnd())
+      // Only the CRLF terminator is stripped: a path may legitimately end in a
+      // space, and trimming it would make `var/update.lock ` look like the lock.
+      .map((line) => line.replace(/\r$/, ''))
       .filter((line) => line.length > 3)
       .map((line) => line.slice(3).replace(/^"(.*)"$/, '$1'))
       .filter((path) => !UPDATER_OWNED_PATHS.includes(path));
