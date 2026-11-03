@@ -31,6 +31,9 @@ let timer: NodeJS.Timeout | null = null;
 let initialTimer: NodeJS.Timeout | null = null;
 let checkInFlight = false;
 let pendingVerification: CheckResult | null = null;
+// Set when the boot crash-loop guard kicked off a rollback. Never cleared:
+// the rollback ends by exiting the process.
+let bootRollbackInFlight = false;
 let scheduler: SchedulerRunner | null = null;
 
 export const stateFilePath = () => path.join(settings.root, 'var', 'update-state.json');
@@ -45,11 +48,14 @@ export const stateFilePath = () => path.join(settings.root, 'var', 'update-state
 export const getCurrentState = (): Promise<UpdateState> => loadState(stateFilePath());
 
 /**
- * True while this process has a pending-verification health-check timer
- * armed (between boot and markBootHealthy). Used by the acknowledge route to
- * refuse clearing a verification that is still genuinely in progress.
+ * True while this process is still resolving a pending-verification: the
+ * boot health-check timer is armed (between boot and markBootHealthy), or
+ * the crash-loop guard started a rollback that has not exited yet. Used by
+ * the acknowledge route to refuse clearing a verification that is still
+ * genuinely in progress.
  */
-export const isVerificationArmed = (): boolean => pendingVerification?.armed === true;
+export const isVerificationArmed = (): boolean =>
+  bootRollbackInFlight || pendingVerification?.armed === true;
 
 export const getDetectedInstallMethod = () => detectedMethod;
 
@@ -185,6 +191,9 @@ const performCheck = async (): Promise<void> => {
 
     // Tier 3 scheduler pass: decide whether to schedule, reschedule, or cancel.
     // Tier 4 snap-forward to next maintenance window is layered in here too.
+    // Execution status the scheduler decision below was based on; null when
+    // this check did not touch `execution`.
+    let executionDecidedFrom: string | null = null;
     if (state.latest && scheduler) {
       const current = getEpVersion();
       const policy = evaluatePolicy({
@@ -203,6 +212,7 @@ const performCheck = async (): Promise<void> => {
         maintenanceWindow: policy.canAutonomous ? parseWindow(settings.updates.maintenanceWindow) : null,
       });
       if (decision.action === 'schedule') {
+        executionDecidedFrom = state.execution.status;
         state.execution = decision.newExecution;
         state.email = decision.newEmailState;
         for (const e of decision.emails) {
@@ -217,13 +227,29 @@ const performCheck = async (): Promise<void> => {
           scheduledFor: decision.newExecution.scheduledFor,
         });
       } else if (decision.action === 'cancel-schedule') {
+        executionDecidedFrom = state.execution.status;
         state.execution = {status: 'idle'};
         scheduler.cancel();
         logger.info(`updater: cancelled pending schedule (${decision.reason})`);
       }
     }
 
-    await saveState(stateFilePath(), state);
+    // The awaits above (SMTP sends) leave room for other writers (apply,
+    // acknowledge, markVerified) to persist a transition. Merge onto a fresh
+    // read and write back only the fields this check owns; `execution` only
+    // when the scheduler changed it and nobody else has moved it since.
+    const fresh = await getCurrentState();
+    const merged: UpdateState = {
+      ...fresh,
+      lastCheckAt: state.lastCheckAt,
+      latest: state.latest,
+      lastEtag: state.lastEtag,
+      email: state.email,
+    };
+    if (executionDecidedFrom != null && fresh.execution.status === executionDecidedFrom) {
+      merged.execution = state.execution;
+    }
+    await saveState(stateFilePath(), merged);
   } catch (err) {
     logger.warn(`Updater check failed: ${(err as Error).message}`);
   } finally {
@@ -519,6 +545,7 @@ export const expressCreateServer = async (): Promise<void> => {
   // rollback can fire even if the version checker is misconfigured.
   const state = await getCurrentState();
   pendingVerification = checkPendingVerification(state, getRollbackDeps());
+  if (pendingVerification.rollingBack) bootRollbackInFlight = true;
 
   // Boot-time failure notification. If a previous run produced a failure
   // outcome whose admin email we haven't already sent (lastFailureKey

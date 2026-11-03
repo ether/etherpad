@@ -43,6 +43,7 @@ describe('checkPendingVerification', () => {
     };
     const r = checkPendingVerification(state, deps);
     expect(r.armed).toBe(true);
+    expect(r.rollingBack).toBeFalsy();
     expect(deps.saveState).toHaveBeenCalledWith(expect.objectContaining({bootCount: 1}));
     // markVerified clears the timer; advancing past the deadline does NOT trigger rollback.
     r.markVerified();
@@ -83,6 +84,9 @@ describe('checkPendingVerification', () => {
     };
     const r = checkPendingVerification(state, deps);
     expect(r.armed).toBe(false);
+    // Flags the background rollback so acknowledge won't treat the still-
+    // persisted pending-verification as stale while it runs.
+    expect(r.rollingBack).toBe(true);
     await vi.runAllTimersAsync();
     expect(deps.exit).toHaveBeenCalledWith(75);
   });

@@ -149,6 +149,13 @@ export interface CheckResult {
   armed: boolean;
   /** Cancels the timer and transitions to `verified`. No-op when armed is false. */
   markVerified: () => void;
+  /**
+   * True when the crash-loop guard started a rollback at boot. The rollback
+   * runs in the background and the persisted state stays
+   * `pending-verification` until it finishes, so callers must not treat
+   * that state as stale.
+   */
+  rollingBack?: boolean;
 }
 
 /**
@@ -200,7 +207,7 @@ export const checkPendingVerification = (state: UpdateState, deps: RollbackDeps)
     // path will exit 75 asynchronously and the supervisor restarts on the
     // restored SHA. Rejections caught + best-effort terminal-state write.
     fireRollback(state);
-    return {armed: false, markVerified: () => {}};
+    return {armed: false, markVerified: () => {}, rollingBack: true};
   }
 
   const incremented: UpdateState = {...state, bootCount: state.bootCount + 1};

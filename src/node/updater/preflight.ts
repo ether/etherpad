@@ -60,11 +60,15 @@ export const UPDATER_OWNED_PATHS: readonly string[] = [
   'var/update-state.json',
   'var/update-state.json.tmp',
   'var/update-backup/',
-  'var/log/',
+  'var/log/update.log',
 ];
 
-const isUpdaterOwned = (p: string): boolean => UPDATER_OWNED_PATHS.some(
-    (owned) => owned.endsWith('/') ? p === owned || p.startsWith(owned) : p === owned);
+// updateLog.ts rotates update.log to update.log.1 … update.log.5.
+const ROTATED_UPDATE_LOG = /^var\/log\/update\.log\.\d+$/;
+
+const isUpdaterOwned = (p: string): boolean => ROTATED_UPDATE_LOG.test(p) ||
+  UPDATER_OWNED_PATHS.some(
+      (owned) => owned.endsWith('/') ? p === owned || p.startsWith(owned) : p === owned);
 
 /**
  * True when `git status --porcelain` output contains nothing but

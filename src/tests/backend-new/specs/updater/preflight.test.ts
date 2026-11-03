@@ -152,6 +152,7 @@ describe('isPorcelainClean (#8411)', () => {
       '?? var/update-state.json.tmp',
       '?? var/update-backup/',
       '?? var/log/update.log',
+      '?? var/log/update.log.2',
       '',
     ].join('\n'))).toBe(true);
   });
@@ -161,6 +162,8 @@ describe('isPorcelainClean (#8411)', () => {
     expect(isPorcelainClean('?? var/update.lock\n?? notes.txt\n')).toBe(false);
     expect(isPorcelainClean('?? var/update.lock.bak\n')).toBe(false);
     expect(isPorcelainClean('?? var/update-backup-old/\n')).toBe(false);
+    expect(isPorcelainClean('?? var/log/other.log\n')).toBe(false);
+    expect(isPorcelainClean('?? var/log/update.log.bak\n')).toBe(false);
   });
 });
 

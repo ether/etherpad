@@ -249,6 +249,34 @@ describe(__filename, function () {
     });
   });
 
+  describe('version check keeps execution/bootCount it does not own (#8412)', function () {
+    let origFetch: typeof globalThis.fetch;
+    afterEach(() => { globalThis.fetch = origFetch; });
+
+    it('does not restore pending-verification over a concurrent acknowledge', async () => {
+      installAdminAuth();
+      const updater = require('../../../node/updater');
+      await saveState(statePath(), {
+        ...EMPTY_STATE,
+        execution: {
+          status: 'pending-verification', targetTag: 'v99.0.0', fromSha: 'x',
+          deadlineAt: '2026-05-08T00:01:00Z',
+        },
+        bootCount: 1,
+      });
+      origFetch = globalThis.fetch;
+      globalThis.fetch = (async () => {
+        // Acknowledge lands while the check is waiting on GitHub.
+        await saveState(statePath(), {...EMPTY_STATE, execution: {status: 'idle'}, bootCount: 0});
+        return new Response(null, {status: 304});
+      }) as any;
+      await updater._internal.performCheck();
+      const status = await agent.get('/admin/update/status').expect(200);
+      assert.equal(status.body.execution.status, 'idle');
+      assert.ok(status.body.lastCheckAt, 'performCheck should have run');
+    });
+  });
+
   describe('GET /admin/update/log', function () {
     it('rejects unauthenticated', async () => {
       await agent.get('/admin/update/log').expect(401);
