@@ -17,7 +17,7 @@ import {createSchedulerRunner, decideSchedule, decideTriggerApply, SchedulerRunn
 import {parseWindow} from './MaintenanceWindow';
 import {applyUpdate, ApplyPipelineDeps} from './applyPipeline';
 import {acquireLock, releaseLock} from './lock';
-import {runPreflight} from './preflight';
+import {gitWorkingTreeClean, runPreflight} from './preflight';
 import {verifyReleaseTag} from './trustedKeys';
 import {createDrainer} from './SessionDrainer';
 import {appendLine} from './updateLog';
@@ -30,17 +30,58 @@ let detectedMethod: Exclude<InstallMethod, 'auto'> = 'managed';
 let timer: NodeJS.Timeout | null = null;
 let initialTimer: NodeJS.Timeout | null = null;
 let checkInFlight = false;
-let inMemoryState: UpdateState | null = null;
 let pendingVerification: CheckResult | null = null;
+// Set when the boot crash-loop guard kicked off a rollback. Never cleared:
+// the rollback ends by exiting the process.
+let bootRollbackInFlight = false;
 let scheduler: SchedulerRunner | null = null;
 
 export const stateFilePath = () => path.join(settings.root, 'var', 'update-state.json');
 
-/** Returns the current state from memory; loads on first call. */
-export const getCurrentState = async (): Promise<UpdateState> => {
-  if (inMemoryState) return inMemoryState;
-  inMemoryState = await loadState(stateFilePath());
-  return inMemoryState;
+/**
+ * Returns the current persisted state. Always reads from disk: the HTTP
+ * handlers, apply pipeline, scheduler and RollbackHandler all write the
+ * file directly, so an in-process cache goes stale and writing it back
+ * clobbers their transitions (#8412: the first version check overwrote
+ * `verified` with the boot-time `pending-verification` snapshot).
+ */
+export const getCurrentState = (): Promise<UpdateState> => loadState(stateFilePath());
+
+/**
+ * True while this process is still resolving a pending-verification: the
+ * boot health-check timer is armed (between boot and markBootHealthy), or
+ * the crash-loop guard started a rollback that has not exited yet. Used by
+ * the acknowledge route to refuse clearing a verification that is still
+ * genuinely in progress.
+ */
+export const isVerificationArmed = (): boolean =>
+  bootRollbackInFlight || pendingVerification?.armed === true;
+
+/**
+ * A `pending-verification` that is still there once the boot health check is
+ * over can't resolve on its own. If this process is already running the
+ * target version the update worked, so record it as verified instead of
+ * making the admin clear it by hand (#8412). Returns the current state.
+ */
+export const resolveStalePendingVerification = async (): Promise<UpdateState> => {
+  const state = await getCurrentState();
+  const exec = state.execution;
+  if (exec.status !== 'pending-verification' || isVerificationArmed() ||
+      exec.targetTag.replace(/^v/, '') !== getEpVersion()) {
+    return state;
+  }
+  const at = new Date().toISOString();
+  const verified: UpdateState = {
+    ...state,
+    execution: {status: 'verified', targetTag: exec.targetTag, verifiedAt: at},
+    lastResult: {
+      targetTag: exec.targetTag, fromSha: exec.fromSha, outcome: 'verified', reason: null, at,
+    },
+    bootCount: 0,
+  };
+  await saveState(stateFilePath(), verified);
+  logger.info(`updater: ${exec.targetTag} is running; marked the stale pending verification as verified`);
+  return verified;
 };
 
 export const getDetectedInstallMethod = () => detectedMethod;
@@ -122,12 +163,15 @@ const performCheck = async (): Promise<void> => {
     // getCurrentState() can throw on a non-ENOENT fs error from loadState();
     // it must run inside the try/finally so checkInFlight is always cleared,
     // otherwise a one-time permission error permanently disables polling.
-    const state = await getCurrentState();
+    const before = await resolveStalePendingVerification();
     const result = await checkLatestRelease({
       fetcher: realFetcher,
-      prevEtag: state.lastEtag,
+      prevEtag: before.lastEtag,
       repo: settings.updates.githubRepo,
     });
+    // Re-read after the network round trip so a transition persisted by
+    // another writer while the fetch was in flight is not overwritten.
+    const state = await getCurrentState();
     const now = new Date();
     state.lastCheckAt = now.toISOString();
 
@@ -174,6 +218,9 @@ const performCheck = async (): Promise<void> => {
 
     // Tier 3 scheduler pass: decide whether to schedule, reschedule, or cancel.
     // Tier 4 snap-forward to next maintenance window is layered in here too.
+    // Execution status the scheduler decision below was based on; null when
+    // this check did not touch `execution`.
+    let executionDecidedFrom: string | null = null;
     if (state.latest && scheduler) {
       const current = getEpVersion();
       const policy = evaluatePolicy({
@@ -192,6 +239,7 @@ const performCheck = async (): Promise<void> => {
         maintenanceWindow: policy.canAutonomous ? parseWindow(settings.updates.maintenanceWindow) : null,
       });
       if (decision.action === 'schedule') {
+        executionDecidedFrom = state.execution.status;
         state.execution = decision.newExecution;
         state.email = decision.newEmailState;
         for (const e of decision.emails) {
@@ -206,13 +254,29 @@ const performCheck = async (): Promise<void> => {
           scheduledFor: decision.newExecution.scheduledFor,
         });
       } else if (decision.action === 'cancel-schedule') {
+        executionDecidedFrom = state.execution.status;
         state.execution = {status: 'idle'};
         scheduler.cancel();
         logger.info(`updater: cancelled pending schedule (${decision.reason})`);
       }
     }
 
-    await saveState(stateFilePath(), state);
+    // The awaits above (SMTP sends) leave room for other writers (apply,
+    // acknowledge, markVerified) to persist a transition. Merge onto a fresh
+    // read and write back only the fields this check owns; `execution` only
+    // when the scheduler changed it and nobody else has moved it since.
+    const fresh = await getCurrentState();
+    const merged: UpdateState = {
+      ...fresh,
+      lastCheckAt: state.lastCheckAt,
+      latest: state.latest,
+      lastEtag: state.lastEtag,
+      email: state.email,
+    };
+    if (executionDecidedFrom != null && fresh.execution.status === executionDecidedFrom) {
+      merged.execution = state.execution;
+    }
+    await saveState(stateFilePath(), merged);
   } catch (err) {
     logger.warn(`Updater check failed: ${(err as Error).message}`);
   } finally {
@@ -282,13 +346,7 @@ const buildSchedulerApplyDeps = (): ApplyPipelineDeps => ({
     },
     {
       installMethod: detectedMethod,
-      workingTreeClean: () => new Promise<boolean>((resolve) => {
-        const c = spawn('git', ['status', '--porcelain'], {cwd: settings.root});
-        let out = '';
-        c.stdout.on('data', (b) => { out += b.toString(); });
-        c.on('close', () => resolve(out.trim().length === 0));
-        c.on('error', () => resolve(false));
-      }),
+      workingTreeClean: () => gitWorkingTreeClean(settings.root),
       freeDiskMB: async (): Promise<number> => {
         try {
           const s = await (fs as any).statfs?.(settings.root);
@@ -514,6 +572,7 @@ export const expressCreateServer = async (): Promise<void> => {
   // rollback can fire even if the version checker is misconfigured.
   const state = await getCurrentState();
   pendingVerification = checkPendingVerification(state, getRollbackDeps());
+  if (pendingVerification.rollingBack) bootRollbackInFlight = true;
 
   // Boot-time failure notification. If a previous run produced a failure
   // outcome whose admin email we haven't already sent (lastFailureKey

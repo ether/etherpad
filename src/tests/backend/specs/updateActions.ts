@@ -196,11 +196,108 @@ describe(__filename, function () {
         .auth('admin', 'admin-pw').expect(200);
     });
 
+    it('clears a stale pending-verification left after boot (#8412)', async () => {
+      installAdminAuth();
+      await saveState(statePath(), {
+        ...EMPTY_STATE,
+        execution: {
+          status: 'pending-verification', targetTag: 'v99.0.0', fromSha: 'x',
+          deadlineAt: '2026-05-08T00:01:00Z',
+        },
+        bootCount: 1,
+      });
+      await agent.post('/admin/update/acknowledge')
+        .auth('admin', 'admin-pw').expect(200);
+      const status = await agent.get('/admin/update/status').expect(200);
+      assert.equal(status.body.execution.status, 'idle');
+    });
+
     it('refuses to clear a non-terminal state (409)', async () => {
       installAdminAuth();
       await saveState(statePath(), {...EMPTY_STATE});
       await agent.post('/admin/update/acknowledge')
         .auth('admin', 'admin-pw').expect(409);
+    });
+  });
+
+  describe('stale pending-verification (#8412)', function () {
+    const pending = (targetTag: string) => saveState(statePath(), {
+      ...EMPTY_STATE,
+      execution: {
+        status: 'pending-verification', targetTag, fromSha: 'x', deadlineAt: '2026-05-08T00:01:00Z',
+      },
+      bootCount: 1,
+    });
+
+    it('marks it verified when the running version is the target', async () => {
+      const {getEpVersion} = require('../../../node/utils/Settings');
+      await pending(`v${getEpVersion()}`);
+      const status = await agent.get('/admin/update/status').expect(200);
+      assert.equal(status.body.execution.status, 'verified');
+      assert.equal(status.body.lastResult.outcome, 'verified');
+    });
+
+    it('leaves it for the admin when another version is running', async () => {
+      await pending('v99.0.0');
+      const status = await agent.get('/admin/update/status').expect(200);
+      assert.equal(status.body.execution.status, 'pending-verification');
+    });
+  });
+
+  describe('version check vs. state written by other paths (#8412)', function () {
+    let origFetch: typeof globalThis.fetch;
+    beforeEach(() => {
+      origFetch = globalThis.fetch;
+      // 304 Not Modified: the check changes nothing but lastCheckAt.
+      globalThis.fetch = (async () => new Response(null, {status: 304})) as any;
+    });
+    afterEach(() => { globalThis.fetch = origFetch; });
+
+    it('does not overwrite a verified state with a stale cached copy', async () => {
+      installAdminAuth();
+      const updater = require('../../../node/updater');
+      // Prime whatever the updater has seen so far (boot-time snapshot).
+      await updater.getCurrentState();
+      // Another writer (RollbackHandler.markVerified) lands `verified`.
+      await saveState(statePath(), {
+        ...EMPTY_STATE,
+        execution: {
+          status: 'verified', targetTag: 'v99.0.0',
+          verifiedAt: '2026-05-08T00:00:30Z',
+        },
+      });
+      await updater._internal.performCheck();
+      const status = await agent.get('/admin/update/status').expect(200);
+      assert.equal(status.body.execution.status, 'verified');
+      assert.ok(status.body.lastCheckAt, 'performCheck should have run');
+    });
+  });
+
+  describe('version check keeps execution/bootCount it does not own (#8412)', function () {
+    let origFetch: typeof globalThis.fetch;
+    afterEach(() => { globalThis.fetch = origFetch; });
+
+    it('does not restore pending-verification over a concurrent acknowledge', async () => {
+      installAdminAuth();
+      const updater = require('../../../node/updater');
+      await saveState(statePath(), {
+        ...EMPTY_STATE,
+        execution: {
+          status: 'pending-verification', targetTag: 'v99.0.0', fromSha: 'x',
+          deadlineAt: '2026-05-08T00:01:00Z',
+        },
+        bootCount: 1,
+      });
+      origFetch = globalThis.fetch;
+      globalThis.fetch = (async () => {
+        // Acknowledge lands while the check is waiting on GitHub.
+        await saveState(statePath(), {...EMPTY_STATE, execution: {status: 'idle'}, bootCount: 0});
+        return new Response(null, {status: 304});
+      }) as any;
+      await updater._internal.performCheck();
+      const status = await agent.get('/admin/update/status').expect(200);
+      assert.equal(status.body.execution.status, 'idle');
+      assert.ok(status.body.lastCheckAt, 'performCheck should have run');
     });
   });
 

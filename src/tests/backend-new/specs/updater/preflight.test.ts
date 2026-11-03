@@ -1,5 +1,11 @@
-import {describe, it, expect, vi} from 'vitest';
-import {runPreflight, PreflightDeps} from '../../../../node/updater/preflight';
+import {describe, it, expect, vi, beforeEach, afterEach} from 'vitest';
+import {execSync} from 'node:child_process';
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import {
+  runPreflight, PreflightDeps, isPorcelainClean, gitWorkingTreeClean,
+} from '../../../../node/updater/preflight';
 import type {VerifyResult} from '../../../../node/updater/trustedKeys';
 
 const baseDeps = (): PreflightDeps => ({
@@ -130,5 +136,71 @@ describe('runPreflight', () => {
       expect(r).toEqual({ok: false, reason: 'signature-verification-failed'});
       expect(readEngines).not.toHaveBeenCalled();
     });
+  });
+});
+
+describe('isPorcelainClean (#8411)', () => {
+  it('treats empty output as clean', () => {
+    expect(isPorcelainClean('')).toBe(true);
+    expect(isPorcelainClean('\n')).toBe(true);
+  });
+
+  it('ignores the files the updater writes itself', () => {
+    expect(isPorcelainClean([
+      '?? var/update.lock',
+      '?? var/update-state.json',
+      '?? var/update-state.json.tmp',
+      '?? var/update-backup/',
+      '?? var/log/update.log',
+      '?? var/log/update.log.2',
+      '',
+    ].join('\n'))).toBe(true);
+  });
+
+  it('still reports real local changes', () => {
+    expect(isPorcelainClean(' M src/node/server.ts\n')).toBe(false);
+    expect(isPorcelainClean('?? var/update.lock\n?? notes.txt\n')).toBe(false);
+    expect(isPorcelainClean('?? var/update.lock.bak\n')).toBe(false);
+    expect(isPorcelainClean('?? var/update-backup-old/\n')).toBe(false);
+    expect(isPorcelainClean('?? var/log/other.log\n')).toBe(false);
+    expect(isPorcelainClean('?? var/log/update.log.bak\n')).toBe(false);
+  });
+});
+
+describe('gitWorkingTreeClean (#8411)', () => {
+  const sh = (cmd: string, cwd: string) => execSync(cmd, {cwd, stdio: 'pipe'});
+  let dir: string;
+  beforeEach(async () => {
+    dir = await fs.mkdtemp(path.join(os.tmpdir(), 'updater-preflight-'));
+    sh('git init -q', dir);
+    sh('git config user.email t@example.com', dir);
+    sh('git config user.name t', dir);
+    sh('git config commit.gpgsign false', dir);
+    await fs.mkdir(path.join(dir, 'var'));
+    await fs.writeFile(path.join(dir, 'var', '.gitkeep'), '');
+    sh('git add . && git commit -q -m init', dir);
+  });
+  afterEach(async () => {
+    await fs.rm(dir, {recursive: true, force: true, maxRetries: 10, retryDelay: 100});
+  });
+
+  it('is clean while the updater holds var/update.lock', async () => {
+    await fs.writeFile(path.join(dir, 'var', 'update.lock'), '{"pid":1}');
+    await fs.mkdir(path.join(dir, 'var', 'update-backup'));
+    await fs.writeFile(path.join(dir, 'var', 'update-backup', 'pnpm-lock.yaml'), 'x');
+    expect(await gitWorkingTreeClean(dir)).toBe(true);
+  });
+
+  it('is dirty when anything else is untracked or modified', async () => {
+    await fs.writeFile(path.join(dir, 'var', 'update.lock'), '{"pid":1}');
+    await fs.writeFile(path.join(dir, 'stray.txt'), 'x');
+    expect(await gitWorkingTreeClean(dir)).toBe(false);
+  });
+
+  it('is dirty when the directory is not a git repo', async () => {
+    const notRepo = await fs.mkdtemp(path.join(os.tmpdir(), 'updater-norepo-'));
+    try {
+      expect(await gitWorkingTreeClean(notRepo)).toBe(false);
+    } finally { await fs.rm(notRepo, {recursive: true, force: true}); }
   });
 });

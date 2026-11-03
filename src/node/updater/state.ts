@@ -147,10 +147,29 @@ export const loadState = async (filePath: string): Promise<UpdateState> => {
   } as UpdateState;
 };
 
-/** Atomic write via tmp-then-rename. Creates parent directories as needed. */
-export const saveState = async (filePath: string, state: UpdateState): Promise<void> => {
-  await fs.mkdir(path.dirname(filePath), {recursive: true});
-  const tmp = `${filePath}.tmp`;
-  await fs.writeFile(tmp, JSON.stringify(state, null, 2));
-  await fs.rename(tmp, filePath);
+// Per-file write queue. Several updater paths save fire-and-forget (the boot
+// bootCount bump and markVerified run back to back, #8412); without
+// serialisation two writes share the same tmp file and the older snapshot
+// can land last.
+const writeQueues = new Map<string, Promise<void>>();
+
+/**
+ * Atomic write via tmp-then-rename. Creates parent directories as needed.
+ * Writes to the same path are applied in call order.
+ */
+export const saveState = (filePath: string, state: UpdateState): Promise<void> => {
+  // Snapshot now so later in-place mutation by the caller can't change what
+  // a queued write persists.
+  const body = JSON.stringify(state, null, 2);
+  const prev = writeQueues.get(filePath) ?? Promise.resolve();
+  const next = prev.catch(() => {}).then(async () => {
+    await fs.mkdir(path.dirname(filePath), {recursive: true});
+    const tmp = `${filePath}.tmp`;
+    await fs.writeFile(tmp, body);
+    await fs.rename(tmp, filePath);
+  });
+  writeQueues.set(filePath, next);
+  const cleanup = () => { if (writeQueues.get(filePath) === next) writeQueues.delete(filePath); };
+  next.then(cleanup, cleanup);
+  return next;
 };

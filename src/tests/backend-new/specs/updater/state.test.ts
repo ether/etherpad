@@ -369,3 +369,27 @@ describe('Tier 3 state extensions', () => {
     expect(state).toEqual(EMPTY_STATE);
   });
 });
+
+describe('saveState ordering (#8412)', () => {
+  it('lands concurrent fire-and-forget writes in call order', async () => {
+    // RollbackHandler fires the bootCount bump and markVerified back to back
+    // without awaiting; the later (verified) write must win.
+    for (let i = 0; i < 20; i++) {
+      const pending = {
+        ...EMPTY_STATE,
+        execution: {
+          status: 'pending-verification' as const, targetTag: 'v1.0.0', fromSha: 'x',
+          deadlineAt: '2026-05-08T00:01:00Z',
+        },
+        bootCount: 1,
+      };
+      const verified = {
+        ...EMPTY_STATE,
+        execution: {status: 'verified' as const, targetTag: 'v1.0.0', verifiedAt: '2026-05-08T00:00:30Z'},
+      };
+      await Promise.all([saveState(statePath(), pending), saveState(statePath(), verified)]);
+      const loaded = await loadState(statePath());
+      expect(loaded.execution.status).toBe('verified');
+    }
+  });
+});
