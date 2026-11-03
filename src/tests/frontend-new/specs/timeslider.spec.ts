@@ -42,19 +42,11 @@ test.describe('history toolbar button enters in-pad history mode', function () {
     await expect(page.locator('#history-playpause')).toBeVisible();
   });
 
-  // Issue #8382: the toolbar's "does everything fit" check
-  // (checkAllIconsAreDisplayedInToolbar) only measures the live-mode
-  // .menu_left formatting toolbar, which is display:none in history mode, and
-  // it only re-runs on a window 'resize' event — never when switching into
-  // history mode, and not when a container (e.g. an embedding iframe) is
-  // resized without the outer window itself resizing. So whenever
-  // #history-controls ends up with less width than its content needs — for
-  // example a narrower embed, or any width change that doesn't fire a window
-  // resize — nothing re-checks, and the non-shrinking Speed control used to
-  // overflow its flex slot and render on top of the Settings/Share/Users/
-  // Home icons in .menu_right. Constrain #editbar directly (independent of
-  // the outer window size) to reproduce exactly that condition.
-  test('playback speed control does not overlap menu_right icons when the toolbar is narrow', async function ({page}) {
+  // Issue #8382: colibris's generic checkbox-switch rule also matched the
+  // follow toggle's label (it immediately follows the hidden follow
+  // checkbox), pushing the eye icon out of its 30px box and under the
+  // speed control at normal desktop width.
+  test('follow toggle eye icon does not overlap the speed control', async function ({page}) {
     await clearPadContent(page);
     await writeToPad(page, 'Foo');
     await page.waitForTimeout(500);
@@ -63,17 +55,13 @@ test.describe('history toolbar button enters in-pad history mode', function () {
     await $timesliderButton.click();
     await expect(page.locator('#history-controls')).toBeVisible();
 
-    await page.addStyleTag({
-      content: '#editbar { width: 650px !important; box-sizing: border-box; }',
-    });
-
+    const eyeBox = await page.locator('.history-follow-toggle svg').boundingBox();
     const speedBox = await page.locator('.nice-select.history-speed').boundingBox();
-    const menuRightBox = await page.locator('.menu_right').boundingBox();
 
+    expect(eyeBox).not.toBeNull();
     expect(speedBox).not.toBeNull();
-    expect(menuRightBox).not.toBeNull();
-    // No horizontal overlap: the speed control's right edge must not extend
-    // past menu_right's left edge.
-    expect(speedBox!.x + speedBox!.width).toBeLessThanOrEqual(menuRightBox!.x + 1);
+    // No horizontal overlap: the eye icon's right edge must not extend past
+    // the speed control's left edge.
+    expect(eyeBox!.x + eyeBox!.width).toBeLessThanOrEqual(speedBox!.x + 1);
   });
 });

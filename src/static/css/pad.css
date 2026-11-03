@@ -294,6 +294,21 @@ body.history-mode #history-controls { display: flex; }
   color: inherit;
 }
 .history-follow-toggle:hover { background: rgba(0,0,0,0.06); }
+/* colibris's generic `[type="checkbox"] + label` rule (components/form.css)
+ * also matches this label, since it immediately follows the hidden
+ * #history-options-followContents checkbox. That rule adds padding-left:
+ * 2.5rem and draws its own switch in ::before/::after, which pushes the eye
+ * icon out of its 30px box — covering it, and the speed control next to it
+ * (issue #8382). Reset those colibris styles for this toggle specifically. */
+#history-options-followContents + .history-follow-toggle {
+  padding-left: 0;
+  height: 30px;
+  line-height: normal;
+}
+#history-options-followContents + .history-follow-toggle::before,
+#history-options-followContents + .history-follow-toggle::after {
+  content: none;
+}
 .history-follow-eye-slash { display: none; }
 #history-options-followContents:not(:checked) + .history-follow-toggle .history-follow-eye-slash {
   display: inline;
@@ -310,27 +325,10 @@ body.history-mode #history-controls { display: flex; }
   clip: rect(0 0 0 0); overflow: hidden;
 }
 .history-speed {
-  /* niceSelect's own .nice-select rule (pad/form.css) sets min-width: 100px,
-   * which combined with flex:0 0 auto kept Speed from shrinking below 100px.
-   * #editbar's "does everything fit" check (checkAllIconsAreDisplayedInToolbar)
-   * only measures the live-mode .menu_left formatting toolbar, which is
-   * display:none in history mode, and only re-runs on a window 'resize' —
-   * never on switching into history mode, and not on a container (e.g. an
-   * embedding iframe) narrowing without the outer window resizing. So
-   * whenever #history-controls ends up with less width than its content
-   * needs without that check re-running, the non-shrinking 100px+ Speed box
-   * had nowhere to go but to overflow onto the adjacent, fixed-width
-   * menu_right icon buttons (issue #8382). */
-  flex: 0 1 130px;
-  min-width: 60px;
+  flex: 0 0 auto;
   font-size: 13px;
   padding: 2px 4px;
   max-width: 130px;
-  /* niceSelect's own .current label is nowrap + overflow:visible, so once the
-   * box itself shrinks below the label's natural width ("Original speed"),
-   * clip it instead of letting the text spill past the box onto menu_right. */
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 /* Responsive — Follow + Speed inherit .hide-for-mobile (already collapses */
