@@ -5,6 +5,7 @@ import {strict as assert} from 'assert';
 const common = require('../common');
 const db = require('../../../node/db/DB');
 import util from 'util';
+import sinon from 'sinon';
 
 type Session = {
   set: (sid: string|null,sess:any, sess2:any) => void;
@@ -15,28 +16,47 @@ type Session = {
   startCleanup: () => void;
   _cleanup: () => Promise<void>;
   _cleanupTimer: any;
+  _timers: any;
+  _get: (sid: string) => Promise<any>;
 }
 
 describe(__filename, function () {
   let ss: Session|null;
   let sid: string|null;
+  // Fake clock driving the store's expiration timers and its notion of "now". The DB keeps using
+  // real timers, so awaiting DB calls never moves the store's clock: expiry is only reached when a
+  // test explicitly advances time, no matter how slow the machine is.
+  let clock: sinon.SinonFakeTimers|null = null;
+  // Records the DB reads kicked off by the store's expiration timers (the timer callbacks call
+  // `this._get()`; the public callback API does not go through the instance property).
+  let timerGets: sinon.SinonSpy;
 
   const set = async (sess: string|null) => await util.promisify(ss!.set).call(ss, sid, sess);
   const get = async () => await util.promisify(ss!.get).call(ss, sid);
   const destroy = async () => await util.promisify(ss!.destroy).call(ss, sid);
   const touch = async (sess: Session) => await util.promisify(ss!.touch).call(ss, sid, sess);
 
-  // Poll until `cond` is true. Used in place of fixed sleeps for "the cleanup timer should have
-  // fired by now" assertions — passes immediately when cleanup completes so tests stay fast,
-  // but tolerates slow CI runners where the event loop may be delayed by hundreds of ms.
-  const eventually = async (cond: () => Promise<boolean>, maxMs = 2000, intervalMs = 25) => {
-    const deadline = Date.now() + maxMs;
-    // First check is immediate so the helper doesn't add a fixed delay.
-    while (true) {
-      if (await cond()) return;
-      if (Date.now() >= deadline) throw new Error(`condition not met within ${maxMs}ms`);
-      await new Promise((r) => setTimeout(r, intervalMs));
-    }
+  const now = () => clock!.now;
+
+  // Replaces `ss` with a new store whose timers run on a fresh fake clock.
+  const newStore = (refresh?: number) => {
+    if (ss != null) ss.shutdown();
+    if (clock != null) clock.uninstall();
+    ss = new SessionStore(refresh);
+    const timers = {Date, setTimeout, clearTimeout};
+    // `global` is supported by sinon (it fakes the given object instead of globalThis) but is
+    // missing from @types/sinon, hence the cast.
+    clock = sinon.useFakeTimers(
+        {global: timers, now: Date.now(), toFake: ['Date', 'setTimeout', 'clearTimeout']} as any);
+    ss!._timers = timers;
+    timerGets = sinon.spy(ss!, '_get');
+  };
+
+  // Advances the store's clock, firing any due expiration timers, and waits for the DB work those
+  // timers started to finish.
+  const advance = async (ms: number) => {
+    clock!.tick(ms);
+    await Promise.all(timerGets.returnValues);
   };
 
   before(async function () {
@@ -44,7 +64,7 @@ describe(__filename, function () {
   });
 
   beforeEach(async function () {
-    ss = new SessionStore();
+    newStore();
     sid = common.randomString();
   });
 
@@ -53,6 +73,8 @@ describe(__filename, function () {
       if (sid != null) await destroy();
       ss.shutdown();
     }
+    if (clock != null) clock.uninstall();
+    clock = null;
     sid = null;
     ss = null;
   });
@@ -70,11 +92,14 @@ describe(__filename, function () {
     });
 
     it('set of session that expires', async function () {
-      const sess:any  = {foo: 'bar', cookie: {expires: new Date(Date.now() + 300)}};
+      const sess:any  = {foo: 'bar', cookie: {expires: new Date(now() + 300)}};
       await set(sess);
       assert.equal(JSON.stringify(await db.get(`sessionstorage:${sid}`)), JSON.stringify(sess));
       // Writing should start a timeout that purges the record once expiry passes.
-      await eventually(async () => await db.get(`sessionstorage:${sid}`) == null);
+      await advance(299);
+      assert.equal(JSON.stringify(await db.get(`sessionstorage:${sid}`)), JSON.stringify(sess));
+      await advance(1);
+      assert(await db.get(`sessionstorage:${sid}`) == null);
     });
 
     it('set of already expired session', async function () {
@@ -87,17 +112,19 @@ describe(__filename, function () {
     it('switch from non-expiring to expiring', async function () {
       const sess:any  = {foo: 'bar'};
       await set(sess);
-      const sess2:any  = {foo: 'bar', cookie: {expires: new Date(Date.now() + 300)}};
+      const sess2:any  = {foo: 'bar', cookie: {expires: new Date(now() + 300)}};
       await set(sess2);
-      await eventually(async () => await db.get(`sessionstorage:${sid}`) == null);
+      await advance(300);
+      assert(await db.get(`sessionstorage:${sid}`) == null);
     });
 
     it('switch from expiring to non-expiring', async function () {
-      const sess:any  = {foo: 'bar', cookie: {expires: new Date(Date.now() + 300)}};
+      const sess:any  = {foo: 'bar', cookie: {expires: new Date(now() + 300)}};
       await set(sess);
       const sess2:any  = {foo: 'bar'};
       await set(sess2);
-      await new Promise((resolve) => setTimeout(resolve, 330));
+      await advance(330);
+      assert(timerGets.notCalled);
       assert.equal(JSON.stringify(await db.get(`sessionstorage:${sid}`)), JSON.stringify(sess2));
     });
   });
@@ -120,11 +147,12 @@ describe(__filename, function () {
     });
 
     it('get of record from previous run (not yet expired)', async function () {
-      const sess = {foo: 'bar', cookie: {expires: new Date(Date.now() + 300)}};
+      const sess = {foo: 'bar', cookie: {expires: new Date(now() + 300)}};
       await db.set(`sessionstorage:${sid}`, sess);
       assert.equal(JSON.stringify(await get()), JSON.stringify(sess));
       // Reading should start a timeout that purges the record once expiry passes.
-      await eventually(async () => await db.get(`sessionstorage:${sid}`) == null);
+      await advance(300);
+      assert(await db.get(`sessionstorage:${sid}`) == null);
     });
 
     it('get of record from previous run (already expired)', async function () {
@@ -135,28 +163,27 @@ describe(__filename, function () {
     });
 
     it('external expiration update is picked up', async function () {
-      const sess:any  = {foo: 'bar', cookie: {expires: new Date(Date.now() + 300)}};
+      const sess:any  = {foo: 'bar', cookie: {expires: new Date(now() + 300)}};
       await set(sess);
       assert.equal(JSON.stringify(await get()), JSON.stringify(sess));
-      const sess2 = {...sess, cookie: {expires: new Date(Date.now() + 600)}};
+      const sess2 = {...sess, cookie: {expires: new Date(now() + 600)}};
       await db.set(`sessionstorage:${sid}`, sess2);
       assert.equal(JSON.stringify(await get()), JSON.stringify(sess2));
-      await new Promise((resolve) => setTimeout(resolve, 330));
+      await advance(330);
       // The original timeout should not have fired.
+      assert(timerGets.notCalled);
       assert.equal(JSON.stringify(await get()), JSON.stringify(sess2));
     });
   });
 
   describe('shutdown', function () {
     it('shutdown cancels timeouts', async function () {
-      // expires=500 / wait=700 keeps comfortable headroom on slow CI: setup
-      // (set+get+shutdown) must finish before the timer would fire (500ms is plenty), and the
-      // 700ms wait is past the original expiry so a cancelled timer would have fired by then.
-      const sess:any  = {foo: 'bar', cookie: {expires: new Date(Date.now() + 500)}};
+      const sess:any  = {foo: 'bar', cookie: {expires: new Date(now() + 300)}};
       await set(sess);
       assert.equal(JSON.stringify(await get()), JSON.stringify(sess));
       ss!.shutdown();
-      await new Promise((resolve) => setTimeout(resolve, 700));
+      await advance(330);
+      assert(timerGets.notCalled);
       // The record should not have been automatically purged.
       assert.equal(JSON.stringify(await db.get(`sessionstorage:${sid}`)), JSON.stringify(sess));
     });
@@ -164,18 +191,19 @@ describe(__filename, function () {
 
   describe('destroy', function () {
     it('destroy deletes the database record', async function () {
-      const sess:any  = {cookie: {expires: new Date(Date.now() + 300)}};
+      const sess:any  = {cookie: {expires: new Date(now() + 300)}};
       await set(sess);
       await destroy();
       assert(await db.get(`sessionstorage:${sid}`) == null);
     });
 
     it('destroy cancels the timeout', async function () {
-      const sess:any  = {cookie: {expires: new Date(Date.now() + 300)}};
+      const sess:any  = {cookie: {expires: new Date(now() + 300)}};
       await set(sess);
       await destroy();
       await db.set(`sessionstorage:${sid}`, sess);
-      await new Promise((resolve) => setTimeout(resolve, 330));
+      await advance(330);
+      assert(timerGets.notCalled);
       assert.equal(JSON.stringify(await db.get(`sessionstorage:${sid}`)), JSON.stringify(sess));
     });
 
@@ -186,13 +214,13 @@ describe(__filename, function () {
 
   describe('touch without refresh', function () {
     it('touch before set is equivalent to set if session expires', async function () {
-      const sess:any  = {cookie: {expires: new Date(Date.now() + 1000)}};
+      const sess:any  = {cookie: {expires: new Date(now() + 1000)}};
       await touch(sess);
       assert.equal(JSON.stringify(await get()), JSON.stringify(sess));
     });
 
     it('touch updates observed expiration but not database', async function () {
-      const start = Date.now();
+      const start = now();
       const sess:any  = {cookie: {expires: new Date(start + 200)}};
       await set(sess);
       const sess2:any  = {cookie: {expires: new Date(start + 12000)}};
@@ -204,52 +232,57 @@ describe(__filename, function () {
 
   describe('touch with refresh', function () {
     beforeEach(async function () {
-      ss = new SessionStore(200);
+      newStore(200);
     });
 
     it('touch before set is equivalent to set if session expires', async function () {
-      const sess:any  = {cookie: {expires: new Date(Date.now() + 1000)}};
+      const sess:any  = {cookie: {expires: new Date(now() + 1000)}};
       await touch(sess);
       assert.equal(JSON.stringify(await get()), JSON.stringify(sess));
     });
 
     it('touch before eligible for refresh updates expiration but not DB', async function () {
-      const now = Date.now();
-      const sess:any  = {foo: 'bar', cookie: {expires: new Date(now + 1000)}};
+      const start = now();
+      const sess:any  = {foo: 'bar', cookie: {expires: new Date(start + 1000)}};
       await set(sess);
-      const sess2:any  = {foo: 'bar', cookie: {expires: new Date(now + 1001)}};
+      const sess2:any  = {foo: 'bar', cookie: {expires: new Date(start + 1001)}};
       await touch(sess2);
       assert.equal(JSON.stringify(await db.get(`sessionstorage:${sid}`)), JSON.stringify(sess));
       assert.equal(JSON.stringify(await get()), JSON.stringify(sess2));
     });
 
     it('touch before eligible for refresh updates timeout', async function () {
-      const start = Date.now();
+      const start = now();
       const sess:any  = {foo: 'bar', cookie: {expires: new Date(start + 200)}};
       await set(sess);
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await advance(100);
       const sess2:any  = {foo: 'bar', cookie: {expires: new Date(start + 399)}};
       await touch(sess2);
-      await new Promise((resolve) => setTimeout(resolve, 110));
+      await advance(110);
+      // Past the original expiry, but the touch moved the timeout out.
+      assert(timerGets.notCalled);
       assert.equal(JSON.stringify(await db.get(`sessionstorage:${sid}`)), JSON.stringify(sess));
       assert.equal(JSON.stringify(await get()), JSON.stringify(sess2));
+      // The rescheduled timeout purges the record once the touched expiry passes.
+      await advance(189);
+      assert(await db.get(`sessionstorage:${sid}`) == null);
     });
 
     it('touch after eligible for refresh updates db', async function () {
-      const start = Date.now();
+      const start = now();
       const sess:any  = {foo: 'bar', cookie: {expires: new Date(start + 2000)}};
       await set(sess);
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await advance(100);
       const sess2:any  = {foo: 'bar', cookie: {expires: new Date(start + 4000)}};
       await touch(sess2);
-      await new Promise((resolve) => setTimeout(resolve, 110));
+      await advance(110);
       assert.equal(JSON.stringify(await db.get(`sessionstorage:${sid}`)), JSON.stringify(sess2));
       assert.equal(JSON.stringify(await get()), JSON.stringify(sess2));
     });
 
     it('refresh=0 updates db every time', async function () {
-      ss = new SessionStore(0);
-      const sess:any  = {foo: 'bar', cookie: {expires: new Date(Date.now() + 1000)}};
+      newStore(0);
+      const sess:any  = {foo: 'bar', cookie: {expires: new Date(now() + 1000)}};
       await set(sess);
       await db.remove(`sessionstorage:${sid}`);
       await touch(sess); // No change in expiration time.
