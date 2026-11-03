@@ -4,5 +4,7 @@ installed_plugins.json
 dirty.db
 rusty.db
 update-state.json
+# Lock the updater takes before it runs preflight; it must not read as a dirty tree (#8411).
+update.lock
 # Runtime update log, written by src/node/updater (see index.ts logPath()).
 log/

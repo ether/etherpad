@@ -18,6 +18,7 @@ import {parseWindow} from './MaintenanceWindow';
 import {applyUpdate, ApplyPipelineDeps} from './applyPipeline';
 import {acquireLock, releaseLock} from './lock';
 import {runPreflight} from './preflight';
+import {checkWorkingTreeClean} from './gitStatus';
 import {verifyReleaseTag} from './trustedKeys';
 import {createDrainer} from './SessionDrainer';
 import {appendLine} from './updateLog';
@@ -282,13 +283,7 @@ const buildSchedulerApplyDeps = (): ApplyPipelineDeps => ({
     },
     {
       installMethod: detectedMethod,
-      workingTreeClean: () => new Promise<boolean>((resolve) => {
-        const c = spawn('git', ['status', '--porcelain'], {cwd: settings.root});
-        let out = '';
-        c.stdout.on('data', (b) => { out += b.toString(); });
-        c.on('close', () => resolve(out.trim().length === 0));
-        c.on('error', () => resolve(false));
-      }),
+      workingTreeClean: () => checkWorkingTreeClean(settings.root),
       freeDiskMB: async (): Promise<number> => {
         try {
           const s = await (fs as any).statfs?.(settings.root);

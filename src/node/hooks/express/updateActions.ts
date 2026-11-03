@@ -15,6 +15,7 @@ import {acquireLock, releaseLock} from '../../updater/lock';
 import {executeUpdate, SpawnFn} from '../../updater/UpdateExecutor';
 import {createDrainer, DrainBroadcastKey, Drainer} from '../../updater/SessionDrainer';
 import {runPreflight} from '../../updater/preflight';
+import {checkWorkingTreeClean} from '../../updater/gitStatus';
 import {verifyReleaseTag} from '../../updater/trustedKeys';
 import {tailLines, appendLine} from '../../updater/updateLog';
 import {performRollback} from '../../updater/RollbackHandler';
@@ -68,13 +69,7 @@ const broadcastShout = (key: DrainBroadcastKey, values: Record<string, unknown>)
 
 const buildPreflightDeps = (installMethod: ReturnType<typeof getDetectedInstallMethod>) => ({
   installMethod,
-  workingTreeClean: () => new Promise<boolean>((resolve) => {
-    const c = spawn('git', ['status', '--porcelain'], {cwd: settings.root});
-    let out = '';
-    c.stdout.on('data', (b) => { out += b.toString(); });
-    c.on('close', () => resolve(out.trim().length === 0));
-    c.on('error', () => resolve(false));
-  }),
+  workingTreeClean: () => checkWorkingTreeClean(settings.root),
   freeDiskMB: async (): Promise<number> => {
     try {
       const s = await (fs as any).statfs?.(settings.root);
