@@ -137,11 +137,14 @@ export const UpdatePage = () => {
     && !us.lockHeld
     && !upToDate;
   const showCancel = status === 'preflight' || status === 'draining' || status === 'scheduled';
-  // pending-verification is included so a status stuck there after the
-  // server is back up can be cleared (#8412); the server refuses while the
-  // boot health check is still armed.
+  // A stuck pending-verification for the version that is running resolves
+  // itself server-side (#8412). One for another version means the update
+  // didn't take, so let the admin clear it.
+  const pendingTag = status === 'pending-verification'
+    ? (us.execution as {targetTag: string}).targetTag : null;
   const showAcknowledge = status === 'preflight-failed' || status === 'rolled-back' ||
-    status === 'rollback-failed' || status === 'pending-verification';
+    status === 'rollback-failed' ||
+    (pendingTag != null && pendingTag.replace(/^v/, '') !== us.currentVersion);
 
   // Optional-chain the execution lookup: some integration-test stubs of
   // /admin/update/status omit Tier 2/3 fields entirely (see

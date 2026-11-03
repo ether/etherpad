@@ -220,6 +220,30 @@ describe(__filename, function () {
     });
   });
 
+  describe('stale pending-verification (#8412)', function () {
+    const pending = (targetTag: string) => saveState(statePath(), {
+      ...EMPTY_STATE,
+      execution: {
+        status: 'pending-verification', targetTag, fromSha: 'x', deadlineAt: '2026-05-08T00:01:00Z',
+      },
+      bootCount: 1,
+    });
+
+    it('marks it verified when the running version is the target', async () => {
+      const {getEpVersion} = require('../../../node/utils/Settings');
+      await pending(`v${getEpVersion()}`);
+      const status = await agent.get('/admin/update/status').expect(200);
+      assert.equal(status.body.execution.status, 'verified');
+      assert.equal(status.body.lastResult.outcome, 'verified');
+    });
+
+    it('leaves it for the admin when another version is running', async () => {
+      await pending('v99.0.0');
+      const status = await agent.get('/admin/update/status').expect(200);
+      assert.equal(status.body.execution.status, 'pending-verification');
+    });
+  });
+
   describe('version check vs. state written by other paths (#8412)', function () {
     let origFetch: typeof globalThis.fetch;
     beforeEach(() => {

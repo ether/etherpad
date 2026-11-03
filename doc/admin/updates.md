@@ -154,7 +154,7 @@ Etherpad applies an update by **exiting with code 75** so a process supervisor r
 | `pnpm install` or `pnpm run build:ui` fails | `rolled-back` | Same as above. The lockfile and SHA are restored. |
 | `/health` doesn't come up within `rollbackHealthCheckSeconds` | `rolled-back` | Same — RollbackHandler restores the previous SHA + lockfile and exits 75 again. |
 | The new version crashes at boot more than twice (`bootCount > 2`) | `rolled-back` | Crash-loop guard kicks in regardless of the health-check timer. |
-| Status stays on `pending-verification` although the server is up and serving | `pending-verification` | Click **Acknowledge** to return to `idle`; Apply is refused until then. |
+| Status stays on `pending-verification` although the server is up and serving | `verified` or `pending-verification` | If the running version is the target, the status changes to `verified` on its own. If not, the update didn't take: click **Acknowledge** to return to `idle`. |
 | Rollback itself fails (e.g., `pnpm install` errors restoring old lockfile) | `rollback-failed` | **Manual intervention required.** The admin banner switches to a strong red alert. Restore the install by hand, then click **Acknowledge** to clear the lock and re-allow Tier 2 attempts. |
 
 ### Endpoints

@@ -57,6 +57,33 @@ export const getCurrentState = (): Promise<UpdateState> => loadState(stateFilePa
 export const isVerificationArmed = (): boolean =>
   bootRollbackInFlight || pendingVerification?.armed === true;
 
+/**
+ * A `pending-verification` that is still there once the boot health check is
+ * over can't resolve on its own. If this process is already running the
+ * target version the update worked, so record it as verified instead of
+ * making the admin clear it by hand (#8412). Returns the current state.
+ */
+export const resolveStalePendingVerification = async (): Promise<UpdateState> => {
+  const state = await getCurrentState();
+  const exec = state.execution;
+  if (exec.status !== 'pending-verification' || isVerificationArmed() ||
+      exec.targetTag.replace(/^v/, '') !== getEpVersion()) {
+    return state;
+  }
+  const at = new Date().toISOString();
+  const verified: UpdateState = {
+    ...state,
+    execution: {status: 'verified', targetTag: exec.targetTag, verifiedAt: at},
+    lastResult: {
+      targetTag: exec.targetTag, fromSha: exec.fromSha, outcome: 'verified', reason: null, at,
+    },
+    bootCount: 0,
+  };
+  await saveState(stateFilePath(), verified);
+  logger.info(`updater: ${exec.targetTag} is running; marked the stale pending verification as verified`);
+  return verified;
+};
+
 export const getDetectedInstallMethod = () => detectedMethod;
 
 /**
@@ -136,7 +163,7 @@ const performCheck = async (): Promise<void> => {
     // getCurrentState() can throw on a non-ENOENT fs error from loadState();
     // it must run inside the try/finally so checkInFlight is always cleared,
     // otherwise a one-time permission error permanently disables polling.
-    const before = await getCurrentState();
+    const before = await resolveStalePendingVerification();
     const result = await checkLatestRelease({
       fetcher: realFetcher,
       prevEtag: before.lastEtag,

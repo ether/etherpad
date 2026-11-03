@@ -4,7 +4,7 @@ import path from 'node:path';
 import {LRUCache} from 'lru-cache';
 import {ArgsExpressType} from '../../types/ArgsExpressType';
 import settings, {getEpVersion} from '../../utils/Settings';
-import {getDetectedInstallMethod, stateFilePath} from '../../updater';
+import {getDetectedInstallMethod, resolveStalePendingVerification, stateFilePath} from '../../updater';
 import {evaluatePolicy} from '../../updater/UpdatePolicy';
 import {isMinorOrMoreBehind} from '../../updater/versionCompare';
 import {loadState} from '../../updater/state';
@@ -166,7 +166,7 @@ export const expressCreateServer = (
       if (!user) return res.status(401).send('Authentication required');
       if (!user.is_admin) return res.status(403).send('Forbidden');
     }
-    const state = await loadState(stateFilePath());
+    const state = await resolveStalePendingVerification();
     const current = getEpVersion();
     const installMethod = getDetectedInstallMethod();
     const policy = state.latest
