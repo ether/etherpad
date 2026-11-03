@@ -12,6 +12,7 @@ import {isMinorOrMoreBehind} from './versionCompare';
 import {evaluatePolicy} from './UpdatePolicy';
 import {decideEmails, decideOutcomeEmail, FailureOutcome} from './Notifier';
 import {checkPendingVerification, CheckResult, RollbackDeps, performRollback} from './RollbackHandler';
+import {createStateCache} from './stateCache';
 import {executeUpdate, SpawnFn} from './UpdateExecutor';
 import {createSchedulerRunner, decideSchedule, decideTriggerApply, SchedulerRunner} from './Scheduler';
 import {parseWindow} from './MaintenanceWindow';
@@ -30,18 +31,21 @@ let detectedMethod: Exclude<InstallMethod, 'auto'> = 'managed';
 let timer: NodeJS.Timeout | null = null;
 let initialTimer: NodeJS.Timeout | null = null;
 let checkInFlight = false;
-let inMemoryState: UpdateState | null = null;
 let pendingVerification: CheckResult | null = null;
 let scheduler: SchedulerRunner | null = null;
 
 export const stateFilePath = () => path.join(settings.root, 'var', 'update-state.json');
 
+const stateCache = createStateCache({
+  load: () => loadState(stateFilePath()),
+  save: (state) => saveState(stateFilePath(), state),
+});
+
 /** Returns the current state from memory; loads on first call. */
-export const getCurrentState = async (): Promise<UpdateState> => {
-  if (inMemoryState) return inMemoryState;
-  inMemoryState = await loadState(stateFilePath());
-  return inMemoryState;
-};
+export const getCurrentState = async (): Promise<UpdateState> => stateCache.get();
+
+/** Persist `state` and keep the in-memory copy in sync (#8412). */
+const persistState = (state: UpdateState): Promise<void> => stateCache.save(state);
 
 export const getDetectedInstallMethod = () => detectedMethod;
 
@@ -212,7 +216,7 @@ const performCheck = async (): Promise<void> => {
       }
     }
 
-    await saveState(stateFilePath(), state);
+    await persistState(state);
   } catch (err) {
     logger.warn(`Updater check failed: ${(err as Error).message}`);
   } finally {
@@ -247,7 +251,7 @@ export const getRollbackDeps = (): RollbackDeps => ({
     await fs.mkdir(path.dirname(dst), {recursive: true});
     await fs.copyFile(src, dst);
   },
-  saveState: (s: UpdateState) => saveState(stateFilePath(), s),
+  saveState: (s: UpdateState) => persistState(s),
   exit: (code: number) => process.exit(code),
   now: () => new Date(),
   rollbackHealthCheckSeconds: Number(settings.updates.rollbackHealthCheckSeconds) || 60,
@@ -265,7 +269,7 @@ const logPath = (): string => path.join(settings.root, 'var', 'log', 'update.log
  */
 const buildSchedulerApplyDeps = (): ApplyPipelineDeps => ({
   loadState: () => loadState(stateFilePath()),
-  saveState: (s: UpdateState) => saveState(stateFilePath(), s),
+  saveState: (s: UpdateState) => persistState(s),
   acquireLock: () => acquireLock(lockPath()),
   releaseLock: async () => {
     try { await releaseLock(lockPath()); }
@@ -362,7 +366,7 @@ const buildSchedulerApplyDeps = (): ApplyPipelineDeps => ({
       await fs.mkdir(path.dirname(dst), {recursive: true});
       await fs.copyFile(src, dst);
     },
-    saveState: (s: UpdateState) => saveState(stateFilePath(), s),
+    saveState: (s: UpdateState) => persistState(s),
     initialState,
     targetTag,
     now: () => new Date(),
@@ -430,7 +434,7 @@ export const notifyApplyFailure = async (params: {
         await sendEmailViaSmtp(settings.adminEmail, e.subject, e.body);
       }
     }
-    await saveState(stateFilePath(), {...state, email: decision.newState});
+    await persistState({...state, email: decision.newState});
   } catch (err) {
     logger.warn(`notifyApplyFailure: ${(err as Error).message}`);
   }
@@ -471,7 +475,7 @@ const schedulerTriggerApply = async (targetTag: string): Promise<void> => {
       logger.info(
         `scheduler fired for ${targetTag} but policy denies auto ` +
         `(${decision.reason}); clearing schedule`);
-      await saveState(stateFilePath(), {...state, execution: {status: 'idle'}});
+      await persistState({...state, execution: {status: 'idle'}});
       return;
     }
     if (decision.action === 'defer') {
@@ -480,7 +484,7 @@ const schedulerTriggerApply = async (targetTag: string): Promise<void> => {
       logger.info(`scheduler deferred ${targetTag} to next maintenance window at ${decision.nextStart}`);
       const sched = state.execution.status === 'scheduled' ? state.execution : null;
       if (sched) {
-        await saveState(stateFilePath(), {
+        await persistState({
           ...state,
           execution: {...sched, scheduledFor: decision.nextStart},
         });
@@ -547,7 +551,7 @@ export const expressCreateServer = async (): Promise<void> => {
         `updater: discarding pending Tier 3 schedule for ${state.execution.targetTag} ` +
         `because updates.tier="off"`);
       state.execution = {status: 'idle'};
-      await saveState(stateFilePath(), state);
+      await persistState(state);
     }
   } else {
     scheduler = createSchedulerRunner({
