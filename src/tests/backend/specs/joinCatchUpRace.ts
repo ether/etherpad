@@ -11,14 +11,12 @@ const assert = require('assert').strict;
 const common = require('../common');
 const padManager = require('../../../node/db/PadManager');
 const padMessageHandler = require('../../../node/handler/PadMessageHandler');
-const plugins = require('../../../static/js/pluginfw/plugin_defs');
 
 describe(__filename, function () {
   let agent: any;
   let pad: any;
   let padId: string;
   const sockets: any[] = [];
-  let hooksBackup: any;
   let updatePadClientsBackup: any;
 
   before(async function () {
@@ -26,7 +24,6 @@ describe(__filename, function () {
   });
 
   beforeEach(async function () {
-    hooksBackup = {handleMessageSecurity: plugins.hooks.handleMessageSecurity};
     updatePadClientsBackup = padMessageHandler.updatePadClients;
     padId = common.randomString();
     pad = await padManager.getPad(padId, '\n');
@@ -34,7 +31,6 @@ describe(__filename, function () {
   });
 
   afterEach(async function () {
-    Object.assign(plugins.hooks, hooksBackup);
     padMessageHandler.updatePadClients = updatePadClientsBackup;
     for (const s of sockets.splice(0)) s.close();
     if (pad != null) await pad.remove();
@@ -94,7 +90,9 @@ describe(__filename, function () {
     await new Promise((r) => setTimeout(r, 500));
 
     const types = writerMsgs.map((m) => m.disconnect ? `disconnect:${m.disconnect}` : m.data?.type);
-    assert.deepEqual(types.filter((t) => t !== 'USER_NEWINFO'), ['ACCEPT_COMMIT'],
+    // Plugins (e.g. ep_set_title_on_pad) may broadcast CUSTOM messages on join.
+    const ignored = new Set(['USER_NEWINFO', 'CUSTOM']);
+    assert.deepEqual(types.filter((t) => !ignored.has(t)), ['ACCEPT_COMMIT'],
         `writer got ${JSON.stringify(types)}`);
     assert.equal(pad.text(), 'hello\n');
   });
