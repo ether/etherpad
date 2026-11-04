@@ -64,7 +64,7 @@
     "mongodb": "^7.8.0",
     "mssql": "^12.7.13",
     "mysql2": "^3.24.6",
-    "nano": "^11.0.7",
+    "nano": "^11.0.8",
     "nodemailer": "^10.3.1",
     "oidc-provider": "9.13.3",
     "openapi-backend": "^5.23.0",
