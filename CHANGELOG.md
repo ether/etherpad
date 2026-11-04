@@ -1,3 +1,31 @@
+# 3.3.14
+
+3.3.14 is a bug-fix release. It fixes a SIGTERM that could be lost during startup, two updater bugs, a join race that disconnected editors under load, and the overlapping controls in history mode.
+
+### Notable fixes
+
+- **Server — a SIGTERM sent during startup is no longer lost (#8421, #8423).** Startup removed the existing SIGINT/SIGTERM listeners before adding its own, so for a moment there were none and Node dropped a signal that had arrived while startup was busy. Etherpad then kept running until systemd sent SIGKILL. The new listener is now added before the old ones are removed. Reported by @ManUtopiK.
+- **Updater — Apply no longer fails on its own lock file, and a finished update shows as verified (#8411, #8412, #8425).** Apply took `var/update.lock` before checking for a clean git tree, so the check always saw the lock file and failed with `dirty-working-tree`. The check now ignores the files the updater writes itself. The first version check after boot also wrote the old `pending-verification` state back over `verified`, so the status stayed on "Pending verification". The state is now always read from disk, and a stale `pending-verification` resolves itself once Etherpad is running the target version. Reported by @damianbulira.
+- **Pads — a user joining no longer disconnects someone who is typing (#8387, #8409).** The catch-up sent to a newly joined client advanced the revision of every client on the pad. If another client's change was being saved at that moment, its revision check failed and it was disconnected with `badChangeset`, which caused reconnect cascades under collaboration load. The catch-up now only goes to the client that joined. Thanks to @Raj85446696, and to @MaBeFHDW for finding the cause.
+- **History mode — the follow (eye) icon no longer overlaps the playback speed control (#8382, #8410).** A generic colibris checkbox style also matched the follow toggle, adding padding and a switch that pushed the eye icon under the speed control and left it sitting too high. Those styles are now reset for the toggle. Reported by @meaz, thanks to @Jbansal2.
+
+### Thanks to our security reporters
+
+Thanks to everyone who reported security issues privately since mid-October:
+
+- @barnessomer ([GHSA-qq7c-m9pc-7q7v](https://github.com/ether/etherpad/security/advisories/GHSA-qq7c-m9pc-7q7v))
+- @sun1024 ([GHSA-35rj-7vrx-29wq](https://github.com/ether/etherpad/security/advisories/GHSA-35rj-7vrx-29wq))
+- @sonicnew ([GHSA-x4mj-5635-3fq9](https://github.com/ether/etherpad/security/advisories/GHSA-x4mj-5635-3fq9))
+- @CyberKareem ([GHSA-73h9-c5xp-gfg4](https://github.com/ether/etherpad/security/advisories/GHSA-73h9-c5xp-gfg4), [GHSA-wg58-mhwv-35pq](https://github.com/ether/etherpad/security/advisories/GHSA-wg58-mhwv-35pq), [GHSA-6mcx-x5h6-rpw2](https://github.com/ether/etherpad/security/advisories/GHSA-6mcx-x5h6-rpw2))
+- @meifukun ([GHSA-pp5v-mvwg-76mp](https://github.com/ether/etherpad/security/advisories/GHSA-pp5v-mvwg-76mp))
+- @gcm-explo1t and @neodymelabs ([GHSA-mc8w-wjhw-45x5](https://github.com/ether/etherpad/security/advisories/GHSA-mc8w-wjhw-45x5))
+- @MaBeFHDW ([GHSA-746x-9w89-7xv6](https://github.com/ether/etherpad/security/advisories/GHSA-746x-9w89-7xv6))
+- @baeseungwon1010 ([GHSA-g9xm-3pqr-wcph](https://github.com/ether/etherpad/security/advisories/GHSA-g9xm-3pqr-wcph))
+
+### Other changes
+
+- Dependency updates, including mongodb 7.8.0, jose 6.2.15 and @tanstack/react-query 5.105.2.
+
 # 3.3.13
 
 3.3.13 is a security release. It stops `.etherpad` imports from setting a pad's ownership, privacy or deletion token (GHSA-qq7c-m9pc-7q7v).
