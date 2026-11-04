@@ -138,7 +138,7 @@ Etherpad applies an update by **exiting with code 75** so a process supervisor r
 ### What clicking "Apply update" does
 
 1. **Lock acquire** — `var/update.lock` (PID-based, stale locks reaped automatically).
-2. **Pre-flight checks** — install method writable, working tree clean, free disk ≥ `diskSpaceMinMB`, `pnpm` on `PATH`, no lock held, target tag exists at the configured remote, signature verifies (if `requireSignature: true`), and the target's Node engine matches the running Node. The Node-engine check runs *after* signature verification (so the `engines.node` range comes from a trusted tag): Etherpad reads `engines.node` from the target tag's `package.json` via `git show <tag>:package.json` and refuses the update via `semver.satisfies` if the running Node does not satisfy it. On failure, state goes to `preflight-failed` with a typed reason; the admin sees a banner and clicks **Acknowledge** to clear it. No filesystem mutation has happened — nothing to roll back.
+2. **Pre-flight checks** — install method writable, working tree clean (files the updater itself writes under `var/` — `update.lock`, `update-state.json`, `update-backup/`, `log/` — are ignored), free disk ≥ `diskSpaceMinMB`, `pnpm` on `PATH`, no lock held, target tag exists at the configured remote, signature verifies (if `requireSignature: true`), and the target's Node engine matches the running Node. The Node-engine check runs *after* signature verification (so the `engines.node` range comes from a trusted tag): Etherpad reads `engines.node` from the target tag's `package.json` via `git show <tag>:package.json` and refuses the update via `semver.satisfies` if the running Node does not satisfy it. On failure, state goes to `preflight-failed` with a typed reason; the admin sees a banner and clicks **Acknowledge** to clear it. No filesystem mutation has happened — nothing to roll back.
 3. **Drain** — `drainSeconds` window during which T-60 / T-30 / T-10 announcements broadcast to every connected pad and new socket connections are refused. Click **Cancel** during this window to abort cleanly.
 4. **Execute** — `git fetch --tags origin`, `git checkout <tag>`, `pnpm install --frozen-lockfile`, `pnpm run build:ui`. Output streams to `var/log/update.log` (rotated 10 MB × 5).
 5. **Exit 75** — the supervisor restarts on the new version.
@@ -154,6 +154,7 @@ Etherpad applies an update by **exiting with code 75** so a process supervisor r
 | `pnpm install` or `pnpm run build:ui` fails | `rolled-back` | Same as above. The lockfile and SHA are restored. |
 | `/health` doesn't come up within `rollbackHealthCheckSeconds` | `rolled-back` | Same — RollbackHandler restores the previous SHA + lockfile and exits 75 again. |
 | The new version crashes at boot more than twice (`bootCount > 2`) | `rolled-back` | Crash-loop guard kicks in regardless of the health-check timer. |
+| Status stays on `pending-verification` although the server is up and serving | `verified` or `pending-verification` | If the running version is the target, the status changes to `verified` on its own. If not, the update didn't take: click **Acknowledge** to return to `idle`. |
 | Rollback itself fails (e.g., `pnpm install` errors restoring old lockfile) | `rollback-failed` | **Manual intervention required.** The admin banner switches to a strong red alert. Restore the install by hand, then click **Acknowledge** to clear the lock and re-allow Tier 2 attempts. |
 
 ### Endpoints
@@ -162,7 +163,7 @@ All Tier 2 endpoints require an authenticated admin session (`is_admin: true`) r
 
 - `POST /admin/update/apply` — start an apply. Returns `202 {accepted, drainEndsAt}` once the drain begins. Body unused.
 - `POST /admin/update/cancel` — cancel during pre-flight or drain. Returns `409` once the executor has begun mutating the filesystem (state machine guarantees we either complete or roll back from there).
-- `POST /admin/update/acknowledge` — clear a terminal `preflight-failed` / `rolled-back` / `rollback-failed` state back to `idle`.
+- `POST /admin/update/acknowledge` — clear a terminal `preflight-failed` / `rolled-back` / `rollback-failed` state back to `idle`. Also clears a `pending-verification` state that is left over once the server is already up (no boot health check armed); while the health check is still running it returns 409.
 - `GET /admin/update/log` — tail the last 200 lines of `var/log/update.log`. Plain text. Used by the in-progress UI.
 
 ### Signature verification

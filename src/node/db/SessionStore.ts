@@ -48,6 +48,10 @@ class SessionStore extends expressSession.Store {
     this._expirations = new Map();
     this._cleanupTimer = null;
     this._cleanupRunning = false;
+    // Source of `Date`, `setTimeout` and `clearTimeout` for the session expiration timers. Only
+    // replaced by tests, which swap in a fake clock so expiry can be checked without depending on
+    // wall-clock timing.
+    this._timers = globalThis;
   }
 
   /**
@@ -73,7 +77,7 @@ class SessionStore extends expressSession.Store {
   }
 
   shutdown() {
-    for (const {timeout} of this._expirations.values()) clearTimeout(timeout);
+    for (const {timeout} of this._expirations.values()) this._timers.clearTimeout(timeout);
     if (this._cleanupTimer) {
       clearTimeout(this._cleanupTimer);
       this._cleanupTimer = null;
@@ -157,14 +161,14 @@ class SessionStore extends expressSession.Store {
 
   async _updateExpirations(sid: string, sess: any, updateDbExp = true) {
     const exp = this._expirations.get(sid) || {};
-    clearTimeout(exp.timeout);
+    this._timers.clearTimeout(exp.timeout);
     // @ts-ignore
     const {cookie: {expires} = {}} = sess || {};
     if (expires) {
       const sessExp = new Date(expires).getTime();
       if (updateDbExp) exp.db = sessExp;
       exp.real = Math.max(exp.real || 0, exp.db || 0, sessExp);
-      const now = Date.now();
+      const now = this._timers.Date.now();
       if (exp.real <= now) return await this._destroy(sid);
       // If reading from the database, update the expiration with the latest value from touch() so
       // that touch() appears to write to the database every time even though it doesn't.
@@ -173,11 +177,12 @@ class SessionStore extends expressSession.Store {
       // the in-memory expiry first — touch() may have extended it without rescheduling the timeout
       // (e.g., if touch's clearTimeout raced with the timer on a slow system). If the session was
       // extended, reschedule instead of reading from the DB which may return stale cached data.
-      exp.timeout = setTimeout(() => {
+      exp.timeout = this._timers.setTimeout(() => {
         const currentExp = this._expirations.get(sid);
-        if (currentExp && currentExp.real > Date.now()) {
+        if (currentExp && currentExp.real > this._timers.Date.now()) {
           // Expiry was extended (e.g., by touch). Reschedule.
-          currentExp.timeout = setTimeout(() => this._get(sid), currentExp.real - Date.now());
+          currentExp.timeout = this._timers.setTimeout(
+              () => this._get(sid), currentExp.real - this._timers.Date.now());
           return;
         }
         // Use this._get(), not this._destroy(), to query the DB for the latest expiration in case
@@ -210,7 +215,7 @@ class SessionStore extends expressSession.Store {
 
   async _destroy(sid:string) {
     logger.debug(`DESTROY ${sid}`);
-    clearTimeout((this._expirations.get(sid) || {}).timeout);
+    this._timers.clearTimeout((this._expirations.get(sid) || {}).timeout);
     this._expirations.delete(sid);
     await DB.remove(`sessionstorage:${sid}`);
   }

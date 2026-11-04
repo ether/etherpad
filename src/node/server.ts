@@ -30,6 +30,7 @@ import {checkForMigration} from "../static/js/pluginfw/installer";
 import {ProxyAgent, setGlobalDispatcher} from 'undici';
 
 import settings from './utils/Settings';
+import {takeOverSignal} from './utils/takeOverSignal';
 
 let wtfnode: any;
 if (settings.dumpOnUncleanExit) {
@@ -159,10 +160,9 @@ exports.start = async () => {
         // https://github.com/andywer/threads.js/pull/329 for an example of a
         // problematic listener. This means that exports.exit is solely
         // responsible for performing all necessary cleanup tasks.
-        for (const listener of process.listeners(signal)) {
-          removeSignalListener(signal, listener);
-        }
-        process.on(signal, exports.exit);
+        // takeOverSignal adds exports.exit before removing the others so that
+        // a signal received during startup is not dropped (#8421).
+        takeOverSignal(signal, exports.exit, removeSignalListener);
         // Prevent signal listeners from being added in the future.
         process.on('newListener', (event, listener) => {
           if (event !== signal) return;
