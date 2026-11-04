@@ -11,7 +11,7 @@
 
 ### Thanks to our security reporters
 
-Thanks to everyone who reported security issues privately since mid-October:
+Thanks to everyone whose privately reported security issues were fixed and published since mid-October. The fixes shipped in 3.3.3 to 3.3.13:
 
 - @barnessomer ([GHSA-qq7c-m9pc-7q7v](https://github.com/ether/etherpad/security/advisories/GHSA-qq7c-m9pc-7q7v))
 - @sun1024 ([GHSA-35rj-7vrx-29wq](https://github.com/ether/etherpad/security/advisories/GHSA-35rj-7vrx-29wq))
