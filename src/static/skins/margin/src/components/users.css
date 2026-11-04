@@ -1,0 +1,65 @@
+table#otheruserstable {
+  margin-top: 20px;
+}
+
+/*
+ * Clicking a row in the user list opens chat and prefills "@<name> ".
+ * The pointer cursor on the name cell makes the affordance visible —
+ * the swatch keeps its own (color-picker) click semantics, so leave
+ * its cursor alone.
+ */
+#otheruserstable tr[data-authorId] .usertdname {
+  cursor: pointer;
+}
+#otheruserstable tr[data-authorId]:hover .usertdname {
+  text-decoration: underline;
+}
+
+.popup#users.chatAndUsers > .popup-content {
+  padding: 20px 10px;
+  height: 250px;
+  border-left: none;
+  transition: none;
+  border-bottom-color: #d2d2d2;
+  border-bottom-color: var(--border-color);
+}
+.popup#users.chatAndUsers #mycolorpicker.popup {
+  right: calc(100% + 30px);
+  top: 15px;
+}
+
+#otheruserstable .swatch {
+  border: none !important;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  margin-left: 1px;
+  margin-right: 15px;
+}
+
+#myusernameform {
+  margin-left: 10px;
+}
+
+input#myusernameedit {
+  min-width: 110px;
+  border: none !important;
+  background-color: transparent !important;
+  border-bottom: 1px solid #d2d2d2 !important;
+  border-bottom: 1px solid var(--border-color) !important;
+  border-radius: 0;
+  padding-bottom: 5px;
+}
+
+#myswatch {
+  border-radius: 50%;
+}
+
+#colorpicker {
+  margin-bottom: 25px;
+}
+
+#mycolorpickerpreview {
+  border-radius: 50%;
+}

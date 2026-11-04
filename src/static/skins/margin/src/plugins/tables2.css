@@ -1,0 +1,239 @@
+/* MENU ICON*/
+#editbar #tbl_menu_list {
+  width: auto !important;
+}
+#tbl-menu {
+  background: none !important;
+  width: 18px !important;
+  padding-left: 2px !important;
+}
+#tbl-menu:before {
+  content: "\F0CE";
+}
+
+#tbl_menu_list > a {
+  font-size: 16px;
+  margin-top: 8px;
+  padding-left: 0;
+  padding-right: 2px;
+  padding-bottom: 4px;
+}
+
+/* DROP DOWN MENU */
+#tbl_context_menu {
+  margin-left: -24px;
+  border: none;
+  margin-top: 9px;
+  box-shadow: 0 0 0 1px rgba(99, 114, 130, 0.16), 0 8px 16px rgba(27, 39, 51, 0.08);
+  border-radius: 3px;
+  background-color: white;
+  font-size: 100%;
+  line-height: 1.7;
+}
+
+#tbl_context_menu > .bd {
+  border: none;
+  background-color: transparent;
+}
+
+#tbl_context_menu > .bd > ul {
+  padding: 6px 0;
+}
+
+/* TABLE SIZE PICKER */
+#tbl_insert  {
+  background-color: white;
+  box-shadow: 0 0 0 1px rgba(99, 114, 130, 0.16), 0 8px 16px rgba(27, 39, 51, 0.08);
+  border-radius: 3px;
+}
+
+#tbl_insert .bd {
+  border: none;
+  text-align: center;
+  background-color: transparent;
+  padding-top: 4px;
+}
+
+#tbl_insert .yuimenuitemlabel { text-align: center; }
+
+#tbl_insert .ft {
+  margin: 0;
+  border: none;
+  background-color: transparent;
+  padding: 6px;
+  padding-top: 0;
+}
+
+#matrix_table tr td {
+  border: 1px solid #d7d7d7;
+  height: 1px;
+  padding: 7px;
+  width: 11px;
+  background-color: #fbfbfb;
+  border-radius: 1px;
+}
+#matrix_table tr td.selected {
+  border: 1px solid #789dce;
+  background-color: #b3d4ff;
+}
+
+/* TABLE SETTINGS POPUP */
+.yui-skin-sam .yui-panel-container {
+  padding: 0;
+  margin: 0;
+  background-color: #fff;
+  box-shadow: 0 0 0 1px rgba(99, 114, 130, 0.16), 0 8px 16px rgba(27, 39, 51, 0.08);
+  border-radius: 5px;
+  padding-bottom: 15px;
+}
+
+.yui-skin-sam .yui-panel-container .yui-panel {
+  border: none !important;
+  background: none;
+  box-shadow: none !important;
+}
+
+.yui-skin-sam .yui-panel-container .yui-panel .hd {
+  cursor: move;
+  padding: 0;
+  border: 0;
+  background: 0;
+  margin: 0;
+  font-size: 14px;
+  line-height: 40px;
+  text-transform: uppercase;
+  padding: 0 15px;
+  padding-top: 5px;
+  font-weight: bold;
+  border-bottom: 1px solid #d2d2d2;
+}
+
+.yui-skin-sam .yui-panel-container .yui-panel .container-close {
+  top: 15px;
+  border: none;
+  background: none;
+  color: white;
+  text-indent: 0;
+}
+.yui-skin-sam .yui-panel-container .yui-panel .container-close::before {
+  content: "x";
+  color: #6f757a;
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.yui-skin-sam .yui-panel-container .yui-panel .bd {
+  background: none;
+  border: none;
+  box-shadow: none;
+  padding: 15px;
+  background-color: transparent !important;
+}
+
+.yui-panel .underlay, .yui-skin-sam .yui-panel-container.shadow .underlay {
+  display: none !important;
+}
+
+#div_tbl_btn_close {
+  float: right;
+  position: relative;
+  width: 100%;
+  margin-top: 10px;
+  right: 0;
+  bottom: 0;
+}
+
+#tbl_btn_close {
+  border: none;
+  color: #ffffff;
+  height: 30px;
+  width: 100%;
+  border-radius: 3px;
+  text-transform: uppercase;
+}
+#tbl_btn_close:hover { cursor: pointer; }
+
+.yui-skin-sam .yui-button {
+  background: none;
+  background-color: white;
+  border: none;
+  height: 24px;
+  margin-bottom: -4px;
+  margin-top: 5px;
+}
+
+.yui-skin-sam .yui-button .first-child { margin: 0; border: none; }
+
+.yui-skin-sam .yui-split-button button {
+  padding: 0;
+  background: none !important;
+}
+
+.yui-skin-sam .yui-split-button button em:not(.color-picker-button) {
+  font-style: normal !important;
+  border-bottom: 1px solid #b5b7b7;
+  padding: 0 5px;
+  margin: 0 5px;
+  padding-bottom: 3px;
+}
+
+button#yui-gen13-button {
+  margin-left: -5px;
+}
+
+button .color-picker-button {
+  border: 1px solid #c1c2c2;
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+}
+
+#even-row-bg-color, #single-row-bg-color {
+  margin-right: 5px;
+}
+#single-col-bg-color, #odd-row-bg-color {
+  margin-left: 7px;
+}
+
+#yui-tbl-prop-panel .text-input[type=text] {
+  border: 1px solid #d2d2d2;
+  float: right;
+  height: 10px;
+  border-radius: 3px;
+  padding: 8px 10px;
+}
+
+#text_input_message {
+  background-color: #64d29b;
+  padding: 0 5px;
+  color: white;
+  font-size: 12px;
+  border-radius: 5px;
+  font-weight: bold;
+  display: none;
+}
+
+/* TABLES INSIDE THE PAD */
+td[name=tData] {
+  /*border: 1px solid grey !important;*/
+}
+
+#yui-picker-panel_c
+{
+  padding-bottom: 40px;
+}
+
+div#yui-picker-panel_h {
+  line-height: 1.8em;
+  font-size: 13px;
+  padding: 9px 15px 5px;
+}
+
+#yui-picker-panel .ft {
+  position: relative;
+  border: none;
+  width: 100%;
+  padding: 0;
+  margin-top: 20px;
+}

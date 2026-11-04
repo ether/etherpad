@@ -1,0 +1,43 @@
+/* margin / index.css — lobby + pad-list page
+ * Styles the home / pad-list using the same data-theme system as pad.css.
+ * Drop alongside pad.css in src/static/skins/margin/. */
+
+@import url("//fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..700&family=Instrument+Serif:ital@0;1&family=Lora:ital,wght@0,400..700;1,400..700&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&family=VT323&family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700&display=swap");
+
+/* Theme definitions are mirrored from pad.css so the lobby themes too.
+ * Both light and dark variants of each named theme are defined so the
+ * Settings popup's Theme dropdown can apply consistently across pages. */
+[data-theme="colibris"]                                  { --m-bg:#f2f3f4; --m-fg:#485365; --m-soft:#576273; --m-accent:#64d29b; --m-panel:#fff;    --m-rule:#dadada;                    --m-radius:3px;  --m-shadow:0 2px 8px rgba(68,68,68,.08);          --m-font:Quicksand, Cantarell, "Open Sans", "Helvetica Neue", sans-serif; --m-ui-style:normal; --m-ui-case:none; }
+[data-theme="editorial"][data-mode="light"]              { --m-bg:#f5f0e8; --m-fg:#1c1916; --m-soft:#5a534a; --m-accent:#a8442b; --m-panel:#fbf8f2; --m-rule:rgba(28,25,22,.12);         --m-radius:2px;  --m-shadow:0 12px 36px -18px rgba(28,25,22,.20); --m-font:"Newsreader",Georgia,serif; --m-ui-style:italic; --m-ui-case:none; }
+[data-theme="editorial"][data-mode="dark"]               { color-scheme:dark; --m-bg:#16130f; --m-fg:#f0eadd; --m-soft:#a8a098; --m-accent:#d27047; --m-panel:#1c1916; --m-rule:rgba(240,234,221,.12); --m-radius:2px;  --m-shadow:0 12px 36px -18px rgba(0,0,0,.6);     --m-font:"Newsreader",Georgia,serif; --m-ui-style:italic; --m-ui-case:none; }
+[data-theme="brutalist"][data-mode="light"]              { --m-bg:#f3f3f0; --m-fg:#000;    --m-soft:#222;    --m-accent:#ff3b00; --m-panel:#fff;    --m-rule:#000;                       --m-radius:0;    --m-shadow:4px 4px 0 #000;                       --m-font:"Space Mono",ui-monospace,monospace; --m-ui-style:normal; --m-ui-case:uppercase; }
+[data-theme="brutalist"][data-mode="dark"]               { color-scheme:dark; --m-bg:#0c0c09; --m-fg:#fff;    --m-soft:#ddd;    --m-accent:#ff3b00; --m-panel:#000;    --m-rule:#fff;                       --m-radius:0;    --m-shadow:4px 4px 0 #fff;                       --m-font:"Space Mono",ui-monospace,monospace; --m-ui-style:normal; --m-ui-case:uppercase; }
+[data-theme="paper"][data-mode="light"]                  { --m-bg:#f6f1e8; --m-fg:#2a2520; --m-soft:#6b6259; --m-accent:#b87333; --m-panel:#fbf6ec; --m-rule:rgba(42,37,32,.08);         --m-radius:12px; --m-shadow:0 14px 40px -16px rgba(42,37,32,.18); --m-font:"Lora",Georgia,serif;             --m-ui-style:normal; --m-ui-case:none; }
+[data-theme="paper"][data-mode="dark"]                   { color-scheme:dark; --m-bg:#231e19; --m-fg:#efe7d4; --m-soft:#a89e8d; --m-accent:#d99560; --m-panel:#2a2520; --m-rule:rgba(239,231,212,.10); --m-radius:12px; --m-shadow:0 14px 40px -16px rgba(0,0,0,.6);     --m-font:"Lora",Georgia,serif;             --m-ui-style:normal; --m-ui-case:none; }
+[data-theme="crt"][data-mode="light"]                    { --m-bg:#edf6ee; --m-fg:#04200d; --m-soft:#1c4a2b; --m-accent:#006b3f; --m-panel:#e9f5ed; --m-rule:rgba(0,107,63,.20);         --m-radius:0;    --m-shadow:0 0 0 1px rgba(0,107,63,.25);         --m-font:"IBM Plex Mono",ui-monospace,monospace; --m-ui-style:normal; --m-ui-case:uppercase; }
+[data-theme="crt"][data-mode="dark"]                     { color-scheme:dark; --m-bg:#04140a; --m-fg:#7fffae; --m-soft:#4ed188; --m-accent:#ffb84d; --m-panel:#08200f; --m-rule:rgba(127,255,174,.20); --m-radius:0;    --m-shadow:0 0 24px rgba(127,255,174,.10);       --m-font:"IBM Plex Mono",ui-monospace,monospace; --m-ui-style:normal; --m-ui-case:uppercase; }
+[data-theme="industrial"][data-mode="light"]             { --m-bg:#f0f1f4; --m-fg:#14171c; --m-soft:#525965; --m-accent:#cc9900; --m-panel:#f5f6f8; --m-rule:rgba(20,23,28,.08);         --m-radius:3px;  --m-shadow:0 12px 32px rgba(20,23,28,.10);       --m-font:"IBM Plex Sans",ui-sans-serif,system-ui,sans-serif; --m-ui-style:normal; --m-ui-case:uppercase; }
+[data-theme="industrial"][data-mode="dark"]              { color-scheme:dark; --m-bg:#0d0f12; --m-fg:#e6e8eb; --m-soft:#9aa0a8; --m-accent:#ffcc00; --m-panel:#14171c; --m-rule:rgba(255,255,255,.08); --m-radius:3px;  --m-shadow:0 12px 32px rgba(0,0,0,.4);           --m-font:"IBM Plex Sans",ui-sans-serif,system-ui,sans-serif; --m-ui-style:normal; --m-ui-case:uppercase; }
+
+[data-theme] body, [data-theme] .body { background: var(--m-bg) !important; color: var(--m-fg); font-family: var(--m-font); }
+[data-theme] body nav { border-bottom: 1px solid var(--m-rule); }
+[data-theme] .logo-box { background: var(--m-accent); border-radius: var(--m-radius); }
+[data-theme] #wrapper, [data-theme] .pad-datalist {
+  background: var(--m-panel); border: 1px solid var(--m-rule);
+  border-radius: var(--m-radius); box-shadow: var(--m-shadow);
+}
+[data-theme] .mission-statement h2 { color: var(--m-fg); text-transform: var(--m-ui-case); font-style: var(--m-ui-style); }
+[data-theme] .mission-statement p  { color: var(--m-soft); }
+[data-theme] #padname { background: var(--m-panel); color: var(--m-fg); border-color: var(--m-rule); border-radius: var(--m-radius); }
+[data-theme] #go2Name [type="submit"], [data-theme] #transferSessionButton {
+  background: var(--m-accent); border-radius: var(--m-radius);
+  text-transform: var(--m-ui-case);
+}
+[data-theme] #button { background: var(--m-panel); color: var(--m-fg); border: 1px solid var(--m-rule); border-radius: var(--m-radius); }
+[data-theme] .pad-datalist h2 { border-bottom-color: var(--m-rule); color: var(--m-fg); }
+[data-theme] .recent-pad:hover a { color: var(--m-accent); }
+
+[data-theme="brutalist"] #wrapper, [data-theme="brutalist"] .pad-datalist,
+[data-theme="brutalist"] #button, [data-theme="brutalist"] #go2Name [type="submit"] {
+  border: 2px solid #000 !important; box-shadow: 4px 4px 0 #000;
+}
