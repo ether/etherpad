@@ -1039,9 +1039,10 @@ const handleUserChanges = async (socket:any, message: {
   }
 };
 
-exports.updatePadClients = async (pad: PadType) => {
+exports.updatePadClients = async (pad: PadType, onlySocketId?: string) => {
   // skip this if no-one is on this pad
-  const roomSockets = _getRoomSockets(pad.id);
+  let roomSockets = _getRoomSockets(pad.id);
+  if (onlySocketId != null) roomSockets = roomSockets.filter((socket) => socket.id === onlySocketId);
   if (roomSockets.length === 0) return;
 
   // since all clients usually get the same set of changesets, store them in local cache
@@ -1503,7 +1504,7 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
     // Flush any revisions that may have been appended while we were awaiting the
     // clientVars hook (before socket.join).  Those revisions were broadcast to
     // existing room members but this socket hadn't joined yet so it missed them.
-    await exports.updatePadClients(pad);
+    await exports.updatePadClients(pad, socket.id);
   }
 
   // Notify other users about this new user.
