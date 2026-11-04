@@ -1,3 +1,16 @@
+# 3.3.15
+
+3.3.15 is a packaging release. It shrinks the Debian package so it can be published to the apt repository again.
+
+### Notable fixes
+
+- **Debian package — the .deb is back under GitHub's 100 MB file limit (#8442).** The 3.3.14 apt publish failed because `etherpad_3.3.14-1_amd64.deb` was 101 MiB. The package build copied the whole workspace `node_modules`, devDependencies included. It now does a fresh production-only install, which brings the amd64 .deb down to about 46 MiB. The built admin UI still ships, and the build now fails if a .deb goes over 95 MiB.
+
+### Other changes
+
+- CI now runs ep_ai_core and ep_ai_mcp in the with-plugins backend jobs (#8431).
+- Dependency updates, including nano 11.0.8, surrealdb 2.2.1, express-rate-limit 8.7.3, rate-limiter-flexible 11.2.4, semver 7.8.6 and @tanstack/react-query 5.105.3.
+
 # 3.3.14
 
 3.3.14 is a bug-fix release. It fixes a SIGTERM that could be lost during startup, two updater bugs, a join race that disconnected editors under load, and the overlapping controls in history mode.

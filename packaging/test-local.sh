@@ -36,11 +36,8 @@ CI=1 pnpm install --frozen-lockfile
 
 echo "==> Building staging tree"
 rm -rf staging dist packaging/etc
-mkdir -p staging/opt/etherpad packaging/etc dist
-cp -a src bin package.json pnpm-workspace.yaml README.md LICENSE node_modules \
-      staging/opt/etherpad/
-printf 'packages:\n  - src\n  - bin\n' > staging/opt/etherpad/pnpm-workspace.yaml
-cp settings.json.template packaging/etc/settings.json.dist
+mkdir -p dist
+packaging/stage.sh
 
 echo "==> Building .deb via nfpm ${NFPM_VERSION} (in container)"
 VERSION="$(node -p 'require("./package.json").version')"

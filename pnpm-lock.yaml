@@ -211,11 +211,11 @@ importers:
         specifier: ^1.4.1
         version: 1.4.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@tanstack/react-query':
-        specifier: ^5.105.2
-        version: 5.105.2(@types/react@19.3.0)(react@19.3.1)
+        specifier: ^5.105.3
+        version: 5.105.3(@types/react@19.3.0)(react@19.3.1)
       '@tanstack/react-query-devtools':
-        specifier: ^5.105.2
-        version: 5.105.2(@tanstack/react-query@5.105.2(@types/react@19.3.0)(react@19.3.1))(@types/react@19.3.0)(csstype@3.2.3)(react@19.3.1)
+        specifier: ^5.105.3
+        version: 5.105.3(@tanstack/react-query@5.105.3(@types/react@19.3.0)(react@19.3.1))(@types/react@19.3.0)(csstype@3.2.3)(react@19.3.1)
       jsonc-parser:
         specifier: ^3.3.1
         version: 3.3.1
@@ -224,7 +224,7 @@ importers:
         version: 0.17.0
       openapi-react-query:
         specifier: ^0.5.4
-        version: 0.5.4(@tanstack/react-query@5.105.2(@types/react@19.3.0)(react@19.3.1))(openapi-fetch@0.17.0)
+        version: 0.5.4(@tanstack/react-query@5.105.3(@types/react@19.3.0)(react@19.3.1))(openapi-fetch@0.17.0)
     devDependencies:
       '@radix-ui/react-dialog':
         specifier: ^1.3.1
@@ -323,14 +323,14 @@ importers:
         specifier: ^6.9.1
         version: 6.9.1(supports-color@8.1.1)
       semver:
-        specifier: ^7.8.5
-        version: 7.8.5
+        specifier: ^7.8.6
+        version: 7.8.6
       tsx:
         specifier: ^4.23.15
         version: 4.23.15
       ueberdb2:
         specifier: 6.1.18
-        version: 6.1.18(@elastic/elasticsearch@9.5.1(supports-color@8.1.1))(async@3.2.6)(cassandra-driver@4.10.0)(dirty-ts@1.1.8)(mongodb@7.8.0(socks@2.8.9))(mssql@12.7.13(supports-color@8.1.1))(mysql2@3.24.6(@types/node@26.6.6))(nano@11.0.7)(pg@8.23.1)(redis@6.3.1(@opentelemetry/api@1.9.1))(rethinkdb@2.4.2)(rusty-store-kv@1.3.1)(surrealdb@2.2.1(tslib@2.8.1)(typescript@7.0.2))
+        version: 6.1.18(@elastic/elasticsearch@9.5.1(supports-color@8.1.1))(async@3.2.6)(cassandra-driver@4.10.0)(dirty-ts@1.1.8)(mongodb@7.8.0(socks@2.8.9))(mssql@12.7.13(supports-color@8.1.1))(mysql2@3.24.6(@types/node@26.6.6))(nano@11.0.8)(pg@8.23.1)(redis@6.3.1(@opentelemetry/api@1.9.1))(rethinkdb@2.4.2)(rusty-store-kv@1.3.1)(surrealdb@2.2.1(tslib@2.8.1)(typescript@7.0.2))
     devDependencies:
       '@types/node':
         specifier: ^26.6.6
@@ -460,8 +460,8 @@ importers:
         specifier: ^3.24.6
         version: 3.24.6(@types/node@26.6.6)
       nano:
-        specifier: ^11.0.7
-        version: 11.0.7
+        specifier: ^11.0.8
+        version: 11.0.8
       nodemailer:
         specifier: ^10.3.1
         version: 10.3.1
@@ -505,8 +505,8 @@ importers:
         specifier: ^1.3.1
         version: 1.3.1
       semver:
-        specifier: ^7.8.5
-        version: 7.8.5
+        specifier: ^7.8.6
+        version: 7.8.6
       socket.io:
         specifier: ^4.8.4
         version: 4.8.4(supports-color@8.1.1)
@@ -527,7 +527,7 @@ importers:
         version: 4.23.15
       ueberdb2:
         specifier: 6.1.18
-        version: 6.1.18(@elastic/elasticsearch@9.5.1(supports-color@8.1.1))(async@3.2.6)(cassandra-driver@4.10.0)(dirty-ts@1.1.8)(mongodb@7.8.0(socks@2.8.9))(mssql@12.7.13(supports-color@8.1.1))(mysql2@3.24.6(@types/node@26.6.6))(nano@11.0.7)(pg@8.23.1)(redis@6.3.1(@opentelemetry/api@1.9.1))(rethinkdb@2.4.2)(rusty-store-kv@1.3.1)(surrealdb@2.2.1(tslib@2.8.1)(typescript@7.0.2))
+        version: 6.1.18(@elastic/elasticsearch@9.5.1(supports-color@8.1.1))(async@3.2.6)(cassandra-driver@4.10.0)(dirty-ts@1.1.8)(mongodb@7.8.0(socks@2.8.9))(mssql@12.7.13(supports-color@8.1.1))(mysql2@3.24.6(@types/node@26.6.6))(nano@11.0.8)(pg@8.23.1)(redis@6.3.1(@opentelemetry/api@1.9.1))(rethinkdb@2.4.2)(rusty-store-kv@1.3.1)(surrealdb@2.2.1(tslib@2.8.1)(typescript@7.0.2))
       underscore:
         specifier: 1.13.8
         version: 1.13.8
@@ -1927,24 +1927,24 @@ packages:
     resolution: {integrity: sha512-aPkUQctDzpXLSWhlx7jUDi3mInsI18xcnrK1hvIyIa88ab1ax88cACr7xU+BKMCGB4NZYNwh4SoNSEbv3RY2NA==}
     engines: {node: '>=20'}
 
-  '@tanstack/query-core@5.105.2':
-    resolution: {integrity: sha512-cyZGOtI1ZZ79mm905PJ42ng43Mwbc9CeqB83XuJmj9ADj/C+dzUXcgMQucRQ8yZs7atHykMzqavAXXhjxAw50g==}
+  '@tanstack/query-core@5.105.3':
+    resolution: {integrity: sha512-v1rbNy7MB/4Akth7CQH+CerV13K7Ok9hAusEsfz4sCjDdu3/kOSJPoWfoB+YjdEX1eBFBWKNAGE5nqZCgdlHDw==}
 
-  '@tanstack/query-devtools@5.105.2':
-    resolution: {integrity: sha512-fm90AMYufr6dKQBP4Jsuz22Aa/KN/NIyo5NceI/R/29LGw1Mf+qypSRQwLfxoI/Lz1NQ9Qap5DZqjkguhKHfxQ==}
+  '@tanstack/query-devtools@5.105.3':
+    resolution: {integrity: sha512-CZQ7vqAc/XTxi6omDeAkQW3RW99HKIxZDvHi1Y/hnyZFMmYhEfCmBd7wfUb1m/BEqdXTEKqZvoRKI7oKDKUchA==}
 
-  '@tanstack/react-query-devtools@5.105.2':
-    resolution: {integrity: sha512-dlN0A1zyy21ZYlgg1pkCdrzXV1S4qA4grToDr3AwA39GTWtsS7bVJd5URv932hZy3zDWj0K3uXq8mLfISFHuqg==}
+  '@tanstack/react-query-devtools@5.105.3':
+    resolution: {integrity: sha512-ggye4KEyv9QDj4bXoqt5pfbzz3XzC0pJAQhFgGAkmKLo8cchklxafKSVafJMHllpHXAJmXJgyi4NL149FdmPnQ==}
     peerDependencies:
-      '@tanstack/react-query': ^5.105.2
+      '@tanstack/react-query': ^5.105.3
       '@types/react': ^18 || ^19
       react: ^18 || ^19
     peerDependenciesMeta:
       '@types/react':
         optional: true
 
-  '@tanstack/react-query@5.105.2':
-    resolution: {integrity: sha512-K7MMGdVIgsQ41o6TI0fXD75aRCDNBLEKP80FvhvuwFkgiC36+rd8/JI5BYufLpfbZ3/sFTcYnotWxJqDxV/9dQ==}
+  '@tanstack/react-query@5.105.3':
+    resolution: {integrity: sha512-dj5hGWZmwoc9NG4enoXuYbiYwb5FxgJYPVv06eUgicMTfEMTRXn08Xv9D/r1V8TfjAv+BpxdvZFzJ1h3hSWZcQ==}
     peerDependencies:
       '@types/react': ^18 || ^19
       react: ^18 || ^19
@@ -4474,9 +4474,9 @@ packages:
     resolution: {integrity: sha512-Tz09sEL2EEuv5fFowm419c1+a/jSMiBjI9gHxVLrVdbUkkNUUfjsVYs9pVZu5oCon/kmRh9TfLEObFtkVxmY0w==}
     engines: {node: '>=8.0.0'}
 
-  nano@11.0.7:
-    resolution: {integrity: sha512-c9pm077xbjMnySEbnQ7kDmgehHxps3MAJLXMDyjQfh28yAmZlp427rLs+nzUCxkPmfK5L9dGFtXvwAlNTyeHrQ==}
-    engines: {node: '>=20.0'}
+  nano@11.0.8:
+    resolution: {integrity: sha512-sOm7K74erwg4Vti32zdvz6YCg2aW9bfuL7BMQhPInARp2QEQroo+DXpC5dBLHKuBMjbfHPcyinX2fk/6RMBShg==}
+    engines: {node: '>=22.0'}
 
   nanoid@3.3.15:
     resolution: {integrity: sha512-y7Wygv/7mEOvxTuEQDB8StXdMRBWf1kR/tlhAzBRUFkB2jfcLOAxO/SHmOO2zgz1pVgK29/kyupn059/bCHdjA==}
@@ -5169,8 +5169,8 @@ packages:
     resolution: {integrity: sha512-BR7VvDCVHO+q2xBEWskxS6DJE1qRnb7DxzUrogb71CWoSficBxYsiAGd+Kl0mmq/MprG9yArRkyrQxTO6XjMzA==}
     hasBin: true
 
-  semver@7.8.5:
-    resolution: {integrity: sha512-Y7/KDsb8LjooZpwaqGyulO6DQlksgCncchHGk+sZIY4SBvUocMBEFH5Ur1fI4dV+Jvl0w6cjvucaIi40puRioA==}
+  semver@7.8.6:
+    resolution: {integrity: sha512-9lpSSU4Mly3mrtruwLs1eLK6+gzbzqeBFwRNjIjE+9LuDpWdYctrQlQ3ej1Ilgi7gknpsTRnPoLP8DpCHqHIJw==}
     engines: {node: '>=10'}
     hasBin: true
 
@@ -6221,7 +6221,7 @@ snapshots:
       import-meta-resolve: 4.2.0
       json5: 2.2.3
       obug: 2.2.1
-      semver: 7.8.5
+      semver: 7.8.6
 
   '@babel/generator@8.0.0':
     dependencies:
@@ -6238,7 +6238,7 @@ snapshots:
       '@babel/helper-validator-option': 8.0.0
       browserslist: 4.28.5
       lru-cache: 11.5.3
-      semver: 7.8.5
+      semver: 7.8.6
 
   '@babel/helper-globals@8.0.0': {}
 
@@ -7182,16 +7182,16 @@ snapshots:
     dependencies:
       remove-accents: 0.5.0
 
-  '@tanstack/query-core@5.105.2': {}
+  '@tanstack/query-core@5.105.3': {}
 
-  '@tanstack/query-devtools@5.105.2(csstype@3.2.3)':
+  '@tanstack/query-devtools@5.105.3(csstype@3.2.3)':
     dependencies:
       '@kobalte/core': 0.13.14(solid-js@1.9.15)
       '@solid-primitives/keyed': 1.5.3(solid-js@1.9.15)
       '@solid-primitives/resize-observer': 2.2.0(solid-js@1.9.15)
       '@solid-primitives/storage': 1.3.11(solid-js@1.9.15)
       '@tanstack/match-sorter-utils': 9.1.2
-      '@tanstack/query-core': 5.105.2
+      '@tanstack/query-core': 5.105.3
       clsx: 2.1.1
       goober: 2.1.19(csstype@3.2.3)
       solid-js: 1.9.15
@@ -7200,19 +7200,19 @@ snapshots:
     transitivePeerDependencies:
       - csstype
 
-  '@tanstack/react-query-devtools@5.105.2(@tanstack/react-query@5.105.2(@types/react@19.3.0)(react@19.3.1))(@types/react@19.3.0)(csstype@3.2.3)(react@19.3.1)':
+  '@tanstack/react-query-devtools@5.105.3(@tanstack/react-query@5.105.3(@types/react@19.3.0)(react@19.3.1))(@types/react@19.3.0)(csstype@3.2.3)(react@19.3.1)':
     dependencies:
-      '@tanstack/query-devtools': 5.105.2(csstype@3.2.3)
-      '@tanstack/react-query': 5.105.2(@types/react@19.3.0)(react@19.3.1)
+      '@tanstack/query-devtools': 5.105.3(csstype@3.2.3)
+      '@tanstack/react-query': 5.105.3(@types/react@19.3.0)(react@19.3.1)
       react: 19.3.1
     optionalDependencies:
       '@types/react': 19.3.0
     transitivePeerDependencies:
       - csstype
 
-  '@tanstack/react-query@5.105.2(@types/react@19.3.0)(react@19.3.1)':
+  '@tanstack/react-query@5.105.3(@types/react@19.3.0)(react@19.3.1)':
     dependencies:
-      '@tanstack/query-core': 5.105.2
+      '@tanstack/query-core': 5.105.3
       react: 19.3.1
     optionalDependencies:
       '@types/react': 19.3.0
@@ -7543,7 +7543,7 @@ snapshots:
       '@typescript-eslint/visitor-keys': 8.72.1
       debug: 4.4.3(supports-color@8.1.1)
       minimatch: 10.2.6
-      semver: 7.8.5
+      semver: 7.8.6
       tinyglobby: 0.2.17
       ts-api-utils: 2.5.0(typescript@7.0.2)
       typescript: 7.0.2
@@ -8547,7 +8547,7 @@ snapshots:
   eslint-compat-utils@0.5.1(eslint@10.14.0(supports-color@8.1.1)):
     dependencies:
       eslint: 10.14.0(supports-color@8.1.1)
-      semver: 7.8.5
+      semver: 7.8.6
 
   eslint-config-etherpad@5.0.2(eslint@10.14.0(supports-color@8.1.1))(supports-color@8.1.1)(typescript@7.0.2):
     dependencies:
@@ -8671,7 +8671,7 @@ snapshots:
       globals: 15.15.0
       globrex: 0.1.2
       ignore: 5.3.2
-      semver: 7.8.5
+      semver: 7.8.6
       ts-declaration-location: 1.0.7(typescript@7.0.2)
     transitivePeerDependencies:
       - typescript
@@ -9362,7 +9362,7 @@ snapshots:
 
   is-bun-module@1.3.0:
     dependencies:
-      semver: 7.8.5
+      semver: 7.8.6
 
   is-callable@1.2.7: {}
 
@@ -9577,7 +9577,7 @@ snapshots:
       lodash.isstring: 4.0.1
       lodash.once: 4.1.1
       ms: 2.1.3
-      semver: 7.8.5
+      semver: 7.8.6
 
   jszip@3.10.1:
     dependencies:
@@ -9720,7 +9720,7 @@ snapshots:
       lockfile: 1.0.4
       node-fetch-commonjs: 3.3.2
       proxy-agent: 6.5.0(supports-color@8.1.1)
-      semver: 7.8.5
+      semver: 7.8.6
       tar: 7.5.19
       url-join: 4.0.1
     transitivePeerDependencies:
@@ -9962,7 +9962,7 @@ snapshots:
     dependencies:
       lru.min: 1.1.4
 
-  nano@11.0.7: {}
+  nano@11.0.8: {}
 
   nanoid@3.3.15: {}
 
@@ -10105,9 +10105,9 @@ snapshots:
     dependencies:
       openapi-typescript-helpers: 0.1.0
 
-  openapi-react-query@0.5.4(@tanstack/react-query@5.105.2(@types/react@19.3.0)(react@19.3.1))(openapi-fetch@0.17.0):
+  openapi-react-query@0.5.4(@tanstack/react-query@5.105.3(@types/react@19.3.0)(react@19.3.1))(openapi-fetch@0.17.0):
     dependencies:
-      '@tanstack/react-query': 5.105.2(@types/react@19.3.0)(react@19.3.1)
+      '@tanstack/react-query': 5.105.3(@types/react@19.3.0)(react@19.3.1)
       openapi-fetch: 0.17.0
       openapi-typescript-helpers: 0.1.0
 
@@ -10724,7 +10724,7 @@ snapshots:
 
   semver@6.3.1: {}
 
-  semver@7.8.5: {}
+  semver@7.8.6: {}
 
   send@1.2.1(supports-color@8.1.1):
     dependencies:
@@ -11230,7 +11230,7 @@ snapshots:
       '@typescript/typescript-win32-arm64': 7.0.2
       '@typescript/typescript-win32-x64': 7.0.2
 
-  ueberdb2@6.1.18(@elastic/elasticsearch@9.5.1(supports-color@8.1.1))(async@3.2.6)(cassandra-driver@4.10.0)(dirty-ts@1.1.8)(mongodb@7.8.0(socks@2.8.9))(mssql@12.7.13(supports-color@8.1.1))(mysql2@3.24.6(@types/node@26.6.6))(nano@11.0.7)(pg@8.23.1)(redis@6.3.1(@opentelemetry/api@1.9.1))(rethinkdb@2.4.2)(rusty-store-kv@1.3.1)(surrealdb@2.2.1(tslib@2.8.1)(typescript@7.0.2)):
+  ueberdb2@6.1.18(@elastic/elasticsearch@9.5.1(supports-color@8.1.1))(async@3.2.6)(cassandra-driver@4.10.0)(dirty-ts@1.1.8)(mongodb@7.8.0(socks@2.8.9))(mssql@12.7.13(supports-color@8.1.1))(mysql2@3.24.6(@types/node@26.6.6))(nano@11.0.8)(pg@8.23.1)(redis@6.3.1(@opentelemetry/api@1.9.1))(rethinkdb@2.4.2)(rusty-store-kv@1.3.1)(surrealdb@2.2.1(tslib@2.8.1)(typescript@7.0.2)):
     optionalDependencies:
       '@elastic/elasticsearch': 9.5.1(supports-color@8.1.1)
       async: 3.2.6
@@ -11239,7 +11239,7 @@ snapshots:
       mongodb: 7.8.0(socks@2.8.9)
       mssql: 12.7.13(supports-color@8.1.1)
       mysql2: 3.24.6(@types/node@26.6.6)
-      nano: 11.0.7
+      nano: 11.0.8
       pg: 8.23.1
       redis: 6.3.1(@opentelemetry/api@1.9.1)
       rethinkdb: 2.4.2
