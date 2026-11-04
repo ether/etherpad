@@ -41,4 +41,31 @@ test.describe('history toolbar button enters in-pad history mode', function () {
     await expect(page.locator('#history-slider-input')).toBeVisible();
     await expect(page.locator('#history-playpause')).toBeVisible();
   });
+
+  // Issue #8382: colibris's generic checkbox-switch rule also matched the
+  // follow toggle's label (it immediately follows the hidden follow
+  // checkbox), pushing the eye icon out of its 30px box and under the
+  // speed control at normal desktop width.
+  test('follow toggle eye icon does not overlap the speed control', async function ({page}) {
+    await clearPadContent(page);
+    await writeToPad(page, 'Foo');
+    await page.waitForTimeout(500);
+
+    const $timesliderButton = page.locator('.buttonicon-history');
+    await $timesliderButton.click();
+    await expect(page.locator('#history-controls')).toBeVisible();
+
+    const eyeBox = await page.locator('.history-follow-toggle svg').boundingBox();
+    const speedBox = await page.locator('.nice-select.history-speed').boundingBox();
+
+    expect(eyeBox).not.toBeNull();
+    expect(speedBox).not.toBeNull();
+    // No horizontal overlap: the eye icon's right edge must not extend past
+    // the speed control's left edge.
+    expect(eyeBox!.x + eyeBox!.width).toBeLessThanOrEqual(speedBox!.x + 1);
+    // The eye must be vertically centred with the speed control.
+    const eyeMid = eyeBox!.y + eyeBox!.height / 2;
+    const speedMid = speedBox!.y + speedBox!.height / 2;
+    expect(Math.abs(eyeMid - speedMid)).toBeLessThanOrEqual(2);
+  });
 });
