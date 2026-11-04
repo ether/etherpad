@@ -323,8 +323,8 @@ importers:
         specifier: ^6.9.1
         version: 6.9.1(supports-color@8.1.1)
       semver:
-        specifier: ^7.8.5
-        version: 7.8.5
+        specifier: ^7.8.6
+        version: 7.8.6
       tsx:
         specifier: ^4.23.15
         version: 4.23.15
@@ -505,8 +505,8 @@ importers:
         specifier: ^1.3.1
         version: 1.3.1
       semver:
-        specifier: ^7.8.5
-        version: 7.8.5
+        specifier: ^7.8.6
+        version: 7.8.6
       socket.io:
         specifier: ^4.8.4
         version: 4.8.4(supports-color@8.1.1)
@@ -5169,8 +5169,8 @@ packages:
     resolution: {integrity: sha512-BR7VvDCVHO+q2xBEWskxS6DJE1qRnb7DxzUrogb71CWoSficBxYsiAGd+Kl0mmq/MprG9yArRkyrQxTO6XjMzA==}
     hasBin: true
 
-  semver@7.8.5:
-    resolution: {integrity: sha512-Y7/KDsb8LjooZpwaqGyulO6DQlksgCncchHGk+sZIY4SBvUocMBEFH5Ur1fI4dV+Jvl0w6cjvucaIi40puRioA==}
+  semver@7.8.6:
+    resolution: {integrity: sha512-9lpSSU4Mly3mrtruwLs1eLK6+gzbzqeBFwRNjIjE+9LuDpWdYctrQlQ3ej1Ilgi7gknpsTRnPoLP8DpCHqHIJw==}
     engines: {node: '>=10'}
     hasBin: true
 
@@ -6221,7 +6221,7 @@ snapshots:
       import-meta-resolve: 4.2.0
       json5: 2.2.3
       obug: 2.2.1
-      semver: 7.8.5
+      semver: 7.8.6
 
   '@babel/generator@8.0.0':
     dependencies:
@@ -6238,7 +6238,7 @@ snapshots:
       '@babel/helper-validator-option': 8.0.0
       browserslist: 4.28.5
       lru-cache: 11.5.3
-      semver: 7.8.5
+      semver: 7.8.6
 
   '@babel/helper-globals@8.0.0': {}
 
@@ -7543,7 +7543,7 @@ snapshots:
       '@typescript-eslint/visitor-keys': 8.72.1
       debug: 4.4.3(supports-color@8.1.1)
       minimatch: 10.2.6
-      semver: 7.8.5
+      semver: 7.8.6
       tinyglobby: 0.2.17
       ts-api-utils: 2.5.0(typescript@7.0.2)
       typescript: 7.0.2
@@ -8547,7 +8547,7 @@ snapshots:
   eslint-compat-utils@0.5.1(eslint@10.14.0(supports-color@8.1.1)):
     dependencies:
       eslint: 10.14.0(supports-color@8.1.1)
-      semver: 7.8.5
+      semver: 7.8.6
 
   eslint-config-etherpad@5.0.2(eslint@10.14.0(supports-color@8.1.1))(supports-color@8.1.1)(typescript@7.0.2):
     dependencies:
@@ -8671,7 +8671,7 @@ snapshots:
       globals: 15.15.0
       globrex: 0.1.2
       ignore: 5.3.2
-      semver: 7.8.5
+      semver: 7.8.6
       ts-declaration-location: 1.0.7(typescript@7.0.2)
     transitivePeerDependencies:
       - typescript
@@ -9362,7 +9362,7 @@ snapshots:
 
   is-bun-module@1.3.0:
     dependencies:
-      semver: 7.8.5
+      semver: 7.8.6
 
   is-callable@1.2.7: {}
 
@@ -9577,7 +9577,7 @@ snapshots:
       lodash.isstring: 4.0.1
       lodash.once: 4.1.1
       ms: 2.1.3
-      semver: 7.8.5
+      semver: 7.8.6
 
   jszip@3.10.1:
     dependencies:
@@ -9720,7 +9720,7 @@ snapshots:
       lockfile: 1.0.4
       node-fetch-commonjs: 3.3.2
       proxy-agent: 6.5.0(supports-color@8.1.1)
-      semver: 7.8.5
+      semver: 7.8.6
       tar: 7.5.19
       url-join: 4.0.1
     transitivePeerDependencies:
@@ -10724,7 +10724,7 @@ snapshots:
 
   semver@6.3.1: {}
 
-  semver@7.8.5: {}
+  semver@7.8.6: {}
 
   send@1.2.1(supports-color@8.1.1):
     dependencies:
