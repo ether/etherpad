@@ -301,6 +301,9 @@ body.history-mode #history-controls { display: flex; }
  * icon out of its 30px box — covering it, and the speed control next to it
  * (issue #8382). Reset those colibris styles for this toggle specifically. */
 #history-options-followContents + .history-follow-toggle {
+  /* colibris sets display: inline-block, which drops the flex centring
+   * above and leaves the eye sitting high. */
+  display: inline-flex;
   padding-left: 0;
   height: 30px;
   line-height: normal;

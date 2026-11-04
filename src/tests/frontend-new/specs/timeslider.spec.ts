@@ -63,5 +63,9 @@ test.describe('history toolbar button enters in-pad history mode', function () {
     // No horizontal overlap: the eye icon's right edge must not extend past
     // the speed control's left edge.
     expect(eyeBox!.x + eyeBox!.width).toBeLessThanOrEqual(speedBox!.x + 1);
+    // The eye must be vertically centred with the speed control.
+    const eyeMid = eyeBox!.y + eyeBox!.height / 2;
+    const speedMid = speedBox!.y + speedBox!.height / 2;
+    expect(Math.abs(eyeMid - speedMid)).toBeLessThanOrEqual(2);
   });
 });
