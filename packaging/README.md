@@ -25,13 +25,8 @@ Prereqs: Node 24 (current LTS; matches `engines.node` floor), pnpm 12+, nfpm.
 pnpm install --frozen-lockfile
 pnpm run build:etherpad
 
-# Stage the tree the way CI does:
-STAGE=staging/opt/etherpad
-mkdir -p "$STAGE"
-cp -a src bin package.json pnpm-workspace.yaml README.md LICENSE \
-      node_modules "$STAGE/"
-printf 'packages:\n  - src\n  - bin\n' > "$STAGE/pnpm-workspace.yaml"
-cp settings.json.template packaging/etc/settings.json.dist
+# Stage the tree the way CI does (production deps only):
+packaging/stage.sh
 
 VERSION=$(node -p "require('./package.json').version") \
 ARCH=amd64 \

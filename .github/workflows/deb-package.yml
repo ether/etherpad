@@ -108,30 +108,8 @@ jobs:
           sudo dpkg -i "/tmp/${NFPM_DEB}"
 
       - name: Stage tree for packaging
-        run: |
-          set -eux
-          STAGE=staging/opt/etherpad
-          mkdir -p "${STAGE}"
-
-          # Production footprint = src/ + bin/ + node_modules/ + metadata.
-          cp -a src bin package.json pnpm-workspace.yaml README.md LICENSE \
-                node_modules "${STAGE}/"
-
-          # Make pnpm-workspace.yaml production-only (same trick Dockerfile uses).
-          printf 'packages:\n  - src\n  - bin\n' > "${STAGE}/pnpm-workspace.yaml"
-
-          mkdir -p packaging/etc
-          cp settings.json.template packaging/etc/settings.json.dist
-
-          # Purge test fixtures and dev caches from node_modules to shrink size.
-          find "${STAGE}/node_modules" -type d \
-               \( -name test -o -name tests -o -name '__tests__' \
-                  -o -name example -o -name examples -o -name docs \) \
-               -prune -exec rm -rf {} + 2>/dev/null || true
-          find "${STAGE}/node_modules" -type f \
-               \( -name '*.md' -o -name '*.ts.map' -o -name '*.map' \
-                  -o -name 'CHANGELOG*' -o -name 'HISTORY*' \) \
-               -delete 2>/dev/null || true
+        # Production deps only; see packaging/stage.sh.
+        run: packaging/stage.sh
 
       - name: Build .deb
         env:
@@ -140,6 +118,22 @@ jobs:
         run: |
           mkdir -p dist
           nfpm package --packager deb -f packaging/nfpm.yaml --target dist/
+
+      - name: Check package size
+        # apt-publish commits the .deb into ether/ether.github.com, and GitHub
+        # rejects files over 100 MiB. Fail here, with some headroom, so a
+        # size regression shows up on the PR instead of at release time.
+        run: |
+          set -euo pipefail
+          LIMIT=$((95 * 1024 * 1024))
+          for f in dist/*.deb; do
+            size=$(stat -c %s "$f")
+            echo "$f: $((size / 1024 / 1024)) MiB ($size bytes)"
+            if [ "$size" -gt "$LIMIT" ]; then
+              echo "::error file=$f::$f is over 95 MiB; GitHub rejects files over 100 MiB in the apt repo"
+              exit 1
+            fi
+          done
 
       - name: Smoke-test the package (amd64 only)
         if: matrix.arch == 'amd64'
