@@ -31,6 +31,7 @@ describe(__filename, function () {
 
   afterEach(async function () {
     Object.assign(plugins.hooks, backups.hooks);
+    settings.defaultPadText = backups.defaultPadText;
     if (pad != null) await pad.remove();
     pad = null;
   });
@@ -200,7 +201,9 @@ describe(__filename, function () {
       // getPad(padId, null, session.author). The default welcome text is not
       // written by that user, so its insert op must not carry their author
       // attribute (which would colour it in the creator's colour). The system
-      // author owns the text instead.
+      // author owns the text instead. Set the default text explicitly: an
+      // instance configured with an empty defaultPadText has no default content.
+      settings.defaultPadText = 'Welcome to Etherpad!\n';
       const creator = await authorManager.getAuthorId(`t.${padId}`);
       pad = await padManager.getPad(padId, null, creator);
       const applied = authorsAppliedToText(pad);
