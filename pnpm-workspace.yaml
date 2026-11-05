@@ -48,6 +48,7 @@ overrides:
   vite@>=7.0.0 <7.3.2: '>=7.3.2'
   ws@>=8.0.0 <8.21.0: '>=8.21.0'
 minimumReleaseAgeExclude:
+  - 'ueberdb2@6.1.19'
   - '@radix-ui/primitive@1.1.5'
   - '@radix-ui/react-collection@1.1.12'
   - '@radix-ui/react-context@1.2.0'
