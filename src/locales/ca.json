@@ -169,6 +169,7 @@
 	"pad.impexp.convertFailed": "No és possible d'importar aquest fitxer. Si us plau, podeu provar d'utilitzar un format diferent o copiar i enganxar manualment.",
 	"pad.impexp.padHasData": "No vam poder importar el fitxer perquè el pad ja tenia canvis. Importeu-lo a un nou pad",
 	"pad.impexp.uploadFailed": "Ha fallat la càrrega. Torneu-ho a provar",
+	"pad.impexp.permission": "La importació està desactivada perquè mai heu contribuït a aquest bloc. Si us plau, contribuïu almenys un cop abans d'importar",
 	"pad.impexp.importfailed": "Ha fallat la importació",
 	"pad.impexp.copypaste": "Si us plau, copieu i enganxeu",
 	"pad.impexp.exportdisabled": "Està inhabilitada l'exportació com a {{type}}. Contacteu amb el vostre administrador de sistemes per a més informació.",

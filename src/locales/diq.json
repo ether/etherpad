@@ -171,6 +171,7 @@
 	"pad.impexp.convertFailed": "Ena dosya azere kerdış mıkum niyo. Babetna namey dokumani weçinê yana xo desti kopya kerê u pronê.",
 	"pad.impexp.padHasData": "Ma nêşa dosya azere kem,  çıkı ena bloknot xora  vurriya ya. Xorê yewna bloknot azere kerê",
 	"pad.impexp.uploadFailed": "Barkerdış nêbi, kerem ke anciya bıcerebne",
+	"pad.impexp.permission": "Şıma ena ped rê qet iştirak nêkerdo coki ra azere kerdış dewre ra veto. Vêre azere kerdışi minimum yû iştirak bıkerê",
 	"pad.impexp.importfailed": "Zer kerdış mıwafaq nebı",
 	"pad.impexp.copypaste": "Reca keme kopya pronayış bıkeri",
 	"pad.impexp.exportdisabled": "Formatta {{type}} ya ateber kerdış dewra vıciya yo. Qandé teferruati idarekarana irtibat kewê",

@@ -429,6 +429,7 @@
 	"pad.impexp.convertFailed": "Non somos capaces de importar o ficheiro. Utiliza un formato de documento diferente ou copia e pega manualmente.",
 	"pad.impexp.padHasData": "Non puidemos importar este ficheiro porque este documento xa sufriu cambios; importa a un novo documento.",
 	"pad.impexp.uploadFailed": "Houbo un erro ao subir o ficheiro; inténtao de novo",
+	"pad.impexp.permission": "Non puidemos importar este ficheiro porque cambiaría quen creou este documento. Só o creador do documento pode importalo.",
 	"pad.impexp.importfailed": "Fallou a importación",
 	"pad.impexp.copypaste": "Copia e pega",
 	"pad.impexp.exportdisabled": "A exportación en formato {{type}} está desactivada. Ponte en contacto coa administración do sistema se queres máis detalles.",

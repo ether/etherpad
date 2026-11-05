@@ -177,6 +177,7 @@
 	"pad.impexp.convertFailed": "Bu dosyayı içe aktaramadık. Lütfen farklı bir belge biçimi kullanın veya elle kopyalayıp yapıştırın",
 	"pad.impexp.padHasData": "Bu bloknotta zaten değişiklikler olduğu için bu dosyayı içe aktaramadık, lütfen yeni bir bloknota aktarın.",
 	"pad.impexp.uploadFailed": "Yükleme başarısız oldu, lütfen tekrar deneyin.",
+	"pad.impexp.permission": "Bu ped'e hiç katkıda bulunmadığınız için içe aktarma devre dışı. Lütfen içe aktarmadan önce en az bir kez katkıda bulunun",
 	"pad.impexp.importfailed": "İçe aktarılamadı",
 	"pad.impexp.copypaste": "Lütfen kopyala yapıştır yapın",
 	"pad.impexp.exportdisabled": "{{type}} biçiminde dışa aktarma devre dışı bırakıldı. Ayrıntılar için lütfen sistem yöneticinize başvurun.",

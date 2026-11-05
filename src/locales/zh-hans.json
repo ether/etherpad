@@ -348,6 +348,7 @@
 	"pad.impexp.convertFailed": "我们无法导入此文档。请使用其他文档格式或手动复制贴上。",
 	"pad.impexp.padHasData": "我们无法导入此文件，因为此记事本已经变更，请导入到一个新的记事本中",
 	"pad.impexp.uploadFailed": "上载失败，请重试",
+	"pad.impexp.permission": "因为你从未为在此记事本做出任何贡献，导入已被禁用。在导入之前，请至少贡献一次",
 	"pad.impexp.importfailed": "导入失败",
 	"pad.impexp.copypaste": "请复制粘贴",
 	"pad.impexp.exportdisabled": "{{type}} 格式的导出被禁用。有关详情，请与您的系统管理员联系。",

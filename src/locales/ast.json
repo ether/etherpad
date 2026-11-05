@@ -123,6 +123,7 @@
 	"pad.impexp.convertFailed": "Nun pudimos importar esti ficheru. Por favor,usa otru formatu de ficheru diferente o copia y pega manualmente.",
 	"pad.impexp.padHasData": "Nun pudimos importar esti ficheru porque esti bloc yá tuvo cambios; impórtalu a un bloc nuevu",
 	"pad.impexp.uploadFailed": "Falló la carga del ficheru, intentalo otra vuelta",
+	"pad.impexp.permission": "La importación ta desactivada porque nunca contribuisti nesti bloc. Contribuye polo menos una vez antes d'importar",
 	"pad.impexp.importfailed": "Falló la importación",
 	"pad.impexp.copypaste": "Por favor, copia y apega",
 	"pad.impexp.exportdisabled": "La esportación en formatu {{type}} ta desactivada. Por favor, comunica col alministrador del sistema pa más detalles.",

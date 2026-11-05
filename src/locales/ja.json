@@ -151,6 +151,7 @@
 	"pad.impexp.convertFailed": "このファイルをインポートできませんでした。他の文書形式を使用するか、手作業でコピー & ペーストしてください",
 	"pad.impexp.padHasData": "このパッドは変更されたため、ファイルからインポートできませんでした。新しいパッドにインポートしてください。",
 	"pad.impexp.uploadFailed": "アップロードに失敗しました。もう一度お試しください",
+	"pad.impexp.permission": "このパッドに寄稿した実績がないため、インポートを無効にしました。まず寄稿をしてから再度、インポートしてください",
 	"pad.impexp.importfailed": "インポートに失敗しました",
 	"pad.impexp.copypaste": "コピー & ペーストしてください",
 	"pad.impexp.exportdisabled": "{{type}}形式でのエクスポートは無効になっています。詳細はシステム管理者にお問い合わせください。",

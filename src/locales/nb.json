@@ -144,6 +144,7 @@
 	"pad.impexp.convertFailed": "Vi greide ikke å importere denne filen. Bruk et annet dokumentformat eller kopier og lim inn teksten manuelt",
 	"pad.impexp.padHasData": "Vi kunne ikke importere denne filen fordi blokken allerede hadde endringer. Importer til en ny blokk.",
 	"pad.impexp.uploadFailed": "Opplastning feilet. Prøv igjen",
+	"pad.impexp.permission": "Import er deaktivert fordi du aldri har bidratt til denne padden. Vennligst bidra minst en gang før du importerer",
 	"pad.impexp.importfailed": "Import feilet",
 	"pad.impexp.copypaste": "Vennligst kopier og lim inn",
 	"pad.impexp.exportdisabled": "Eksportering som {{type}} er deaktivert. Vennligst kontakt systemadministratoren din for detaljer.",

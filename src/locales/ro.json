@@ -138,6 +138,7 @@
 	"pad.impexp.convertFailed": "Nu am putut importa acest fișier. Vă rugăm să utilizați un alt format de document sau să copiați pasta manual",
 	"pad.impexp.padHasData": "Nu am putut importa acest fișier, deoarece acest Pad a avut deja modificări, vă rugăm să importați pe un nou pad",
 	"pad.impexp.uploadFailed": "Încărcarea a eșuat. Încercați din nou",
+	"pad.impexp.permission": "Importul este dezactivat deoarece nu ați contribuit niciodată la această placă. Vă rugăm să contribuiți cel puțin o dată înainte de import",
 	"pad.impexp.importfailed": "Import eșuat",
 	"pad.impexp.copypaste": "Vă rugăm să copiați și să lipiți",
 	"pad.impexp.exportdisabled": "Exportul ca format {{type}} este dezactivat. Vă rugăm să contactați administratorul de sistem pentru detalii.",

@@ -180,6 +180,7 @@
 	"pad.impexp.convertFailed": "Não foi possível importar este arquivo. Use outro formato ou copie e cole manualmente",
 	"pad.impexp.padHasData": "Não foi possível importar este arquivo porque esta nota já tinha alterações, consulte como importar para uma nova nota",
 	"pad.impexp.uploadFailed": "O envio falhou. Tente outra vez",
+	"pad.impexp.permission": "A importação está desativada porque você nunca contribuiu para este bloco. Contribua pelo menos uma vez antes de importar",
 	"pad.impexp.importfailed": "A importação falhou",
 	"pad.impexp.copypaste": "Copie e cole",
 	"pad.impexp.exportdisabled": "A exportação em formato {{type}} está desativada. Comunique-se com o administrador do sistema para detalhes.",
