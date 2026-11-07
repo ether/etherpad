@@ -78,6 +78,17 @@ describe(__filename, function () {
 
   const settle = (ms = 800) => new Promise((r) => setTimeout(r, ms));
 
+  // Polls until pred() is true, so tests assert on the observable result of
+  // the held message instead of only on a fixed delay.
+  const waitFor = async (pred: () => boolean | Promise<boolean>, what: string,
+      timeoutMs = 5000) => {
+    const deadline = Date.now() + timeoutMs;
+    while (!(await pred())) {
+      if (Date.now() > deadline) throw new Error(`timed out waiting for ${what}`);
+      await new Promise((r) => setTimeout(r, 25));
+    }
+  };
+
   const makePublicPad = async () => {
     const id = `toctou_pub_${common.randomString()}`;
     const pad = await padManager.getPad(id, 'public text\n');
@@ -137,6 +148,8 @@ describe(__filename, function () {
     collab(socket, {type: 'GET_CHAT_MESSAGES', start: 0, end: 10});
     await held;
     clientReady(socket, b.id, token);
+    await waitFor(() => msgs.some((m) => m?.data?.type === 'CHAT_MESSAGES'),
+        'the chat history reply for the authorized pad');
     await settle();
     assert(!JSON.stringify(msgs).includes(SECRET),
         `victim chat leaked: ${brief(msgs)}`);
@@ -153,6 +166,9 @@ describe(__filename, function () {
     });
     await held;
     clientReady(socket, b.id, token);
+    await waitFor(() => msgs.some(
+        (m) => m?.type === 'CHANGESET_REQ' && m?.data?.requestID === 'r1'),
+    'the changeset reply for the authorized pad');
     await settle();
     assert(!JSON.stringify(msgs).includes(SECRET),
         `victim history leaked: ${brief(msgs)}`);
@@ -191,12 +207,14 @@ describe(__filename, function () {
       });
 
   it('SAVE_REVISION cannot be retargeted into an unauthorized pad', async function () {
-    const {socket, token} = await joinPublic();
+    const {a, socket, token} = await joinPublic();
     const b = await makePrivatePad();
     const held = holdFirst((m) => m?.data?.type === 'SAVE_REVISION');
     collab(socket, {type: 'SAVE_REVISION'});
     await held;
     clientReady(socket, b.id, token);
+    await waitFor(async () => (await padManager.getPad(a.id)).getSavedRevisions().length === 1,
+        'the saved revision on the authorized pad');
     await settle();
     const victim = await padManager.getPad(b.id);
     assert.equal(victim.getSavedRevisions().length, 0,
