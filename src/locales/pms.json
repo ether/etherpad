@@ -242,6 +242,7 @@
 	"pad.impexp.convertFailed": "I l'oma nen podù amporté s'archivi. Për piasì, ch'a deuvra n'àutr formà ëd document o ch'a còpia e ancòla a man",
 	"pad.impexp.padHasData": "I l'oma nen podù amporté s'archivi përché 's feuj a l'ha già avù dle modìfiche; për piasì, ch'a ampòrta un feuj neuv",
 	"pad.impexp.uploadFailed": "Ël cariament a l'ha falì, për piasì ch'a preuva torna",
+	"pad.impexp.permission": "L'amportassion a l'é disativà përchè chiel a l'ha pa mai contribuì a cost blòch-sì. Për piasì, ch'a contribuissa almanch na vira prima d'amporté",
 	"pad.impexp.importfailed": "Amportassion falìa",
 	"pad.impexp.copypaste": "Për piasì, ch'a còpia e ancòla",
 	"pad.impexp.exportdisabled": "L'esportassion an formà {{type}} a l'é disativà. Për piasì, ch'a contata sò aministrator ëd sistema për ij detaj.",

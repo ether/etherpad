@@ -179,6 +179,7 @@
 	"pad.impexp.convertFailed": "Nie byliśmy w stanie zaimportować tego pliku. Proszę użyć innego formatu dokumentu lub skopiować i wkleić ręcznie",
 	"pad.impexp.padHasData": "Nie udało się zaimportować tego pliku, bo ten dokument ma już zmiany, proszę zaimportować do nowego dokumentu",
 	"pad.impexp.uploadFailed": "Przesyłanie nie powiodło się, proszę spróbować jeszcze raz",
+	"pad.impexp.permission": "Importowanie jest zablokowane, ponieważ nie edytowałeś jeszcze tego dokumentu. Wykonaj przynajmniej jedną zmianę zanim zaczniesz importować",
 	"pad.impexp.importfailed": "Importowanie nie powiodło się",
 	"pad.impexp.copypaste": "Proszę skopiować i wkleić",
 	"pad.impexp.exportdisabled": "Eksport do formatu {{type}} jest wyłączony. Proszę skontaktować się z administratorem aby uzyskać więcej szczegółów.",

@@ -410,6 +410,7 @@
 	"pad.impexp.convertFailed": "Non è stato possibile importare questo file. Utilizzare un formato differente o copiare ed incollare a mano",
 	"pad.impexp.padHasData": "Non è possibile importare questo file poiché questo Pad ha già avuto modifiche; importalo in un nuovo Pad",
 	"pad.impexp.uploadFailed": "Caricamento non riuscito, riprovare",
+	"pad.impexp.permission": "L'importazione è disabilitata perché non hai mai contribuito a questo pad. Per favore, contribuisci almeno una volta, prima di fare importazioni",
 	"pad.impexp.importfailed": "Importazione fallita",
 	"pad.impexp.copypaste": "Si prega di copiare e incollare",
 	"pad.impexp.exportdisabled": "L'esportazione come {{type}} è disabilitata. Contattare l'amministratore per i dettagli.",

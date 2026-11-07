@@ -1,3 +1,18 @@
+# 3.3.16
+
+3.3.16 is a security release. It fixes a race in the collaboration socket that could expose and write to pads the user was not allowed to open, and picks up the ueberDB MSSQL fix. Upgrade as soon as you can.
+
+### Security
+
+- **Collaboration — every socket message now stays bound to the pad it was authorized for ([GHSA-c36r-65p6-q3m9](https://github.com/ether/etherpad/security/advisories/GHSA-c36r-65p6-q3m9), #8458).** The earlier fix for GHSA-6mcx-x5h6-rpw2 only pinned the target pad for USER_CHANGES. Chat, history (CHANGESET_REQ), saved revisions, pad options and pad deletion still read the pad from the socket's session when they ran. A second CLIENT_READY on the same socket rewrote that session before its own access check. A message authorized for one pad could then run against another, which leaked the other pad's text, history and chat and let chat messages and saved revisions be written into it, including on pads the user could only view. CLIENT_READY now changes the session only after access is granted, and each message carries the pad and access mode it was authorized with. Reported by @leograntquinn-crypto.
+- **Database — ueberdb2 6.1.19 (#8444).** Fixes SQL injection in the MSSQL driver's bulk writes ([GHSA-xmqq-59rx-x7pf](https://github.com/ether/ueberDB/security/advisories/GHSA-xmqq-59rx-x7pf)). Only installs using `"dbType": "mssql"` are affected.
+
+### Other changes
+
+- The default-content author test no longer depends on the local `defaultPadText` setting (#8445).
+- The Docker workflow now records the release version (#8456).
+- Dependency updates, including undici 8.12.4, mssql 12.7.14, entities 9.0.0, surrealdb 2.2.2 and resolve 1.22.14.
+
 # 3.3.15
 
 3.3.15 is a packaging release. It shrinks the Debian package so it can be published to the apt repository again.

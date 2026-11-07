@@ -49,7 +49,7 @@ jobs:
           key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
             ${{ runner.os }}-pnpm-store-
-      - uses: pnpm/action-setup@v6.1.0
+      - uses: pnpm/action-setup@v6.1.1
         name: Install pnpm
         with:
           run_install: false
@@ -442,4 +442,35 @@ jobs:
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
           git add charts/etherpad/values-dev.yaml
           git commit -m 'Update develop image tag'
+          git push
+      - name: Check out ether-charts (release)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: actions/checkout@v7
+        with:
+          path: ether-charts-release
+          repository: ether/ether-charts
+          token: ${{ secrets.ETHER_CHART_TOKEN }}
+      - name: Update tag in prod values.yaml
+        if: success() && startsWith(github.ref, 'refs/tags/')
+        working-directory: ether-charts-release
+        env:
+          RELEASE_VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          # Only touch the tag inside the top-level image: block.
+          sed -i '/^image:/,/^[^[:space:]#]/ s/^\(  tag: \).*/\1"'"${RELEASE_VERSION}"'"/' charts/etherpad/values.yaml
+          grep -n -A5 '^image:' charts/etherpad/values.yaml
+      - name: Commit and push prod tag
+        working-directory: ether-charts-release
+        if: success() && startsWith(github.ref, 'refs/tags/')
+        env:
+          RELEASE_VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add charts/etherpad/values.yaml
+          if git diff --cached --quiet; then
+            echo "values.yaml already at ${RELEASE_VERSION}, nothing to commit"
+            exit 0
+          fi
+          git commit -m "chore: update prod image to ${RELEASE_VERSION}"
           git push

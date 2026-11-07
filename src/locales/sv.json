@@ -333,6 +333,7 @@
 	"pad.impexp.convertFailed": "Vi kunde inte importera denna fil. Var god använd ett annat dokumentformat eller kopiera och klistra in den manuellt",
 	"pad.impexp.padHasData": "Vi kunde inte importera denna fil eftersom detta block redan har redigerats. Importera den till ett nytt block.",
 	"pad.impexp.uploadFailed": "Uppladdningen misslyckades, var god försök igen",
+	"pad.impexp.permission": "Importering är inaktiverat eftersom du aldrig har bidragit till detta block. Var god bidra minst en gång innan du importerar",
 	"pad.impexp.importfailed": "Importering misslyckades",
 	"pad.impexp.copypaste": "Var god kopiera och klistra in",
 	"pad.impexp.exportdisabled": "Exportering av formatet {{type}} är inaktiverad. Var god kontakta din systemadministratör för mer information.",

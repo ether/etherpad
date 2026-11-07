@@ -123,6 +123,7 @@
 	"pad.impexp.convertFailed": "N'eus ket bet gallet enporzhiañ ar restr. Ober gant ur furmad teul all pe eilañ/pegañ gant an dorn.",
 	"pad.impexp.padHasData": "N'hon eus ket gallet enporzhiañ ar restr-mañ dre ma'z eus bet degaset kemmoù er bloc'h-se ; enporzhiit anezhi war-zu ur bloc'h nevez, mar plij.",
 	"pad.impexp.uploadFailed": "C'hwitet eo bet an enporzhiañ. Klaskit en-dro.",
+	"pad.impexp.permission": "Diweredekaet eo an enporzhiañ peogwir n'hoc'h eus ket kemeret perzh gwech ebet er bloc'had-se. Kemerit perzh ur wech da nebeutañ a-raok enporzhiañ.",
 	"pad.impexp.importfailed": "C'hwitet eo an enporzhiadenn",
 	"pad.impexp.copypaste": "Eilit/pegit, mar plij",
 	"pad.impexp.exportdisabled": "Diweredekaet eo ezporzhiañ d'ar furmad {{type}}. Kit e darempred gant merour ar reizhiad evit gouzout hiroc'h.",

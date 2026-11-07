@@ -287,6 +287,7 @@
 	"pad.impexp.convertFailed": "未能匯入此檔案。請以其他檔案格式或手動複製貼上匯入。",
 	"pad.impexp.padHasData": "因為此記事本已異動過我們無法匯入此檔案，請匯入至新的記事本",
 	"pad.impexp.uploadFailed": "上載失敗，請重試",
+	"pad.impexp.permission": "因為您已沒在此記事本上貢獻，匯入功能已停用。在進行匯入之前，至少要做出一次貢獻",
 	"pad.impexp.importfailed": "匯入失敗",
 	"pad.impexp.copypaste": "請複製貼上",
 	"pad.impexp.exportdisabled": "{{type}}格式的匯出被禁用。有關詳情，請與您的系統管理員聯繫。",

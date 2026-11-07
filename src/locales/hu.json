@@ -170,6 +170,7 @@
 	"pad.impexp.convertFailed": "Nem tudtuk importálni ezt a fájlt. Kérjük, használj másik dokumentum formátumot, vagy kézzel másold és illeszd be a tartalmat",
 	"pad.impexp.padHasData": "Nem tudjuk importálni ezt a fájlt, mert ez a jegyzetfüzet már megváltozott, kérjük, importálj egy új jegyzetfüzetbe.",
 	"pad.impexp.uploadFailed": "A feltöltés sikertelen, próbáld meg újra",
+	"pad.impexp.permission": "Az importálás le van tiltva, mert soha nem járult hozzá ehhez a jegyzetfüzethez. Kérjük, járuljon hozzá legalább egyszer az importálás előtt",
 	"pad.impexp.importfailed": "Az importálás nem sikerült",
 	"pad.impexp.copypaste": "Kérjük másold be",
 	"pad.impexp.exportdisabled": "{{type}} formátumba az exportálás nem engedélyezett. Kérjük, a részletekért fordulj a rendszeradminisztrátorhoz.",

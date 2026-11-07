@@ -350,6 +350,7 @@
 	"pad.impexp.convertFailed": "Nous ne pouvons pas importer ce fichier. Veuillez utiliser un autre format de document ou faire manuellement",
 	"pad.impexp.padHasData": "Nous n’avons pas pu importer ce fichier parce que ce bloc-notes a déjà été modifié ; veuillez l’importer vers un nouveau bloc-notes",
 	"pad.impexp.uploadFailed": "Le téléversement a échoué, veuillez réessayer",
+	"pad.impexp.permission": "L’importation est désactivée parce que vous n’avez jamais contribué à ce bloc. Veuillez contribuer au moins une fois avant d’importer",
 	"pad.impexp.importfailed": "Échec de l’import",
 	"pad.impexp.copypaste": "Veuillez copier-coller",
 	"pad.impexp.exportdisabled": "L’exportation au format {{type}} est désactivée. Veuillez contacter votre administrateur système pour plus de détails.",

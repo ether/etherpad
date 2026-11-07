@@ -434,6 +434,7 @@
 	"pad.impexp.convertFailed": "Diese Datei konnte nicht importiert werden. Bitte verwende ein anderes Dokumentformat oder übertrage den Text manuell.",
 	"pad.impexp.padHasData": "Diese Datei konnte nicht importiert werden, da dieses Pad bereits Änderungen enthält. Bitte importiere die Datei in ein neues Pad.",
 	"pad.impexp.uploadFailed": "Das Hochladen ist fehlgeschlagen. Bitte versuche es erneut.",
+	"pad.impexp.permission": "Die Importfunktion ist deaktiviert, da du noch nichts zu diesem Pad beigetragen hast. Bitte trage etwas zu diesem Pad bei, bevor du importierst.",
 	"pad.impexp.importfailed": "Import fehlgeschlagen",
 	"pad.impexp.copypaste": "Bitte kopieren und einfügen",
 	"pad.impexp.exportdisabled": "Der Export im {{type}}-Format ist deaktiviert. Für Einzelheiten kontaktiere bitte deinen Systemadministrator.",

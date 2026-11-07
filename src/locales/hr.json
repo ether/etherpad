@@ -127,6 +127,7 @@
 	"pad.impexp.convertFailed": "Nismo bili u mogućnosti uvesti tu datoteku. Molimo Vas, rabite neki drugi format dokumenta ili ručno preslikajte/zalijepite sadržaj",
 	"pad.impexp.padHasData": "Nismo bili u mogućnosti uvesti navedenu datoteku, jer je blokić već bio mijenjan, molimo Vas uvezite u novi blokić",
 	"pad.impexp.uploadFailed": "Postavljanje nije uspjelo. molimo Vas, pokušajte ponovo",
+	"pad.impexp.permission": "Uvoz je onemogućen jer niste doprinosili ovom blokiću Etherpada. Molimo Vas, doprinosite barem jednom prije radnje uvoza",
 	"pad.impexp.importfailed": "Uvoz nije uspio",
 	"pad.impexp.copypaste": "Molimo preslikajte/zalijepite",
 	"pad.impexp.exportdisabled": "Izvoz u formatu {{type}} nije omogućen. Molimo Vas, kontaktirajte Vašega administratora sustava za više pojedinosti.",
