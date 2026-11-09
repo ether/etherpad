@@ -78,15 +78,13 @@ jobs:
     # Manual gate: promote edge -> stable via GitHub Environments approval.
     environment: snap-store-stable
     steps:
-      - name: Download snap artifact
-        uses: actions/download-artifact@v8
-        with:
-          name: etherpad-snap
+      # Promote the revision already on edge (the one that was tested) rather
+      # than re-uploading the same file: the store rejects a second upload of
+      # an identical binary ("Error checking upload uniqueness").
+      - name: Install snapcraft
+        run: sudo snap install snapcraft --classic
 
-      - name: Publish to stable
-        uses: snapcore/action-publish@v1
+      - name: Promote edge to stable
         env:
           SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
-        with:
-          snap: ${{ needs.build.outputs.snap-file }}
-          release: stable
+        run: snapcraft promote etherpad --from-channel latest/edge --to-channel latest/stable --yes
