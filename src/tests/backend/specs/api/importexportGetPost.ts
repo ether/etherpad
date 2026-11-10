@@ -184,8 +184,7 @@ describe(__filename, function () {
               it('re-import to read-write pad ID gives 200 OK', async function () {
                 // The new pad ID must differ from testPadId because Etherpad refuses to import
                 // .etherpad files on top of a pad that already has edits. Each import also gets
-                // its own pad: a cookie-less request is a new author, and only a pad's creator may
-                // import a .etherpad file that names a different creator.
+                // its own pad.
                 let req = agent.post(`/p/${testPadId}_import_${exportType}/import`)
                     .set("authorization", await common.generateJWTToken())
                     .attach('file', Buffer.from(text), {
@@ -315,8 +314,7 @@ describe(__filename, function () {
       });
     }); // End of LibreOffice tests.
 
-    // A fresh pad: each cookie-less request is a new author, and only a pad's creator may import a
-    // .etherpad file that names a different creator.
+    // A fresh pad, so the .etherpad file is imported on top of an empty pad.
     const etherpadPadId = `${testPadId}_etherpad`;
 
     it('Tries to import .etherpad', async function () {
@@ -354,7 +352,7 @@ describe(__filename, function () {
           .expect(/<ul class="bullet"><li><ul class="bullet"><li>hello<\/ul><\/li><\/ul>/);
     });
 
-    it('rejects a .etherpad import that would change the creator', async function () {
+    it('keeps the creator when a .etherpad import names a different creator', async function () {
       this.timeout(3000);
       // Each cookie-less request is a different author, so this pad's creator isn't the importer.
       const padId = `${testPadId}_creator`;
@@ -362,14 +360,43 @@ describe(__filename, function () {
           .set("authorization", await common.generateJWTToken())
           .attach('file', padText, {filename: '/test.txt', contentType: 'text/plain'})
           .expect(200);
+      padManager.unloadPad(padId);
+      const creator = await (await padManager.getPad(padId)).getRevisionAuthor(0);
       await agent.post(`/p/${padId}/import`)
           .set("authorization", await common.generateJWTToken())
           .attach('file', etherpadDoc, {
             filename: '/test.etherpad',
             contentType: 'application/etherpad',
           })
-          .expect(400)
-          .expect((res:any) => assert.equal(res.body.message, 'permission'));
+          .expect(200)
+          .expect((res:any) => assert.equal(res.body.message, 'ok'));
+      padManager.unloadPad(padId);
+      assert.equal(await (await padManager.getPad(padId)).getRevisionAuthor(0), creator);
+    });
+
+    it('imports .etherpad into a pad created with createPad', async function () {
+      this.timeout(3000);
+      const padId = `${testPadId}_apicreated`;
+      await agent.get(`${endPoint('createPad')}?padID=${padId}&text=api`)
+          .set("authorization", await common.generateJWTToken())
+          .expect(200)
+          .expect((res:any) => assert.equal(res.body.code, 0));
+      await agent.post(`/p/${padId}/import`)
+          .set("authorization", await common.generateJWTToken())
+          .attach('file', etherpadDoc, {
+            filename: '/test.etherpad',
+            contentType: 'application/etherpad',
+          })
+          .expect(200)
+          .expect((res:any) => assert.deepEqual(res.body, {
+            code: 0,
+            message: 'ok',
+            data: {directDatabaseAccess: true},
+          }));
+      padManager.unloadPad(padId);
+      const pad = await padManager.getPad(padId);
+      assert.equal(await pad.getRevisionAuthor(0), 'a.etherpad-system');
+      assert.match(pad.text(), /hello/);
     });
 
     it('Tries to import unsupported file type', async function () {

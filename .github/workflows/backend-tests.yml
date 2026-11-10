@@ -131,6 +131,7 @@ jobs:
           ep_headings2
           ep_markdown
           ep_guest
+          ep_post_data
           ep_set_title_on_pad
           ep_spellcheck
           ep_subscript_and_superscript
@@ -272,6 +273,7 @@ jobs:
           ep_headings2
           ep_markdown
           ep_guest
+          ep_post_data
           ep_set_title_on_pad
           ep_spellcheck
           ep_subscript_and_superscript
