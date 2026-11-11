@@ -409,8 +409,8 @@ importers:
         specifier: ^2.0.1
         version: 2.0.1
       jose:
-        specifier: ^6.2.16
-        version: 6.2.16
+        specifier: ^6.2.17
+        version: 6.2.17
       js-cookie:
         specifier: ^3.0.8
         version: 3.0.8
@@ -4036,8 +4036,8 @@ packages:
   isexe@2.0.0:
     resolution: {integrity: sha512-RHxMLp9lnKHGHRng9QFhRCMbYAcVpn69smSGcq3f36xjgVVWThj4qqLbTLlq7Ssj8B+fIQ1EuCEGI2lKsyQeIw==}
 
-  jose@6.2.16:
-    resolution: {integrity: sha512-4LSJpbuBuPdGrONCdZUy0xnxtLf8eEz+EY0SMXdHQEBU7bgUHDVblU/JAjryv3wID9/LK7/YuwFwq+AQNfMscQ==}
+  jose@6.2.17:
+    resolution: {integrity: sha512-wOuK9V1yujQFH5S0ZWmLcDZN7+IKh9bUCC2ZPCf2HDlol3WWHy+PPyNjEI75FXRLMp3vDKQcupP59xhVU95hcg==}
 
   js-cookie@3.0.8:
     resolution: {integrity: sha512-yeJd4aNAdYZQjaon2bpD/Gb0B/omw7HQOsynXXcOiWVCacbBcPlgn8S/d1X6blFSaHao7ozqtW7NZW19xpCtIw==}
@@ -9513,7 +9513,7 @@ snapshots:
 
   isexe@2.0.0: {}
 
-  jose@6.2.16: {}
+  jose@6.2.17: {}
 
   js-cookie@3.0.8: {}
 
@@ -10082,7 +10082,7 @@ snapshots:
   oidc-provider@9.13.3(supports-color@8.1.1):
     dependencies:
       debug: 4.4.3(supports-color@8.1.1)
-      jose: 6.2.16
+      jose: 6.2.17
       koa: 3.2.1
     transitivePeerDependencies:
       - supports-color
