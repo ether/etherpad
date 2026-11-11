@@ -142,6 +142,7 @@ const paduserlist = (() => {
         name = $('<input>')
             .attr('data-l10n-id', 'pad.userlist.unnamed')
             .attr('type', 'text')
+            .attr('maxlength', '128')
             .addClass('editempty')
             .addClass('newinput')
             .attr('value', html10n.get('pad.userlist.unnamed'));
