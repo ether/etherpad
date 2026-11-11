@@ -52,6 +52,6 @@
     "url": "https://github.com/ether/etherpad.git"
   },
   "engineStrict": true,
-  "version": "3.3.16",
+  "version": "3.3.17",
   "license": "Apache-2.0"
 }

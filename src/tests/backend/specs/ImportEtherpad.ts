@@ -287,14 +287,35 @@ describe(__filename, function () {
       assert.equal(pad.getPublicStatus(), true);
     });
 
-    it('rejects a file that changes the creator unless the creator imports it', async function () {
-      await assert.rejects(
-          importEtherpad.setPadRaw(padId, JSON.stringify(makeAuthoredExport(importerId)), importerId),
-          {code: 'ECREATOR'});
-      padManager.unloadPad(padId);
-      assert.equal(await (await padManager.getPad(padId)).getRevisionAuthor(0), creatorId);
+    it('keeps the creator when a non-creator imports a file naming someone else', async function () {
+      // The GHSA-qq7c forgery: a writer imports a file that names them as the creator.
+      const pad = await importAndReload(makeAuthoredExport(importerId), importerId);
+      assert.equal(await pad.getRevisionAuthor(0), creatorId);
+      assert.equal(pad.text(), 'foo\n');
+      await pad.check();
+    });
+
+    it('lets the creator import a file that names a different creator', async function () {
       const pad = await importAndReload(makeAuthoredExport(importerId), creatorId);
       assert.equal(await pad.getRevisionAuthor(0), importerId);
+    });
+
+    it('imports a same-creator file unchanged', async function () {
+      const exp = makeAuthoredExport(creatorId);
+      const pad = await importAndReload(exp, importerId);
+      assert.equal(await pad.getRevisionAuthor(0), creatorId);
+      assert.deepEqual(pad.pool.toJsonable(), exp['pad:testing'].pool);
+      assert.deepEqual(pad.atext, exp['pad:testing'].atext);
+    });
+
+    it('does not let a non-creator take pad settings from a file naming them', async function () {
+      const exp = makeAuthoredExport(importerId);
+      const pad = await importAndReload({
+        ...exp,
+        'pad:testing': {...exp['pad:testing'], padSettings: {enforceSettings: true}},
+      }, importerId);
+      assert.equal(await pad.getRevisionAuthor(0), creatorId);
+      assert.equal(pad.getPadSettings().enforceSettings, false);
     });
 
     it('keeps the target pad settings when the importer is not the creator', async function () {
@@ -313,6 +334,74 @@ describe(__filename, function () {
         'pad:testing': {...exp['pad:testing'], padSettings: {enforceSettings: true}},
       }, creatorId);
       assert.equal(pad.getPadSettings().enforceSettings, true);
+    });
+  });
+
+  describe('pads created through the HTTP API', function () {
+    const api = require('../../../node/db/API');
+    const {SYSTEM_AUTHOR_ID} = require('../../../node/utils/SystemAuthor');
+
+    // An export of a browser-created pad: rev 0 was written by a real author.
+    const makeBrowserExport = (rev0Author: string): MapArrayType<any> => {
+      const pool = {numToAttrib: {0: ['author', rev0Author]}, nextNum: 1};
+      const atext = {text: 'hello\n', attribs: '*0+5|1+1'};
+      return {
+        'pad:testing': {
+          atext, pool, head: 0, chatHead: -1, savedRevisions: [],
+          padSettings: {enforceSettings: true},
+        },
+        [`globalAuthor:${rev0Author}`]: {
+          colorId: '#000000', name: 'new', timestamp: 1598747784631, padIDs: 'testing',
+        },
+        'pad:testing:revs:0': {
+          changeset: 'Z:1>5*0+5$hello',
+          meta: {author: rev0Author, timestamp: 1597632398288, pool, atext},
+        },
+      };
+    };
+
+    const importAndReload = async (records: MapArrayType<any>, authorId: string) => {
+      await importEtherpad.setPadRaw(padId, JSON.stringify(records), authorId);
+      padManager.unloadPad(padId);
+      return await padManager.getPad(padId);
+    };
+
+    for (const [desc, text] of [['with text', 'api text\n'], ['without text', '']]) {
+      it(`imports a browser pad export into a createPad pad ${desc}`, async function () {
+        await api.createPad(padId, text);
+        const apiCreator = await (await padManager.getPad(padId)).getRevisionAuthor(0);
+        assert.equal(apiCreator, text ? SYSTEM_AUTHOR_ID : '');
+        const fileAuthor = makeAuthorId();
+        const importer = makeAuthorId();
+        const pad = await importAndReload(makeBrowserExport(fileAuthor), importer);
+        assert.equal(pad.text(), 'hello\n');
+        assert.equal(await pad.getRevisionAuthor(0), apiCreator);
+        // The text keeps its original authorship.
+        assert(pad.getAllAuthors().includes(fileAuthor));
+        assert.equal(pad.getPadSettings().enforceSettings, false);
+        await pad.check();
+      });
+    }
+
+    it('keeps the system creator when the file author imports their own export', async function () {
+      await api.createPad(padId, 'api text\n');
+      const fileAuthor = makeAuthorId();
+      const pad = await importAndReload(makeBrowserExport(fileAuthor), fileAuthor);
+      assert.equal(await pad.getRevisionAuthor(0), SYSTEM_AUTHOR_ID);
+      assert.equal(pad.getPadSettings().enforceSettings, false);
+    });
+
+    it('does not let the importer become the creator of a group pad', async function () {
+      const {groupID} = await api.createGroup();
+      const {padID} = await api.createGroupPad(groupID, randomString(10), 'api text\n');
+      padId = padID;
+      const importer = makeAuthorId();
+      const exp = makeBrowserExport(importer);
+      const pad = await importAndReload(
+          {...exp, 'pad:testing': {...exp['pad:testing'], publicStatus: true}}, importer);
+      assert.equal(await pad.getRevisionAuthor(0), SYSTEM_AUTHOR_ID);
+      assert.equal(pad.getPublicStatus(), false);
+      await pad.check();
     });
   });
 

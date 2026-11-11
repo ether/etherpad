@@ -842,8 +842,10 @@ const handleGetChatMessages = async (
  */
 const handleSuggestUserName = (
     socket:any, message: ClientSuggestUserName, ctx: MessageContext) => {
-  const {newName, unnamedId} = message.data.payload;
+  const {unnamedId} = message.data.payload;
+  const newName = authorManager.sanitizeAuthorName(message.data.payload.newName);
   if (newName == null) throw new Error('missing newName');
+  message.data.payload.newName = newName;
   if (unnamedId == null) throw new Error('missing unnamedId');
   const padId = ctx.padId;
   // search the author and send him this message
@@ -864,7 +866,8 @@ const handleSuggestUserName = (
 const handleUserInfoUpdate = async (
     socket:any, {data: {userInfo: {name, colorId}}}: UserNewInfoMessage, ctx: MessageContext) => {
   if (colorId == null) throw new Error('missing colorId');
-  if (!name) name = null;
+  // Unauthenticated input that is stored and rebroadcast: type-check and cap it (GHSA-w4w9).
+  name = authorManager.sanitizeAuthorName(name);
   if (!ctx.author || !ctx.padId) throw new Error('session not ready');
   const author = ctx.author;
   if (!/(^#[0-9A-F]{6}$)|(^#[0-9A-F]{3}$)/i.test(colorId)) {
@@ -1220,6 +1223,8 @@ const handleClientReady = async (
   await hooks.aCallAll('clientReady', message); // Deprecated due to awkward context.
 
   let {colorId: authorColorId, name: authorName} = message.userInfo || {};
+  // Unauthenticated input that is stored and rebroadcast: type-check and cap it (GHSA-w4w9).
+  authorName = authorManager.sanitizeAuthorName(authorName);
   if (authorColorId && !/^#(?:[0-9A-F]{3}){1,2}$/i.test(authorColorId as string)) {
     messageLogger.warn(`Ignoring invalid colorId in CLIENT_READY message: ${authorColorId}`);
     // @ts-ignore
@@ -1230,6 +1235,8 @@ const handleClientReady = async (
     authorColorId && authorManager.setAuthorColorId(sessionInfo.author, authorColorId),
   ]);
   ({colorId: authorColorId, name: authorName} = await authorManager.getAuthor(sessionInfo.author));
+  // The stored record may predate the name cap; never send an oversized name back out.
+  authorName = authorManager.sanitizeAuthorName(authorName);
 
   // Pad retention: an overdue pad is deleted here, before it loads, so the
   // client gets a new pad rather than content that should already be gone.
@@ -1267,7 +1274,12 @@ const handleClientReady = async (
           'This is possibly related to https://github.com/ether/etherpad-lite/issues/2802');
     } else {
       // Filter author attribs (e.g. don't send author's pads to all clients)
-      historicalAuthorData[authorId] = {name: author.name, colorId: author.colorId};
+      // Re-sanitize on read so records stored before the name cap are not rebroadcast at full
+      // size to every client that opens the pad (GHSA-w4w9).
+      historicalAuthorData[authorId] = {
+        name: authorManager.sanitizeAuthorName(author.name),
+        colorId: author.colorId,
+      };
     }
   }));
 
@@ -1614,7 +1626,7 @@ const handleClientReady = async (
         type: 'USER_NEWINFO',
         userInfo: {
           colorId: authorInfo.colorId,
-          name: authorInfo.name,
+          name: authorManager.sanitizeAuthorName(authorInfo.name),
           userId: authorId,
         },
       },
