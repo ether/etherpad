@@ -1,3 +1,20 @@
+# 3.3.17
+
+3.3.17 is a security release. It caps the length of author display names, which any visitor could set to almost 1 MB, and fixes `.etherpad` imports into pads created through the HTTP API. Upgrade as soon as you can.
+
+### Security
+
+- **Pads — author display names are now type-checked and capped at 128 characters ([GHSA-w4w9-j4c3-hjf6](https://github.com/ether/etherpad/security/advisories/GHSA-w4w9-j4c3-hjf6), #8475).** The name sent in `CLIENT_READY` and `USERINFO_UPDATE` was stored with no type or length check, so a visitor with no account could save a name of nearly 1 MB, bounded only by the socket's message size. That name was then sent to everyone who opened the pad. A name that wasn't a string also broke the admin author search. Names must now be strings and are trimmed and cut to 128 characters, with any Unicode accepted. Names already stored are capped when read back, so oversized records are no longer rebroadcast. The pad's name fields enforce the same limit. Reported by @MAYASEVEN.
+
+### Notable fixes
+
+- **Import — `.etherpad` files import again into pads created through the HTTP API (#8470).** Since 3.3.13 (#8420), importing a `.etherpad` file from the import dialog failed with a permission error when the target pad was created by `createPad`, `createGroupPad`, admin create-pad or ep_post_data, and the file came from a pad a browser created. When the importer isn't the target pad's creator, the file's first author is now rewritten to that creator. Text keeps its original authorship. An importer still can't make themselves the creator, and pad settings still come from the target pad.
+
+### Other changes
+
+- Localisation updates from translatewiki.net.
+- Dependency updates.
+
 # 3.3.16
 
 3.3.16 is a security release. It fixes a race in the collaboration socket that could expose and write to pads the user was not allowed to open, and picks up the ueberDB MSSQL fix. Upgrade as soon as you can.
