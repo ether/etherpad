@@ -5,7 +5,7 @@
   var renderDir = (langs[renderLang] && langs[renderLang].direction === 'rtl') ? 'rtl' : 'ltr';
 %>
 <!doctype html>
-<html lang="<%=renderLang%>" dir="<%=renderDir%>">
+<html lang="<%=renderLang%>" dir="<%=renderDir%>" data-skin="<%=settings.skinName%>"<% if (settings.enableDarkMode) { %> data-auto-dark<% } %>>
 
         <title><%=settings.title%></title>
 <%- typeof socialMetaHtml !== 'undefined' ? socialMetaHtml : '' %>
@@ -15,6 +15,28 @@
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
         <link rel="shortcut icon" href="favicon.ico">
         <link rel="localizations" type="application/l10n+json" href="locales.json">
+
+        <% if (settings.enableDarkMode) { %>
+        <script>
+          (() => {
+            // Match the pad's stored light-mode override before the first paint.
+            const updateAutoDark = () => {
+              let useSystemPreference = true;
+              try {
+                useSystemPreference = localStorage.getItem('ep_darkMode') !== 'false';
+              } catch {
+                // When storage is unavailable, follow the system preference.
+              }
+              document.documentElement.toggleAttribute('data-auto-dark', useSystemPreference);
+            };
+            updateAutoDark();
+            window.addEventListener('pageshow', updateAutoDark);
+            window.addEventListener('storage', (event) => {
+              if (event.key === 'ep_darkMode' || event.key === null) updateAutoDark();
+            });
+          })();
+        </script>
+        <% } %>
 
         <style>
             html, body {
@@ -184,7 +206,7 @@
             <h3 data-l10n-id="index.transferSession"></h3>
             <div data-l10n-id="index.transferSessionDescription"></div>
             <button type="button" class="btn-secondary" style="margin-top: 20px" data-l10n-id="index.transferSessionNow"></button>
-            <div id="transfer-session-error" data-l10n-id="index.sessionTransferError" role="alert" aria-live="assertive" style="display: none; color: #b00020; margin-top: 10px;"></div>
+            <div id="transfer-session-error" data-l10n-id="index.sessionTransferError" role="alert" aria-live="assertive" style="display: none; color: var(--index-error-color, #b00020); margin-top: 10px;"></div>
 
             <!-- Copy link button -->
             <div style="display: none" id="copy-link-section">
@@ -203,7 +225,7 @@
             </div>
 
             <button data-l10n-id="index.transferSessionTitle" id="transferSessionButton" disabled></button>
-            <div id="receive-session-error" data-l10n-id="index.sessionTransferError" role="alert" aria-live="assertive" style="display: none; color: #b00020; margin-top: 10px;"></div>
+            <div id="receive-session-error" data-l10n-id="index.sessionTransferError" role="alert" aria-live="assertive" style="display: none; color: var(--index-error-color, #b00020); margin-top: 10px;"></div>
           </div>
 
           <div>
