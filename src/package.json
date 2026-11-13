@@ -67,7 +67,7 @@
     "nano": "^11.0.8",
     "nodemailer": "^10.4.1",
     "oidc-provider": "9.13.3",
-    "openapi-backend": "^5.23.0",
+    "openapi-backend": "^5.24.0",
     "pdfkit": "^0.20.2",
     "pg": "^8.23.1",
     "prom-client": "^15.1.3",
