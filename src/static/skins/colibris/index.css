@@ -277,3 +277,110 @@ a, a:visited, a:hover, a:active {
     font-size: 1.5rem;
   }
 }
+/* Use the dark Colibris pad palette on the home page. See pad.css and
+   src/pad-variants.css for the base colors and their roles. */
+@media (prefers-color-scheme: dark) {
+  :root[data-auto-dark] {
+    color-scheme: dark;
+    --home-background: #485365;
+    --home-surface: #576273;
+    --home-text: white;
+    --home-accent-hover: color-mix(in srgb, var(--ep-color) 75%, white);
+    --etherpad-border: var(--home-surface);
+    --muted-text: #f2f3f4;
+    --muted-border: #d2d2d2;
+    --muted-background: var(--home-background);
+    --ep-color: #64d29b;
+  }
+
+  :where([data-auto-dark]) body {
+    background: var(--home-background);
+    color: var(--home-text);
+  }
+
+  :where([data-auto-dark]) .body {
+    background: var(--home-background);
+  }
+
+  :where([data-auto-dark]) #wrapper,
+  :where([data-auto-dark]) .pad-datalist,
+  :where([data-auto-dark]) #settings-dialog {
+    background: var(--home-surface);
+    border-color: var(--etherpad-border);
+    color: var(--home-text);
+  }
+
+  :where([data-auto-dark]) #transfer-session-error,
+  :where([data-auto-dark]) #receive-session-error {
+    color: #ffd4d4;
+  }
+
+  :where([data-auto-dark]) .pad-datalist h2 {
+    border-bottom-color: var(--etherpad-border);
+  }
+
+  :where([data-auto-dark]) #label {
+    color: var(--home-text);
+    text-shadow: none;
+  }
+
+  :where([data-auto-dark]) #padname,
+  :where([data-auto-dark]) #codeInput {
+    background: var(--home-background);
+    color: var(--home-text);
+  }
+
+  :where([data-auto-dark]) #button,
+  :where([data-auto-dark]) #inner > button {
+    background: var(--home-surface);
+    color: var(--home-text);
+  }
+
+  :where([data-auto-dark]) #button:hover,
+  :where([data-auto-dark]) #inner > button:hover {
+    background: var(--muted-background);
+  }
+
+  :where([data-auto-dark]) #go2Name [type="submit"],
+  :where([data-auto-dark]) #transferSessionButton,
+  :where([data-auto-dark]) .btn-secondary:not(:disabled):hover {
+    background: var(--ep-color);
+    color: #222;
+  }
+
+  :where([data-auto-dark]) #go2Name [type="submit"]:hover,
+  :where([data-auto-dark]) #transferSessionButton:not(:disabled):hover {
+    background: var(--home-accent-hover);
+  }
+
+  :where([data-auto-dark]) .btn-secondary:not(:disabled) {
+    border-color: var(--muted-border);
+  }
+
+  :where([data-auto-dark]) .btn-secondary:not(:disabled):not(:hover) {
+    color: var(--home-text);
+  }
+
+  :where([data-auto-dark]) .recent-pad:hover {
+    background: var(--muted-background);
+  }
+
+  :where([data-auto-dark]) .recent-pad:hover a {
+    color: var(--home-text);
+  }
+
+  :where([data-auto-dark]) .active-btn {
+    text-decoration-color: var(--ep-color);
+  }
+
+  :where([data-auto-dark]) a:focus-visible,
+  :where([data-auto-dark]) button:focus-visible,
+  :where([data-auto-dark]) input:focus-visible,
+  :where([data-auto-dark]) #button:focus-visible,
+  :where([data-auto-dark]) #padname:focus-visible,
+  :where([data-auto-dark]) #codeInput:focus-visible,
+  :where([data-auto-dark]) #go2Name [type="submit"]:focus-visible {
+    outline: 2px solid var(--ep-color);
+    outline-offset: 2px;
+  }
+}
