@@ -440,6 +440,73 @@ export const applyToText = (cs: string, str: string): string => {
 };
 
 /**
+ * Re-splits `=` and `-` ops of a changeset at line boundaries using the text it applies to.
+ *
+ * A multi-line keep or delete op must end on a newline, otherwise line-based appliers such as
+ * `mutateTextLines` (used by every browser client) skip or remove whole lines and lose the
+ * trailing partial-line characters, while `applyToText` keeps them. `checkRep` cannot catch this
+ * because it does not know the text. Non-JS clients have sent e.g. `|5=1t` where the canonical form
+ * is `|5=1s=1` (https://github.com/ether/etherpad/issues/8487).
+ *
+ * @param {string} cs - Changeset that applies to `text`. Newline counts per op must already match.
+ * @param {string} text - The text the changeset applies to.
+ * @returns {string} The changeset in line-split canonical form (unchanged if it already was).
+ */
+export const splitOpsAtLineBoundaries = (cs: string, text: string): string => {
+  const unpacked = unpack(cs);
+  assert(text.length === unpacked.oldLen, `mismatched apply: ${text.length} / ${unpacked.oldLen}`);
+  const assem = new SmartOpAssembler();
+  let pos = 0;
+  for (const op of deserializeOps(unpacked.ops)) {
+    if (op.opcode === '+') {
+      assem.append(op);
+      continue;
+    }
+    const slice = text.substr(pos, op.chars);
+    pos += op.chars;
+    if (op.lines === 0 || slice.endsWith('\n')) {
+      assem.append(op);
+      continue;
+    }
+    for (const o of opsFromText(op.opcode, slice, op.attribs)) assem.append(o);
+  }
+  assem.endDocument();
+  return pack(unpacked.oldLen, unpacked.newLen, assem.toString(), unpacked.charBank);
+};
+
+/**
+ * Compares two changesets, treating them as equal if they differ only in where multi-line `=`/`-`
+ * runs are split (see `splitOpsAtLineBoundaries`). Used to recognise a retransmitted changeset
+ * against the line-split form the server stored.
+ *
+ * @param {string} a - Changeset.
+ * @param {string} b - Changeset.
+ * @returns {boolean}
+ */
+export const equalIgnoringLineSplits = (a: string, b: string): boolean => {
+  if (a === b) return true;
+  const ua = unpack(a);
+  const ub = unpack(b);
+  if (ua.oldLen !== ub.oldLen || ua.newLen !== ub.newLen || ua.charBank !== ub.charBank) {
+    return false;
+  }
+  const merged = (ops: string) => {
+    const out: {opcode: string, chars: number, lines: number, attribs: string}[] = [];
+    for (const {opcode, chars, lines, attribs} of deserializeOps(ops)) {
+      const last = out[out.length - 1];
+      if (last != null && opcode !== '+' && last.opcode === opcode && last.attribs === attribs) {
+        last.chars += chars;
+        last.lines += lines;
+      } else {
+        out.push({opcode, chars, lines, attribs});
+      }
+    }
+    return JSON.stringify(out);
+  };
+  return merged(ua.ops) === merged(ub.ops);
+};
+
+/**
  * Applies a changeset on an array of lines.
  *
  * @param {string} cs - the changeset to apply
