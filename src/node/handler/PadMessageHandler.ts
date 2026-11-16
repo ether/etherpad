@@ -609,7 +609,15 @@ exports.handleMessage = async (socket:any, message: ClientVarMessage) => {
     thisSession.readOnlyPadId = pending.readOnlyPadId;
     thisSession.readonly = pending.readonly;
     if (previousSession && previousSession.padId !== pending.padId) {
-      await notifyUserLeave(socket, previousSession);
+      // The socket has already left the old room, so a failing author lookup or userLeave hook
+      // must not abort the new join and strand the socket outside both rooms.
+      try {
+        await notifyUserLeave(socket, previousSession);
+      } catch (err: any) {
+        messageLogger.error(
+            `Failed to notify pad ${previousSession.padId} that socket ${socket.id} left: ` +
+            `${err.stack || err}`);
+      }
       if (!isCurrentJoin()) return;
     }
   }

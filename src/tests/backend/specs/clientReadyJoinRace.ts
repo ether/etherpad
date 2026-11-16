@@ -266,6 +266,18 @@ describe(__filename, function () {
     await assertJoined(client, b, [a.id]);
   });
 
+  it('completes a pad move when the userLeave hook throws', async function () {
+    const a = await makePad();
+    const b = await makePad();
+    const client = await connect(a.id);
+    await client.ready(a.id);
+    addHook('userLeave', () => { throw new Error('userLeave hook failure'); });
+    await client.ready(b.id);
+    assert.deepEqual(client.messages.filter((m: any) => m.type === 'CLIENT_VARS')
+        .map((m: any) => m.data.padId), [a.id, b.id]);
+    await assertJoined(client, b, [a.id]);
+  });
+
   it('drops a join superseded while notifying the previous room', async function () {
     const a = await makePad();
     const b = await makePad();
