@@ -269,6 +269,11 @@ exports.handleDisconnect = async (socket:any) => {
   stats.meter('disconnects').mark();
   const session = sessioninfos[socket.id];
   delete sessioninfos[socket.id];
+  await notifyUserLeave(socket, session);
+};
+
+// Used after disconnecting or moving an already joined socket to another pad.
+const notifyUserLeave = async (socket: any, session: any) => {
   // session.padId can be nullish if the user disconnects before sending CLIENT_READY.
   if (!session || !session.author || !session.padId) return;
   const {session: {user} = {}} = socket.client.request as SocketClientRequest;
@@ -286,15 +291,18 @@ exports.handleDisconnect = async (socket:any) => {
   // from presence even when another socket of theirs is still connected. Only
   // broadcast — and only run the userLeave hook — when the *last* socket for
   // this author leaves the pad.
-  const isLastSocketForAuthor = !_getRoomSockets(session.padId).some(
+  const hasAuthorSocket = () => _getRoomSockets(session.padId).some(
       (s: any) => sessioninfos[s.id]?.author === session.author);
-  if (isLastSocketForAuthor) {
+  if (!hasAuthorSocket()) {
+    const colorId = await authorManager.getAuthorColorId(session.author);
+    // Another socket (or a later join on this socket) may have returned while reading the author.
+    if (hasAuthorSocket()) return;
     socket.broadcast.to(session.padId).emit('message', {
       type: 'COLLABROOM',
       data: {
         type: 'USER_LEAVE',
         userInfo: {
-          colorId: await authorManager.getAuthorColorId(session.author),
+          colorId,
           userId: session.author,
         },
       },
@@ -402,6 +410,10 @@ const handlePadOptionsMessage = async (
  * @param message the message from the client
  */
 exports.handleMessage = async (socket:any, message: ClientVarMessage) => {
+  const thisSession = sessioninfos[socket.id];
+  // Reserve arrival order before any await, but only supersede earlier joins after authorization.
+  const joinGeneration = message?.type === 'CLIENT_READY' && thisSession
+    ? (thisSession.nextJoinGeneration = (thisSession.nextJoinGeneration || 0) + 1) : undefined;
   const env = process.env.NODE_ENV || 'development';
 
   if (env === 'production') {
@@ -419,8 +431,9 @@ exports.handleMessage = async (socket:any, message: ClientVarMessage) => {
   if (message == null) throw new Error('message is null');
   if (!message.type) throw new Error('message type missing');
 
-  const thisSession = sessioninfos[socket.id];
   if (!thisSession) throw new Error('message from an unknown connection');
+  const isCurrentJoin = () => sessioninfos[socket.id] === thisSession &&
+      thisSession.joinGeneration === joinGeneration;
 
   // The pad (and access mode) this message is authorized against. For
   // CLIENT_READY it is staged here and only committed to the session once the
@@ -565,6 +578,8 @@ exports.handleMessage = async (socket:any, message: ClientVarMessage) => {
     socket.emit('message', {accessStatus});
     throw new Error('access denied');
   }
+  if (sessioninfos[socket.id] !== thisSession) throw new Error('client disconnected');
+  if (pending && joinGeneration! < (thisSession.joinGeneration || 0)) return;
   if (thisSession.author != null && thisSession.author !== authorID) {
     socket.emit('message', {disconnect: 'rejected'});
     throw new Error([
@@ -583,11 +598,28 @@ exports.handleMessage = async (socket:any, message: ClientVarMessage) => {
   // one synchronous step. A denied CLIENT_READY never reaches this point, so it
   // can no longer leave the session pointing at a pad the user cannot access.
   if (pending) {
+    const previousSession = thisSession.padId && socket.rooms.has(thisSession.padId)
+      ? {...thisSession} : null;
+    // Stop old-room updates while preparing the new snapshot, including same-pad rejoins.
+    if (previousSession) socket.leave(previousSession.padId);
+    thisSession.joinGeneration = joinGeneration;
     thisSession.auth = pending.auth;
     thisSession.embed = pending.embed;
     thisSession.padId = pending.padId;
     thisSession.readOnlyPadId = pending.readOnlyPadId;
     thisSession.readonly = pending.readonly;
+    if (previousSession && previousSession.padId !== pending.padId) {
+      // The socket has already left the old room, so a failing author lookup or userLeave hook
+      // must not abort the new join and strand the socket outside both rooms.
+      try {
+        await notifyUserLeave(socket, previousSession);
+      } catch (err: any) {
+        messageLogger.error(
+            `Failed to notify pad ${previousSession.padId} that socket ${socket.id} left: ` +
+            `${err.stack || err}`);
+      }
+      if (!isCurrentJoin()) return;
+    }
   }
 
   // Allow plugins to bypass the readonly message blocker. Base the decision on
@@ -612,7 +644,9 @@ exports.handleMessage = async (socket:any, message: ClientVarMessage) => {
       return this.socket;
     },
   };
-  for (const res of await hooks.aCallAll('handleMessageSecurity', context)) {
+  const securityResults = await hooks.aCallAll('handleMessageSecurity', context);
+  if (pending && !isCurrentJoin()) return;
+  for (const res of securityResults) {
     switch (res) {
       case true:
         padutils.warnDeprecated(
@@ -639,6 +673,7 @@ exports.handleMessage = async (socket:any, message: ClientVarMessage) => {
 
   // Drop the message if the client disconnected during the above processing.
   if (sessioninfos[socket.id] !== thisSession) throw new Error('client disconnected');
+  if (pending && !isCurrentJoin()) return;
 
   const msgCtx: MessageContext = {
     auth,
@@ -651,7 +686,7 @@ exports.handleMessage = async (socket:any, message: ClientVarMessage) => {
   const {type} = message;
   try {
     switch (type) {
-      case 'CLIENT_READY': await handleClientReady(socket, message, msgCtx); break;
+      case 'CLIENT_READY': await handleClientReady(socket, message, msgCtx, isCurrentJoin); break;
       case 'CHANGESET_REQ': await handleChangesetRequest(socket, message, msgCtx); break;
       case 'COLLABROOM': {
         if (readOnly) throw new Error('write attempt on read-only pad');
@@ -1124,7 +1159,8 @@ exports.updatePadClients = async (pad: PadType, onlySocketId?: string) => {
   await Promise.all(roomSockets.map(async (socket) => {
     const sessioninfo = sessioninfos[socket.id];
     // The user might have disconnected since _getRoomSockets() was called.
-    if (sessioninfo == null) return;
+    if (sessioninfo == null || sessioninfo.padId !== pad.id) return;
+    const joinGeneration = sessioninfo.joinGeneration;
 
     while (sessioninfo.rev < pad.getHeadRevisionNumber()) {
       const r = sessioninfo.rev + 1;
@@ -1133,6 +1169,9 @@ exports.updatePadClients = async (pad: PadType, onlySocketId?: string) => {
         revision = await pad.getRevision(r);
         revCache[r] = revision;
       }
+      // A join can replace the revision baseline while this DB read is in flight, even on this pad.
+      if (sessioninfos[socket.id] !== sessioninfo || sessioninfo.padId !== pad.id ||
+          sessioninfo.joinGeneration !== joinGeneration) return;
 
       const author = revision.meta.author;
       const revChangeset = revision.changeset;
@@ -1215,12 +1254,13 @@ const _correctMarkersInPad = (atext: AText, apool: AttributePool) => {
  * @param message the message from the client
  */
 const handleClientReady = async (
-    socket:any, message: ClientReadyMessage, ctx: MessageContext) => {
+    socket:any, message: ClientReadyMessage, ctx: MessageContext, isCurrentJoin: () => boolean) => {
   const sessionInfo = sessioninfos[socket.id];
   if (sessionInfo == null) throw new Error('client disconnected');
   assert(sessionInfo.author);
 
   await hooks.aCallAll('clientReady', message); // Deprecated due to awkward context.
+  if (!isCurrentJoin()) return;
 
   let {colorId: authorColorId, name: authorName} = message.userInfo || {};
   // Unauthenticated input that is stored and rebroadcast: type-check and cap it (GHSA-w4w9).
@@ -1245,6 +1285,7 @@ const handleClientReady = async (
   const padExisted = await padManager.doesPadExist(ctx.padId);
   // load the pad-object from the database
   const pad = await padManager.getPad(ctx.padId, null, sessionInfo.author);
+  if (!isCurrentJoin()) return;
   if (settings.enablePadWideSettings && !padExisted && message.padSettingsDefaults) {
     pad.setPadSettings(message.padSettingsDefaults);
     await pad.saveToDatabase();
@@ -1285,8 +1326,8 @@ const handleClientReady = async (
 
   // glue the clientVars together, send them and tell the other clients that a new one is there
 
-  // Check if the user has disconnected during any of the above awaits.
-  if (sessionInfo !== sessioninfos[socket.id]) throw new Error('client disconnected');
+  // A newer authorized join or a disconnect invalidates all remaining work for this join.
+  if (!isCurrentJoin()) return;
 
   const {session: {user} = {}} = socket.client.request as SocketClientRequest;
 
@@ -1364,6 +1405,7 @@ const handleClientReady = async (
         pad.getRevisionDate(revNum),
       ]);
     }));
+    if (!isCurrentJoin()) return;
 
     // return pending changesets
     for (const r of revisionsNeeded) {
@@ -1549,37 +1591,38 @@ const handleClientReady = async (
 
     // call the clientVars-hook so plugins can modify them before they get sent to the client
     const messages = await hooks.aCallAll('clientVars', {clientVars, pad, socket});
+    if (!isCurrentJoin()) return;
 
     // combine our old object with the new attributes from the hook
     for (const msg of messages) {
       Object.assign(clientVars, msg);
     }
 
-    // Join the pad and start receiving updates
-    socket.join(ctx.padId);
-
-    // Send the clientVars to the Client
-    socket.emit('message', {type: 'CLIENT_VARS', data: clientVars});
-
-    // Save the revision in sessioninfos — must match what was sent in clientVars
-    sessionInfo.rev = headRev;
-
     // Initialize sessionInfo.time to the timestamp of the snapshot revision so
     // that subsequent NEW_CHANGES timeDelta calculations are valid.  Without
     // this, the catch-up updatePadClients() call below would emit timeDelta=NaN
     // which breaks the client's broadcast/timeslider time tracking.
+    let snapshotTime;
     try {
-      sessionInfo.time = await pad.getRevisionDate(headRev);
+      snapshotTime = await pad.getRevisionDate(headRev);
     } catch (err) {
       // Fallback: if we can't read the revision timestamp, use now.
-      sessionInfo.time = Date.now();
+      snapshotTime = Date.now();
     }
+    if (!isCurrentJoin()) return;
+
+    // Publish the snapshot and its revision baseline without another await in between.
+    socket.join(ctx.padId);
+    socket.emit('message', {type: 'CLIENT_VARS', data: clientVars});
+    sessionInfo.rev = headRev;
+    sessionInfo.time = snapshotTime;
 
     // Flush any revisions that may have been appended while we were awaiting the
     // clientVars hook (before socket.join).  Those revisions were broadcast to
     // existing room members but this socket hadn't joined yet so it missed them.
     await exports.updatePadClients(pad, socket.id);
   }
+  if (!isCurrentJoin()) return;
 
   // Notify other users about this new user.
   socket.broadcast.to(ctx.padId).emit('message', {
@@ -1611,6 +1654,7 @@ const handleClientReady = async (
 
     // reuse previously created cache of author's data
     const authorInfo = historicalAuthorData[authorId] || await authorManager.getAuthor(authorId);
+    if (!isCurrentJoin()) return;
     if (authorInfo == null) {
       messageLogger.error(
           `Author ${authorId} connected via socket.io session ${roomSocket.id} is missing from ` +
@@ -1635,6 +1679,7 @@ const handleClientReady = async (
     socket.emit('message', msg);
   }));
 
+  if (!isCurrentJoin()) return;
   await hooks.aCallAll('userJoin', {
     authorId: sessionInfo.author,
     displayName: authorName,
