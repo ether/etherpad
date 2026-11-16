@@ -475,6 +475,38 @@ export const splitOpsAtLineBoundaries = (cs: string, text: string): string => {
 };
 
 /**
+ * Compares two changesets, treating them as equal if they differ only in where multi-line `=`/`-`
+ * runs are split (see `splitOpsAtLineBoundaries`). Used to recognise a retransmitted changeset
+ * against the line-split form the server stored.
+ *
+ * @param {string} a - Changeset.
+ * @param {string} b - Changeset.
+ * @returns {boolean}
+ */
+export const equalIgnoringLineSplits = (a: string, b: string): boolean => {
+  if (a === b) return true;
+  const ua = unpack(a);
+  const ub = unpack(b);
+  if (ua.oldLen !== ub.oldLen || ua.newLen !== ub.newLen || ua.charBank !== ub.charBank) {
+    return false;
+  }
+  const merged = (ops: string) => {
+    const out: {opcode: string, chars: number, lines: number, attribs: string}[] = [];
+    for (const {opcode, chars, lines, attribs} of deserializeOps(ops)) {
+      const last = out[out.length - 1];
+      if (last != null && opcode !== '+' && last.opcode === opcode && last.attribs === attribs) {
+        last.chars += chars;
+        last.lines += lines;
+      } else {
+        out.push({opcode, chars, lines, attribs});
+      }
+    }
+    return JSON.stringify(out);
+  };
+  return merged(ua.ops) === merged(ub.ops);
+};
+
+/**
  * Applies a changeset on an array of lines.
  *
  * @param {string} cs - the changeset to apply

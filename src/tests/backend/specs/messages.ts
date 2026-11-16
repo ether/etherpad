@@ -298,6 +298,27 @@ describe(__filename, function () {
       });
     }
 
+    it('retransmitted multi-line keep ending mid-line is not applied twice (#8487)',
+        async function () {
+          await Promise.all([
+            assertAccepted(socket, rev + 1),
+            sendUserChanges(socket, 'Z:1>3*0|1+2*0+1$a\nb'),
+          ]);
+          const cs = 'Z:4>1|1=3*0+1$X';
+          await Promise.all([
+            assertAccepted(socket, rev + 1),
+            sendUserChanges(socket, cs),
+          ]);
+          const head = pad!.getHeadRevisionNumber();
+          --rev;
+          await Promise.all([
+            assertAccepted(socket, rev + 1),
+            sendUserChanges(socket, cs),
+          ]);
+          assert.equal(pad!.text(), 'a\nbX\n');
+          assert.equal(pad!.getHeadRevisionNumber(), head);
+        });
+
     it('retransmission is accepted, has no effect', async function () {
       const cs = 'Z:1>5*0+5$hello';
       await Promise.all([

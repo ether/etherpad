@@ -24,7 +24,7 @@ import {MapArrayType} from "../types/MapType";
 import AttributeMap from '../../static/js/AttributeMap';
 const padManager = require('../db/PadManager');
 const padDeletionManager = require('../db/PadDeletionManager');
-import {applyToText, checkRep, cloneAText, compose, deserializeOps, follow, identity, inverse, makeAText, moveOpsToNewPool, mutateAttributionLines, mutateTextLines, oldLen, prepareForWire, splitAttributionLines, splitOpsAtLineBoundaries, splitTextLines, unpack} from '../../static/js/Changeset';
+import {applyToText, checkRep, cloneAText, compose, deserializeOps, equalIgnoringLineSplits, follow, identity, inverse, makeAText, moveOpsToNewPool, mutateAttributionLines, mutateTextLines, oldLen, prepareForWire, splitAttributionLines, splitOpsAtLineBoundaries, splitTextLines, unpack} from '../../static/js/Changeset';
 import ChatMessage from '../../static/js/ChatMessage';
 import AttributePool from '../../static/js/AttributePool';
 const AttributeManager = require('../../static/js/AttributeManager');
@@ -1037,7 +1037,10 @@ const handleUserChanges = async (socket:any, message: {
     while (r < pad.getHeadRevisionNumber()) {
       r++;
       const {changeset: c, meta: {author: authorId}} = await pad.getRevision(r);
-      if (canonicalCs === c && thisSession.author === authorId) {
+      // Stored revisions have their multi-line keeps/deletes split at line
+      // boundaries (see splitOpsAtLineBoundaries below), so compare ignoring
+      // those splits or a retried non-canonical edit would be applied twice.
+      if (thisSession.author === authorId && equalIgnoringLineSplits(canonicalCs, c)) {
         // Assume this is a retransmission of an already applied changeset.
         rebasedChangeset = identity(unpack(canonicalCs).oldLen);
       }
