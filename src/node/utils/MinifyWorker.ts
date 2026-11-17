@@ -3,6 +3,7 @@
  * Worker thread to minify JS & CSS files out of the main NodeJS thread
  */
 
+import {realpath} from 'node:fs/promises';
 import path from 'node:path';
 import {build, transform} from 'esbuild';
 import type {Plugin} from 'esbuild';
@@ -60,12 +61,18 @@ const externalFonts = (entryDir: string): Plugin => ({
   * @param {string} filename - name of the file
  */
 export const compressCSS = async (filename: string) => {
+  // esbuild resolves symlinks, so `args.resolveDir` in the font plugin is a
+  // real path. Plugins live behind a symlink (`plugin_packages/ep_x` ->
+  // `plugin_packages/.versions/ep_x@1.2.3`), so the entry directory must be
+  // resolved the same way or the rebased URL escapes the plugin directory
+  // (`../../../.versions/ep_x@1.2.3/...`) and 404s.
+  const entry = await realpath(path.resolve(filename));
   const transformedCSS = await build(
     {
-      entryPoints: [filename],
+      entryPoints: [entry],
       minify: true,
       bundle: true,
-      plugins: [externalFonts(path.dirname(path.resolve(filename)))],
+      plugins: [externalFonts(path.dirname(entry))],
       loader:{
         '.jpg': 'dataurl',
         '.png': 'dataurl',

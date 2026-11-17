@@ -24,6 +24,7 @@
 
 import {strict as assert} from 'assert';
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 
 const {compressCSS} = require('../../../node/utils/MinifyWorker');
@@ -136,6 +137,38 @@ describe(__filename, function () {
             pathname.startsWith('/etherpad/static/'),
             `font URL ${url} resolves to ${pathname}, outside the served static root`);
       }
+    });
+  });
+
+  describe('font URLs in a symlinked plugin stylesheet', function () {
+    // Plugins are installed as `plugin_packages/ep_x` -> `.versions/ep_x@1.2.3`
+    // symlinks. esbuild resolves symlinks for `resolveDir`, so rebasing
+    // against the unresolved entry directory produced
+    // `../../../.versions/ep_x@1.2.3/static/fonts/...`, which 404s once the
+    // browser resolves it against /static/plugins/ep_x/static/css/.
+    // Seen as a blank ep_webrtc screen-share button in production mode.
+    let tmp: string;
+    let css: string;
+
+    before(async function () {
+      tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'ep-css-symlink-'));
+      const real = path.join(tmp, '.versions', 'ep_x@1.2.3');
+      fs.mkdirSync(path.join(real, 'static', 'css'), {recursive: true});
+      fs.mkdirSync(path.join(real, 'static', 'fonts'), {recursive: true});
+      fs.writeFileSync(path.join(real, 'static', 'fonts', 'icons.woff2'), '');
+      fs.writeFileSync(path.join(real, 'static', 'css', 'styles.css'),
+          '@font-face{font-family:x;src:url("../fonts/icons.woff2") format("woff2")}');
+      fs.symlinkSync(real, path.join(tmp, 'ep_x'), 'dir');
+      css = await compressCSS(path.join(tmp, 'ep_x', 'static', 'css', 'styles.css'));
+    });
+
+    after(function () {
+      if (tmp) fs.rmSync(tmp, {recursive: true, force: true});
+    });
+
+    it('rebases the URL relative to the stylesheet, not the symlink target', function () {
+      const urls = [...css.matchAll(externalFontPattern)].map((m) => m[1]);
+      assert.deepEqual(urls, ['../fonts/icons.woff2']);
     });
   });
 });
