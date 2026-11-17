@@ -1,3 +1,12 @@
+# 3.3.19
+
+3.3.19 is a bug-fix release. Users who share an IP, for example several tabs or people behind one proxy or the Home Assistant add-on, are no longer disconnected by the message rate limiter. Plugin icon fonts load again in production mode.
+
+### Notable fixes
+
+- **Collaboration — the pad message rate limit now applies per connection, with a burst allowance (#8498).** `commitRateLimiting` counted messages per IP. Every tab and every user behind the same proxy shared one budget of 10 messages a second. When a tab joined a pad, plugins such as ep_webrtc sent a burst of signalling messages. That pushed the shared IP over the limit, so tabs kept getting disconnected ("Reconnecting…") and chat messages were dropped. The limit is now counted per socket connection. On top of the steady rate, a new burst budget (`commitRateLimiting.burstPoints`, default 50, over `burstDuration`, default 10 seconds) absorbs join spikes. A connection that keeps flooding is still disconnected. Other `commitRateLimiting` options such as `blockDuration` now pass through. If you need a per-IP connection cap, set it at your reverse proxy. ep_webrtc 2.5.56 also batches its ICE candidates into fewer messages.
+- **Plugins — icon fonts load again in production mode (#8501).** Since 3.3.17 (#8373), the CSS minifier rewrote relative font URLs against the symlinked plugin path instead of the real one. Plugin fonts then 404'd, which left icons such as ep_webrtc's screen-share button blank. Font URLs are now rebased against the real stylesheet path.
+
 # 3.3.18
 
 3.3.18 is a bug-fix release. Text typed from clients that send multi-line keep or delete ops, such as the `pad` terminal client, no longer appears scrambled in watching browsers. A socket that sends overlapping joins can no longer end up in two pad rooms. The Colibris home page also follows dark mode.
