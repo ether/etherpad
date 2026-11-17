@@ -352,6 +352,8 @@ export type SettingsType = {
   commitRateLimiting: {
     duration: number,
     points: number,
+    burstDuration?: number,
+    burstPoints?: number,
   },
   importMaxFileSize: number,
   enableAdminUITests: boolean,
@@ -888,16 +890,23 @@ const settings: SettingsType = {
   /*
  * From Etherpad 1.9.0 onwards, commits from individual users are rate limited
  *
- * The default is to allow at most 10 changes per IP in a 1 second window.
- * After that the change is rejected.
+ * Limits apply per connection (browser tab), not per IP, so clients sharing an
+ * IP (NAT, a TCP proxy) do not share a budget. The default is a steady 10
+ * messages per second per connection, plus a burst allowance of 50 extra
+ * messages per 10 seconds for short spikes such as a WebRTC plugin negotiating
+ * with peers on join. A connection that exceeds both is disconnected.
  *
  * See https://github.com/animir/node-rate-limiter-flexible/wiki/Overall-example#websocket-single-connection-prevent-flooding for more options
  */
   commitRateLimiting: {
     // duration of the rate limit window (seconds)
     duration: 1,
-    // maximum number of changes per IP to allow during the rate limit window
+    // maximum number of messages per connection to allow during the rate limit window
     points: 10,
+    // duration of the burst window (seconds)
+    burstDuration: 10,
+    // extra messages per connection allowed in the burst window once points is used up
+    burstPoints: 50,
   },
   /*
  * From Etherpad 1.8.3 onwards, the maximum allowed size for a single imported

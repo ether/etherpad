@@ -7,10 +7,12 @@ if [[ $? -ne 0 ]];then
   exit 1
 fi
 
-#sending changesets every 99ms should trigger ratelimit
-node send_changesets.mjs http://127.0.0.1:8081/p/BACKEND_TEST_ratelimit_99ms 99
+#sending changesets every 50ms should trigger ratelimit. The limit is 10/s per connection plus a
+#burst allowance of 50 per 10s, so anything up to ~15/s sustained is tolerated; 20/s drains the
+#burst budget after about 5 seconds.
+node send_changesets.mjs http://127.0.0.1:8081/p/BACKEND_TEST_ratelimit_50ms 50
 if [[ $? -ne 1 ]];then
-  echo "FAILED: ratelimit was not triggered when sending every 99 ms"
+  echo "FAILED: ratelimit was not triggered when sending every 50 ms"
   exit 1
 fi
 

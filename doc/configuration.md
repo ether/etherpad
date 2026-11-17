@@ -49,6 +49,32 @@ This makes Etherpad trust the standard `X-Forwarded-*` headers, so it:
 Leave it at the default `false` when Etherpad is reachable directly on a public
 IP — otherwise any client could forge these headers.
 
+## Pad message rate limiting
+
+In production mode, `commitRateLimiting` caps how many socket.io messages
+(edits, chat, plugin messages) each connection can send. The budget is per
+connection (browser tab), not per IP, so users behind one NAT or TCP proxy do
+not share it.
+
+```json
+"commitRateLimiting": {
+  "duration": 1,
+  "points": 10,
+  "burstDuration": 10,
+  "burstPoints": 50
+}
+```
+
+* `points` per `duration` seconds is the steady rate.
+* `burstPoints` per `burstDuration` seconds is extra headroom for short
+  spikes, such as a WebRTC plugin negotiating with every peer when a tab
+  joins. Because the burst budget refills too, the highest rate a connection
+  can sustain is `points/duration + burstPoints/burstDuration` (15 messages
+  per second with the defaults).
+
+A connection that uses up both is sent `{disconnect: 'rateLimited'}` and has
+to reconnect.
+
 ## Running under a subpath / ingress
 
 Etherpad can be served under a URL-path prefix (for example
