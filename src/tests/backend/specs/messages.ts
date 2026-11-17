@@ -268,6 +268,57 @@ describe(__filename, function () {
       assert.equal(pad!.text(), 'hello\n');
     });
 
+    // https://github.com/ether/etherpad/issues/8487
+    // A multi-line keep/delete op whose run does not end on a newline (e.g.
+    // `|1=3` over "a\nb") passes checkRep and applyToText (newline counts
+    // match), but line-based appliers (mutateTextLines, used by every browser
+    // via NEW_CHANGES) skip/remove whole lines and drop the trailing partial
+    // chars. The server must store and broadcast the line-split form.
+    for (const [desc, cs, wantText] of [
+      ['multi-line keep ending mid-line', 'Z:4>1|1=3*0+1$X', 'a\nbX\n'],
+      ['multi-line delete ending mid-line', 'Z:4<3|1-3$', '\n'],
+    ]) {
+      it(`${desc} is normalized so line-based clients agree (#8487)`, async function () {
+        const {mutateTextLines, splitTextLines} = require('../../../static/js/Changeset');
+        await Promise.all([
+          assertAccepted(socket, rev + 1),
+          sendUserChanges(socket, 'Z:1>3*0|1+2*0+1$a\nb'),
+        ]);
+        assert.equal(pad!.text(), 'a\nb\n');
+        const prevText = pad!.text();
+        await Promise.all([
+          assertAccepted(socket, rev + 1),
+          sendUserChanges(socket, cs),
+        ]);
+        assert.equal(pad!.text(), wantText);
+        const stored = await pad!.getRevisionChangeset(rev);
+        const lines = splitTextLines(prevText);
+        mutateTextLines(stored, lines);
+        assert.equal(lines.join(''), wantText);
+      });
+    }
+
+    it('retransmitted multi-line keep ending mid-line is not applied twice (#8487)',
+        async function () {
+          await Promise.all([
+            assertAccepted(socket, rev + 1),
+            sendUserChanges(socket, 'Z:1>3*0|1+2*0+1$a\nb'),
+          ]);
+          const cs = 'Z:4>1|1=3*0+1$X';
+          await Promise.all([
+            assertAccepted(socket, rev + 1),
+            sendUserChanges(socket, cs),
+          ]);
+          const head = pad!.getHeadRevisionNumber();
+          --rev;
+          await Promise.all([
+            assertAccepted(socket, rev + 1),
+            sendUserChanges(socket, cs),
+          ]);
+          assert.equal(pad!.text(), 'a\nbX\n');
+          assert.equal(pad!.getHeadRevisionNumber(), head);
+        });
+
     it('retransmission is accepted, has no effect', async function () {
       const cs = 'Z:1>5*0+5$hello';
       await Promise.all([
