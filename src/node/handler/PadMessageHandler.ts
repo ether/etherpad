@@ -82,14 +82,12 @@ exports.socketio = () => {
   // points/duration per connection; the burst budget on top absorbs short spikes such as a plugin's
   // WebRTC negotiation on join. A connection that keeps sending faster than the steady rate drains
   // the burst budget and is still disconnected.
-  const {duration, points, burstPoints, burstDuration} = settings.commitRateLimiting;
+  // Other rate-limiter-flexible options in commitRateLimiting (e.g. blockDuration) still apply to
+  // the steady limiter.
+  const {burstPoints = 50, burstDuration = 10, ...steady} = settings.commitRateLimiting;
   rateLimiter = new BurstyRateLimiter(
-      new RateLimiterMemory({duration, points}),
-      new RateLimiterMemory({
-        keyPrefix: 'commitBurst',
-        duration: burstDuration ?? 10,
-        points: burstPoints ?? 50,
-      }));
+      new RateLimiterMemory(steady),
+      new RateLimiterMemory({keyPrefix: 'commitBurst', duration: burstDuration, points: burstPoints}));
 };
 
 /**
