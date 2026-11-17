@@ -68,7 +68,9 @@ not share it.
 * `points` per `duration` seconds is the steady rate.
 * `burstPoints` per `burstDuration` seconds is extra headroom for short
   spikes, such as a WebRTC plugin negotiating with every peer when a tab
-  joins.
+  joins. Because the burst budget refills too, the highest rate a connection
+  can sustain is `points/duration + burstPoints/burstDuration` (15 messages
+  per second with the defaults).
 
 A connection that uses up both is sent `{disconnect: 'rateLimited'}` and has
 to reconnect.
