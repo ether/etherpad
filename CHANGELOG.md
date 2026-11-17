@@ -1,3 +1,18 @@
+# 3.3.18
+
+3.3.18 is a bug-fix release. Text typed from clients that send multi-line keep or delete ops, such as the `pad` terminal client, no longer appears scrambled in watching browsers. A socket that sends overlapping joins can no longer end up in two pad rooms. The Colibris home page also follows dark mode.
+
+### Notable fixes
+
+- **Collaboration — multi-line keep and delete ops are split at line boundaries (#8495, #8487).** A client could send a keep or delete that spans several lines but ends mid-line, for example `|5=1t` instead of `|5=1s=1`. The server applied it correctly, so export and reload looked right. But browsers apply incoming changes line by line, so watching users saw the typed text out of order or reversed. The server now re-splits such ops before storing and broadcasting them, so existing clients render correctly without an update. A resent edit is still recognised as a retry and isn't applied twice. The `pad` client has also been fixed (ether/pad#4). Reported by @zzkt.
+- **Collaboration — superseded `CLIENT_READY` joins are discarded (#8461, #8460).** When one socket sent overlapping `CLIENT_READY` messages, a slower, older join could finish after a newer one and leave the socket in two pad rooms. Only the latest join now takes effect. A failing leave notification during a pad switch no longer aborts the new join. Thanks @Aschenbath.
+
+### Other changes
+
+- The Colibris home page follows the browser's dark mode when `enableDarkMode` is on, and respects a light-mode choice saved in a pad (#8486). Thanks @rittmeier.
+- Localisation updates from translatewiki.net.
+- Dependency updates, including jsdom 31.0.1, oidc-provider 9.14.0, mongodb 7.9.0, nodemailer 10.5.0 and openapi-backend 5.24.0.
+
 # 3.3.17
 
 3.3.17 is a security release. It caps the length of author display names, which any visitor could set to almost 1 MB, and fixes `.etherpad` imports into pads created through the HTTP API. Upgrade as soon as you can.
