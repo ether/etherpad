@@ -50,7 +50,7 @@ const hooks = require('../../static/js/pluginfw/hooks');
 const stats = require('../stats')
 const assert = require('assert').strict;
 import {recordChangesetApply, recordSocketEmit} from '../prom-instruments';
-import {RateLimiterMemory} from 'rate-limiter-flexible';
+import {BurstyRateLimiter, RateLimiterMemory} from 'rate-limiter-flexible';
 import {ChangesetRequest, PadUserInfo, SocketClientRequest} from "../types/SocketClientRequest";
 import {APool, AText, PadAuthor, PadType} from "../types/PadType";
 import {ChangeSet} from "../types/ChangeSet";
@@ -74,10 +74,22 @@ const addContextToError = (err:any, pfx:string) => {
 };
 
 exports.socketio = () => {
-  // The rate limiter is created in this hook so that restarting the server resets the limiter. The
-  // settings.commitRateLimiting object is passed directly to the rate limiter so that the limits
-  // can be dynamically changed during runtime by modifying its properties.
-  rateLimiter = new RateLimiterMemory(settings.commitRateLimiting);
+  // The rate limiter is created in this hook so that restarting the server resets the limiter.
+  //
+  // It is keyed on the socket.io connection, not on the client IP: behind a TCP-level proxy, NAT or
+  // a shared office connection every client has the same IP, so a per-IP budget lets a few tabs
+  // (or one noisy neighbour) disconnect everybody else. The steady-state budget is
+  // points/duration per connection; the burst budget on top absorbs short spikes such as a plugin's
+  // WebRTC negotiation on join. A connection that keeps sending faster than the steady rate drains
+  // the burst budget and is still disconnected.
+  const {duration, points, burstPoints, burstDuration} = settings.commitRateLimiting;
+  rateLimiter = new BurstyRateLimiter(
+      new RateLimiterMemory({duration, points}),
+      new RateLimiterMemory({
+        keyPrefix: 'commitBurst',
+        duration: burstDuration ?? 10,
+        points: burstPoints ?? 50,
+      }));
 };
 
 /**
@@ -418,10 +430,11 @@ exports.handleMessage = async (socket:any, message: ClientVarMessage) => {
 
   if (env === 'production') {
     try {
-      await rateLimiter.consume(socket.request.ip); // consume 1 point per event from IP
+      await rateLimiter.consume(socket.id); // consume 1 point per event from this connection
     } catch (err) {
-      messageLogger.warn(`Rate limited IP ${logIp(socket.request.ip)}. To reduce the amount of rate ` +
-                         'limiting that happens edit the rateLimit values in settings.json');
+      messageLogger.warn(`Rate limited connection ${socket.id} from IP ${logIp(socket.request.ip)}. ` +
+                         'To reduce the amount of rate limiting that happens edit the ' +
+                         'commitRateLimiting values in settings.json');
       stats.meter('rateLimited').mark();
       socket.emit('message', {disconnect: 'rateLimited'});
       throw err;

@@ -33,10 +33,10 @@ A deprecation WARN is emitted when only the legacy setting is present.
 
 ## Rate limiting
 
-The in-memory socket rate limiter keys on the raw client IP for the
-duration of the limiter window (see `commitRateLimiting` in
-`settings.json`). This state is never written to disk, never sent to a
-plugin, and is thrown away on server restart.
+The in-memory socket rate limiter keys on the socket.io connection ID,
+not the client IP, for the duration of the limiter window (see
+`commitRateLimiting` in `settings.json`). This state is never written to
+disk, never sent to a plugin, and is thrown away on server restart.
 
 ## What Etherpad does not do
 
