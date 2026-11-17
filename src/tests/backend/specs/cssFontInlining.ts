@@ -158,7 +158,8 @@ describe(__filename, function () {
       fs.writeFileSync(path.join(real, 'static', 'fonts', 'icons.woff2'), '');
       fs.writeFileSync(path.join(real, 'static', 'css', 'styles.css'),
           '@font-face{font-family:x;src:url("../fonts/icons.woff2") format("woff2")}');
-      fs.symlinkSync(real, path.join(tmp, 'ep_x'), 'dir');
+      // 'junction' needs no symlink privilege on Windows; ignored elsewhere.
+      fs.symlinkSync(real, path.join(tmp, 'ep_x'), 'junction');
       css = await compressCSS(path.join(tmp, 'ep_x', 'static', 'css', 'styles.css'));
     });
 
