@@ -24,7 +24,7 @@ import {MapArrayType} from "../types/MapType";
 import AttributeMap from '../../static/js/AttributeMap';
 const padManager = require('../db/PadManager');
 const padDeletionManager = require('../db/PadDeletionManager');
-import {applyToText, checkRep, cloneAText, compose, deserializeOps, follow, identity, inverse, makeAText, moveOpsToNewPool, mutateAttributionLines, mutateTextLines, oldLen, prepareForWire, splitAttributionLines, splitTextLines, unpack} from '../../static/js/Changeset';
+import {applyToText, checkRep, cloneAText, compose, deserializeOps, equalIgnoringLineSplits, follow, identity, inverse, makeAText, moveOpsToNewPool, mutateAttributionLines, mutateTextLines, oldLen, prepareForWire, splitAttributionLines, splitOpsAtLineBoundaries, splitTextLines, unpack} from '../../static/js/Changeset';
 import ChatMessage from '../../static/js/ChatMessage';
 import AttributePool from '../../static/js/AttributePool';
 const AttributeManager = require('../../static/js/AttributeManager');
@@ -50,7 +50,7 @@ const hooks = require('../../static/js/pluginfw/hooks');
 const stats = require('../stats')
 const assert = require('assert').strict;
 import {recordChangesetApply, recordSocketEmit} from '../prom-instruments';
-import {RateLimiterMemory} from 'rate-limiter-flexible';
+import {BurstyRateLimiter, RateLimiterMemory} from 'rate-limiter-flexible';
 import {ChangesetRequest, PadUserInfo, SocketClientRequest} from "../types/SocketClientRequest";
 import {APool, AText, PadAuthor, PadType} from "../types/PadType";
 import {ChangeSet} from "../types/ChangeSet";
@@ -74,10 +74,20 @@ const addContextToError = (err:any, pfx:string) => {
 };
 
 exports.socketio = () => {
-  // The rate limiter is created in this hook so that restarting the server resets the limiter. The
-  // settings.commitRateLimiting object is passed directly to the rate limiter so that the limits
-  // can be dynamically changed during runtime by modifying its properties.
-  rateLimiter = new RateLimiterMemory(settings.commitRateLimiting);
+  // The rate limiter is created in this hook so that restarting the server resets the limiter.
+  //
+  // It is keyed on the socket.io connection, not on the client IP: behind a TCP-level proxy, NAT or
+  // a shared office connection every client has the same IP, so a per-IP budget lets a few tabs
+  // (or one noisy neighbour) disconnect everybody else. The steady-state budget is
+  // points/duration per connection; the burst budget on top absorbs short spikes such as a plugin's
+  // WebRTC negotiation on join. A connection that keeps sending faster than the steady rate drains
+  // the burst budget and is still disconnected.
+  // Other rate-limiter-flexible options in commitRateLimiting (e.g. blockDuration) still apply to
+  // the steady limiter.
+  const {burstPoints = 50, burstDuration = 10, ...steady} = settings.commitRateLimiting;
+  rateLimiter = new BurstyRateLimiter(
+      new RateLimiterMemory(steady),
+      new RateLimiterMemory({keyPrefix: 'commitBurst', duration: burstDuration, points: burstPoints}));
 };
 
 /**
@@ -204,6 +214,19 @@ class Channels {
 }
 
 /**
+ * The authorization context a single socket message was checked against,
+ * pinned in handleMessage() before any await. Handlers read the target pad and
+ * access mode from here, never from the mutable sessioninfos[socket.id].
+ */
+type MessageContext = {
+  auth: {padID: string, sessionID: string|null, token: string},
+  author: string,
+  padId: string,
+  readOnlyPadId: string,
+  readonly: boolean,
+};
+
+/**
  * A changeset queue per pad that is processed by handleUserChanges()
  */
 // The channel key `ch` is the pad id captured at enqueue time (see the enqueue
@@ -256,6 +279,11 @@ exports.handleDisconnect = async (socket:any) => {
   stats.meter('disconnects').mark();
   const session = sessioninfos[socket.id];
   delete sessioninfos[socket.id];
+  await notifyUserLeave(socket, session);
+};
+
+// Used after disconnecting or moving an already joined socket to another pad.
+const notifyUserLeave = async (socket: any, session: any) => {
   // session.padId can be nullish if the user disconnects before sending CLIENT_READY.
   if (!session || !session.author || !session.padId) return;
   const {session: {user} = {}} = socket.client.request as SocketClientRequest;
@@ -273,15 +301,18 @@ exports.handleDisconnect = async (socket:any) => {
   // from presence even when another socket of theirs is still connected. Only
   // broadcast — and only run the userLeave hook — when the *last* socket for
   // this author leaves the pad.
-  const isLastSocketForAuthor = !_getRoomSockets(session.padId).some(
+  const hasAuthorSocket = () => _getRoomSockets(session.padId).some(
       (s: any) => sessioninfos[s.id]?.author === session.author);
-  if (isLastSocketForAuthor) {
+  if (!hasAuthorSocket()) {
+    const colorId = await authorManager.getAuthorColorId(session.author);
+    // Another socket (or a later join on this socket) may have returned while reading the author.
+    if (hasAuthorSocket()) return;
     socket.broadcast.to(session.padId).emit('message', {
       type: 'COLLABROOM',
       data: {
         type: 'USER_LEAVE',
         userInfo: {
-          colorId: await authorManager.getAuthorColorId(session.author),
+          colorId,
           userId: session.author,
         },
       },
@@ -296,16 +327,16 @@ exports.handleDisconnect = async (socket:any) => {
 };
 
 
-const handlePadDelete = async (socket: any, padDeleteMessage: PadDeleteMessage) => {
-  const session = sessioninfos[socket.id];
-  if (!session || !session.author || !session.padId) throw new Error('session not ready');
+const handlePadDelete = async (
+    socket: any, padDeleteMessage: PadDeleteMessage, ctx: MessageContext) => {
+  if (!ctx.author || !ctx.padId) throw new Error('session not ready');
   const padId = padDeleteMessage.data.padId;
-  if (session.padId !== padId) throw new Error('refusing cross-pad delete');
+  if (ctx.padId !== padId) throw new Error('refusing cross-pad delete');
   if (!await padManager.doesPadExist(padId)) return;
 
   const retrievedPad = await padManager.getPad(padId);
   const firstContributor = await retrievedPad.getRevisionAuthor(0);
-  const isCreator = session.author === firstContributor;
+  const isCreator = ctx.author === firstContributor;
   const suppliedToken = padDeleteMessage.data.deletionToken;
   const tokenSupplied = typeof suppliedToken === 'string' && suppliedToken !== '';
   const tokenOk = tokenSupplied &&
@@ -318,7 +349,7 @@ const handlePadDelete = async (socket: any, padDeleteMessage: PadDeleteMessage) 
   // edit the pad, so they must not be able to destroy it just because
   // allowPadDeletionByAllUsers is on (issue #7959). A valid recovery token
   // (tokenOk) remains a sufficient credential regardless of session mode.
-  const writable = !session.readonly;
+  const writable = !ctx.readonly;
   const creatorOk = !tokenSupplied && isCreator && writable;
   const flagOk = !tokenSupplied && !isCreator && settings.allowPadDeletionByAllUsers && writable;
 
@@ -350,16 +381,16 @@ const handlePadDelete = async (socket: any, padDeleteMessage: PadDeleteMessage) 
 const isPadCreator = async (pad: any, authorId: string) => authorId === await pad.getRevisionAuthor(0);
 
 const handlePadOptionsMessage = async (
-    socket: any, message: PadOptionsMessage & {data: {payload: PadOptionsMessage}}) => {
-  const session = sessioninfos[socket.id];
-  if (!session || !session.author || !session.padId) throw new Error('session not ready');
+    socket: any, message: PadOptionsMessage & {data: {payload: PadOptionsMessage}},
+    ctx: MessageContext) => {
+  if (!ctx.author || !ctx.padId) throw new Error('session not ready');
   if (!settings.enablePadWideSettings) return;
-  if (!await padManager.doesPadExist(session.padId)) {
-    messageLogger.warn(`Ignoring padoptions for missing pad ${session.padId}`);
+  if (!await padManager.doesPadExist(ctx.padId)) {
+    messageLogger.warn(`Ignoring padoptions for missing pad ${ctx.padId}`);
     return;
   }
-  const pad = await padManager.getPad(session.padId, null, session.author);
-  if (!await isPadCreator(pad, session.author)) {
+  const pad = await padManager.getPad(ctx.padId, null, ctx.author);
+  if (!await isPadCreator(pad, ctx.author)) {
     socket.emit('shout', {
       type: 'COLLABROOM',
       data: {
@@ -377,7 +408,7 @@ const handlePadOptionsMessage = async (
   }
   pad.setPadSettings(message.data.payload.options);
   await pad.saveToDatabase();
-  _getRoomSockets(session.padId).forEach((socket) => {
+  _getRoomSockets(ctx.padId).forEach((socket) => {
     socket.emit('message', message);
   });
 };
@@ -389,14 +420,19 @@ const handlePadOptionsMessage = async (
  * @param message the message from the client
  */
 exports.handleMessage = async (socket:any, message: ClientVarMessage) => {
+  const thisSession = sessioninfos[socket.id];
+  // Reserve arrival order before any await, but only supersede earlier joins after authorization.
+  const joinGeneration = message?.type === 'CLIENT_READY' && thisSession
+    ? (thisSession.nextJoinGeneration = (thisSession.nextJoinGeneration || 0) + 1) : undefined;
   const env = process.env.NODE_ENV || 'development';
 
   if (env === 'production') {
     try {
-      await rateLimiter.consume(socket.request.ip); // consume 1 point per event from IP
+      await rateLimiter.consume(socket.id); // consume 1 point per event from this connection
     } catch (err) {
-      messageLogger.warn(`Rate limited IP ${logIp(socket.request.ip)}. To reduce the amount of rate ` +
-                         'limiting that happens edit the rateLimit values in settings.json');
+      messageLogger.warn(`Rate limited connection ${socket.id} from IP ${logIp(socket.request.ip)}. ` +
+                         'To reduce the amount of rate limiting that happens edit the ' +
+                         'commitRateLimiting values in settings.json');
       stats.meter('rateLimited').mark();
       socket.emit('message', {disconnect: 'rateLimited'});
       throw err;
@@ -406,8 +442,18 @@ exports.handleMessage = async (socket:any, message: ClientVarMessage) => {
   if (message == null) throw new Error('message is null');
   if (!message.type) throw new Error('message type missing');
 
-  const thisSession = sessioninfos[socket.id];
   if (!thisSession) throw new Error('message from an unknown connection');
+  const isCurrentJoin = () => sessioninfos[socket.id] === thisSession &&
+      thisSession.joinGeneration === joinGeneration;
+
+  // The pad (and access mode) this message is authorized against. For
+  // CLIENT_READY it is staged here and only committed to the session once the
+  // access check for that pad has passed; for every other message it is
+  // pinned from the session below. Either way it is handed to the handler so a
+  // concurrent same-socket CLIENT_READY cannot retarget an in-flight message
+  // onto another pad (see also GHSA-6mcx-x5h6-rpw2).
+  let pending: {auth: any, embed: boolean, padId: string,
+                readOnlyPadId: string, readonly: boolean} | null = null;
 
   if (message.type === 'CLIENT_READY') {
     // Refuse new joiners while the updater drainer is running. Existing sockets
@@ -479,7 +525,7 @@ exports.handleMessage = async (socket:any, message: ClientVarMessage) => {
     // Remember this information since we won't have the cookie in further socket.io messages. This
     // information will be used to check if the sessionId of this connection is still valid since it
     // could have been deleted by the API.
-    thisSession.auth = {
+    const pendingAuth = {
       sessionID: resolvedSessionID,
       padID: message.padId,
       token: resolvedToken,
@@ -489,44 +535,52 @@ exports.handleMessage = async (socket:any, message: ClientVarMessage) => {
     // by design, and kicking the parent on iframe load would tear down
     // the live editor mid-session. The iframe sets `embed=1` in its
     // socket.io handshake query.
-    thisSession.embed = socket.handshake?.query?.embed === '1';
+    const embed = socket.handshake?.query?.embed === '1';
 
     // Pad does not exist, so we need to sanitize the id
-    if (!(await padManager.doesPadExist(thisSession.auth.padID))) {
-      thisSession.auth.padID = await padManager.sanitizePadId(thisSession.auth.padID);
+    if (!(await padManager.doesPadExist(pendingAuth.padID))) {
+      pendingAuth.padID = await padManager.sanitizePadId(pendingAuth.padID);
     }
-    const padIds = await readOnlyManager.getIds(thisSession.auth.padID);
-    thisSession.padId = padIds.padId;
-    thisSession.readOnlyPadId = padIds.readOnlyPadId;
-    thisSession.readonly =
-        padIds.readonly || !webaccess.userCanModify(thisSession.auth.padID, socket.client.request);
+    const padIds = await readOnlyManager.getIds(pendingAuth.padID);
+    // Do NOT write these into sessioninfos[socket.id] yet: other messages on
+    // this socket are still being processed against the previously authorized
+    // pad, and this pad has not been access-checked. They are committed below,
+    // after checkAccess() grants access.
+    pending = {
+      auth: pendingAuth,
+      embed,
+      padId: padIds.padId,
+      readOnlyPadId: padIds.readOnlyPadId,
+      readonly:
+          padIds.readonly || !webaccess.userCanModify(pendingAuth.padID, socket.client.request),
+    };
   }
   // Outside of the checks done by this function, message.padId must not be accessed because it is
   // too easy to introduce a security vulnerability that allows malicious users to read or modify
   // pads that they should not be able to access. Code should instead use
-  // sessioninfos[socket.id].padId if the real pad ID is needed or
-  // sessioninfos[socket.id].auth.padID if the original user-supplied pad ID is needed.
+  // the pinned `msgCtx.padId` (passed to every handler) if the real pad ID is needed or
+  // `msgCtx.auth.padID` if the original user-supplied pad ID is needed.
   Object.defineProperty(message, 'padId', {get: () => {
     throw new Error('message.padId must not be accessed (for security reasons)');
   }});
 
-  const auth = thisSession.auth;
+  // Pin the pad this message is authorized against — together with `auth` and
+  // the read-only flag — BEFORE any of the awaits below (checkAccess and the
+  // handleMessageSecurity/handleMessage hooks), in one synchronous step so the
+  // three always describe the same pad. Handlers must use these pinned values
+  // (msgCtx), never sessioninfos[socket.id].padId/readonly, which a concurrent
+  // CLIENT_READY may commit to a different pad mid-message.
+  const auth = pending ? pending.auth : thisSession.auth;
   if (!auth) {
     const ip = logIp(socket.request.ip);
     const msg = JSON.stringify(message, null, 2);
     throw new Error(`pre-CLIENT_READY message from IP ${ip}: ${msg}`);
   }
 
-  // Pin the pad this message is authorized against — together with `auth` and
-  // the read-only flag — BEFORE any of the awaits below (checkAccess and the
-  // handleMessageSecurity/handleMessage hooks). A concurrent same-socket
-  // CLIENT_READY can mutate sessioninfos[socket.id] (padId/readonly/auth) IN
-  // PLACE during those awaits (the object identity check below does not catch an
-  // in-place mutation). Using these pinned values for the read-only gate, the
-  // queue key and the write keeps them all referring to the SAME pad, closing
-  // the cross-pad write TOCTOU (GHSA-6mcx-x5h6-rpw2).
-  const messagePadId = thisSession.padId;
-  const messageReadonly = thisSession.readonly;
+  const messagePadId: string = pending ? pending.padId : thisSession.padId;
+  const messageReadOnlyPadId: string =
+      pending ? pending.readOnlyPadId : thisSession.readOnlyPadId;
+  const messageReadonly: boolean = pending ? pending.readonly : thisSession.readonly;
 
   const {session: {user} = {}} = socket.client.request as SocketClientRequest;
   const {accessStatus, authorID} =
@@ -535,6 +589,8 @@ exports.handleMessage = async (socket:any, message: ClientVarMessage) => {
     socket.emit('message', {accessStatus});
     throw new Error('access denied');
   }
+  if (sessioninfos[socket.id] !== thisSession) throw new Error('client disconnected');
+  if (pending && joinGeneration! < (thisSession.joinGeneration || 0)) return;
   if (thisSession.author != null && thisSession.author !== authorID) {
     socket.emit('message', {disconnect: 'rejected'});
     throw new Error([
@@ -549,9 +605,41 @@ exports.handleMessage = async (socket:any, message: ClientVarMessage) => {
   }
   thisSession.author = authorID;
 
+  // Access to the CLIENT_READY pad is now granted: commit it to the session in
+  // one synchronous step. A denied CLIENT_READY never reaches this point, so it
+  // can no longer leave the session pointing at a pad the user cannot access.
+  if (pending) {
+    const previousSession = thisSession.padId && socket.rooms.has(thisSession.padId)
+      ? {...thisSession} : null;
+    // Stop old-room updates while preparing the new snapshot, including same-pad rejoins.
+    if (previousSession) socket.leave(previousSession.padId);
+    thisSession.joinGeneration = joinGeneration;
+    thisSession.auth = pending.auth;
+    thisSession.embed = pending.embed;
+    thisSession.padId = pending.padId;
+    thisSession.readOnlyPadId = pending.readOnlyPadId;
+    thisSession.readonly = pending.readonly;
+    if (previousSession && previousSession.padId !== pending.padId) {
+      // The socket has already left the old room, so a failing author lookup or userLeave hook
+      // must not abort the new join and strand the socket outside both rooms.
+      try {
+        await notifyUserLeave(socket, previousSession);
+      } catch (err: any) {
+        messageLogger.error(
+            `Failed to notify pad ${previousSession.padId} that socket ${socket.id} left: ` +
+            `${err.stack || err}`);
+      }
+      if (!isCurrentJoin()) return;
+    }
+  }
+
   // Allow plugins to bypass the readonly message blocker. Base the decision on
   // the value pinned above so a concurrent CLIENT_READY can't flip it mid-message.
   let readOnly = messageReadonly;
+  // The session's access mode as seen by handlers (e.g. CLIENT_VARS.readonly).
+  // Only the deprecated `true` hook result upgrades it; "permitOnce" lifts the
+  // gate for this one message without changing it.
+  let sessionReadonly = messageReadonly;
   const context = {
     message,
     sessionInfo: {
@@ -567,13 +655,18 @@ exports.handleMessage = async (socket:any, message: ClientVarMessage) => {
       return this.socket;
     },
   };
-  for (const res of await hooks.aCallAll('handleMessageSecurity', context)) {
+  const securityResults = await hooks.aCallAll('handleMessageSecurity', context);
+  if (pending && !isCurrentJoin()) return;
+  for (const res of securityResults) {
     switch (res) {
       case true:
         padutils.warnDeprecated(
             'returning `true` from a `handleMessageSecurity` hook function is deprecated; ' +
             'return "permitOnce" instead');
-        thisSession.readonly = false;
+        // Only persist the upgrade for the pad this message was authorized
+        // against; a concurrent CLIENT_READY may have moved the session on.
+        if (thisSession.padId === messagePadId) thisSession.readonly = false;
+        sessionReadonly = false;
         // Fall through:
       case 'permitOnce':
         readOnly = false;
@@ -591,12 +684,21 @@ exports.handleMessage = async (socket:any, message: ClientVarMessage) => {
 
   // Drop the message if the client disconnected during the above processing.
   if (sessioninfos[socket.id] !== thisSession) throw new Error('client disconnected');
+  if (pending && !isCurrentJoin()) return;
+
+  const msgCtx: MessageContext = {
+    auth,
+    author: authorID,
+    padId: messagePadId,
+    readOnlyPadId: messageReadOnlyPadId,
+    readonly: sessionReadonly,
+  };
 
   const {type} = message;
   try {
     switch (type) {
-      case 'CLIENT_READY': await handleClientReady(socket, message); break;
-      case 'CHANGESET_REQ': await handleChangesetRequest(socket, message); break;
+      case 'CLIENT_READY': await handleClientReady(socket, message, msgCtx, isCurrentJoin); break;
+      case 'CHANGESET_REQ': await handleChangesetRequest(socket, message, msgCtx); break;
       case 'COLLABROOM': {
         if (readOnly) throw new Error('write attempt on read-only pad');
         const {type} = message.data;
@@ -609,20 +711,21 @@ exports.handleMessage = async (socket:any, message: ClientVarMessage) => {
               // the write target (see the padChannels executor).
               await padChannels.enqueue(messagePadId, {socket, message});
               break;
-            case 'PAD_DELETE': await handlePadDelete(socket, message.data as unknown as PadDeleteMessage); break;
-            case 'USERINFO_UPDATE': await handleUserInfoUpdate(socket, message as unknown as UserNewInfoMessage); break;
-            case 'CHAT_MESSAGE': await handleChatMessage(socket, message as unknown as ChatMessageMessage); break;
-            case 'GET_CHAT_MESSAGES': await handleGetChatMessages(socket, message); break;
-            case 'SAVE_REVISION': await handleSaveRevisionMessage(socket, message as unknown as ClientSaveRevisionMessage); break;
+            case 'PAD_DELETE': await handlePadDelete(socket, message.data as unknown as PadDeleteMessage, msgCtx); break;
+            case 'USERINFO_UPDATE': await handleUserInfoUpdate(socket, message as unknown as UserNewInfoMessage, msgCtx); break;
+            case 'CHAT_MESSAGE': await handleChatMessage(socket, message as unknown as ChatMessageMessage, msgCtx); break;
+            case 'GET_CHAT_MESSAGES': await handleGetChatMessages(socket, message, msgCtx); break;
+            case 'SAVE_REVISION': await handleSaveRevisionMessage(socket, message as unknown as ClientSaveRevisionMessage, msgCtx); break;
             case 'CLIENT_MESSAGE': {
               const {type} = message.data.payload;
               try {
                 switch (type) {
-                  case 'suggestUserName': handleSuggestUserName(socket, message as unknown as ClientSuggestUserName); break;
+                  case 'suggestUserName': handleSuggestUserName(socket, message as unknown as ClientSuggestUserName, msgCtx); break;
                   case 'padoptions':
                     await handlePadOptionsMessage(
                         socket,
-                        message as unknown as PadOptionsMessage & {data: {payload: PadOptionsMessage}});
+                        message as unknown as PadOptionsMessage & {data: {payload: PadOptionsMessage}},
+                        msgCtx);
                     break;
                   default: throw new Error('unknown message type');
                 }
@@ -651,8 +754,9 @@ exports.handleMessage = async (socket:any, message: ClientVarMessage) => {
  * @param socket the socket.io Socket object for the client
  * @param message the message from the client
  */
-const handleSaveRevisionMessage = async (socket:any, message: ClientSaveRevisionMessage) => {
-  const {padId, author: authorId} = sessioninfos[socket.id];
+const handleSaveRevisionMessage = async (
+    socket:any, message: ClientSaveRevisionMessage, ctx: MessageContext) => {
+  const {padId, author: authorId} = ctx;
   const pad = await padManager.getPad(padId, null, authorId);
   const savedRevision = await pad.addSavedRevision(pad.head, authorId);
   // Notify every client in the pad room — including any open timeslider —
@@ -712,9 +816,10 @@ exports.handleCustomMessage = (padID: string, msgString:string) => {
  * @param socket the socket.io Socket object for the client
  * @param message the message from the client
  */
-const handleChatMessage = async (socket:any, message: ChatMessageMessage) => {
+const handleChatMessage = async (
+    socket:any, message: ChatMessageMessage, ctx: MessageContext) => {
   const chatMessage = ChatMessage.fromObject(message.data.message);
-  const {padId, author: authorId} = sessioninfos[socket.id];
+  const {padId, author: authorId} = ctx;
   // Don't trust the user-supplied values.
   chatMessage.time = Date.now();
   chatMessage.authorId = authorId;
@@ -754,12 +859,13 @@ exports.sendChatMessageToPadClients = async (mt: ChatMessage|number, puId: strin
  * @param socket the socket.io Socket object for the client
  * @param message the message from the client
  */
-const handleGetChatMessages = async (socket:any, {data: {start, end}}:any) => {
+const handleGetChatMessages = async (
+    socket:any, {data: {start, end}}:any, ctx: MessageContext) => {
   if (!Number.isInteger(start)) throw new Error(`missing or invalid start: ${start}`);
   if (!Number.isInteger(end)) throw new Error(`missing or invalid end: ${end}`);
   const count = end - start;
   if (count < 0 || count > 100) throw new Error(`invalid number of messages: ${count}`);
-  const {padId, author: authorId} = sessioninfos[socket.id];
+  const {padId, author: authorId} = ctx;
   const pad = await padManager.getPad(padId, null, authorId);
 
   const chatMessages = await pad.getChatMessages(start, end);
@@ -780,11 +886,14 @@ const handleGetChatMessages = async (socket:any, {data: {start, end}}:any) => {
  * @param socket the socket.io Socket object for the client
  * @param message the message from the client
  */
-const handleSuggestUserName = (socket:any, message: ClientSuggestUserName) => {
-  const {newName, unnamedId} = message.data.payload;
+const handleSuggestUserName = (
+    socket:any, message: ClientSuggestUserName, ctx: MessageContext) => {
+  const {unnamedId} = message.data.payload;
+  const newName = authorManager.sanitizeAuthorName(message.data.payload.newName);
   if (newName == null) throw new Error('missing newName');
+  message.data.payload.newName = newName;
   if (unnamedId == null) throw new Error('missing unnamedId');
-  const padId = sessioninfos[socket.id].padId;
+  const padId = ctx.padId;
   // search the author and send him this message
   _getRoomSockets(padId).forEach((socket) => {
     const session = sessioninfos[socket.id];
@@ -800,12 +909,13 @@ const handleSuggestUserName = (socket:any, message: ClientSuggestUserName) => {
  * @param socket the socket.io Socket object for the client
  * @param message the message from the client
  */
-const handleUserInfoUpdate = async (socket:any, {data: {userInfo: {name, colorId}}}: UserNewInfoMessage) => {
+const handleUserInfoUpdate = async (
+    socket:any, {data: {userInfo: {name, colorId}}}: UserNewInfoMessage, ctx: MessageContext) => {
   if (colorId == null) throw new Error('missing colorId');
-  if (!name) name = null;
-  const session = sessioninfos[socket.id];
-  if (!session || !session.author || !session.padId) throw new Error('session not ready');
-  const author = session.author;
+  // Unauthenticated input that is stored and rebroadcast: type-check and cap it (GHSA-w4w9).
+  name = authorManager.sanitizeAuthorName(name);
+  if (!ctx.author || !ctx.padId) throw new Error('session not ready');
+  const author = ctx.author;
   if (!/(^#[0-9A-F]{6}$)|(^#[0-9A-F]{3}$)/i.test(colorId)) {
     throw new Error(`malformed color: ${colorId}`);
   }
@@ -816,7 +926,7 @@ const handleUserInfoUpdate = async (socket:any, {data: {userInfo: {name, colorId
     authorManager.setAuthorName(author, name),
   ]);
 
-  const padId = session.padId;
+  const padId = ctx.padId;
 
   const infoMsg = {
     type: 'COLLABROOM',
@@ -973,7 +1083,10 @@ const handleUserChanges = async (socket:any, message: {
     while (r < pad.getHeadRevisionNumber()) {
       r++;
       const {changeset: c, meta: {author: authorId}} = await pad.getRevision(r);
-      if (canonicalCs === c && thisSession.author === authorId) {
+      // Stored revisions have their multi-line keeps/deletes split at line
+      // boundaries (see splitOpsAtLineBoundaries below), so compare ignoring
+      // those splits or a retried non-canonical edit would be applied twice.
+      if (thisSession.author === authorId && equalIgnoringLineSplits(canonicalCs, c)) {
         // Assume this is a retransmission of an already applied changeset.
         rebasedChangeset = identity(unpack(canonicalCs).oldLen);
       }
@@ -1001,6 +1114,12 @@ const handleUserChanges = async (socket:any, message: {
     // accept such changesets — clients must always preserve the
     // trailing-newline invariant.
     const projectedText = applyToText(rebasedChangeset, prevText);
+    // applyToText only checks per-op newline counts. A multi-line keep/delete
+    // that ends mid-line (e.g. `|5=1t` instead of `|5=1s=1`) is accepted by
+    // it but misapplied by line-based clients, so every browser watching the
+    // pad diverges from the stored text (#8487). Store and broadcast the
+    // line-split form instead.
+    rebasedChangeset = splitOpsAtLineBoundaries(rebasedChangeset, prevText);
     if (!projectedText.endsWith('\n')) {
       throw new Error(
           `Rejected USER_CHANGES whose application would leave the pad ` +
@@ -1060,7 +1179,8 @@ exports.updatePadClients = async (pad: PadType, onlySocketId?: string) => {
   await Promise.all(roomSockets.map(async (socket) => {
     const sessioninfo = sessioninfos[socket.id];
     // The user might have disconnected since _getRoomSockets() was called.
-    if (sessioninfo == null) return;
+    if (sessioninfo == null || sessioninfo.padId !== pad.id) return;
+    const joinGeneration = sessioninfo.joinGeneration;
 
     while (sessioninfo.rev < pad.getHeadRevisionNumber()) {
       const r = sessioninfo.rev + 1;
@@ -1069,6 +1189,9 @@ exports.updatePadClients = async (pad: PadType, onlySocketId?: string) => {
         revision = await pad.getRevision(r);
         revCache[r] = revision;
       }
+      // A join can replace the revision baseline while this DB read is in flight, even on this pad.
+      if (sessioninfos[socket.id] !== sessioninfo || sessioninfo.padId !== pad.id ||
+          sessioninfo.joinGeneration !== joinGeneration) return;
 
       const author = revision.meta.author;
       const revChangeset = revision.changeset;
@@ -1150,14 +1273,18 @@ const _correctMarkersInPad = (atext: AText, apool: AttributePool) => {
  * @param socket the socket.io Socket object for the client
  * @param message the message from the client
  */
-const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
+const handleClientReady = async (
+    socket:any, message: ClientReadyMessage, ctx: MessageContext, isCurrentJoin: () => boolean) => {
   const sessionInfo = sessioninfos[socket.id];
   if (sessionInfo == null) throw new Error('client disconnected');
   assert(sessionInfo.author);
 
   await hooks.aCallAll('clientReady', message); // Deprecated due to awkward context.
+  if (!isCurrentJoin()) return;
 
   let {colorId: authorColorId, name: authorName} = message.userInfo || {};
+  // Unauthenticated input that is stored and rebroadcast: type-check and cap it (GHSA-w4w9).
+  authorName = authorManager.sanitizeAuthorName(authorName);
   if (authorColorId && !/^#(?:[0-9A-F]{3}){1,2}$/i.test(authorColorId as string)) {
     messageLogger.warn(`Ignoring invalid colorId in CLIENT_READY message: ${authorColorId}`);
     // @ts-ignore
@@ -1168,14 +1295,17 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
     authorColorId && authorManager.setAuthorColorId(sessionInfo.author, authorColorId),
   ]);
   ({colorId: authorColorId, name: authorName} = await authorManager.getAuthor(sessionInfo.author));
+  // The stored record may predate the name cap; never send an oversized name back out.
+  authorName = authorManager.sanitizeAuthorName(authorName);
 
   // Pad retention: an overdue pad is deleted here, before it loads, so the
   // client gets a new pad rather than content that should already be gone.
-  const padRetention = await checkPadRetentionOnOpen(sessionInfo.padId);
+  const padRetention = await checkPadRetentionOnOpen(ctx.padId);
 
-  const padExisted = await padManager.doesPadExist(sessionInfo.padId);
+  const padExisted = await padManager.doesPadExist(ctx.padId);
   // load the pad-object from the database
-  const pad = await padManager.getPad(sessionInfo.padId, null, sessionInfo.author);
+  const pad = await padManager.getPad(ctx.padId, null, sessionInfo.author);
+  if (!isCurrentJoin()) return;
   if (settings.enablePadWideSettings && !padExisted && message.padSettingsDefaults) {
     pad.setPadSettings(message.padSettingsDefaults);
     await pad.saveToDatabase();
@@ -1205,14 +1335,19 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
           'This is possibly related to https://github.com/ether/etherpad-lite/issues/2802');
     } else {
       // Filter author attribs (e.g. don't send author's pads to all clients)
-      historicalAuthorData[authorId] = {name: author.name, colorId: author.colorId};
+      // Re-sanitize on read so records stored before the name cap are not rebroadcast at full
+      // size to every client that opens the pad (GHSA-w4w9).
+      historicalAuthorData[authorId] = {
+        name: authorManager.sanitizeAuthorName(author.name),
+        colorId: author.colorId,
+      };
     }
   }));
 
   // glue the clientVars together, send them and tell the other clients that a new one is there
 
-  // Check if the user has disconnected during any of the above awaits.
-  if (sessionInfo !== sessioninfos[socket.id]) throw new Error('client disconnected');
+  // A newer authorized join or a disconnect invalidates all remaining work for this join.
+  if (!isCurrentJoin()) return;
 
   const {session: {user} = {}} = socket.client.request as SocketClientRequest;
 
@@ -1235,7 +1370,7 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
       if (sinfo && sinfo.author === sessionInfo.author && !sinfo.embed) {
         // fix user's counter, works on page refresh or if user closes browser window and then rejoins
         sessioninfos[otherSocket.id] = {};
-        otherSocket.leave(sessionInfo.padId);
+        otherSocket.leave(ctx.padId);
         otherSocket.emit('message', {disconnect: 'userdup'});
       }
     }
@@ -1243,7 +1378,7 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
 
   /* eslint-disable prefer-template -- it doesn't support breaking across multiple lines */
   accessLogger.info(`[${pad.head > 0 ? 'ENTER' : 'CREATE'}]` +
-                    ` pad:${sessionInfo.padId}` +
+                    ` pad:${ctx.padId}` +
                     ` socket:${socket.id}` +
                     ` IP:${logIp(socket.request.ip)}` +
                     ` authorID:${sessionInfo.author}` +
@@ -1253,7 +1388,7 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
   if (message.reconnect) {
     // If this is a reconnect, we don't have to send the client the ClientVars again
     // Join the pad and start receiving updates
-    socket.join(sessionInfo.padId);
+    socket.join(ctx.padId);
 
     // Save the revision in sessioninfos, we take the revision from the info the client send to us
     sessionInfo.rev = message.client_rev;
@@ -1290,6 +1425,7 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
         pad.getRevisionDate(revNum),
       ]);
     }));
+    if (!isCurrentJoin()) return;
 
     // return pending changesets
     for (const r of revisionsNeeded) {
@@ -1342,7 +1478,7 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
     // null because createDeletionTokenIfAbsent() only emits a plaintext token
     // once. Readonly sessions never see it.
     const isCreator =
-        !sessionInfo.readonly && sessionInfo.author === await pad.getRevisionAuthor(0);
+        !ctx.readonly && sessionInfo.author === await pad.getRevisionAuthor(0);
     // The deletion token is a recovery handle for the one class of creator that
     // can otherwise lose the ability to delete their pad: a user whose creator
     // status lives only in a per-browser author-token cookie. It is pointless —
@@ -1375,16 +1511,16 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
     // allowPadDeletionByAllUsers must not hand them a delete button (the server
     // enforces the same in handlePadDelete).
     const canDeletePad =
-        !sessionInfo.readonly && (isCreator || settings.allowPadDeletionByAllUsers);
+        !ctx.readonly && (isCreator || settings.allowPadDeletionByAllUsers);
     const padDeletionToken =
         isCreator && !canDeleteWithoutToken
-        ? await padDeletionManager.createDeletionTokenIfAbsent(sessionInfo.padId)
+        ? await padDeletionManager.createDeletionTokenIfAbsent(ctx.padId)
         : null;
 
-    // Warning: never ever send sessionInfo.padId to the client. If the client is read only you
+    // Warning: never ever send ctx.padId to the client. If the client is read only you
     // would open a security hole 1 swedish mile wide...
     const canEditPadSettings = settings.enablePadWideSettings &&
-        !sessionInfo.readonly && await isPadCreator(pad, sessionInfo.author);
+        !ctx.readonly && await isPadCreator(pad, sessionInfo.author);
     const clientVars:MapArrayType<any> = {
       skinName: settings.skinName,
       skinVariants: settings.skinVariants,
@@ -1419,7 +1555,7 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
       savedRevisions: pad.getSavedRevisions(),
       collab_client_vars: {
         initialAttributedText: atext,
-        padId: sessionInfo.auth.padID,
+        padId: ctx.auth.padID,
         historicalAuthorData,
         apool,
         rev: headRev,
@@ -1427,17 +1563,17 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
       },
       colorPalette: authorManager.getColorPalette(),
       userColor: authorColorId,
-      padId: sessionInfo.auth.padID,
+      padId: ctx.auth.padID,
       padOptions: settings.padOptions,
       padShortcutEnabled: settings.padShortcutEnabled,
-      initialTitle: `Pad: ${sessionInfo.auth.padID}`,
+      initialTitle: `Pad: ${ctx.auth.padID}`,
       opts: {},
       // tell the client the number of the latest chat-message, which will be
       // used to request the latest 100 chat-messages later (GET_CHAT_MESSAGES)
       chatHead: pad.chatHead,
       numConnectedUsers: roomSockets.length + 1, // +1 for this user (not yet in room)
-      readOnlyId: sessionInfo.readOnlyPadId,
-      readonly: sessionInfo.readonly,
+      readOnlyId: ctx.readOnlyPadId,
+      readonly: ctx.readonly,
       canEditPadSettings,
       serverTimestamp: Date.now(),
       sessionRefreshInterval: settings.cookie.sessionRefreshInterval,
@@ -1475,40 +1611,41 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
 
     // call the clientVars-hook so plugins can modify them before they get sent to the client
     const messages = await hooks.aCallAll('clientVars', {clientVars, pad, socket});
+    if (!isCurrentJoin()) return;
 
     // combine our old object with the new attributes from the hook
     for (const msg of messages) {
       Object.assign(clientVars, msg);
     }
 
-    // Join the pad and start receiving updates
-    socket.join(sessionInfo.padId);
-
-    // Send the clientVars to the Client
-    socket.emit('message', {type: 'CLIENT_VARS', data: clientVars});
-
-    // Save the revision in sessioninfos — must match what was sent in clientVars
-    sessionInfo.rev = headRev;
-
     // Initialize sessionInfo.time to the timestamp of the snapshot revision so
     // that subsequent NEW_CHANGES timeDelta calculations are valid.  Without
     // this, the catch-up updatePadClients() call below would emit timeDelta=NaN
     // which breaks the client's broadcast/timeslider time tracking.
+    let snapshotTime;
     try {
-      sessionInfo.time = await pad.getRevisionDate(headRev);
+      snapshotTime = await pad.getRevisionDate(headRev);
     } catch (err) {
       // Fallback: if we can't read the revision timestamp, use now.
-      sessionInfo.time = Date.now();
+      snapshotTime = Date.now();
     }
+    if (!isCurrentJoin()) return;
+
+    // Publish the snapshot and its revision baseline without another await in between.
+    socket.join(ctx.padId);
+    socket.emit('message', {type: 'CLIENT_VARS', data: clientVars});
+    sessionInfo.rev = headRev;
+    sessionInfo.time = snapshotTime;
 
     // Flush any revisions that may have been appended while we were awaiting the
     // clientVars hook (before socket.join).  Those revisions were broadcast to
     // existing room members but this socket hadn't joined yet so it missed them.
     await exports.updatePadClients(pad, socket.id);
   }
+  if (!isCurrentJoin()) return;
 
   // Notify other users about this new user.
-  socket.broadcast.to(sessionInfo.padId).emit('message', {
+  socket.broadcast.to(ctx.padId).emit('message', {
     type: 'COLLABROOM',
     data: {
       type: 'USER_NEWINFO',
@@ -1537,6 +1674,7 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
 
     // reuse previously created cache of author's data
     const authorInfo = historicalAuthorData[authorId] || await authorManager.getAuthor(authorId);
+    if (!isCurrentJoin()) return;
     if (authorInfo == null) {
       messageLogger.error(
           `Author ${authorId} connected via socket.io session ${roomSocket.id} is missing from ` +
@@ -1552,7 +1690,7 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
         type: 'USER_NEWINFO',
         userInfo: {
           colorId: authorInfo.colorId,
-          name: authorInfo.name,
+          name: authorManager.sanitizeAuthorName(authorInfo.name),
           userId: authorId,
         },
       },
@@ -1561,12 +1699,13 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
     socket.emit('message', msg);
   }));
 
+  if (!isCurrentJoin()) return;
   await hooks.aCallAll('userJoin', {
     authorId: sessionInfo.author,
     displayName: authorName,
-    padId: sessionInfo.padId,
-    readOnly: sessionInfo.readonly,
-    readOnlyPadId: sessionInfo.readOnlyPadId,
+    padId: ctx.padId,
+    readOnly: ctx.readonly,
+    readOnlyPadId: ctx.readOnlyPadId,
     socket,
   });
 };
@@ -1574,14 +1713,15 @@ const handleClientReady = async (socket:any, message: ClientReadyMessage) => {
 /**
  * Handles a request for a rough changeset, the timeslider client needs it
  */
-const handleChangesetRequest = async (socket:any, {data: {granularity, start, requestID}}: ChangesetRequest) => {
+const handleChangesetRequest = async (
+    socket:any, {data: {granularity, start, requestID}}: ChangesetRequest, ctx: MessageContext) => {
   if (granularity == null) throw new Error('missing granularity');
   if (!Number.isInteger(granularity)) throw new Error('granularity is not an integer');
   if (start == null) throw new Error('missing start');
   start = checkValidRev(start);
   if (requestID == null) throw new Error('mising requestID');
   const end = start + (100 * granularity);
-  const {padId, author: authorId} = sessioninfos[socket.id];
+  const {padId, author: authorId} = ctx;
   const pad = await padManager.getPad(padId, null, authorId);
   const headRev = pad.getHeadRevisionNumber();
   if (start > headRev)

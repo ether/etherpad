@@ -1,3 +1,59 @@
+# 3.3.19
+
+3.3.19 is a bug-fix release. Users who share an IP, for example several tabs or people behind one proxy or the Home Assistant add-on, are no longer disconnected by the message rate limiter. Plugin icon fonts load again in production mode.
+
+### Notable fixes
+
+- **Collaboration — the pad message rate limit now applies per connection, with a burst allowance (#8498).** `commitRateLimiting` counted messages per IP. Every tab and every user behind the same proxy shared one budget of 10 messages a second. When a tab joined a pad, plugins such as ep_webrtc sent a burst of signalling messages. That pushed the shared IP over the limit, so tabs kept getting disconnected ("Reconnecting…") and chat messages were dropped. The limit is now counted per socket connection. On top of the steady rate, a new burst budget (`commitRateLimiting.burstPoints`, default 50, over `burstDuration`, default 10 seconds) absorbs join spikes. A connection that keeps flooding is still disconnected. Other `commitRateLimiting` options such as `blockDuration` now pass through. If you need a per-IP connection cap, set it at your reverse proxy. ep_webrtc 2.5.56 also batches its ICE candidates into fewer messages.
+- **Plugins — icon fonts load again in production mode (#8501).** Since 3.3.17 (#8373), the CSS minifier rewrote relative font URLs against the symlinked plugin path instead of the real one. Plugin fonts then 404'd, which left icons such as ep_webrtc's screen-share button blank. Font URLs are now rebased against the real stylesheet path.
+
+# 3.3.18
+
+3.3.18 is a bug-fix release. Text typed from clients that send multi-line keep or delete ops, such as the `pad` terminal client, no longer appears scrambled in watching browsers. A socket that sends overlapping joins can no longer end up in two pad rooms. The Colibris home page also follows dark mode.
+
+### Notable fixes
+
+- **Collaboration — multi-line keep and delete ops are split at line boundaries (#8495, #8487).** A client could send a keep or delete that spans several lines but ends mid-line, for example `|5=1t` instead of `|5=1s=1`. The server applied it correctly, so export and reload looked right. But browsers apply incoming changes line by line, so watching users saw the typed text out of order or reversed. The server now re-splits such ops before storing and broadcasting them, so existing clients render correctly without an update. A resent edit is still recognised as a retry and isn't applied twice. The `pad` client has also been fixed (ether/pad#4). Reported by @zzkt.
+- **Collaboration — superseded `CLIENT_READY` joins are discarded (#8461, #8460).** When one socket sent overlapping `CLIENT_READY` messages, a slower, older join could finish after a newer one and leave the socket in two pad rooms. Only the latest join now takes effect. A failing leave notification during a pad switch no longer aborts the new join. Thanks @Aschenbath.
+
+### Other changes
+
+- The Colibris home page follows the browser's dark mode when `enableDarkMode` is on, and respects a light-mode choice saved in a pad (#8486). Thanks @rittmeier.
+- Localisation updates from translatewiki.net.
+- Dependency updates, including jsdom 31.0.1, oidc-provider 9.14.0, mongodb 7.9.0, nodemailer 10.5.0 and openapi-backend 5.24.0.
+
+# 3.3.17
+
+3.3.17 is a security release. It caps the length of author display names, which any visitor could set to almost 1 MB, and fixes `.etherpad` imports into pads created through the HTTP API. Upgrade as soon as you can.
+
+### Security
+
+- **Pads — author display names are now type-checked and capped at 128 characters ([GHSA-w4w9-j4c3-hjf6](https://github.com/ether/etherpad/security/advisories/GHSA-w4w9-j4c3-hjf6), #8475).** The name sent in `CLIENT_READY` and `USERINFO_UPDATE` was stored with no type or length check, so a visitor with no account could save a name of nearly 1 MB, bounded only by the socket's message size. That name was then sent to everyone who opened the pad. A name that wasn't a string also broke the admin author search. Names must now be strings and are trimmed and cut to 128 characters, with any Unicode accepted. Names already stored are capped when read back, so oversized records are no longer rebroadcast. The pad's name fields enforce the same limit. Reported by @MAYASEVEN.
+
+### Notable fixes
+
+- **Import — `.etherpad` files import again into pads created through the HTTP API (#8470).** Since 3.3.13 (#8420), importing a `.etherpad` file from the import dialog failed with a permission error when the target pad was created by `createPad`, `createGroupPad`, admin create-pad or ep_post_data, and the file came from a pad a browser created. When the importer isn't the target pad's creator, the file's first author is now rewritten to that creator. Text keeps its original authorship. An importer still can't make themselves the creator, and pad settings still come from the target pad.
+
+### Other changes
+
+- Localisation updates from translatewiki.net.
+- Dependency updates.
+
+# 3.3.16
+
+3.3.16 is a security release. It fixes a race in the collaboration socket that could expose and write to pads the user was not allowed to open, and picks up the ueberDB MSSQL fix. Upgrade as soon as you can.
+
+### Security
+
+- **Collaboration — every socket message now stays bound to the pad it was authorized for ([GHSA-c36r-65p6-q3m9](https://github.com/ether/etherpad/security/advisories/GHSA-c36r-65p6-q3m9), #8458).** The earlier fix for GHSA-6mcx-x5h6-rpw2 only pinned the target pad for USER_CHANGES. Chat, history (CHANGESET_REQ), saved revisions, pad options and pad deletion still read the pad from the socket's session when they ran. A second CLIENT_READY on the same socket rewrote that session before its own access check. A message authorized for one pad could then run against another, which leaked the other pad's text, history and chat and let chat messages and saved revisions be written into it, including on pads the user could only view. CLIENT_READY now changes the session only after access is granted, and each message carries the pad and access mode it was authorized with. Reported by @leograntquinn-crypto.
+- **Database — ueberdb2 6.1.19 (#8444).** Fixes SQL injection in the MSSQL driver's bulk writes ([GHSA-xmqq-59rx-x7pf](https://github.com/ether/ueberDB/security/advisories/GHSA-xmqq-59rx-x7pf)). Only installs using `"dbType": "mssql"` are affected.
+
+### Other changes
+
+- The default-content author test no longer depends on the local `defaultPadText` setting (#8445).
+- The Docker workflow now records the release version (#8456).
+- Dependency updates, including undici 8.12.4, mssql 12.7.14, entities 9.0.0, surrealdb 2.2.2 and resolve 1.22.14.
+
 # 3.3.15
 
 3.3.15 is a packaging release. It shrinks the Debian package so it can be published to the apt repository again.

@@ -778,6 +778,13 @@ is sent to the client. Plugins can use this hook to manipulate the
 configuration. (Example: Add a tracking ID for an external analytics tool that
 is used client-side.)
 
+A socket can send another `CLIENT_READY` while an asynchronous hook is running.
+If that later request is authorized, the earlier join is superseded: its hook
+results are discarded, and it does not send `CLIENT_VARS` or join the old room.
+The socket leaves its previous room when the new join is authorized. A denied
+request does not supersede a pending authorized join. Use `userJoin` for work
+that requires the join to have completed.
+
 You can manipulate `clientVars` in two different ways:
 * Return an object. The object will be merged into `clientVars` via
   `Object.assign()`, so any keys that already exist in `clientVars` will be
@@ -1111,6 +1118,10 @@ Called from: `src/node/handler/PadMessageHandler.js`
 
 Called when a user disconnects from a pad. This is useful if you want to perform
 certain actions after a pad has been edited.
+
+This also runs when an authorized `CLIENT_READY` moves the socket to a different
+pad. In either case, the hook runs only when the author's last socket leaves the
+previous pad; other sockets for that author keep their presence.
 
 Context properties:
 

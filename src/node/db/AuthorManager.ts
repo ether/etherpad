@@ -24,6 +24,32 @@ const CustomError = require('../utils/customError');
 const hooks = require('../../static/js/pluginfw/hooks');
 import padutils, {randomString} from "../../static/js/pad_utils";
 
+/**
+ * Maximum length (in Unicode code points) of an author display name. Names come from
+ * unauthenticated socket.io messages and are rebroadcast to every client that opens a pad, so
+ * they must be bounded by the application rather than by the transport's packet size limit
+ * (GHSA-w4w9-j4c3-hjf6). The pad's name input uses the same value as its maxlength.
+ */
+const MAX_AUTHOR_NAME_LENGTH = 128;
+exports.MAX_AUTHOR_NAME_LENGTH = MAX_AUTHOR_NAME_LENGTH;
+
+/**
+ * Normalizes an author display name: non-strings and blank strings become null, everything else
+ * is trimmed and truncated to MAX_AUTHOR_NAME_LENGTH code points. Safe to call on values read
+ * back from the database, so records stored before the cap existed are not rebroadcast at their
+ * full size.
+ */
+const sanitizeAuthorName = (name: unknown): string | null => {
+  if (typeof name !== 'string') return null;
+  // Slice by UTF-16 units first so Array.from() never walks a huge string, then cut on code
+  // points so a surrogate pair is never split.
+  let s = name.trimStart().slice(0, MAX_AUTHOR_NAME_LENGTH * 2 + 2).trim();
+  const cps = Array.from(s);
+  if (cps.length > MAX_AUTHOR_NAME_LENGTH) s = cps.slice(0, MAX_AUTHOR_NAME_LENGTH).join('').trim();
+  return s === '' ? null : s;
+};
+exports.sanitizeAuthorName = sanitizeAuthorName;
+
 exports.getColorPalette = () => [
   '#ffc7c7',
   '#fff1c7',
@@ -207,7 +233,7 @@ exports.createAuthor = async (name: string) => {
   const now = Date.now();
   const authorObj = {
     colorId: Math.floor(Math.random() * (exports.getColorPalette().length)),
-    name,
+    name: sanitizeAuthorName(name),
     timestamp: now,
     lastSeen: now,
   };
@@ -241,15 +267,16 @@ exports.setAuthorColorId = async (author: string, colorId: string) => {
  * Returns the name of the author
  * @param {String} author The id of the author
  */
-exports.getAuthorName = async (author: string) => await db.getSub(`globalAuthor:${author}`, ['name']);
+exports.getAuthorName = async (author: string) =>
+  sanitizeAuthorName(await db.getSub(`globalAuthor:${author}`, ['name']));
 
 /**
  * Sets the name of the author
  * @param {String} author The id of the author
  * @param {String} name The name of the author
  */
-exports.setAuthorName = async (author: string, name: string) => {
-  await db.setSub(`globalAuthor:${author}`, ['name'], name);
+exports.setAuthorName = async (author: string, name: unknown) => {
+  await db.setSub(`globalAuthor:${author}`, ['name'], sanitizeAuthorName(name));
   await db.setSub(`globalAuthor:${author}`, ['lastSeen'], Date.now());
 };
 
@@ -511,9 +538,12 @@ exports.searchAuthors = async (query: {
     if (erased && !query.includeErased) continue;
     const authorID = key.substring('globalAuthor:'.length);
     const mappers = mapperByAuthor.get(authorID) || [];
+    // Records written before names were type-checked (GHSA-w4w9) can hold a non-string name;
+    // treat those as unnamed instead of letting one bad record break the whole admin search.
+    const name = typeof rec.name === 'string' ? rec.name : null;
     if (pattern) {
       const nameMatch =
-          (rec.name || '').toLowerCase().includes(pattern);
+          (name || '').toLowerCase().includes(pattern);
       const mapperMatch =
           mappers.some((m) => m.toLowerCase().includes(pattern));
       const idMatch =
@@ -522,7 +552,7 @@ exports.searchAuthors = async (query: {
     }
     rows.push({
       authorID,
-      name: rec.name ?? null,
+      name,
       colorId: rec.colorId ?? null,
       mapper: mappers,
       // Prefer lastSeen; fall back to timestamp for legacy records that

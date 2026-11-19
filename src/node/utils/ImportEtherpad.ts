@@ -248,6 +248,26 @@ exports.setPadRaw = async (padId: string, r: string, authorId = '') => {
   const creatorId = targetRev0 != null ? targetRev0.meta?.author ?? '' : authorId;
   const importerIsCreator = targetPad == null || (authorId !== '' && creatorId === authorId);
 
+  // The rev 0 author is the pad's creator. When someone other than the target pad's creator
+  // imports a file that names a different creator (for example a browser-made pad's export
+  // imported into a pad created through the HTTP API, whose creator is the system author), keep
+  // the target's creator by rewriting the file's rev 0 author. The creator is added to the pool
+  // because Pad.check() requires the pool's authors to match the revision authors.
+  if (!importerIsCreator && srcPadId != null) {
+    const rev0 = records[`pad:${srcPadId}:revs:0`];
+    const padRec = records[`pad:${srcPadId}`];
+    if (rev0 != null && typeof rev0 === 'object' && padRec != null && typeof padRec === 'object' &&
+        (rev0.meta?.author ?? '') !== creatorId) {
+      logger.info(`(pad ${padId}) import names a different creator; keeping the pad's creator`);
+      rev0.meta = {...(rev0.meta ?? {}), author: creatorId};
+      if (creatorId !== '') {
+        const pool = new AttributePool().fromJsonable(padRec.pool ?? {numToAttrib: {}, nextNum: 0});
+        pool.putAttrib(['author', creatorId]);
+        padRec.pool = pool.toJsonable();
+      }
+    }
+  }
+
   const data = new Map();
   const existingAuthors = new Set();
   const padDb = new Database('memory', {data});
@@ -289,7 +309,8 @@ exports.setPadRaw = async (padId: string, r: string, authorId = '') => {
           return;
         }
         // The rev 0 author is the pad's creator, who may delete the pad and change pad-wide
-        // settings. Only the creator may import a file that hands that role to someone else.
+        // settings. Only the creator may import a file that hands that role to someone else. The
+        // rewrite above normally keeps the creator; this rejects files it could not rewrite.
         if (prefix === 'pad' && keyParts[2] === 'revs' && keyParts[3] === '0' &&
             !importerIsCreator && ((value as any).meta?.author ?? '') !== creatorId) {
           throw Object.assign(
