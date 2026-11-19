@@ -62,6 +62,8 @@ For more than a decade, Etherpad has quietly underpinned the documents that matt
 
 ## Installation
 
+Prefer a fully managed instance? [![Deploy on Elestio](https://elest.io/images/logos/deploy-to-elestio-btn.svg)](https://dash.elest.io/deploy?soft=Etherpad&id=266)
+
 ### Quick install (one-liner)
 
 The fastest way to get Etherpad running. Requires `git` and Node.js >= 24.
