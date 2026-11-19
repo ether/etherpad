@@ -24,7 +24,7 @@ test.describe('admin Manage pads does not accumulate socket listeners', () => {
     page.on('websocket', (ws) => {
       ws.on('framesent', ({payload}) => {
         if (typeof payload !== 'string') return;
-        const m = /^42(?:\/[^,]*,)?(\[.*)$/s.exec(payload);
+        const m = /^42(?:\/[^,]*,)?(\[[\s\S]*)$/.exec(payload);
         if (!m) return;
         const [event, query] = JSON.parse(m[1]);
         if (event === 'padLoad') padLoads.push(query);
