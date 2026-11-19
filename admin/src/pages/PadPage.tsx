@@ -163,7 +163,10 @@ export const PadPage = () => {
       settingsSocket.off('results:createPad', onCreatePad)
       settingsSocket.off('results:cleanupPadRevisions', onCleanupPadRevisions)
     }
-  }, [settingsSocket, pads])
+    // The handlers read `pads` via useStore.getState(), so they don't need to
+    // rebind when it changes. onCreatePad does close over `searchParams`,
+    // so rebind when that changes or a post-create reload uses a stale query.
+  }, [settingsSocket, searchParams])
 
   const deletePad  = (id: string) => settingsSocket?.emit('deletePad', id)
   const cleanupPad = (id: string) => settingsSocket?.emit('cleanupPadRevisions', id)
