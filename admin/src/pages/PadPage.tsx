@@ -126,17 +126,19 @@ export const PadPage = () => {
   useEffect(() => {
     if (!settingsSocket) return
 
-    settingsSocket.on('results:padLoad', (data: PadSearchResult) => {
+    const onPadLoad = (data: PadSearchResult) => {
       useStore.getState().setPads(data)
-    })
+    }
+    settingsSocket.on('results:padLoad', onPadLoad)
 
-    settingsSocket.on('results:deletePad', (padID: string) => {
+    const onDeletePad = (padID: string) => {
       const newPads = useStore.getState().pads?.results?.filter(p => p.padName !== padID)
       useStore.getState().setPads({total: useStore.getState().pads!.total - 1, results: newPads})
-    })
+    }
+    settingsSocket.on('results:deletePad', onDeletePad)
 
     type CreateResponse = {error: string} | {success: string}
-    settingsSocket.on('results:createPad', (rep: CreateResponse) => {
+    const onCreatePad = (rep: CreateResponse) => {
       if ('error' in rep) {
         useStore.getState().setToastState({open: true, title: rep.error, success: false})
       } else {
@@ -144,15 +146,27 @@ export const PadPage = () => {
         setCreatePadDialogOpen(false)
         settingsSocket.emit('padLoad', searchParams)
       }
-    })
+    }
+    settingsSocket.on('results:createPad', onCreatePad)
 
-    settingsSocket.on('results:cleanupPadRevisions', (data) => {
+    const onCleanupPadRevisions = (data: {error?: string, padId: string, keepRevisions: number}) => {
       const newPads = useStore.getState().pads?.results ?? []
       if (data.error) { setErrorText(data.error); return }
       newPads.forEach(p => { if (p.padName === data.padId) p.revisionNumber = data.keepRevisions })
       useStore.getState().setPads({results: newPads, total: useStore.getState().pads!.total})
-    })
-  }, [settingsSocket, pads])
+    }
+    settingsSocket.on('results:cleanupPadRevisions', onCleanupPadRevisions)
+
+    return () => {
+      settingsSocket.off('results:padLoad', onPadLoad)
+      settingsSocket.off('results:deletePad', onDeletePad)
+      settingsSocket.off('results:createPad', onCreatePad)
+      settingsSocket.off('results:cleanupPadRevisions', onCleanupPadRevisions)
+    }
+    // The handlers read `pads` via useStore.getState(), so they don't need to
+    // rebind when it changes. onCreatePad does close over `searchParams`,
+    // so rebind when that changes or a post-create reload uses a stale query.
+  }, [settingsSocket, searchParams])
 
   const deletePad  = (id: string) => settingsSocket?.emit('deletePad', id)
   const cleanupPad = (id: string) => settingsSocket?.emit('cleanupPadRevisions', id)
