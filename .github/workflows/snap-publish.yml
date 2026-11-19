@@ -55,19 +55,39 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    outputs:
+      revision: ${{ steps.upload.outputs.revision }}
     steps:
       - name: Download snap artifact
         uses: actions/download-artifact@v8
         with:
           name: etherpad-snap
 
-      - name: Publish to edge
-        uses: snapcore/action-publish@v1
+      - name: Install snapcraft
+        run: sudo snap install snapcraft --classic
+
+      # snapcore/action-publish has no revision output and `snapcraft upload`
+      # has no machine-readable format, so parse the "Revision N created for
+      # 'etherpad'" line it prints. publish-stable releases exactly this
+      # revision, never "whatever is on edge right now".
+      - name: Upload and release to edge
+        id: upload
         env:
           SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
-        with:
-          snap: ${{ needs.build.outputs.snap-file }}
-          release: edge
+          SNAP_FILE: ${{ needs.build.outputs.snap-file }}
+        run: |
+          set -o pipefail
+          snapcraft upload --release=edge "$SNAP_FILE" 2>&1 | tee upload.log
+          rev="$(sed -n "s/.*Revision \([0-9][0-9]*\) created for.*/\1/p" upload.log | tail -n1)"
+          if [ -z "$rev" ]; then
+            echo "::error::Could not find the uploaded revision number in the snapcraft upload output."
+            exit 1
+          fi
+          if grep -qi 'manual review' upload.log; then
+            echo "::warning::Revision $rev needs manual review by the Snap Store; it reaches edge only after Canonical approves it."
+          fi
+          echo "Uploaded revision $rev"
+          echo "revision=$rev" >> "$GITHUB_OUTPUT"
 
   publish-stable:
     needs: [build, publish-edge]
@@ -77,16 +97,39 @@ jobs:
       contents: read
     # Manual gate: promote edge -> stable via GitHub Environments approval.
     environment: snap-store-stable
+    # One stable release at a time; never cancel one that is already running.
+    concurrency:
+      group: snap-publish-stable
+      cancel-in-progress: false
     steps:
-      - name: Download snap artifact
-        uses: actions/download-artifact@v8
-        with:
-          name: etherpad-snap
+      # Release the revision this run uploaded rather than re-uploading the
+      # same file (the store rejects an identical binary: "Error checking
+      # upload uniqueness") or promoting latest/edge, which may by now hold
+      # another tag's upload or the hourly cron's revision.
+      - name: Install snapcraft
+        run: sudo snap install snapcraft --classic
 
-      - name: Publish to stable
-        uses: snapcore/action-publish@v1
+      - name: Release this run's revision to stable
         env:
           SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
-        with:
-          snap: ${{ needs.build.outputs.snap-file }}
-          release: stable
+          REVISION: ${{ needs.publish-edge.outputs.revision }}
+        run: |
+          set -o pipefail
+          if ! [[ "$REVISION" =~ ^[0-9]+$ ]]; then
+            echo "::error::publish-edge did not report a revision (got '$REVISION')."
+            exit 1
+          fi
+          # A revision held in manual review has never been released to any
+          # channel, so `snapcraft revisions` shows "-" in its Channels column.
+          # Refuse rather than release something that has not been on edge.
+          snapcraft revisions etherpad | tee revisions.txt
+          channels="$(awk -v r="$REVISION" '$1 == r { print $NF }' revisions.txt)"
+          if [ -z "$channels" ]; then
+            echo "::error::Revision $REVISION is not listed in the store."
+            exit 1
+          fi
+          if [[ "$channels" != *edge* ]]; then
+            echo "::error::Revision $REVISION has not been released to edge yet (channels: $channels). It is probably still in Snap Store manual review. Re-run this job once Canonical approves it."
+            exit 1
+          fi
+          snapcraft release etherpad "$REVISION" stable
