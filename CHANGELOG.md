@@ -1,3 +1,26 @@
+# 3.3.20
+
+3.3.20 hardens the admin sockets. The admin settings and plugin pages now only accept socket connections opened by Etherpad's own admin page. It also fixes the pad counter on the admin pads page. Upgrading is recommended.
+
+### Security
+
+- **Admin — the admin socket.io namespaces now check where a connection comes from (#8511).** The `/settings` and `/pluginfw/installer` namespaces used to accept any handshake that carried an admin session cookie. Browsers send that cookie with WebSocket handshakes from any page on the same site, for example another subdomain of your domain. Connections are now accepted only when the browser reports them as same-origin (`Sec-Fetch-Site`), or when they carry a per-session token that the admin page fetches from Etherpad. Clients that send no `Origin` header, such as scripts, are not affected. Plugins with their own privileged namespaces can reuse the check as `originCheckMiddleware`. Reported by @brx-zyy.
+
+### Upgrade notes
+
+- No configuration change is needed, including behind a reverse proxy that rewrites the `Host` header: the check does not depend on `Host`, `trustProxy` or `publicURL`. A new `socketIo.allowedOrigins` setting (`SOCKETIO_ALLOWED_ORIGINS` in Docker) lets you allow additional origins, if a page on another origin needs to use the admin namespaces. If the admin page shows "The server refused this admin connection", check the server log for the rejected origin.
+
+### Notable fixes
+
+- **Admin — the pads page no longer piles up socket listeners (#8497, #8457).** Every update of the pad list added another set of listeners without removing the old ones. Deleting pads then made "Total pads" drop by 2, 3, 4 and go negative, and creating a pad reloaded the list more and more times. The listeners are now removed when the list changes.
+
+### Other changes
+
+- The snap's stable channel is now promoted from the tested edge revision instead of a fresh upload (#8450).
+- Fixed dead links to the Easysync PDFs in the docs (#8503).
+- Localisation updates from translatewiki.net.
+- Dependency updates, including oidc-provider 9.15.0, rate-limiter-flexible 11.5.0, nodemailer 10.6.0 and @tanstack/react-query 5.107.2.
+
 # 3.3.19
 
 3.3.19 is a bug-fix release. Users who share an IP, for example several tabs or people behind one proxy or the Home Assistant add-on, are no longer disconnected by the message rate limiter. Plugin icon fonts load again in production mode.
