@@ -99,12 +99,18 @@ const startProxy = async () => {
   return server;
 };
 
+// What the test pages point at. The page servers run in this process, so each
+// test sets these before it loads a page instead of passing them in the URL.
+let pagePad = '';
+let pageBase = etherpad;
+const showPage = (pad: string, base: string) => { pagePad = pad; pageBase = base; };
+
 test.beforeAll(async () => {
   tls = selfSignedCert();
   const servePage = (req: http.IncomingMessage, res: http.ServerResponse) => {
     const url = new URL(req.url!, 'http://x');
-    const pad = url.searchParams.get('pad') || '';
-    const padBase = url.searchParams.get('base') || etherpad;
+    const pad = pagePad;
+    const padBase = pageBase;
     res.setHeader('Content-Type', 'text/html');
     if (url.pathname === '/embed') {
       res.end(`<!doctype html><title>embedder</title>
@@ -216,8 +222,8 @@ test('a pad embedded on another origin of the same site keeps the visitor\'s aut
       await expect.poll(() => userId(page), {timeout: 20000}).toMatch(/^a\./);
       const visitor = await userId(page);
       // https on both sides: http and https are different sites.
-      await page.goto(`https://www.example.test:${tlsPagesPort}/embed?pad=${padId}` +
-          `&base=${encodeURIComponent(padBase)}`);
+      showPage(padId, padBase);
+      await page.goto(`https://www.example.test:${tlsPagesPort}/embed`);
       const {padFrame, inner} = embeddedPad(page, padId);
       await expect(inner).toBeVisible({timeout: 20000});
       await expect.poll(async () => await userId(padFrame()), {timeout: 20000}).toBe(visitor);
@@ -226,8 +232,8 @@ test('a pad embedded on another origin of the same site keeps the visitor\'s aut
 test('a pad embedded in a cross-site iframe works', async ({page, browser}) => {
   const padId = `FRONTEND_TESTS${randomUUID()}`;
   const padBase = `https://pad.example.test:${proxyPort}`;
-  await page.goto(`https://embedder.other.test:${tlsPagesPort}/embed?pad=${padId}` +
-      `&base=${encodeURIComponent(padBase)}`);
+  showPage(padId, padBase);
+  await page.goto(`https://embedder.other.test:${tlsPagesPort}/embed`);
   const {padFrame, inner} = embeddedPad(page, padId);
   await expect(inner).toBeVisible({timeout: 20000});
   await expect.poll(async () => await userId(padFrame()), {timeout: 20000}).toMatch(/^a\./);
@@ -251,8 +257,8 @@ test('a sibling subdomain gets an anonymous author, not the visitor\'s', async (
   const visitor = await userId(page);
 
   const sibling = await page.context().newPage();
-  await sibling.goto(`http://sibling.example.test:${pagesPort}/sibling?pad=${padId}` +
-      `&base=${encodeURIComponent(padBase)}`);
+  showPage(padId, padBase);
+  await sibling.goto(`http://sibling.example.test:${pagesPort}/sibling`);
   await expect.poll(() => sibling.evaluate(() => (window as any).result), {timeout: 20000})
       .toBeTruthy();
   const got = await sibling.evaluate(() => (window as any).result);
