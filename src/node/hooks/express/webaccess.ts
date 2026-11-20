@@ -8,6 +8,7 @@ import {SettingsUser} from "../../types/SettingsUser";
 const httpLogger = log4js.getLogger('http');
 import settings from '../../utils/Settings';
 import {anonymizeIp} from '../../utils/anonymizeIp';
+import {adminSocketToken} from '../../utils/socketOrigin';
 const hooks = require('../../../static/js/pluginfw/hooks');
 import readOnlyManager from '../../db/ReadOnlyManager';
 
@@ -71,6 +72,20 @@ const staticResources = [
   /^\/timeSliderBootstrap-[a-zA-Z0-9]+\.min\.js$/,
   /^\/manifest.json$/
 ]
+
+// Response for an authorized admin on /admin-auth/*. GET /admin-auth/socket-token
+// returns the token the admin UI passes in the socket.io handshake `auth` payload
+// (see utils/socketOrigin.ts). This response carries no CORS headers, so only a
+// page on Etherpad's own origin can read it, however a reverse proxy rewrites
+// the Host header.
+const sendAdminAuthorized = (req: any, res: any) => {
+  if (req.method === 'GET' && req.path.toLowerCase() === '/admin-auth/socket-token') {
+    res.set('Cache-Control', 'no-store');
+    res.json({token: adminSocketToken(req.sessionID)});
+    return;
+  }
+  res.status(200).send('Authorized');
+};
 
 const checkAccess = async (req:any, res:any, next: Function) => {
   const requireAdmin = req.path.toLowerCase().startsWith('/admin-auth');
@@ -157,10 +172,7 @@ const checkAccess = async (req:any, res:any, next: Function) => {
   // ///////////////////////////////////////////////////////////////////////////////////////////////
 
   if (await authorize()) {
-    if(requireAdmin) {
-        res.status(200).send('Authorized')
-        return
-    }
+    if (requireAdmin) return sendAdminAuthorized(req, res);
     return next();
   }
 
@@ -264,10 +276,7 @@ const checkAccess = async (req:any, res:any, next: Function) => {
 
   const auth = await authorize()
   if (auth && !requireAdmin) return next();
-  if(auth && requireAdmin) {
-    res.status(200).send('Authorized')
-    return
-  }
+  if (auth && requireAdmin) return sendAdminAuthorized(req, res);
 
   if (await aCallFirst0('authzFailure', {req, res})) return;
   if (await aCallFirst0('authFailure', {req, res, next})) return;

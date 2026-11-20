@@ -220,6 +220,7 @@ export type SettingsType = {
   socketTransportProtocols:  any[],
   socketIo: {
     maxHttpBufferSize: number,
+    allowedOrigins: string[] | string | null,
   },
   authenticationMethod: string,
   dbType: string,
@@ -531,6 +532,13 @@ const settings: SettingsType = {
      * (malicious clients can exhaust memory).
      */
     maxHttpBufferSize: 1000000,
+    /**
+     * Extra browser origins (scheme://host[:port]) allowed to open the admin socket.io
+     * namespaces (/settings, /pluginfw/installer). The admin UI on Etherpad's own origin
+     * always works, behind any reverse proxy, without setting this. Only needed to let a
+     * page on a different origin use the admin namespaces.
+     */
+    allowedOrigins: [],
   },
   /*
   The authentication method used by the server.
