@@ -23,6 +23,9 @@ exports.padcookie = new class {
   constructor() {
     const prefix = (window as any).clientVars?.cookiePrefix || '';
     this.cookieName_ = prefix + (window.location.protocol === 'https:' ? 'prefs' : 'prefsHttp');
+    // In-memory copy of the prefs, used when the cookie can't be read or written (e.g. a
+    // cross-site iframe over http, where the browser rejects the cookie).
+    this.prefs_ = {};
   }
 
   init() {
@@ -58,15 +61,24 @@ exports.padcookie = new class {
   }
 
   writePrefs_(prefs) {
-    Cookies.set(this.cookieName_, JSON.stringify(prefs), {expires: 365 * 100});
+    this.prefs_ = {...prefs};
+    try {
+      Cookies.set(this.cookieName_, JSON.stringify(prefs), {expires: 365 * 100});
+    } catch (e) {
+      // Cookies are unavailable; the in-memory copy still applies for this page load.
+    }
+  }
+
+  getPrefs_() {
+    return this.readPrefs_() || {...this.prefs_};
   }
 
   getPref(prefName) {
-    return this.readPrefs_()[prefName];
+    return this.getPrefs_()[prefName];
   }
 
   setPref(prefName, value) {
-    const prefs = this.readPrefs_();
+    const prefs = this.getPrefs_();
     prefs[prefName] = value;
     this.writePrefs_(prefs);
   }
