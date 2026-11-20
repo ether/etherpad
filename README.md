@@ -315,7 +315,7 @@ dependency or upgrading version.
 
 If you want to find out how Etherpad's `Easysync` works (the library that makes
 it really realtime), start with this
-[PDF](https://github.com/ether/etherpad/raw/master/doc/easysync/easysync-full-description.pdf)
+[PDF](https://github.com/ether/etherpad/blob/develop/doc/public/easysync/easysync-full-description.pdf)
 (complex, but worth reading).
 
 ### Contributing

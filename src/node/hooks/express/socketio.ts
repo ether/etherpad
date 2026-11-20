@@ -8,6 +8,7 @@ import log4js from 'log4js';
 const proxyaddr = require('proxy-addr');
 import settings from '../../utils/Settings';
 import {Server, Socket} from 'socket.io'
+import {checkSocketOrigin, isValidAdminSocketToken} from '../../utils/socketOrigin';
 const socketIORouter = require('../../handler/SocketIORouter');
 const hooks = require('../../../static/js/pluginfw/hooks');
 const padMessageHandler = require('../../handler/PadMessageHandler');
@@ -68,7 +69,68 @@ const socketSessionMiddleware = (args: any) => (socket: any, next: Function) => 
   express.sessionMiddleware(req, {}, next);
 };
 
+// The admin SPA's Vite dev server (`pnpm --filter admin dev`) is served from
+// localhost:5173 and opens its sockets directly against :9001, so allow it
+// when Etherpad itself is running in development mode.
+const devOrigins = (): string[] =>
+  process.env.NODE_ENV === 'development' ? ['http://localhost:5173'] : [];
+
+let lastOriginWarning = 0;
+
+let expressApp: any = null;
+
+const checkOrigin = (socket: any, next: Function) => {
+  const decision = checkSocketOrigin(socket.request, {
+    trustProxy: settings.trustProxy,
+    publicURL: settings.publicURL,
+    allowedOrigins: settings.socketIo?.allowedOrigins,
+    extraOrigins: devOrigins(),
+    tokenValid: isValidAdminSocketToken(
+        socket.request?.sessionID, socket.handshake?.auth?.adminSocketToken),
+  });
+  if (decision.allowed) return next();
+  // Without an admin session the admin UI cannot get a token, so the rejection
+  // is about the missing login, not the origin. Don't point the operator at
+  // socketIo.allowedOrigins for that. The client gets the same error either
+  // way, so a page on another origin cannot tell whether the visitor is an
+  // admin.
+  const isAdmin = !!socket.request?.session?.user?.is_admin;
+  if (isAdmin && Date.now() - lastOriginWarning > 10000) { // Rate limit to avoid filling logs.
+    lastOriginWarning = Date.now();
+    const host = String(socket.request.headers.host ?? '').slice(0, 255).replace(/[\r\n]/g, '');
+    logger.warn(`Rejected socket.io connection to ${socket.nsp?.name} from Origin ` +
+        `${JSON.stringify(String(decision.origin).slice(0, 255))} (Host: ${JSON.stringify(host)}): ` +
+        `${decision.reason}. ` +
+        'If this origin should be allowed to use the admin UI, add it to ' +
+        '"socketIo.allowedOrigins" in settings.json.');
+  } else if (!isAdmin) {
+    logger.debug(`Rejected socket.io connection to ${socket.nsp?.name} without an admin ` +
+        `session: ${decision.reason}`);
+  }
+  const err: any = new Error('origin not allowed');
+  err.data = {code: 'origin_not_allowed'};
+  next(err);
+};
+
+/**
+ * socket.io namespace middleware that rejects handshakes opened by a page on
+ * another origin (see utils/socketOrigin.ts for the rules). Registered on the
+ * privileged admin namespaces; exported so plugins that add their own
+ * privileged namespaces can use it too:
+ * `io.of('/my-admin-ns').use(originCheckMiddleware)`. It loads the express
+ * session itself if no earlier middleware has, because the admin socket token
+ * is checked against the session.
+ */
+export const originCheckMiddleware = (socket: any, next: Function) => {
+  if (socket.request?.sessionID != null || expressApp == null) return checkOrigin(socket, next);
+  socketSessionMiddleware({app: expressApp})(socket, (err: any) => {
+    if (err) return next(err);
+    checkOrigin(socket, next);
+  });
+};
+
 export const expressCreateServer = (hookName:string, args:ArgsExpressType, cb:Function) => {
+  expressApp = args.app;
   // init socket.io and redirect all requests to the MessageHandler
   // there shouldn't be a browser that isn't compatible to all
   // transports in this list at once
@@ -116,10 +178,12 @@ export const expressCreateServer = (hookName:string, args:ArgsExpressType, cb:Fu
   io.of('/pluginfw/installer')
       .on('connection',handleConnection)
       .use(socketSessionMiddleware(args))
+      .use(originCheckMiddleware)
       .use(renewSession)
   io.of('/settings')
       .on('connection',handleConnection)
       .use(socketSessionMiddleware(args))
+      .use(originCheckMiddleware)
       .use(renewSession)
 
   io.use(renewSession);

@@ -18,6 +18,7 @@ import util from 'util';
 const webaccess = require('./express/webaccess');
 
 import SecretRotator from '../security/SecretRotator';
+import {setAdminSocketTokenSecrets} from '../utils/socketOrigin';
 
 let secretRotator: SecretRotator|null = null;
 const logger = log4js.getLogger('http');
@@ -197,6 +198,11 @@ exports.restartServer = async () => {
     }
   }
   if (!secret) throw new Error('missing cookie signing secret');
+  const staticSecret = secret;
+  setAdminSocketTokenSecrets(() => {
+    const rotated = secretRotator?.secrets;
+    return Array.isArray(rotated) && rotated.length > 0 ? rotated : [staticSecret];
+  });
 
   app.use(cookieParser(secret, {}));
 

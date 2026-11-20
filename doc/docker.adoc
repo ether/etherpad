@@ -496,6 +496,10 @@ For the editor container, you can also make it full width by adding `full-width-
 | The maximum size (in bytes) of a single message accepted via Socket.IO. If a client sends a larger message, its connection gets closed to prevent DoS (memory exhaustion) attacks.
 | `50000`
 
+| `SOCKETIO_ALLOWED_ORIGINS`
+| Comma-separated extra origins (`scheme://host[:port]`) allowed to open the admin socket.io namespaces. The admin UI on Etherpad's own origin always works, also behind a proxy that rewrites Host; set this only to let a page on a different origin use the admin namespaces.
+| `""` (none)
+
 | `LOAD_TEST`
 | Allow Load Testing tools to hit the Etherpad Instance. WARNING: this will disable security on the instance.
 | `false`

@@ -129,5 +129,5 @@ attributes `*0*1` (author + bold), the following newline carries `*0`, and so on
 
 Detailed information about the changesets & Easysync protocol:
 
-* [Easysync Protocol](https://github.com/ether/etherpad/blob/develop/doc/easysync/easysync-notes.pdf)
-* [Etherpad and EasySync Technical Manual](https://github.com/ether/etherpad/blob/develop/doc/easysync/easysync-full-description.pdf)
+* [Easysync Protocol](https://github.com/ether/etherpad/blob/develop/doc/public/easysync/easysync-notes.pdf)
+* [Etherpad and EasySync Technical Manual](https://github.com/ether/etherpad/blob/develop/doc/public/easysync/easysync-full-description.pdf)
