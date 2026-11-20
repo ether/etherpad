@@ -26,10 +26,12 @@ exports.padcookie = new class {
     // In-memory copy of the prefs, used when the cookie can't be read or written (e.g. a
     // cross-site iframe over http, where the browser rejects the cookie).
     this.prefs_ = {};
+    // Set once a cookie write doesn't stick, so a stale cookie can't mask newer in-memory prefs.
+    this.memoryOnly_ = false;
   }
 
   init() {
-    const prefs = this.readPrefs_() || {};
+    const prefs = this.getPrefs_();
     delete prefs.userId;
     delete prefs.name;
     delete prefs.colorId;
@@ -62,14 +64,17 @@ exports.padcookie = new class {
 
   writePrefs_(prefs) {
     this.prefs_ = {...prefs};
+    const json = JSON.stringify(prefs);
     try {
-      Cookies.set(this.cookieName_, JSON.stringify(prefs), {expires: 365 * 100});
+      Cookies.set(this.cookieName_, json, {expires: 365 * 100});
+      if (Cookies.get(this.cookieName_) !== json) this.memoryOnly_ = true;
     } catch (e) {
-      // Cookies are unavailable; the in-memory copy still applies for this page load.
+      this.memoryOnly_ = true;
     }
   }
 
   getPrefs_() {
+    if (this.memoryOnly_) return {...this.prefs_};
     return this.readPrefs_() || {...this.prefs_};
   }
 

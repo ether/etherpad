@@ -14,21 +14,24 @@ vi.mock('../../../static/js/pad_utils', () => ({
 describe(__filename, function () {
   let padcookie: any;
   const g = globalThis as any;
-  const savedWindow = g.window;
+  const saved = {window: g.window, $: g.$, html10n: g.html10n};
 
   beforeAll(async function () {
     g.window = {location: {protocol: 'http:'}};
+    g.$ = {gritter: {add: () => {}}};
+    g.html10n = {get: (key: string) => key};
     ({padcookie} = await import('../../../static/js/pad_cookie') as any);
   });
 
   afterAll(function () {
-    g.window = savedWindow;
+    Object.assign(g, saved);
   });
 
   beforeEach(function () {
     jar.clear();
     blocked = true;
     padcookie.clear();
+    padcookie.memoryOnly_ = false;
   });
 
   it('getPref returns undefined instead of throwing when cookies are blocked', function () {
@@ -39,6 +42,19 @@ describe(__filename, function () {
     padcookie.setPref('showLineNumbers', false);
     expect(padcookie.getPref('showLineNumbers')).toBe(false);
     expect(jar.size).toBe(0);
+  });
+
+  it('init() keeps prefs set earlier when cookies are blocked', function () {
+    padcookie.init();
+    padcookie.setPref('chatAlwaysVisible', true);
+    padcookie.init();
+    expect(padcookie.getPref('chatAlwaysVisible')).toBe(true);
+  });
+
+  it('a readable but stale cookie does not hide newer prefs', function () {
+    jar.set('prefsHttp', JSON.stringify({showChat: false}));
+    padcookie.setPref('showChat', true);
+    expect(padcookie.getPref('showChat')).toBe(true);
   });
 
   it('still uses the cookie when cookies work', function () {
