@@ -8,7 +8,7 @@ import {SettingsUser} from "../../types/SettingsUser";
 const httpLogger = log4js.getLogger('http');
 import settings from '../../utils/Settings';
 import {anonymizeIp} from '../../utils/anonymizeIp';
-import {adminSocketToken} from '../../utils/socketOrigin';
+import {adminSocketToken, padCredentialBinding, padSocketToken} from '../../utils/socketOrigin';
 const hooks = require('../../../static/js/pluginfw/hooks');
 import readOnlyManager from '../../db/ReadOnlyManager';
 
@@ -87,7 +87,20 @@ const sendAdminAuthorized = (req: any, res: any) => {
   res.status(200).send('Authorized');
 };
 
+// GET /pad-socket-token returns the token the pad client passes in the
+// socket.io handshake `auth` payload (see utils/socketOrigin.ts). The token is
+// bound to the cookies this request carries, so it grants nothing those
+// cookies do not already grant, and is served without an access check: a
+// plugin's authorize hook that only knows pad paths must not break the pad
+// socket. The response carries no CORS headers, so only a page on Etherpad's
+// own origin can read it, however a reverse proxy rewrites the Host header.
+const sendPadSocketToken = (req: any, res: any) => {
+  res.set('Cache-Control', 'no-store');
+  res.json({token: padSocketToken(padCredentialBinding(req, settings.cookie?.prefix || ''))});
+};
+
 const checkAccess = async (req:any, res:any, next: Function) => {
+  if (req.method === 'GET' && req.path === '/pad-socket-token') return sendPadSocketToken(req, res);
   const requireAdmin = req.path.toLowerCase().startsWith('/admin-auth');
   for (const staticResource of staticResources) {
     if (req.path.match(staticResource)) {

@@ -8,7 +8,9 @@ import log4js from 'log4js';
 const proxyaddr = require('proxy-addr');
 import settings from '../../utils/Settings';
 import {Server, Socket} from 'socket.io'
-import {checkSocketOrigin, isValidAdminSocketToken} from '../../utils/socketOrigin';
+import {
+  checkSocketOrigin, isValidAdminSocketToken, isValidPadSocketToken, padCredentialBinding,
+} from '../../utils/socketOrigin';
 const socketIORouter = require('../../handler/SocketIORouter');
 const hooks = require('../../../static/js/pluginfw/hooks');
 const padMessageHandler = require('../../handler/PadMessageHandler');
@@ -129,6 +131,62 @@ export const originCheckMiddleware = (socket: any, next: Function) => {
   });
 };
 
+const asList = (v: unknown): string[] => {
+  if (v == null) return [];
+  return Array.isArray(v) ? v : String(v).split(',');
+};
+
+let lastPadOriginLog = 0;
+
+/**
+ * Origin check for the default (pad) namespace. Unlike the admin namespaces,
+ * pads are legitimately used from other sites: an embedded pad is a
+ * cross-site iframe. That iframe is still an Etherpad page, so its socket is
+ * opened from Etherpad's own origin and passes. What fails is a socket opened
+ * directly by a page on another origin (a sibling subdomain, or any site when
+ * cookies are SameSite=None). By default such a socket still connects, but
+ * the browser's cookies are ignored: it gets a fresh anonymous author rather
+ * than the visitor's author token, group session or login. See
+ * utils/socketOrigin.ts for how a handshake is judged; the pad client sends a
+ * pad socket token, so the check does not depend on the Host header.
+ */
+export const padOriginMiddleware = (socket: any, next: Function) => {
+  const policy = settings.socketIo?.crossOriginPadSockets || 'anonymous';
+  if (socket.data == null) socket.data = {};
+  if (policy === 'allow') {
+    socket.data.ambientCredentials = true;
+    return next();
+  }
+  const decision = checkSocketOrigin(socket.request, {
+    trustProxy: settings.trustProxy,
+    publicURL: settings.publicURL,
+    allowedOrigins: [
+      ...asList(settings.socketIo?.allowedOrigins),
+      ...asList(settings.socketIo?.padAllowedOrigins),
+    ],
+    tokenValid: isValidPadSocketToken(
+        padCredentialBinding(socket.request, settings.cookie?.prefix || ''),
+        socket.handshake?.auth?.padSocketToken),
+  });
+  socket.data.ambientCredentials = decision.allowed;
+  if (decision.allowed) return next();
+  if (Date.now() - lastPadOriginLog > 10000) { // Rate limit to avoid filling logs.
+    lastPadOriginLog = Date.now();
+    logger.info(`Pad socket.io connection from Origin ` +
+        `${JSON.stringify(String(decision.origin).slice(0, 255))} is not from this server ` +
+        `(${decision.reason}); ` +
+        (policy === 'reject' ? 'rejected it. ' : 'ignoring its cookies (anonymous author). ') +
+        'If this origin should act with the visitor\'s cookies, add it to ' +
+        '"socketIo.padAllowedOrigins" in settings.json.');
+  }
+  if (policy === 'reject') {
+    const err: any = new Error('origin not allowed');
+    err.data = {code: 'origin_not_allowed'};
+    return next(err);
+  }
+  next();
+};
+
 export const expressCreateServer = (hookName:string, args:ArgsExpressType, cb:Function) => {
   expressApp = args.app;
   // init socket.io and redirect all requests to the MessageHandler
@@ -148,8 +206,11 @@ export const expressCreateServer = (hookName:string, args:ArgsExpressType, cb:Fu
     // https://socket.io/docs/v3/faq/index.html
     // @ts-ignore
     const session = socket.request.session;
-    session.connections++;
-    session.save();
+    // @ts-ignore
+    if (session != null && socket.data?.ambientCredentials !== false) {
+      session.connections++;
+      session.save();
+    }
     socket.on('disconnect', () => {
       sockets.delete(socket);
       socketsEvents.emit('updated');
@@ -164,6 +225,9 @@ export const expressCreateServer = (hookName:string, args:ArgsExpressType, cb:Fu
       // have a standard mechanism for periodically updating the browser's cookies, so the browser
       // will not see the new cookie expiration time unless it makes a new HTTP request or the new
       // cookie value is sent to the client in a custom socket.io message.)
+      // A socket that may not use the browser's cookies must not keep the
+      // visitor's session alive either.
+      if (socket.data?.ambientCredentials === false) return;
       if (socket.request.session != null) socket.request.session.touch();
     });
     next();
@@ -186,6 +250,7 @@ export const expressCreateServer = (hookName:string, args:ArgsExpressType, cb:Fu
       .use(originCheckMiddleware)
       .use(renewSession)
 
+  io.use(padOriginMiddleware);
   io.use(renewSession);
 
   // var socketIOLogger = log4js.getLogger("socket.io");

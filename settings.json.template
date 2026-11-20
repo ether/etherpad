@@ -866,7 +866,40 @@
      * You only need this to let a page on a different origin use the admin
      * namespaces.
      */
-    "allowedOrigins": []
+    "allowedOrigins": [],
+
+    /*
+     * Pad sockets (the default namespace) identify the visitor from the
+     * cookies the browser sends: the author token, an HTTP API group session
+     * and, with requireAuthentication, the login. A page that is not
+     * Etherpad (a sibling subdomain, or any site when cookies are
+     * SameSite=None) can open a pad socket too, and its browser sends those
+     * cookies along.
+     *
+     * Etherpad's own pages prove where they come from, so these settings do
+     * not affect them. That includes embedded pads (also cross-site
+     * iframes), the timeslider, read-only pads, the desktop and mobile apps,
+     * and deployments behind a reverse proxy that rewrites the Host header.
+     * Non-browser clients (CLI tools, bots, load tests) send no Origin and
+     * are not affected either.
+     *
+     * crossOriginPadSockets decides what happens to a socket opened by a
+     * page on another origin:
+     *   "anonymous" (default): connect, but ignore the browser's cookies.
+     *                The page gets a fresh anonymous author, never the
+     *                visitor's identity, group sessions or login.
+     *   "reject":    refuse the connection. Recommended when you do not
+     *                integrate Etherpad by opening its sockets from other
+     *                origins.
+     *   "allow":     trust the cookies whatever the origin (the behaviour
+     *                before 3.3.21). Not recommended.
+     *
+     * padAllowedOrigins lists exact "scheme://host[:port]" origins whose
+     * pages may open pad sockets with the visitor's cookies. Origins in
+     * allowedOrigins are trusted for pads too.
+     */
+    "padAllowedOrigins": [],
+    "crossOriginPadSockets": "anonymous"
   },
 
   /*

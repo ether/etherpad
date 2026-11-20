@@ -11,6 +11,12 @@ Cookies used by Etherpad.
 
 For more info, visit the related discussion at https://github.com/ether/etherpad-lite/issues/3563.
 
+## Cookies on pad sockets from other origins
+
+Browsers send these cookies with a socket.io handshake based on the *site*, so a page on a sibling subdomain (or any site, with `SameSite=None`) can open a pad socket that carries them. The pad client therefore fetches a short token from `GET /pad-socket-token` (same origin, no CORS) and sends it with the handshake. The token is bound to the `token`, `sessionID` and logged-in `express_sid` cookies of that request.
+
+A pad socket may use the cookies when it has a valid token, an Origin listed in `socketIo.padAllowedOrigins` or `socketIo.allowedOrigins`, a `Sec-Fetch-Site` of `same-origin`, no `Origin` header (non-browser clients), or an Origin matching the Host header, `X-Forwarded-Host` (with `trustProxy`) or `publicURL`. A `Sec-Fetch-Site` of `same-site` or `cross-site` overrides everything except the allowlists. Any other pad socket comes from another origin. `socketIo.crossOriginPadSockets` decides what happens to it: `"anonymous"` (default) ignores its cookies, `"reject"` refuses it and `"allow"` trusts it.
+
 Etherpad HTTP API clients may make use (if they choose so) to send another cookie:
 
 | Name      | Sample value                       | Domain      | Usage description                                                                                                                                                                                                                                                                                                                                                                                                                          |
