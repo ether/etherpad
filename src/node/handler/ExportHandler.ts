@@ -194,15 +194,21 @@ exports.doExport = async (req: any, res: any, padId: string, readOnlyId: string,
         res.sendFile(destFile, (err: any) => (err ? reject(err) : resolve()));
       });
     } finally {
-      // clean up temporary files, also when sending failed
-      await fsp_unlink(srcFile).catch(() => {});
+      // clean up temporary files, also when sending failed. A failed removal
+      // must not replace the send error, but it is logged.
+      const removeTemp = (file: string) => fsp_unlink(file).catch((err: any) => {
+        if (err?.code !== 'ENOENT') {
+          console.warn(`Could not remove export temp file ${file}: ${err?.message || err}`);
+        }
+      });
+      await removeTemp(srcFile);
 
       // 100ms delay to accommodate for slow windows fs
       if (os.type().indexOf('Windows') > -1) {
         await new Promise((resolve) => setTimeout(resolve, 100));
       }
 
-      await fsp_unlink(destFile).catch(() => {});
+      await removeTemp(destFile);
     }
   }
 };
