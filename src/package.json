@@ -62,7 +62,7 @@
     "measured-core": "^2.0.0",
     "mime-types": "^3.0.2",
     "mongodb": "^7.9.0",
-    "mssql": "^12.7.14",
+    "mssql": "^12.7.16",
     "mysql2": "^3.24.6",
     "nano": "^11.0.8",
     "nodemailer": "^10.6.0",
