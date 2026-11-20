@@ -149,4 +149,32 @@ describe(__filename, function () {
           `soffice temp file still contains the remote URL:\n${capturedHtml}`);
     });
   }
+
+  // The converted file used to be deleted as soon as res.sendFile() was
+  // called, not when it finished, so on a slow file system the response
+  // sometimes found the file gone and turned into a 404.
+  it('sends the converted file before deleting the temp files', async function () {
+    const dests: string[] = [];
+    plugins.hooks.exportConvert = [
+      makeHook('exportConvert', async (hookName: string, {srcFile, destFile, res}: any) => {
+        dests.push(srcFile, destFile);
+        await fsp.writeFile(destFile, 'dummy-converted-output');
+        // Make sendFile start late, like a slow disk would.
+        const sendFile = res.sendFile.bind(res);
+        res.sendFile = (...args: any[]) => { setTimeout(() => sendFile(...args), 50); };
+        return 'handled';
+      }),
+    ];
+    for (let i = 0; i < 3; i++) {
+      const res = await agent.get('/p/sofficeSsrfPad/export/odt').buffer(true)
+          .parse((r: any, cb: Function) => {
+            let data = '';
+            r.on('data', (c: Buffer) => { data += c.toString(); });
+            r.on('end', () => cb(null, data));
+          })
+          .expect(200);
+      assert.equal(res.body, 'dummy-converted-output');
+    }
+    for (const f of dests) assert.equal(fs.existsSync(f), false, `${f} was not removed`);
+  });
 });

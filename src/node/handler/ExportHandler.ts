@@ -186,17 +186,23 @@ exports.doExport = async (req: any, res: any, padId: string, readOnlyId: string,
       await converter.convertFile(srcFile, destFile, type);
     }
 
-    // send the file
-    await res.sendFile(destFile, null);
+    try {
+      // send the file. res.sendFile() takes a callback and returns nothing, so
+      // wait for the callback: deleting destFile before then can make the
+      // response fail with ENOENT (a 404).
+      await new Promise<void>((resolve, reject) => {
+        res.sendFile(destFile, (err: any) => (err ? reject(err) : resolve()));
+      });
+    } finally {
+      // clean up temporary files, also when sending failed
+      await fsp_unlink(srcFile).catch(() => {});
 
-    // clean up temporary files
-    await fsp_unlink(srcFile);
+      // 100ms delay to accommodate for slow windows fs
+      if (os.type().indexOf('Windows') > -1) {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
 
-    // 100ms delay to accommodate for slow windows fs
-    if (os.type().indexOf('Windows') > -1) {
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await fsp_unlink(destFile).catch(() => {});
     }
-
-    await fsp_unlink(destFile);
   }
 };
