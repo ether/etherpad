@@ -263,6 +263,50 @@ describe(__filename, function () {
           assert.equal(msg.data.userId, authorId);
         });
 
+        it('an unknown policy refuses a foreign origin instead of failing open',
+            async function () {
+              settings.socketIo = {...settings.socketIo, crossOriginPadSockets: 'rejct' as any};
+              const {cookie} = await visitor();
+              const o = await open(cookie, {transport, origin: 'https://other.example.com'});
+              assert.equal(o.event, 'connect_error');
+              assert.equal((o as any).message, 'origin not allowed');
+            });
+
+        it('plugin hooks see no cookies or session on a foreign-origin socket',
+            async function () {
+              const {cookie} = await visitor();
+              const seen: any[] = [];
+              const backup = plugins.hooks.handleMessage;
+              plugins.hooks.handleMessage = [{
+                hook_fn: (hookName: string, ctx: any) => {
+                  if (ctx.message?.type !== 'CLIENT_READY') return;
+                  const req = ctx.socket.request;
+                  seen.push({cookie: req.headers.cookie, user: req.session?.user,
+                    sessionID: req.sessionID, save: typeof req.session?.save});
+                },
+                hook_fn_name: 'padSocketOriginTest/handleMessage',
+                hook_name: 'handleMessage',
+                part: {plugin: 'padSocketOriginTest'},
+              }];
+              try {
+                await clientReady(
+                    await connected(cookie, {transport, origin: 'https://other.example.com'}));
+                await clientReady(await connected(cookie, {
+                  transport, origin: 'https://pad.example.com', token: await tokenFor(cookie),
+                }));
+              } finally {
+                plugins.hooks.handleMessage = backup;
+              }
+              assert.equal(seen.length, 2);
+              assert.equal(seen[0].cookie, undefined);
+              assert.equal(seen[0].user, undefined);
+              assert.equal(seen[0].sessionID, undefined);
+              assert.equal(seen[0].save, 'undefined');
+              // Etherpad's own page keeps them.
+              assert.match(seen[1].cookie, /token=/);
+              assert.equal(seen[1].save, 'function');
+            });
+
         it('socketIo.padAllowedOrigins and allowedOrigins are trusted', async function () {
           const {cookie, authorId} = await visitor();
           settings.socketIo = {...settings.socketIo, padAllowedOrigins: ['https://app.example.com']};
@@ -315,6 +359,41 @@ describe(__filename, function () {
             await connected(cookie, {origin: 'https://other.example.com'}));
         assert.equal(msg.accessStatus, 'deny');
       });
+
+      it('plugin hooks do not see the visitor\'s login on a foreign-origin socket',
+          async function () {
+            const cookie = await login();
+            // Let the join through without a login, so the message hooks run
+            // and can look at the session the visitor's cookie points to.
+            settings.requireAuthentication = false;
+            const seen: any[] = [];
+            const backup = plugins.hooks.handleMessageSecurity;
+            plugins.hooks.handleMessageSecurity = [{
+              hook_fn: (hookName: string, ctx: any) => {
+                if (ctx.message?.type === 'CLIENT_READY') return;
+                seen.push(ctx.socket.request.session?.user?.username ?? null);
+              },
+              hook_fn_name: 'padSocketOriginTest/handleMessageSecurity',
+              hook_name: 'handleMessageSecurity',
+              part: {plugin: 'padSocketOriginTest'},
+            }];
+            const sendChat = async (s: any) => {
+              await clientReady(s);
+              s.emit('message', {component: 'pad', type: 'COLLABROOM',
+                data: {type: 'CHAT_MESSAGE', message: {text: 'hi', time: Date.now()}}});
+              await new Promise((r) => setTimeout(r, 300));
+            };
+            try {
+              await sendChat(await connected(cookie, {origin: 'https://other.example.com'}));
+              await sendChat(await connected(cookie, {
+                origin: 'https://pad.example.com', token: await tokenFor(cookie),
+              }));
+            } finally {
+              plugins.hooks.handleMessageSecurity = backup;
+            }
+            // Etherpad's own page sees the login, the foreign page does not.
+            assert.deepEqual(seen, [null, 'user']);
+          });
 
       it('the pad page behind a Host-rewriting proxy can, with its token', async function () {
         const cookie = await login();

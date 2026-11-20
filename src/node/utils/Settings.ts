@@ -1304,6 +1304,18 @@ export const reloadSettings = () => {
       settings.ipLogging = 'anonymous';
     }
 
+    // Validate `socketIo.crossOriginPadSockets`. A typo must not quietly pick
+    // a weaker policy than intended, so an unknown value falls back to the
+    // strictest one.
+    const validCrossOriginPadSockets = ['anonymous', 'reject', 'allow'];
+    if (settings.socketIo != null && settings.socketIo.crossOriginPadSockets != null &&
+        !validCrossOriginPadSockets.includes(settings.socketIo.crossOriginPadSockets as any)) {
+      logger.error(
+          `socketIo.crossOriginPadSockets="${settings.socketIo.crossOriginPadSockets}" is ` +
+          `not one of ${validCrossOriginPadSockets.join(', ')}; falling back to "reject".`);
+      settings.socketIo.crossOriginPadSockets = 'reject';
+    }
+
     // Validate `privacyBanner.dismissal`. The client treats every value other
     // than the exact strings 'dismissible' and 'sticky' as "no special
     // handling", which silently degrades a misconfigured 'sticky' to a

@@ -63,8 +63,10 @@ import {readCookieFromHeader} from '../utils/socketOrigin';
 // socket opened by a page that is not Etherpad with
 // `socket.data.ambientCredentials = false`. Such a socket must not act on the
 // cookies the browser attached to its handshake (author token, group session,
-// login session): they belong to the visitor, not to the page. These helpers
-// are the only way this file reads those credentials.
+// login session): they belong to the visitor, not to the page. The middleware
+// also strips the cookies and the session from the handshake request, so
+// plugin hooks that get the socket cannot see them either; these helpers keep
+// the core reads safe on their own as well.
 const ambientCredentialsTrusted = (socket: any): boolean =>
   socket?.data?.ambientCredentials !== false;
 const NO_CREDENTIALS = Object.freeze({session: Object.freeze({}), headers: Object.freeze({})});

@@ -894,6 +894,11 @@
      *   "allow":     trust the cookies whatever the origin (the behaviour
      *                before 3.3.21). Not recommended.
      *
+     * Etherpad's pages prove their origin with a token from
+     * /pad-socket-token that is bound to the cookies sent with that request.
+     * If you set the group sessionID cookie yourself, use a Path that also
+     * covers /pad-socket-token (normally "/").
+     *
      * padAllowedOrigins lists exact "scheme://host[:port]" origins whose
      * pages may open pad sockets with the visitor's cookies. Origins in
      * allowedOrigins are trusted for pads too.

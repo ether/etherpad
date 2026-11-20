@@ -20,13 +20,17 @@ const etherpadPort = Number(new URL(etherpad).port);
 
 // pad/www/sibling.example.test are same-site with each other; embedder.other.test
 // is another site. All map to loopback, so Chromium's local network access
-// checks do not get in the way. The rules do not affect localhost.
+// checks do not get in the way. The rules do not affect localhost. Chromium
+// takes the mapping as a command line flag, Firefox as a pref; each browser
+// ignores the other's.
+const testHosts =
+    ['pad.example.test', 'sibling.example.test', 'www.example.test', 'embedder.other.test'];
 test.use({
   ignoreHTTPSErrors: true,
-  launchOptions: {args: [
-    '--host-resolver-rules=MAP pad.example.test 127.0.0.1, MAP sibling.example.test 127.0.0.1, ' +
-      'MAP www.example.test 127.0.0.1, MAP embedder.other.test 127.0.0.1',
-  ]},
+  launchOptions: {
+    args: [`--host-resolver-rules=${testHosts.map((h) => `MAP ${h} 127.0.0.1`).join(', ')}`],
+    firefoxUserPrefs: {'network.dns.localDomains': testHosts.join(',')},
+  },
 });
 
 let pages: http.Server; // Embedding page and sibling page, on other origins.
@@ -188,6 +192,7 @@ test('behind a Host-rewriting TLS proxy the pad keeps its author and edits',
       await page.goto(padUrl);
       await expect.poll(() => userId(page), {timeout: 20000}).toMatch(/^a\./);
       const before = await userId(page);
+      await page.waitForSelector('#editorcontainer.initialized');
       await (await getPadBody(page)).click();
       await page.keyboard.insertText('typed behind a proxy');
 

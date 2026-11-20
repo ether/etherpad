@@ -175,16 +175,38 @@ export const padOriginMiddleware = (socket: any, next: Function) => {
     logger.info(`Pad socket.io connection from Origin ` +
         `${JSON.stringify(String(decision.origin).slice(0, 255))} is not from this server ` +
         `(${decision.reason}); ` +
-        (policy === 'reject' ? 'rejected it. ' : 'ignoring its cookies (anonymous author). ') +
+        (policy !== 'anonymous' ? 'rejected it. ' : 'ignoring its cookies (anonymous author). ') +
         'If this origin should act with the visitor\'s cookies, add it to ' +
         '"socketIo.padAllowedOrigins" in settings.json.');
   }
-  if (policy === 'reject') {
+  // Anything but "anonymous" here is "reject" (Settings validates the value;
+  // this keeps a value changed at runtime from failing open).
+  if (policy !== 'anonymous') {
     const err: any = new Error('origin not allowed');
     err.data = {code: 'origin_not_allowed'};
     return next(err);
   }
+  stripAmbientCredentials(socket.request);
   next();
+};
+
+/**
+ * Removes the browser's cookies and the express session from a handshake
+ * request, so nothing that runs later can act on them: core reads go through
+ * PadMessageHandler's credentialRequest(), but plugin hooks (handleMessage,
+ * handleMessageSecurity, clientVars, userJoin, ...) get the raw socket. Other
+ * namespaces on the same connection share this request object, so they see
+ * the stripped request too once the pad namespace has connected; a plugin
+ * namespace that needs a guarantee should run its own origin check.
+ */
+const stripAmbientCredentials = (req: any) => {
+  if (req == null) return;
+  if (req.headers != null) delete req.headers.cookie;
+  // A plain object, not an express-session Session: it has no save() or
+  // touch(), so it cannot write to or renew the visitor's stored session.
+  req.session = {};
+  req.sessionID = undefined;
+  req.sessionStore = undefined;
 };
 
 export const expressCreateServer = (hookName:string, args:ArgsExpressType, cb:Function) => {

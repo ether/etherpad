@@ -707,7 +707,7 @@ Context properties:
     * `padId`: The real (not read-only) ID of the pad.
     * `readOnly`: Whether the client has read-only access (true) or read/write
       access (false).
-* `socket`: The socket.io Socket object.
+* `socket`: The socket.io Socket object. If the pad socket was opened by a page on another origin and `socketIo.crossOriginPadSockets` is `"anonymous"`, `socket.request` carries no `Cookie` header and an empty `session` (no `user`), so a plugin cannot act on the visitor's cookies or login for it.
 * `client`: (**Deprecated**; use `socket` instead.) Synonym of `socket`.
 
 Example:
@@ -751,7 +751,7 @@ Context properties:
     * `padId`: The real (not read-only) ID of the pad.
     * `readOnly`: Whether the client has read-only access (true) or read/write
       access (false).
-* `socket`: The socket.io Socket object.
+* `socket`: The socket.io Socket object. If the pad socket was opened by a page on another origin and `socketIo.crossOriginPadSockets` is `"anonymous"`, `socket.request` carries no `Cookie` header and an empty `session` (no `user`), so a plugin cannot act on the visitor's cookies or login for it.
 * `client`: (**Deprecated**; use `socket` instead.) Synonym of `socket`.
 
 Example:
