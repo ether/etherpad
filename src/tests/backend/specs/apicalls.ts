@@ -19,5 +19,28 @@ describe(__filename, function () {
         .send({})
         .expect(400);
     });
+
+    it('POST with deeply nested diagnosticInfo returns 200', async function () {
+      const depth = 16000; // ~96KB, under the express.json() limit
+      const body = `{"diagnosticInfo":${'{"a":'.repeat(depth)}1${'}'.repeat(depth)}}`;
+      await agent.post('/ep/pad/connection-diagnostic-info')
+        .set('Content-Type', 'application/json')
+        .send(body)
+        .expect(200);
+    });
+  });
+
+  describe('/jserror', function () {
+    it('accepts a normal error report', async function () {
+      await agent.post('/jserror')
+        .field('errorInfo', JSON.stringify({msg: 'boom', stack: 'at x'}))
+        .expect(200);
+    });
+
+    it('rejects an oversized error report', async function () {
+      const res = await agent.post('/jserror')
+        .field('errorInfo', JSON.stringify({msg: 'boom', pad: 'x'.repeat(200 * 1024)}));
+      if (res.status === 200) throw new Error('oversized /jserror body was accepted');
+    });
   });
 });
