@@ -30,8 +30,20 @@ export const App = () => {
     document.title = t('admin.page-title')
     useStore.getState().setShowLoading(true);
 
-    const settingSocket = connect(`${WS_URL}/settings`, {transports: ['websocket']});
-    const pluginsSocket = connect(`${WS_URL}/pluginfw/installer`, {transports: ['websocket']})
+    // The admin namespaces accept a handshake when the browser reports it as
+    // same-origin (Sec-Fetch-Site) or when it carries this session's admin
+    // socket token. The token comes from a same-origin endpoint and is fetched
+    // again on every (re)connect, so it survives session rotation and server
+    // restarts and works behind any reverse proxy.
+    const socketAuth = (cb: (data: object) => void) => {
+      fetch('/admin-auth/socket-token', {credentials: 'same-origin'})
+          .then((r) => (r.ok ? r.json() : {}))
+          .then((body: {token?: string}) =>
+            cb(typeof body?.token === 'string' ? {adminSocketToken: body.token} : {}))
+          .catch(() => cb({}));
+    };
+    const settingSocket = connect(`${WS_URL}/settings`, {transports: ['websocket'], auth: socketAuth});
+    const pluginsSocket = connect(`${WS_URL}/pluginfw/installer`, {transports: ['websocket'], auth: socketAuth})
     // When the server explicitly rejects us for not being admin, we must
     // NOT reconnect on the subsequent `disconnect` event — otherwise the
     // socket cycles forever (connect → admin_auth_error → server
@@ -83,6 +95,22 @@ export const App = () => {
         setToastState({open: true, title: t('admin_settings.toast.save_failed') + (detail ? ` (${detail})` : ''), success: false});
       }
     });
+
+    // The server rejects admin sockets opened from a page on another origin.
+    // socket.io does not retry after a middleware rejection, so without this
+    // the SPA would sit on the loading screen.
+    const onConnectError = (err: Error & {data?: {code?: string}}) => {
+      if (err?.data?.code !== 'origin_not_allowed') return;
+      authErrored = true;
+      useStore.getState().setToastState({
+        open: true,
+        title: t('admin_settings.toast.origin_rejected'),
+        success: false,
+      });
+      useStore.getState().setShowLoading(false);
+    };
+    settingSocket.on('connect_error', onConnectError);
+    pluginsSocket.on('connect_error', onConnectError);
 
     // Backend emits this when the connecting socket does not have an
     // admin session. Previously the server just dropped silently, so the

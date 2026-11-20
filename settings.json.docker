@@ -719,7 +719,24 @@
      *
      * 1MB accommodates large pastes while still preventing abuse.
      */
-    "maxHttpBufferSize": "${SOCKETIO_MAX_HTTP_BUFFER_SIZE:1000000}"
+    "maxHttpBufferSize": "${SOCKETIO_MAX_HTTP_BUFFER_SIZE:1000000}",
+
+    /*
+     * Extra browser origins allowed to open the admin socket.io namespaces
+     * (/settings and /pluginfw/installer), as exact "scheme://host[:port]"
+     * strings. SOCKETIO_ALLOWED_ORIGINS takes a comma-separated list,
+     * e.g. "https://admin.example.com,https://pad.example.org".
+     *
+     * Etherpad rejects admin socket connections opened by a page on another
+     * origin, including a sibling subdomain (SameSite=Lax cookies are still
+     * sent there), so such a page cannot use a logged-in administrator's
+     * session. The admin UI on Etherpad's own origin always works, also
+     * behind a reverse proxy that rewrites the Host header: the check uses
+     * the browser's Sec-Fetch-Site header and a per-session token, not Host.
+     * You only need this to let a page on a different origin use the admin
+     * namespaces.
+     */
+    "allowedOrigins": "${SOCKETIO_ALLOWED_ORIGINS:}"
   },
 
   /*

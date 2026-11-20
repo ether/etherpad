@@ -48,6 +48,35 @@ export const generateAdminDefinition = (): any => ({
         },
       },
     },
+    '/admin-auth/socket-token': {
+      get: {
+        operationId: 'getAdminSocketToken',
+        summary: 'Get the token for the admin socket.io handshake',
+        description:
+          'Returns a token bound to the caller\'s admin session. The admin UI ' +
+          'passes it as `auth.adminSocketToken` when connecting to the /settings ' +
+          'and /pluginfw/installer socket.io namespaces.',
+        security: [
+          {sessionCookie: []},
+        ],
+        responses: {
+          '200': {
+            description: 'Caller is an authenticated admin.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {token: {type: 'string'}},
+                  required: ['token'],
+                },
+              },
+            },
+          },
+          '401': {description: 'No authentication presented and no admin session exists.'},
+          '403': {description: 'Authenticated, but the user is not an admin.'},
+        },
+      },
+    },
     '/api/version-status': {
       get: {
         operationId: 'getVersionStatus',
