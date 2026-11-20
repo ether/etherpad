@@ -221,6 +221,8 @@ export type SettingsType = {
   socketIo: {
     maxHttpBufferSize: number,
     allowedOrigins: string[] | string | null,
+    padAllowedOrigins: string[] | string | null,
+    crossOriginPadSockets: 'anonymous' | 'reject' | 'allow',
   },
   authenticationMethod: string,
   dbType: string,
@@ -539,6 +541,24 @@ const settings: SettingsType = {
      * page on a different origin use the admin namespaces.
      */
     allowedOrigins: [],
+    /**
+     * Extra browser origins allowed to open pad sockets (the default socket.io
+     * namespace) with the visitor's cookies. Etherpad's own pages, embedded
+     * pads (cross-site iframes included) and non-browser clients never need
+     * this. Origins in allowedOrigins are trusted here too.
+     */
+    padAllowedOrigins: [],
+    /**
+     * What to do with a pad socket opened by a page that is not Etherpad (a
+     * sibling subdomain, or any site when cookies are SameSite=None):
+     *   "anonymous" (default): connect, but ignore the browser's cookies, so
+     *       the page gets a fresh anonymous author instead of the visitor's
+     *       identity, group sessions or login.
+     *   "reject": refuse the connection.
+     *   "allow": trust the cookies regardless of origin (behaviour before
+     *       3.3.21; not recommended).
+     */
+    crossOriginPadSockets: 'anonymous',
   },
   /*
   The authentication method used by the server.
@@ -1282,6 +1302,18 @@ export const reloadSettings = () => {
           `ipLogging="${settings.ipLogging}" is not one of ` +
           `${validIpLogging.join(', ')}; falling back to "anonymous".`);
       settings.ipLogging = 'anonymous';
+    }
+
+    // Validate `socketIo.crossOriginPadSockets`. A typo must not quietly pick
+    // a weaker policy than intended, so an unknown value falls back to the
+    // strictest one.
+    const validCrossOriginPadSockets = ['anonymous', 'reject', 'allow'];
+    if (settings.socketIo != null && settings.socketIo.crossOriginPadSockets != null &&
+        !validCrossOriginPadSockets.includes(settings.socketIo.crossOriginPadSockets as any)) {
+      logger.error(
+          `socketIo.crossOriginPadSockets="${settings.socketIo.crossOriginPadSockets}" is ` +
+          `not one of ${validCrossOriginPadSockets.join(', ')}; falling back to "reject".`);
+      settings.socketIo.crossOriginPadSockets = 'reject';
     }
 
     // Validate `privacyBanner.dismissal`. The client treats every value other
