@@ -1,0 +1,108 @@
+#timeslider-slider #ui-slider-handle {
+  border-radius: 3px;
+  width: 12px;
+  height: 28px;
+  background-color: #64d29b;
+  background-color: var(--primary-color);
+}
+
+#timeslider-slider #ui-slider-bar {
+  border-radius: 3px;
+  background-color: #d2d2d2;
+  background-color: var(--border-color);
+}
+#slider-btn-container {
+  margin: -18px 15px 0 20px;
+}
+#slider-btn-container #playpause_button_icon {
+  color: #ffffff;
+  color: var(--bg-color);
+  background-color: #64d29b;
+  background-color: var(--primary-color);
+  border: none;
+  margin-right: 5px;
+  padding-top: 3px;
+  width: 45px;
+  height: 45px;
+}
+#slider-btn-container #playpause_button_icon:not(.pause) {
+  padding-left: 4px;
+}
+#slider-btn-container .stepper {
+  border: 2px solid !important;
+  height: 30px;
+  width: 30px;
+  line-height: 28px;
+  margin-left: 5px;
+  font-size: 13px;
+  color: #64d29b;
+  color: var(--primary-color);
+  border-color: #64d29b;
+  border-color: var(--primary-color);
+}
+#slider-btn-container .stepper.disabled {
+  opacity: .5;
+}
+
+.timeslider #editbar .buttontext {
+  background-color: #576273;
+  background-color: var(--text-soft-color);
+  color: #ffffff;
+  color: var(--bg-color);
+  margin: 0;
+}
+
+#editbar {
+  display: block;
+  padding-bottom: 5px;
+}
+
+#editbar li > a {
+  border-radius: 3px;
+}
+
+#timeslider-slider #timer {
+  opacity: .7;
+  top: -12px;
+  font-size: .8em;
+}
+
+.timeslider #authorsList .author {
+  padding: 2px 5px;
+  border-radius: 3px;
+  margin-right: 4px;
+  margin-bottom: 4px;
+}
+
+.timeslider-title {
+  font-size: 1.8rem !important;
+}
+.timeslider-subtitle {
+  margin-top: 6px;
+  font-size: .9em;
+}
+
+.timeslider #outerdocbody > #sidediv {
+  padding-top: 30px;
+  padding-bottom: 30px;
+}
+
+.timeslider #outerdocbody > #innerdocbody {
+  padding-top: 30px;
+  padding-bottom: 30px;
+}
+
+@media (max-width: 800px) {
+
+  #slider-btn-container {
+    margin-top: 0;
+    margin-right: 5px;
+  }
+  #slider-btn-container #playpause_button_icon {
+    width: 30px;
+    height: 30px;
+  }
+  #slider-btn-container #playpause_button_icon:before {
+    font-size: 18px;
+  }
+}

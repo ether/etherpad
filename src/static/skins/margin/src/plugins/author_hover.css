@@ -1,0 +1,10 @@
+.authortooltip {
+  opacity: 1!important;
+  border-radius: 2px;
+  padding: 4px 10px 3px!important;
+  text-transform: uppercase;
+  font-size: 13px!important;
+  font-weight: 700;
+  color: #000;
+  background-color: rgba(255, 255, 255, 0.85) !important;
+}
