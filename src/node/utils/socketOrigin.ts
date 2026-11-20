@@ -206,3 +206,76 @@ export const isValidAdminSocketToken = (sessionID: unknown, token: unknown): boo
   }
   return ok;
 };
+
+// ---------------------------------------------------------------------------
+// Pad socket token (default socket.io namespace).
+//
+// The pad socket identifies the visitor from cookies the browser attaches to
+// the handshake: the HttpOnly author `token` cookie, the integrator's group
+// `sessionID` cookie and the express session (when it holds a logged-in
+// user). Pads have no login in the default config, so the token is bound to
+// exactly those values. A page on another origin can fetch a token for its
+// own cookies, but the handshake it opens carries the visitor's cookies, so
+// the token does not match. Binding every credential the pad handler reads
+// also defeats cookie tossing from a sibling subdomain: whatever credentials
+// the server ends up using are the ones the token was issued for.
+// ---------------------------------------------------------------------------
+
+/**
+ * Reads one cookie from a raw Cookie header. Same rules as the pad handler
+ * uses when it resolves the author token: first match wins, undecodable
+ * values count as absent.
+ */
+export const readCookieFromHeader = (cookieHeader: unknown, name: string): string | null => {
+  if (typeof cookieHeader !== 'string' || cookieHeader === '') return null;
+  const match = cookieHeader.split(/;\s*/).find((c) => c.split('=')[0] === name);
+  if (!match) return null;
+  const raw = match.split('=').slice(1).join('=');
+  try {
+    return decodeURIComponent(raw);
+  } catch (err) {
+    if (err instanceof URIError) return null;
+    throw err;
+  }
+};
+
+export type PadCredentialRequest = {
+  headers?: {cookie?: string | string[]},
+  session?: {user?: unknown} | null,
+  sessionID?: unknown,
+};
+
+/** The credentials of a request that the pad handler would act on. */
+export const padCredentialBinding = (req: PadCredentialRequest, cookiePrefix: string): string => {
+  const cookieHeader = Array.isArray(req.headers?.cookie) ?
+    req.headers!.cookie.join('; ') : req.headers?.cookie;
+  const authorToken = readCookieFromHeader(cookieHeader, `${cookiePrefix}token`) || '';
+  const groupSession = readCookieFromHeader(cookieHeader, `${cookiePrefix}sessionID`) ||
+      readCookieFromHeader(cookieHeader, 'sessionID') || '';
+  // The express session only grants anything once it holds a user. Anonymous
+  // sessions are not saved (saveUninitialized: false), so their id changes on
+  // every request and must not be part of the binding.
+  const loginSession = req.session?.user != null && typeof req.sessionID === 'string' ?
+    req.sessionID : '';
+  return JSON.stringify([authorToken, groupSession, loginSession]);
+};
+
+const padMac = (secret: string, binding: string): string =>
+  crypto.createHmac('sha256', secret)
+      .update(`etherpad pad socket token\0${binding}`)
+      .digest('base64url');
+
+/** Returns the pad socket token for the credentials a request carries. */
+export const padSocketToken = (binding: string): string => padMac(currentSecrets()[0], binding);
+
+/** Constant-time check of a client-supplied pad socket token. */
+export const isValidPadSocketToken = (binding: string, token: unknown): boolean => {
+  if (typeof token !== 'string' || token === '' || token.length > 128) return false;
+  const actual = Buffer.from(token);
+  let ok = false;
+  for (const secret of currentSecrets()) {
+    const expected = Buffer.from(padMac(secret, binding));
+    if (actual.length === expected.length && crypto.timingSafeEqual(actual, expected)) ok = true;
+  }
+  return ok;
+};

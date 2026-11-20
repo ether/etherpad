@@ -186,17 +186,29 @@ exports.doExport = async (req: any, res: any, padId: string, readOnlyId: string,
       await converter.convertFile(srcFile, destFile, type);
     }
 
-    // send the file
-    await res.sendFile(destFile, null);
+    try {
+      // send the file. res.sendFile() takes a callback and returns nothing, so
+      // wait for the callback: deleting destFile before then can make the
+      // response fail with ENOENT (a 404).
+      await new Promise<void>((resolve, reject) => {
+        res.sendFile(destFile, (err: any) => (err ? reject(err) : resolve()));
+      });
+    } finally {
+      // clean up temporary files, also when sending failed. A failed removal
+      // must not replace the send error, but it is logged.
+      const removeTemp = (file: string) => fsp_unlink(file).catch((err: any) => {
+        if (err?.code !== 'ENOENT') {
+          console.warn(`Could not remove export temp file ${file}: ${err?.message || err}`);
+        }
+      });
+      await removeTemp(srcFile);
 
-    // clean up temporary files
-    await fsp_unlink(srcFile);
+      // 100ms delay to accommodate for slow windows fs
+      if (os.type().indexOf('Windows') > -1) {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
 
-    // 100ms delay to accommodate for slow windows fs
-    if (os.type().indexOf('Windows') > -1) {
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await removeTemp(destFile);
     }
-
-    await fsp_unlink(destFile);
   }
 };

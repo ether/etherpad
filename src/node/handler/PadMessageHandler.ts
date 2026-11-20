@@ -57,6 +57,22 @@ import {ChangeSet} from "../types/ChangeSet";
 import {ChatMessageMessage, ClientReadyMessage, ClientSaveRevisionMessage, ClientSuggestUserName, ClientUserChangesMessage, ClientVarMessage, CustomMessage, PadDeleteMessage, PadOptionsMessage, UserNewInfoMessage} from "../../static/js/types/SocketIOMessage";
 import {Builder} from "../../static/js/Builder";
 const webaccess = require('../hooks/express/webaccess');
+import {readCookieFromHeader} from '../utils/socketOrigin';
+
+// The pad origin check (hooks/express/socketio.ts padOriginMiddleware) marks a
+// socket opened by a page that is not Etherpad with
+// `socket.data.ambientCredentials = false`. Such a socket must not act on the
+// cookies the browser attached to its handshake (author token, group session,
+// login session): they belong to the visitor, not to the page. The middleware
+// also strips the cookies and the session from the handshake request, so
+// plugin hooks that get the socket cannot see them either; these helpers keep
+// the core reads safe on their own as well.
+const ambientCredentialsTrusted = (socket: any): boolean =>
+  socket?.data?.ambientCredentials !== false;
+const NO_CREDENTIALS = Object.freeze({session: Object.freeze({}), headers: Object.freeze({})});
+/** The request whose session/cookies may be used for this socket. */
+const credentialRequest = (socket: any): SocketClientRequest =>
+  (ambientCredentialsTrusted(socket) ? socket.client.request : NO_CREDENTIALS) as any;
 const { checkValidRev } = require('../utils/checkValidRev');
 
 let rateLimiter:any;
@@ -286,7 +302,7 @@ exports.handleDisconnect = async (socket:any) => {
 const notifyUserLeave = async (socket: any, session: any) => {
   // session.padId can be nullish if the user disconnects before sending CLIENT_READY.
   if (!session || !session.author || !session.padId) return;
-  const {session: {user} = {}} = socket.client.request as SocketClientRequest;
+  const {session: {user} = {}} = credentialRequest(socket);
   /* eslint-disable prefer-template -- it doesn't support breaking across multiple lines */
   accessLogger.info('[LEAVE]' +
                     ` pad:${session.padId}` +
@@ -479,24 +495,13 @@ exports.handleMessage = async (socket:any, message: ClientVarMessage) => {
     // cookie to be non-HttpOnly and exposed it to XSS. Now we read it from the
     // handshake Cookie header so integrators can set it `HttpOnly`.
     const cookiePrefix = settings.cookie?.prefix || '';
-    const cookieHeader: string = socket.request?.headers?.cookie || '';
-    const readCookie = (name: string): string | null => {
-      const match = cookieHeader.split(/;\s*/).find(
-          (c) => c.split('=')[0] === name);
-      if (!match) return null;
-      const raw = match.split('=').slice(1).join('=');
-      // A malformed value (e.g. `name=%ZZ`) makes decodeURIComponent throw
-      // URIError. Without this guard a single bad cookie aborts CLIENT_READY,
-      // letting an unauthenticated peer spam server error logs and block
-      // itself from joining (flagged by Qodo on #7755). Treat undecodable
-      // values as absent.
-      try {
-        return decodeURIComponent(raw);
-      } catch (err) {
-        if (err instanceof URIError) return null;
-        throw err;
-      }
-    };
+    // A socket opened by a page on another origin gets no cookies at all:
+    // it falls back to the in-message values below.
+    const cookieHeader: string = ambientCredentialsTrusted(socket) ?
+      (socket.request?.headers?.cookie || '') : '';
+    // A malformed value (e.g. `name=%ZZ`) counts as absent rather than
+    // aborting CLIENT_READY (flagged by Qodo on #7755).
+    const readCookie = (name: string): string | null => readCookieFromHeader(cookieHeader, name);
     const cookieToken = readCookie(`${cookiePrefix}token`);
     const legacyToken = typeof message.token === 'string' ? message.token : null;
     // A connection with neither the cookie nor a legacy token gets a fresh
@@ -552,7 +557,7 @@ exports.handleMessage = async (socket:any, message: ClientVarMessage) => {
       padId: padIds.padId,
       readOnlyPadId: padIds.readOnlyPadId,
       readonly:
-          padIds.readonly || !webaccess.userCanModify(pendingAuth.padID, socket.client.request),
+          padIds.readonly || !webaccess.userCanModify(pendingAuth.padID, credentialRequest(socket)),
     };
   }
   // Outside of the checks done by this function, message.padId must not be accessed because it is
@@ -582,7 +587,7 @@ exports.handleMessage = async (socket:any, message: ClientVarMessage) => {
       pending ? pending.readOnlyPadId : thisSession.readOnlyPadId;
   const messageReadonly: boolean = pending ? pending.readonly : thisSession.readonly;
 
-  const {session: {user} = {}} = socket.client.request as SocketClientRequest;
+  const {session: {user} = {}} = credentialRequest(socket);
   const {accessStatus, authorID} =
       await securityManager.checkAccess(auth.padID, auth.sessionID, auth.token, user);
   if (accessStatus !== 'grant') {
@@ -1349,7 +1354,7 @@ const handleClientReady = async (
   // A newer authorized join or a disconnect invalidates all remaining work for this join.
   if (!isCurrentJoin()) return;
 
-  const {session: {user} = {}} = socket.client.request as SocketClientRequest;
+  const {session: {user} = {}} = credentialRequest(socket);
 
   // The duplicate-author kick exists because cookie-derived authorIDs are
   // per-browser, so "same authorID, same pad" historically meant "stale tab in

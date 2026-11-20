@@ -10,6 +10,28 @@ import io from 'socket.io-client';
  *     https://socket.io/docs/v2/client-api/#new-Manager-url-options
  * @return socket.io Socket object
  */
+// Resolves to the pad socket token, or null if it cannot be fetched. Never
+// rejects: without a token the server falls back to other origin checks.
+const fetchPadSocketToken = async (tokenUrl) => {
+  if (typeof fetch !== 'function' || tokenUrl.origin !== window.location.origin) return null;
+  const controller = typeof AbortController === 'function' ? new AbortController() : null;
+  const timer = controller ? setTimeout(() => controller.abort(), 5000) : null;
+  try {
+    const res = await fetch(tokenUrl.href, {
+      credentials: 'same-origin',
+      cache: 'no-store',
+      signal: controller ? controller.signal : undefined,
+    });
+    if (!res.ok) return null;
+    const body = await res.json();
+    return typeof body?.token === 'string' ? body.token : null;
+  } catch (_err) {
+    return null;
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+};
+
 const connect = (etherpadBaseUrl, namespace = '/', options = {}) => {
   // The API for socket.io's io() function is awkward. The documentation says that the first
   // argument is a URL, but it is not the URL of the socket.io endpoint. The URL's path part is used
@@ -27,6 +49,16 @@ const connect = (etherpadBaseUrl, namespace = '/', options = {}) => {
     transports: ['polling', 'websocket'],
   };
   socketOptions = Object.assign(options, socketOptions);
+  // Prove to the server that this socket was opened by an Etherpad page, so
+  // it may use the browser's cookies. socket.io calls
+  // this on every (re)connect, so the token always matches the current
+  // cookies. It is fetched from the same origin as the socket; a page on
+  // another origin cannot read it.
+  if (socketOptions.auth == null) {
+    const tokenUrl = new URL('pad-socket-token', baseUrl);
+    socketOptions.auth = (cb) => fetchPadSocketToken(tokenUrl).then(
+        (token) => cb(token ? {padSocketToken: token} : {}));
+  }
 
   const socket = io(namespaceUrl.href, socketOptions);
 
