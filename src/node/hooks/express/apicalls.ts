@@ -39,7 +39,18 @@ exports.expressPreSession = async (hookName:string, {app}:any) => {
   // The Etherpad client side sends information about client side javscript errors
   app.post('/jserror', (req:any, res:any, next:Function) => {
     (async () => {
-      const data = JSON.parse(await parseJserrorForm(req));
+      let errorInfo;
+      try {
+        errorInfo = await parseJserrorForm(req);
+      } catch (err:any) {
+        if (err?.httpCode === 413) {
+          clientLogger.warn('Rejected oversized client error report');
+          res.status(413).end('Error report too large');
+          return;
+        }
+        throw err;
+      }
+      const data = JSON.parse(errorInfo);
       clientLogger.warn(`${data.msg} --`, {
         [util.inspect.custom]: (depth: number, options:any) => {
           // The data is client-supplied, so keep the depth bounded.

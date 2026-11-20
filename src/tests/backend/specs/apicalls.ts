@@ -38,9 +38,9 @@ describe(__filename, function () {
     });
 
     it('rejects an oversized error report', async function () {
-      const res = await agent.post('/jserror')
-        .field('errorInfo', JSON.stringify({msg: 'boom', pad: 'x'.repeat(200 * 1024)}));
-      if (res.status === 200) throw new Error('oversized /jserror body was accepted');
+      await agent.post('/jserror')
+        .field('errorInfo', JSON.stringify({msg: 'boom', pad: 'x'.repeat(200 * 1024)}))
+        .expect(413);
     });
   });
 });
