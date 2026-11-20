@@ -175,6 +175,12 @@ describe(__filename, function () {
           .expect(200);
       assert.equal(res.body, 'dummy-converted-output');
     }
+    // Cleanup runs after the response is sent (with an extra delay on
+    // Windows), so give it a moment.
+    const deadline = Date.now() + 5000;
+    while (dests.some((f) => fs.existsSync(f)) && Date.now() < deadline) {
+      await new Promise((r) => setTimeout(r, 50));
+    }
     for (const f of dests) assert.equal(fs.existsSync(f), false, `${f} was not removed`);
   });
 });
