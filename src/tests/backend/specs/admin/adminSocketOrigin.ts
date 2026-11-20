@@ -13,7 +13,9 @@ import * as os from 'os';
 import * as path from 'path';
 import {
   adminSocketToken, checkSocketOrigin, isValidAdminSocketToken, normalizeOrigin,
+  setAdminSocketTokenSecrets,
 } from '../../../../node/utils/socketOrigin';
+import {getIo, originCheckMiddleware} from '../../../../node/hooks/express/socketio';
 
 const io = require('socket.io-client');
 const common = require('../../common');
@@ -203,6 +205,25 @@ describe(__filename, function () {
       assert.equal(isValidAdminSocketToken('session-a', undefined), false);
       assert.equal(isValidAdminSocketToken(undefined, t), false);
     });
+
+    it('admin socket tokens are keyed with the shared session secrets', function () {
+      // Instances on the same database share SecretRotator's secrets, so a
+      // token issued by one must validate on another, including across a
+      // rotation (new secret first, previous ones still listed).
+      const prev = setAdminSocketTokenSecrets(() => ['secret-a']);
+      try {
+        const t = adminSocketToken('session-a');
+        setAdminSocketTokenSecrets(() => ['secret-a']);
+        assert.equal(isValidAdminSocketToken('session-a', t), true, 'other instance');
+        setAdminSocketTokenSecrets(() => ['secret-b', 'secret-a']);
+        assert.equal(isValidAdminSocketToken('session-a', t), true, 'after rotation');
+        assert.notEqual(adminSocketToken('session-a'), t);
+        setAdminSocketTokenSecrets(() => ['secret-c']);
+        assert.equal(isValidAdminSocketToken('session-a', t), false, 'unrelated secret');
+      } finally {
+        setAdminSocketTokenSecrets(prev);
+      }
+    });
   });
 
   describe('admin namespaces over socket.io', function () {
@@ -317,6 +338,25 @@ describe(__filename, function () {
         }
       });
     }
+
+    describe('originCheckMiddleware on a plugin namespace', function () {
+      const ns = '/test-plugin-admin-ns';
+      before(function () {
+        // A plugin installs only the origin check; it must load the session
+        // itself so the token path works.
+        getIo().of(ns).use(originCheckMiddleware).on('connection', () => {});
+      });
+
+      it('accepts a token without a separate session middleware', async function () {
+        await expectAccepted(openAdminSocket(ns, cookie, 'websocket',
+            {origin: 'http://pad.example.lan', token}));
+      });
+
+      it('rejects a sibling subdomain', async function () {
+        await expectRejected(openAdminSocket(ns, cookie, 'websocket',
+            {origin: siblingOrigin, secFetchSite: 'same-site'}));
+      });
+    });
 
     it('an admin behind a Host-rewriting proxy can still load settings', async function () {
       const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ep-socket-origin-'));

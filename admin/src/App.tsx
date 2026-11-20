@@ -35,9 +35,15 @@ export const App = () => {
     // socket token. The token comes from a same-origin endpoint and is fetched
     // again on every (re)connect, so it survives session rotation and server
     // restarts and works behind any reverse proxy.
+    // Set when the token request says we have no admin session, so that a
+    // rejected handshake is reported as a login problem, not an origin one.
+    let notAdmin = false;
     const socketAuth = (cb: (data: object) => void) => {
       fetch('/admin-auth/socket-token', {credentials: 'same-origin'})
-          .then((r) => (r.ok ? r.json() : {}))
+          .then((r) => {
+            notAdmin = r.status === 401 || r.status === 403;
+            return r.ok ? r.json() : {};
+          })
           .then((body: {token?: string}) =>
             cb(typeof body?.token === 'string' ? {adminSocketToken: body.token} : {}))
           .catch(() => cb({}));
@@ -104,10 +110,11 @@ export const App = () => {
       authErrored = true;
       useStore.getState().setToastState({
         open: true,
-        title: t('admin_settings.toast.origin_rejected'),
+        title: t(notAdmin ? 'admin_settings.toast.auth_error' : 'admin_settings.toast.origin_rejected'),
         success: false,
       });
       useStore.getState().setShowLoading(false);
+      if (notAdmin) navigate('/login');
     };
     settingSocket.on('connect_error', onConnectError);
     pluginsSocket.on('connect_error', onConnectError);

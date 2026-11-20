@@ -77,15 +77,9 @@ const devOrigins = (): string[] =>
 
 let lastOriginWarning = 0;
 
-/**
- * socket.io namespace middleware that rejects handshakes opened by a page on
- * another origin (see utils/socketOrigin.ts for the rules). Registered on the
- * privileged admin namespaces; exported so plugins that add their own
- * privileged namespaces can use it too. Install it after the session
- * middleware so the admin socket token can be checked against the session:
- * `io.of('/my-admin-ns').use(sessionMiddleware).use(originCheckMiddleware)`.
- */
-export const originCheckMiddleware = (socket: any, next: Function) => {
+let expressApp: any = null;
+
+const checkOrigin = (socket: any, next: Function) => {
   const decision = checkSocketOrigin(socket.request, {
     trustProxy: settings.trustProxy,
     publicURL: settings.publicURL,
@@ -95,7 +89,13 @@ export const originCheckMiddleware = (socket: any, next: Function) => {
         socket.request?.sessionID, socket.handshake?.auth?.adminSocketToken),
   });
   if (decision.allowed) return next();
-  if (Date.now() - lastOriginWarning > 10000) { // Rate limit to avoid filling logs.
+  // Without an admin session the admin UI cannot get a token, so the rejection
+  // is about the missing login, not the origin. Don't point the operator at
+  // socketIo.allowedOrigins for that. The client gets the same error either
+  // way, so a page on another origin cannot tell whether the visitor is an
+  // admin.
+  const isAdmin = !!socket.request?.session?.user?.is_admin;
+  if (isAdmin && Date.now() - lastOriginWarning > 10000) { // Rate limit to avoid filling logs.
     lastOriginWarning = Date.now();
     const host = String(socket.request.headers.host ?? '').slice(0, 255).replace(/[\r\n]/g, '');
     logger.warn(`Rejected socket.io connection to ${socket.nsp?.name} from Origin ` +
@@ -103,13 +103,34 @@ export const originCheckMiddleware = (socket: any, next: Function) => {
         `${decision.reason}. ` +
         'If this origin should be allowed to use the admin UI, add it to ' +
         '"socketIo.allowedOrigins" in settings.json.');
+  } else if (!isAdmin) {
+    logger.debug(`Rejected socket.io connection to ${socket.nsp?.name} without an admin ` +
+        `session: ${decision.reason}`);
   }
   const err: any = new Error('origin not allowed');
   err.data = {code: 'origin_not_allowed'};
   next(err);
 };
 
+/**
+ * socket.io namespace middleware that rejects handshakes opened by a page on
+ * another origin (see utils/socketOrigin.ts for the rules). Registered on the
+ * privileged admin namespaces; exported so plugins that add their own
+ * privileged namespaces can use it too:
+ * `io.of('/my-admin-ns').use(originCheckMiddleware)`. It loads the express
+ * session itself if no earlier middleware has, because the admin socket token
+ * is checked against the session.
+ */
+export const originCheckMiddleware = (socket: any, next: Function) => {
+  if (socket.request?.sessionID != null || expressApp == null) return checkOrigin(socket, next);
+  socketSessionMiddleware({app: expressApp})(socket, (err: any) => {
+    if (err) return next(err);
+    checkOrigin(socket, next);
+  });
+};
+
 export const expressCreateServer = (hookName:string, args:ArgsExpressType, cb:Function) => {
+  expressApp = args.app;
   // init socket.io and redirect all requests to the MessageHandler
   // there shouldn't be a browser that isn't compatible to all
   // transports in this list at once

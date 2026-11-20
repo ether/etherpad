@@ -160,20 +160,49 @@ export const checkSocketOrigin = (
   return {allowed: false, origin, reason: 'Origin does not match this server'};
 };
 
-// Per-process key for admin socket tokens. Tokens are bound to the express
-// session id, so a token is only useful together with the session cookie it
-// was issued for. A restart rotates the key; the admin UI fetches a fresh
-// token on every (re)connect, so this is invisible to users.
-const tokenKey = crypto.randomBytes(32);
+// Admin socket tokens are an HMAC of the express session id, keyed with the
+// session cookie signing secret(s). With key rotation enabled those come from
+// SecretRotator, which shares them through the database, so every Etherpad
+// instance on the same database issues and accepts the same tokens. The
+// random key is only used until express has set the secrets (e.g. in unit
+// tests). The admin UI fetches a fresh token on every (re)connect, so rotation
+// is invisible to users.
+const fallbackKey = crypto.randomBytes(32).toString('hex');
+let getSecrets: () => readonly string[] = () => [fallbackKey];
+
+/**
+ * Called by the express hook once the session signing secrets are known.
+ * Returns the previous getter so tests can restore it.
+ */
+export const setAdminSocketTokenSecrets =
+    (fn: () => readonly string[]): (() => readonly string[]) => {
+      const prev = getSecrets;
+      getSecrets = fn;
+      return prev;
+    };
+
+const currentSecrets = (): string[] => {
+  const secrets = (getSecrets() || []).filter((s) => typeof s === 'string' && s !== '');
+  return secrets.length > 0 ? secrets : [fallbackKey];
+};
+
+const mac = (secret: string, sessionID: string): string =>
+  crypto.createHmac('sha256', secret)
+      .update(`etherpad admin socket token\0${sessionID}`)
+      .digest('base64url');
 
 /** Returns the admin socket token for an express session id. */
 export const adminSocketToken = (sessionID: string): string =>
-  crypto.createHmac('sha256', tokenKey).update(`admin-socket:${sessionID}`).digest('base64url');
+  mac(currentSecrets()[0], sessionID);
 
 /** Constant-time check of a client-supplied admin socket token. */
 export const isValidAdminSocketToken = (sessionID: unknown, token: unknown): boolean => {
   if (typeof sessionID !== 'string' || sessionID === '' || typeof token !== 'string') return false;
-  const expected = Buffer.from(adminSocketToken(sessionID));
   const actual = Buffer.from(token);
-  return actual.length === expected.length && crypto.timingSafeEqual(actual, expected);
+  let ok = false;
+  for (const secret of currentSecrets()) {
+    const expected = Buffer.from(mac(secret, sessionID));
+    if (actual.length === expected.length && crypto.timingSafeEqual(actual, expected)) ok = true;
+  }
+  return ok;
 };
