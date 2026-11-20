@@ -1,3 +1,27 @@
+# 3.3.21
+
+3.3.21 is a security hardening release. Pad socket.io connections now only use the visitor's cookies when they come from Etherpad's own pages. It also fixes pads embedded cross-site over plain http and an intermittent 404 on LibreOffice exports. Upgrading is recommended.
+
+### Security
+
+- **Collaboration — pad socket.io connections only use the visitor's cookies when they come from Etherpad's own pages (#8514).** A pad socket identifies the visitor from the cookies the browser sends with the handshake: the author token, an HTTP API group session and, with `requireAuthentication`, the login session. Browsers send those cookies with handshakes from any page on the same site, for example another subdomain of your domain. The pad page now fetches a short token from `GET /pad-socket-token` and sends it with the handshake, and same-origin connections are recognised from `Sec-Fetch-Site`. A pad socket opened by a page on another origin still connects, but its cookies are ignored, so it gets a fresh anonymous author with no group session and no login. Plugin hooks don't see those cookies or the login on such a socket either. Clients that send no `Origin` header, such as the `pad` CLI, bots and load tests, are not affected. Reported by @brx-zyy.
+
+### Upgrade notes
+
+- No configuration change is needed, including behind a reverse proxy that rewrites the `Host` header and for pads embedded in an iframe on another site: an embedded pad is an Etherpad page, so its socket comes from Etherpad's own origin. The check the pad page relies on does not depend on `Host`, `trustProxy` or `publicURL`.
+- New setting `socketIo.crossOriginPadSockets` decides what happens to a pad socket opened by another origin: `"anonymous"` (default) ignores its cookies, `"reject"` refuses the connection and `"allow"` keeps the old behaviour. An unknown value logs an error and falls back to `"reject"`.
+- New setting `socketIo.padAllowedOrigins` lists extra `scheme://host[:port]` origins whose pages may open pad sockets with the visitor's cookies. Origins in `socketIo.allowedOrigins` are trusted for pads too.
+- If your integration sets the `sessionID` cookie itself, give it a `Path` that also covers `/pad-socket-token` (normally `Path=/`).
+
+### Notable fixes
+
+- **Embedding — a pad embedded cross-site over plain http loads again (#8515, #8513).** The browser rejects the prefs cookie in that case (`SameSite=None` needs `Secure`), and the pad then failed to finish loading. The pad now keeps its prefs in memory when the cookie can't be read or written. It loads with default prefs, and settings changed during the visit apply until reload.
+- **Export — LibreOffice exports no longer intermittently fail with a 404 (#8517).** The converted file could be deleted while it was still being sent. The temp files are now removed only after the response has been sent, and also when sending fails.
+
+### Other changes
+
+- Dependency updates, including mssql 12.7.16, express-rate-limit 8.7.5, jose 6.2.18 and @tanstack/react-query 5.108.0.
+
 # 3.3.20
 
 3.3.20 hardens the admin sockets. The admin settings and plugin pages now only accept socket connections opened by Etherpad's own admin page. It also fixes the pad counter on the admin pads page. Upgrading is recommended.
