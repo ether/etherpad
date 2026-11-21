@@ -19,6 +19,7 @@ const webaccess = require('./express/webaccess');
 
 import SecretRotator from '../security/SecretRotator';
 import {setAdminSocketTokenSecrets} from '../utils/socketOrigin';
+import {adminFrameHeaders, isAdminPath} from '../utils/adminFramePolicy';
 
 let secretRotator: SecretRotator|null = null;
 const logger = log4js.getLogger('http');
@@ -128,7 +129,14 @@ exports.restartServer = async () => {
   }
 
   app.use((req, res, next) => {
-    // res.header("X-Frame-Options", "deny"); // breaks embedded pads
+    // No site-wide X-Frame-Options: it would break embedded pads. The admin UI
+    // is the exception and only allows its own origin to frame it.
+    // See utils/adminFramePolicy.ts.
+    if (isAdminPath(req.path)) {
+      for (const [name, value] of Object.entries(adminFrameHeaders(settings.adminFrameAncestors))) {
+        res.header(name, value);
+      }
+    }
     if (settings.ssl) {
       // we use SSL
       res.header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');

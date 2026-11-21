@@ -155,6 +155,34 @@ Here `X-Proxy-Path` is used, which works regardless of `trustProxy`. Use
 `X-Forwarded-Prefix` instead if you prefer the standard header (and set
 `trustProxy: true`).
 
+## Embedding pads and the admin UI
+
+Pads, the timeslider and the other public pages can be embedded in an
+`<iframe>` on any site. Etherpad sends no framing restriction for them.
+
+The admin UI (`/admin` and `/admin-auth`) is different. It can install plugins,
+which runs code on the server, so it only allows Etherpad's own origin to frame
+it:
+
+```
+Content-Security-Policy: frame-ancestors 'self'
+X-Frame-Options: SAMEORIGIN
+```
+
+This keeps other sites from showing the admin UI inside their own pages.
+
+If you deliberately show the admin UI inside another site, list that site's
+origin in `adminFrameAncestors`:
+
+```json
+"adminFrameAncestors": ["https://portal.example.com"]
+```
+
+Entries are CSP `frame-ancestors` sources. When the list is not empty,
+`X-Frame-Options` is left out, because it cannot name other origins. The page
+that frames the admin UI still needs to be allowed to open the admin sockets;
+see `socketIo.allowedOrigins`.
+
 ## Self-update, email, database, and metrics
 
 These areas have their own pages:
