@@ -23,7 +23,7 @@ const fixture = [
 // optional ack id and its [event, ...args] payload.
 const parseFrame = (msg: string | Buffer) => {
   if (typeof msg !== 'string' || !msg.startsWith(PREFIX)) return null;
-  const m = /^(\d*)(\[.*)$/s.exec(msg.slice(PREFIX.length));
+  const m = /^(\d*)(\[[\s\S]*)$/.exec(msg.slice(PREFIX.length));
   if (!m) return null;
   return {ack: m[1], payload: JSON.parse(m[2]) as unknown[]};
 };
