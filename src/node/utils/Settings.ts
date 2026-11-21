@@ -347,6 +347,7 @@ export type SettingsType = {
     scrollWhenCaretIsInTheLastLineOfViewport: boolean,
   },
   exposeVersion: boolean,
+  adminFrameAncestors: string[] | string,
   customLocaleStrings: Record<string, string>,
   importExportRateLimiting: {
     windowMs?: number,
@@ -896,6 +897,13 @@ const settings: SettingsType = {
  * Do not enable on production machines.
  */
   exposeVersion: false,
+  /*
+   * Extra origins allowed to show the admin UI (/admin) in an iframe, as CSP
+   * frame-ancestors sources, e.g. ["https://portal.example.com"]. By default
+   * only Etherpad's own origin can frame the admin UI.
+   * Pads are not affected and can always be embedded.
+   */
+  adminFrameAncestors: [],
   /*
  * Override any strings found in locale directories
  */

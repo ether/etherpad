@@ -1063,6 +1063,23 @@
   "exposeVersion": false,
 
   /*
+   * Extra origins allowed to show the admin UI (/admin) inside an iframe.
+   *
+   * By default the admin UI sends "Content-Security-Policy: frame-ancestors
+   * 'self'" and "X-Frame-Options: SAMEORIGIN", so only Etherpad's own pages
+   * can frame it.
+   *
+   * Entries are CSP frame-ancestors sources, e.g.
+   * ["https://portal.example.com"]. When the list is not empty,
+   * X-Frame-Options is not sent. Only set this if you deliberately embed the
+   * admin UI in another site.
+   *
+   * Pads, the timeslider and every other page are not affected and can
+   * always be embedded.
+   */
+  "adminFrameAncestors": [],
+
+  /*
    * The log level we are using.
    *
    * Valid values: DEBUG, INFO, WARN, ERROR
