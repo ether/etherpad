@@ -161,6 +161,8 @@ Etherpad applies an update by **exiting with code 75** so a process supervisor r
 
 All Tier 2 endpoints require an authenticated admin session (`is_admin: true`) regardless of `requireAdminForStatus`.
 
+A browser `POST` to these endpoints, one that sends an `Origin` or `Sec-Fetch-Site` header, must also send an `X-Requested-With` header; the admin UI does this. Without it the request gets `403 {"error": "missing-admin-action-header"}`. Scripts and `curl` with basic auth send neither header and are not affected.
+
 - `POST /admin/update/apply` — start an apply. Returns `202 {accepted, drainEndsAt}` once the drain begins. Body unused.
 - `POST /admin/update/cancel` — cancel during pre-flight or drain. Returns `409` once the executor has begun mutating the filesystem (state machine guarantees we either complete or roll back from there).
 - `POST /admin/update/acknowledge` — clear a terminal `preflight-failed` / `rolled-back` / `rollback-failed` state back to `idle`. Also clears a `pending-verification` state that is left over once the server is already up (no boot health check armed); while the health check is still running it returns 409.
