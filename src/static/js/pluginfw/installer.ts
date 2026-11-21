@@ -371,8 +371,13 @@ const hideUninstallablePlugins = async (
     logger.warn(`Plugin catalog: could not check npm deprecations (${err}); ` +
                 'listing all plugins.');
   }
-  const {kept, excluded} = filterCatalogEntries(
+  const {kept, excluded, compatibilityIgnored} = filterCatalogEntries(
       entries as unknown as Record<string, CatalogEntry>, deprecations);
+  if (compatibilityIgnored) {
+    logger.warn('Plugin catalog: the plugin feed marks most plugins as failing its ' +
+                'compatibility check, which points at a broken registry run; ' +
+                'ignoring its compatibility verdicts for this refresh.');
+  }
   if (excluded.size > 0) {
     logger.info(`Plugin catalog: hiding ${excluded.size} plugin(s) that cannot be ` +
                 'installed safely.');
