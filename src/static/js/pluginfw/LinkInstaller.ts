@@ -1,11 +1,22 @@
 import {IPluginInfo, PluginManager} from "live-plugin-manager";
 import path from "path";
 import {node_modules, pluginInstallPath} from "./installer";
-import {accessSync, constants, rmSync, symlinkSync, unlinkSync} from "node:fs";
+import {
+  accessSync, constants, lstatSync, readlinkSync, realpathSync, rmSync, symlinkSync, unlinkSync,
+} from "node:fs";
 import {dependencies, name} from '../../../package.json'
 import settings from '../../../node/utils/Settings';
 import {readFileSync} from "fs";
 import {isValidDependencyName, resolveDependencyPath} from "./dependencyPath";
+
+// Core's own dependencies. Uninstalling a plugin must never unlink or delete
+// these, whatever the dependency map says (#8532).
+const coreDependencies = new Set(Object.keys(dependencies));
+
+const isInside = (parent: string, child: string) => {
+  const rel = path.relative(parent, child);
+  return rel !== '' && !rel.startsWith('..') && !path.isAbsolute(rel);
+};
 
 export class LinkInstaller {
   private livePluginManager: PluginManager;
@@ -98,8 +109,8 @@ export class LinkInstaller {
       console.error(`Skipping plugin dependency with invalid name: ${dependency}`)
       return
     }
-    if (this.dependenciesMap.has(dependency)) {
-      console.debug(`Dependency ${dependency} is still being used by other plugins`)
+    if (coreDependencies.has(dependency) || this.dependenciesMap.has(dependency)) {
+      console.debug(`Dependency ${dependency} is still being used by core or other plugins`)
       return
     }
     // Read sub dependencies
@@ -160,6 +171,11 @@ export class LinkInstaller {
     const dependencyPath = resolveDependencyPath(pluginInstallPath, dependency)
     if (dependencyPath == null) {
       console.error(`Skipping plugin dependency with invalid name: ${dependency}`)
+      return
+    }
+    if (coreDependencies.has(dependency)) {
+      // Core needs it, so neither it nor its own dependencies may go.
+      this.dependenciesMap.get(dependency)?.delete(plugin)
       return
     }
     if (this.dependenciesMap.has(dependency)) {
@@ -251,6 +267,10 @@ export class LinkInstaller {
     try {
       // Check if the dependency is already installed
       accessSync(linkPath, constants.F_OK)
+      if (!this.isPluginLink(linkPath)) {
+        console.debug(`Not unlinking ${dependency}: ${linkPath} is not a plugin link`)
+        return
+      }
       unlinkSync(linkPath)
     } catch (err) {
       // Symlink does not exist
@@ -258,6 +278,21 @@ export class LinkInstaller {
     }
   }
 
+
+  // True only for a symlink in node_modules that points into
+  // pluginInstallPath, i.e. one that linkDependency() or checkForMigration()
+  // made. Everything else in node_modules (pnpm's links for core's own
+  // dependencies, real directories) belongs to core and is left alone.
+  private isPluginLink(linkPath: string) {
+    try {
+      if (!lstatSync(linkPath).isSymbolicLink()) return false
+      const target = path.resolve(path.dirname(linkPath), readlinkSync(linkPath))
+      if (isInside(path.resolve(pluginInstallPath), target)) return true
+      return isInside(realpathSync(pluginInstallPath), realpathSync(linkPath))
+    } catch (err) {
+      return false
+    }
+  }
 
   private async checkLinkedDependencies(plugin: IPluginInfo) {
     // Check if the plugin really exists at source
@@ -269,6 +304,11 @@ export class LinkInstaller {
       console.debug(`Plugin ${plugin.name} is not installed`)
     }
     await this.addSubDependencies(plugin)
-    this.dependenciesMap.set(plugin.name, new Set())
+    // live-plugin-manager lists every package in pluginInstallPath, sub
+    // dependencies included, so this also runs for packages like log4js that
+    // core and other plugins depend on. Don't wipe their dependents (#8532).
+    if (!this.dependenciesMap.has(plugin.name)) {
+      this.dependenciesMap.set(plugin.name, new Set())
+    }
   }
 }
