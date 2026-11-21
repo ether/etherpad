@@ -497,7 +497,9 @@
    *                       confirmation before installing them. Placeholder
    *                       packages (0.0.0-* versions, no repository) are only
    *                       listed when searched for by their exact name.
-   *  - "hide"           : list official plugins only.
+   *  - "hide"           : list official plugins only. Official status needs
+   *                       registry.npmjs.org; if it cannot be reached, nothing
+   *                       can be verified and the list is empty.
    *  - "all"            : list everything, placeholders included.
    * `pnpm run plugins i ep_<name>` on the server is never affected.
    */

@@ -37,6 +37,8 @@ export type PackageInfo =  {
   placeholder?: boolean,
   /** Set on *installed* plugins when a newer version is available. */
   updatable?: boolean,
+  /** Set on *installed*, updatable plugins: the catalog version an update installs. */
+  latestVersion?: string,
   /**
    * Set on *installed* plugins that npm marks deprecated or that core knows
    * to be superseded. Carries the human-readable reason. Never set on

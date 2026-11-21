@@ -36,7 +36,9 @@ a repository in the [ether](https://github.com/ether) GitHub org. Everything
 else is labelled **Third-party**: it is not maintained by the Etherpad
 project and it runs code on your server. The admin UI asks for confirmation
 before installing a third-party plugin; official plugins install with one
-click.
+click. Updates of an installed plugin follow the same rule, and an install
+always fetches the exact version the catalog showed, so a label shown for one
+release never covers a different one.
 
 The check is done when the catalog is refreshed and cached per published
 version, so it adds no latency to browsing. It relies on npm provenance
@@ -55,7 +57,7 @@ The `pluginCatalogThirdParty` setting in `settings.json` changes this:
 | Value | Effect |
 | --- | --- |
 | `label` (default) | List third-party plugins with a badge; placeholders only on an exact-name search. |
-| `hide` | List official plugins only. |
+| `hide` | List official plugins only. Needs registry.npmjs.org: if it cannot be reached, nothing can be verified and the list is empty. |
 | `all` | List everything, placeholders included. |
 
 None of this affects `pnpm run plugins i ep_<name>` on the server.

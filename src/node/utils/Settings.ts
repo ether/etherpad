@@ -502,7 +502,8 @@ const settings: SettingsType = {
    *  - 'label' (default): list them with a "Third-party" badge and ask for
    *    confirmation before installing; placeholder packages (0.0.0-*
    *    versions, no repository) only show up on an exact-name search.
-   *  - 'hide': list official plugins only.
+   *  - 'hide': list official plugins only (empty if npm is unreachable,
+   *    since provenance cannot then be checked).
    *  - 'all': list everything, placeholders included.
    * Installs from the command line are never affected.
    */

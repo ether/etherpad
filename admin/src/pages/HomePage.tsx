@@ -26,7 +26,8 @@ export const HomePage = () => {
   })
   const [searchTerm, setSearchTerm] = useState<string>('')
   // Third-party plugin awaiting the admin's confirmation before install.
-  const [confirmInstall, setConfirmInstall] = useState<string | null>(null)
+  const [confirmInstall, setConfirmInstall] =
+    useState<{name: string, version?: string} | null>(null)
   const {t} = useTranslation()
 
   const updatableCount = useMemo(
@@ -143,19 +144,23 @@ export const HomePage = () => {
     setInstalledPlugins(installedPlugins.filter(i => i.name !== pluginName))
   }
 
-  const installPlugin = (pluginName: string) => {
-    pluginsSocket!.emit('install', pluginName)
+  // With a version, the server installs exactly that release: the one the
+  // catalog showed and classified, not whatever is latest by then.
+  const installPlugin = (pluginName: string, version?: string) => {
+    pluginsSocket!.emit('install', version ? {name: pluginName, version} : pluginName)
     setPlugins(plugins.filter(p => p.name !== pluginName))
   }
 
   // Official plugins install with one click. A third-party plugin runs code
   // the Etherpad project has not reviewed, so the admin confirms first; the
   // extra, deliberate click also blunts clickjacking of the Install button.
-  const requestInstall = (plugin: PluginDef) => {
-    if (plugin.official) {
-      installPlugin(plugin.name)
+  // Updates go through here too; an update whose target version could not
+  // be classified is treated as third-party.
+  const requestInstall = (plugin: {name: string, version?: string, official?: boolean}) => {
+    if (plugin.official === true) {
+      installPlugin(plugin.name, plugin.version)
     } else {
-      setConfirmInstall(plugin.name)
+      setConfirmInstall({name: plugin.name, version: plugin.version})
     }
   }
 
@@ -177,7 +182,7 @@ export const HomePage = () => {
               <Trans i18nKey="admin_plugins.third_party_confirm_title"/>
             </Dialog.Title>
             <Dialog.Description className="pm-dialog-body">
-              {t('admin_plugins.third_party_confirm_body', {plugin: confirmInstall ?? ''})}
+              {t('admin_plugins.third_party_confirm_body', {plugin: confirmInstall?.name ?? ''})}
             </Dialog.Description>
             <div className="pm-dialog-actions">
               <Dialog.Close asChild>
@@ -188,9 +193,9 @@ export const HomePage = () => {
               <button
                 className="pm-btn pm-btn-primary"
                 onClick={() => {
-                  const name = confirmInstall
+                  const target = confirmInstall
                   setConfirmInstall(null)
-                  if (name) installPlugin(name)
+                  if (target) installPlugin(target.name, target.version)
                 }}
               >
                 <Download size={13}/> <Trans i18nKey="admin_plugins.available_install.value"/>
@@ -312,7 +317,11 @@ export const HomePage = () => {
               <div className="pm-installed-actions">
                 {plugin.updatable ? (
                   <IconButton
-                    onClick={() => installPlugin(plugin.name)}
+                    onClick={() => requestInstall({
+                      name: plugin.name,
+                      version: plugin.latestVersion,
+                      official: plugin.official,
+                    })}
                     icon={<ArrowUpFromDot size={14}/>}
                     title={t('admin_plugins.update_tooltip')}
                   />

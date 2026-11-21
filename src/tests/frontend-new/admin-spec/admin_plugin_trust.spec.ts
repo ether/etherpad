@@ -7,7 +7,8 @@ import {loginToAdmin} from "../helper/adminhelper";
 // the server (pluginTrust.ts, covered by the backend specs); this spec checks
 // what the admin sees. The live feed changes daily, so the search results are
 // replaced with a fixture on the socket, and `install` events are recorded and
-// swallowed so nothing is ever actually installed.
+// swallowed so nothing is ever actually installed. Installs carry the
+// version the catalog showed, so a label can't cover a different release.
 
 const NS = '/pluginfw/installer';
 const PREFIX = `42${NS},`;
@@ -35,7 +36,8 @@ const useFixtureCatalog = async (page: Page) => {
     ws.onMessage((msg) => {
       const frame = parseFrame(msg);
       if (frame && frame.payload[0] === 'install') {
-        installs.push(String(frame.payload[1]));
+        const req = frame.payload[1] as string | {name: string, version?: string};
+        installs.push(typeof req === 'string' ? req : `${req.name}@${req.version}`);
         return;
       }
       server.send(msg);
@@ -82,7 +84,7 @@ test.describe('Plugin catalog: official and third-party plugins', () => {
   test('installs an official plugin with one click', async ({page}) => {
     await row(page, 'ep_fixture_official').getByRole('button', {name: 'Install'}).click();
     await expect(page.getByTestId('third-party-confirm')).toHaveCount(0);
-    await expect.poll(() => installs).toEqual(['ep_fixture_official']);
+    await expect.poll(() => installs).toEqual(['ep_fixture_official@1.0.0']);
   });
 
   test('asks before installing a third-party plugin, and cancel installs nothing',
@@ -113,6 +115,6 @@ test.describe('Plugin catalog: official and third-party plugins', () => {
     const dialog = page.getByTestId('third-party-confirm');
     await dialog.getByRole('button', {name: 'Install'}).click();
     await expect(dialog).toHaveCount(0);
-    await expect.poll(() => installs).toEqual(['ep_fixture_community']);
+    await expect.poll(() => installs).toEqual(['ep_fixture_community@2.0.0']);
   });
 });

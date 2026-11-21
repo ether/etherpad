@@ -6,8 +6,10 @@ import {
   clearDeprecationCache,
   fetchPluginDeprecations,
   getAvailablePlugins,
+  getBrowsablePlugins,
   getInstalledPluginWarnings,
   install,
+  linkInstaller,
   search,
 } from '../../../static/js/pluginfw/installer';
 import {OFFICIAL_GITHUB_OWNER_ID} from '../../../static/js/pluginfw/pluginTrust';
@@ -376,6 +378,84 @@ describe(__filename, function () {
       settings.pluginCatalogThirdParty = 'all';
       stubFetch(npmMeta, {feedBody: trustFeed, attestations});
       assert.deepEqual(names(await search('', 0)), Object.keys(trustFeed).sort());
+    });
+    it('getAvailable (browsing) applies the same policy as search', async function () {
+      settings.pluginCatalogThirdParty = 'label';
+      stubFetch(npmMeta, {feedBody: trustFeed, attestations});
+      assert.deepEqual(names(await getBrowsablePlugins(false)),
+          ['ep_align', 'ep_community', 'ep_liar']);
+      settings.pluginCatalogThirdParty = 'hide';
+      assert.deepEqual(names(await getBrowsablePlugins(false)), ['ep_align']);
+    });
+
+    it('the deprecation-only lookup does not fetch attestations', async function () {
+      const fetchStub = stubFetch(npmMeta, {feedBody: trustFeed, attestations});
+      await fetchPluginDeprecations([{name: 'ep_align', version: '11.0.43'}]);
+      const attCalls = fetchStub.getCalls()
+          .filter((c) => String(c.args[0]).includes('/-/npm/v1/attestations/'));
+      assert.equal(attCalls.length, 0);
+    });
+
+    it('provenance fetched later reuses the cached metadata', async function () {
+      const fetchStub = stubFetch(npmMeta, {feedBody: trustFeed, attestations});
+      await fetchPluginDeprecations([{name: 'ep_align', version: '11.0.43'}]);
+      const metaCalls = () => fetchStub.getCalls()
+          .filter((c) => String(c.args[0]).endsWith('/ep_align/11.0.43')).length;
+      assert.equal(metaCalls(), 1);
+      const available = await getAvailablePlugins(false);
+      assert.equal(available.ep_align.official, true);
+      assert.equal(metaCalls(), 1);
+    });
+
+    it('retries a catalog whose provenance could not be checked sooner', async function () {
+      let attestationsDown = true;
+      const fetchStub = stubFetch(npmMeta, {feedBody: trustFeed,
+        attestations: (n, v) => (attestationsDown ? new Error('timeout') : attestations(n, v))});
+      const feedCalls = () =>
+        fetchStub.getCalls().filter((c) => String(c.args[0]) === feedUrl).length;
+      const first = await getAvailablePlugins(false);
+      assert.equal(first.ep_align.official, false, 'unknown is never official');
+      const realNow = Date.now;
+      const start = realNow();
+      try {
+        // Two minutes later: inside the normal 10-minute cache, past the
+        // 1-minute limit for a catalog with unchecked provenance.
+        sinon.stub(Date, 'now').returns(start + 2 * 60 * 1000);
+        attestationsDown = false;
+        const second = await getAvailablePlugins(600);
+        assert.equal(feedCalls(), 2, 'an incomplete catalog must be refreshed');
+        assert.equal(second.ep_align.official, true);
+        (Date.now as sinon.SinonStub).returns(start + 4 * 60 * 1000);
+        await getAvailablePlugins(600);
+        assert.equal(feedCalls(), 2, 'a complete catalog is cached as before');
+      } finally {
+        (Date.now as any).restore?.();
+      }
+    });
+  });
+
+  describe('install pins the version the catalog showed', function () {
+    const installOnce = (name: string, version?: string) => new Promise<any>(
+        (resolve) => install(name, (err: any) => resolve(err), version));
+
+    it('passes the requested version to the installer and to the npm checks', async function () {
+      const fetchStub = stubFetch(() => ({engines: {node: '>=18'}}));
+      // Rejecting keeps the install from "succeeding", which would persist
+      // installed_plugins.json and fire the restartServer hook.
+      const installStub = sinon.stub(linkInstaller, 'installPlugin')
+          .rejects(new Error('stop here'));
+      const err = await installOnce('ep_align', '11.0.43');
+      assert.match(String(err), /stop here/);
+      assert.deepEqual(installStub.firstCall.args, ['ep_align', '11.0.43']);
+      assert.ok(fetchStub.getCalls().some((c) => String(c.args[0]).endsWith('/ep_align/11.0.43')));
+    });
+
+    it('refuses a version that is not a plain semver', async function () {
+      stubFetch(() => ({}));
+      const installStub = sinon.stub(linkInstaller, 'installPlugin').resolves();
+      const err = await installOnce('ep_align', 'latest; rm -rf /');
+      assert.match(String(err), /Invalid version/);
+      assert.equal(installStub.callCount, 0);
     });
   });
 });

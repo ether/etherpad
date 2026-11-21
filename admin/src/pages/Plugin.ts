@@ -24,6 +24,10 @@ export type InstalledPlugin = {
   version: string,
   description?: string,
   updatable?: boolean,
+  /** For an updatable plugin: the catalog version an update installs. */
+  latestVersion?: string,
+  /** For an updatable plugin: whether that version is official. */
+  official?: boolean,
   /**
    * Reason this installed plugin should no longer be used (npm deprecation
    * message, or core's reason for treating it as superseded). Set by the

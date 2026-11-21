@@ -6,6 +6,7 @@ import {PackageData, PackageInfo} from "../../../node/types/PackageInfo";
 import {MapArrayType} from "../../../node/types/MapType";
 
 import path from "path";
+import semver from 'semver';
 
 import {promises as fs} from "fs";
 
@@ -211,19 +212,17 @@ const fetchPluginVersionMeta = async (
  */
 const fetchOfficialProvenance = async (
   name: string,
-  meta: NpmVersionMeta,
+  ref: ProvenanceRef,
   signal: AbortSignal,
 ): Promise<boolean | undefined> => {
-  const url = meta.dist?.attestations?.url;
-  const version = (meta as any).version;
+  const {attestationsUrl: url, version, integrity} = ref;
   if (typeof url !== 'string' || typeof version !== 'string') return false;
   if (!url.startsWith(`${npmRegistry}/-/npm/v1/attestations/`)) return false;
   try {
     const res = await fetch(url, {headers, signal});
     if (res.status === 404) return false;
     if (!res.ok) return undefined;
-    const source = provenanceSource(await res.json(),
-        {name, version, integrity: meta.dist?.integrity});
+    const source = provenanceSource(await res.json(), {name, version, integrity});
     return isOfficialProvenance(source);
   } catch (err) {
     logger.debug(`npm provenance lookup for ${name}@${version} fell through: ${err}`);
@@ -231,14 +230,20 @@ const fetchOfficialProvenance = async (
   }
 };
 
+/** What is needed to look up a version's provenance without refetching its metadata. */
+type ProvenanceRef = {version?: string, integrity?: unknown, attestationsUrl?: unknown};
+
 /** What the catalog learns about one published version from npm. */
 export type PluginRegistryInfo = {
   /** npm deprecation message, or null when not deprecated. */
   deprecated: string | null,
   /** Whether the version's package.json names a repository. */
   hasRepository: boolean,
-  /** Built and published from an ether/* repository (npm provenance). */
-  official: boolean,
+  /**
+   * Built and published from an ether/* repository (npm provenance).
+   * `undefined` when provenance was not requested or could not be checked.
+   */
+  official?: boolean,
 };
 
 // Lookups are cached by name@version because a published version is
@@ -251,13 +256,19 @@ const DEPRECATION_TTL_MS = 12 * 60 * 60 * 1000;
 const DEPRECATION_SWEEP_BUDGET_MS = 15000;
 const DEPRECATION_CONCURRENCY = 8;
 const DEPRECATION_CACHE_MAX = 1000;
-const registryInfoCache = new Map<string, {info: PluginRegistryInfo, expires: number}>();
+type CachedRegistryInfo = {
+  deprecated: string | null,
+  hasRepository: boolean,
+  provenance: ProvenanceRef,
+};
+const registryInfoCache = new Map<string, {info: CachedRegistryInfo, expires: number}>();
 const provenanceCache = new Map<string, boolean>();
 // Lookups that have been started but not finished, so two concurrent sweeps
 // (the admin page fires `getInstalled` and `search` together) join one
 // request per package instead of issuing two. `undefined` means the lookup
 // failed, i.e. the state is unknown.
-const registryInfoInFlight = new Map<string, Promise<PluginRegistryInfo | undefined>>();
+const registryInfoInFlight = new Map<string, Promise<CachedRegistryInfo | undefined>>();
+const provenanceInFlight = new Map<string, Promise<boolean | undefined>>();
 
 // Exported for tests; also lets an operator-triggered catalog reload pick up
 // a deprecation published in the last 12 hours.
@@ -266,20 +277,40 @@ export const clearDeprecationCache = () => {
   provenanceCache.clear();
 };
 
+/** Runs `fn` over `jobs` with bounded concurrency until done or `signal` aborts. */
+const runPool = async <T>(
+  jobs: T[], signal: AbortSignal, fn: (job: T) => Promise<void>,
+) => {
+  let index = 0;
+  const worker = async () => {
+    while (index < jobs.length) {
+      if (signal.aborted) return;
+      await fn(jobs[index++]);
+    }
+  };
+  await Promise.all(
+    Array.from({length: Math.min(DEPRECATION_CONCURRENCY, jobs.length)}, worker));
+};
+
 /**
- * Looks up deprecation, repository and provenance for each of the given
- * packages.
+ * Looks up deprecation and repository for each of the given packages and,
+ * with `withProvenance`, whether it is official.
  *
- * Fail-open by design: a package whose lookup fails (offline, npm blocked by
- * a firewall, 404, timeout, overall budget exceeded) is simply absent from
- * the returned map, and the caller then treats it as not deprecated and not
- * a placeholder. An admin behind a firewall gets the full catalog, not an
- * empty one. Unknown provenance is never treated as official.
+ * The metadata sweep and the provenance sweep each get their own time
+ * budget, so a slow registry cannot starve one with the other.
+ *
+ * Fail-open by design: a package whose metadata lookup fails (offline, npm
+ * blocked by a firewall, 404, timeout, overall budget exceeded) is simply
+ * absent from the returned map, and the caller then treats it as not
+ * deprecated and not a placeholder. An admin behind a firewall gets the full
+ * catalog, not an empty one. Provenance that could not be checked is left
+ * `undefined` and is never treated as official.
  */
 export const fetchPluginRegistryInfo = async (
   pkgs: ReadonlyArray<{name: string, version?: string}>,
+  {withProvenance = true}: {withProvenance?: boolean} = {},
 ): Promise<Map<string, PluginRegistryInfo>> => {
-  const result = new Map<string, PluginRegistryInfo>();
+  const cached = new Map<string, CachedRegistryInfo>();
   const pending: Array<{name: string, version: string, key: string}> = [];
   const now = Date.now();
   if (registryInfoCache.size > DEPRECATION_CACHE_MAX) registryInfoCache.clear();
@@ -288,88 +319,124 @@ export const fetchPluginRegistryInfo = async (
     if (!pkg || typeof pkg.name !== 'string') continue;
     const version = typeof pkg.version === 'string' && pkg.version ? pkg.version : 'latest';
     const key = `${pkg.name}@${version}`;
-    const cached = registryInfoCache.get(key);
-    if (cached && cached.expires > now) {
-      result.set(pkg.name, cached.info);
+    const hit = registryInfoCache.get(key);
+    if (hit && hit.expires > now) {
+      cached.set(pkg.name, hit.info);
     } else {
       pending.push({name: pkg.name, version, key});
     }
   }
-  if (pending.length === 0) return result;
 
-  // One controller for the whole sweep: if the registry is slow we give up
-  // on the remainder rather than making the admin page wait indefinitely.
-  const budget = AbortSignal.timeout(DEPRECATION_SWEEP_BUDGET_MS);
-  const lookup = (job: {name: string, version: string, key: string}) => {
-    const started = registryInfoInFlight.get(job.key);
-    if (started) return started;
-    const promise = (async (): Promise<PluginRegistryInfo | undefined> => {
-      const meta = await fetchPluginVersionMeta(job.name, job.version, budget);
-      if (meta === undefined) return undefined; // unknown -> not hidden
-      const resolvedKey = typeof (meta as any).version === 'string'
-        ? `${job.name}@${(meta as any).version}` : job.key;
-      let official = provenanceCache.get(resolvedKey);
-      let cacheable = true;
-      if (official === undefined) {
-        const fetched = await fetchOfficialProvenance(job.name, meta, budget);
-        if (fetched === undefined) {
-          cacheable = false;
-        } else {
-          provenanceCache.set(resolvedKey, fetched);
-        }
-        official = fetched === true;
-      }
-      const info: PluginRegistryInfo = {
-        deprecated: normalizeDeprecation(meta.deprecated),
-        hasRepository: hasRepositoryField(meta.repository),
-        official,
-      };
-      if (cacheable) {
+  if (pending.length > 0) {
+    // One controller for the whole sweep: if the registry is slow we give up
+    // on the remainder rather than making the admin page wait indefinitely.
+    const budget = AbortSignal.timeout(DEPRECATION_SWEEP_BUDGET_MS);
+    const lookup = (job: {name: string, version: string, key: string}) => {
+      const started = registryInfoInFlight.get(job.key);
+      if (started) return started;
+      const promise = (async (): Promise<CachedRegistryInfo | undefined> => {
+        const meta = await fetchPluginVersionMeta(job.name, job.version, budget);
+        if (meta === undefined) return undefined; // unknown -> not hidden
+        const info: CachedRegistryInfo = {
+          deprecated: normalizeDeprecation(meta.deprecated),
+          hasRepository: hasRepositoryField(meta.repository),
+          provenance: {
+            version: typeof (meta as any).version === 'string' ? (meta as any).version : undefined,
+            integrity: meta.dist?.integrity,
+            attestationsUrl: meta.dist?.attestations?.url,
+          },
+        };
         registryInfoCache.set(job.key, {info, expires: Date.now() + DEPRECATION_TTL_MS});
-      }
-      return info;
-    })().finally(() => registryInfoInFlight.delete(job.key));
-    registryInfoInFlight.set(job.key, promise);
-    return promise;
-  };
-  let index = 0;
-  const worker = async () => {
-    while (index < pending.length) {
-      if (budget.aborted) return;
-      const job = pending[index++];
+        return info;
+      })().finally(() => registryInfoInFlight.delete(job.key));
+      registryInfoInFlight.set(job.key, promise);
+      return promise;
+    };
+    await runPool(pending, budget, async (job) => {
       const info = await lookup(job);
-      if (info !== undefined) result.set(job.name, info);
+      if (info !== undefined) cached.set(job.name, info);
+    });
+    if (budget.aborted && cached.size < pkgs.length) {
+      logger.warn('Plugin catalog: npm metadata lookup timed out; ' +
+                  'listing the plugins it could not check.');
     }
-  };
-  await Promise.all(
-    Array.from({length: Math.min(DEPRECATION_CONCURRENCY, pending.length)}, worker));
-  if (budget.aborted && result.size < pkgs.length) {
-    logger.warn('Plugin catalog: npm metadata lookup timed out; ' +
-                'listing the plugins it could not check.');
+  }
+
+  const result = new Map<string, PluginRegistryInfo>();
+  const needProvenance: Array<{name: string, key: string, ref: ProvenanceRef}> = [];
+  for (const [name, info] of cached) {
+    const out: PluginRegistryInfo = {deprecated: info.deprecated, hasRepository: info.hasRepository};
+    if (withProvenance) {
+      const key = `${name}@${info.provenance.version}`;
+      const known = provenanceCache.get(key);
+      if (known !== undefined) {
+        out.official = known;
+      } else {
+        needProvenance.push({name, key, ref: info.provenance});
+      }
+    }
+    result.set(name, out);
+  }
+
+  if (needProvenance.length > 0) {
+    const budget = AbortSignal.timeout(DEPRECATION_SWEEP_BUDGET_MS);
+    const check = (job: {name: string, key: string, ref: ProvenanceRef}) => {
+      const started = provenanceInFlight.get(job.key);
+      if (started) return started;
+      const promise = (async () => {
+        const official = await fetchOfficialProvenance(job.name, job.ref, budget);
+        if (official !== undefined) provenanceCache.set(job.key, official);
+        return official;
+      })().finally(() => provenanceInFlight.delete(job.key));
+      provenanceInFlight.set(job.key, promise);
+      return promise;
+    };
+    await runPool(needProvenance, budget, async (job) => {
+      const official = await check(job);
+      if (official !== undefined) result.get(job.name)!.official = official;
+    });
+    if (budget.aborted) {
+      logger.warn('Plugin catalog: npm provenance lookup timed out; the plugins it ' +
+                  'could not check are shown as third-party until the next refresh.');
+    }
   }
   return result;
 };
 
 /**
  * Looks up the npm deprecation notice for each of the given packages. Same
- * fail-open contract as {@link fetchPluginRegistryInfo}.
+ * fail-open contract as {@link fetchPluginRegistryInfo}; provenance is not
+ * fetched because only the deprecation is needed.
  */
 export const fetchPluginDeprecations = async (
   pkgs: ReadonlyArray<{name: string, version?: string}>,
 ): Promise<Map<string, string | null>> => {
-  const info = await fetchPluginRegistryInfo(pkgs);
+  const info = await fetchPluginRegistryInfo(pkgs, {withProvenance: false});
   return new Map([...info].map(([name, i]) => [name, i.deprecated]));
 };
 
-export const install = async (pluginName: string, cb:Function|null = null) => {
+/**
+ * Installs a plugin from npm.
+ *
+ * @param version exact version to install. The admin catalog passes the
+ *   version it classified, so an "official" label shown for one release can
+ *   never authorise installing a different, newer release. Omitted, the
+ *   latest version is installed.
+ */
+export const install = async (
+  pluginName: string, cb:Function|null = null, version?: string,
+) => {
   cb = wrapTaskCb(cb);
-  logger.info(`Installing plugin ${pluginName}...`);
+  logger.info(`Installing plugin ${pluginName}${version ? `@${version}` : ''}...`);
   try {
+    if (version !== undefined && !semver.valid(version)) {
+      throw new Error(`Invalid version for ${pluginName}: ${version}`);
+    }
     // A superseded package is refused before any network call, so the block
     // holds even when npm is unreachable.
     const known = installBlockReason(pluginName);
     if (known) throw new PluginDeprecatedError(pluginName, known.detail);
-    const meta = await fetchPluginVersionMeta(pluginName);
+    const meta = await fetchPluginVersionMeta(pluginName, version);
     const compat = checkEngineCompatibility(meta?.engines?.node, process.version);
     if (!compat.compatible) {
       throw new EngineIncompatibleError(pluginName, compat.required, compat.current);
@@ -380,7 +447,7 @@ export const install = async (pluginName: string, cb:Function|null = null) => {
     // only — an unreachable registry leaves the install to proceed.
     const deprecated = installBlockReason(pluginName, normalizeDeprecation(meta?.deprecated));
     if (deprecated) throw new PluginDeprecatedError(pluginName, deprecated.detail);
-    await linkInstaller.installPlugin(pluginName);
+    await linkInstaller.installPlugin(pluginName, version);
     logger.info(`Successfully installed plugin ${pluginName}`);
     await hooks.aCallAll('pluginInstall', {pluginName});
     cb(null);
@@ -392,6 +459,11 @@ export const install = async (pluginName: string, cb:Function|null = null) => {
 
 export let availablePlugins:MapArrayType<PackageInfo>|null = null;
 let cacheTimestamp = 0;
+// Set when the last refresh could not check provenance for some plugins.
+// Such a catalog is only reused briefly, so the next search retries instead
+// of showing official plugins as third-party for the full cache lifetime.
+let catalogIncomplete = false;
+const INCOMPLETE_CATALOG_MAX_AGE = 60;
 
 // The admin plugin page emits `getInstalled` (which checks for updates) and
 // `search` at the same time on load, and both end up here. Without sharing
@@ -405,7 +477,9 @@ export const getAvailablePlugins = async (maxCacheAge: number | false) => {
   const nowTimestamp = Math.round(Date.now() / 1000);
 
   // check cache age before making any request
-  if (availablePlugins && maxCacheAge && (nowTimestamp - cacheTimestamp) <= maxCacheAge) {
+  const maxAge = maxCacheAge && catalogIncomplete
+    ? Math.min(maxCacheAge, INCOMPLETE_CATALOG_MAX_AGE) : maxCacheAge;
+  if (availablePlugins && maxAge && (nowTimestamp - cacheTimestamp) <= maxAge) {
     return availablePlugins;
   }
 
@@ -482,19 +556,31 @@ const hideUninstallablePlugins = async (
   const classified = kept as unknown as MapArrayType<PackageInfo>;
   let official = 0;
   let placeholders = 0;
+  let unknown = 0;
   for (const key of Object.keys(classified)) {
     const entry = classified[key];
     if (!entry) continue;
     const info = registryInfo.get(entry.name);
+    if (info?.official === undefined) unknown++;
     entry.official = info?.official === true;
     entry.placeholder = !entry.official &&
         isPlaceholderPackage(entry.version, info?.hasRepository);
     if (entry.official) official++;
     if (entry.placeholder) placeholders++;
   }
+  catalogIncomplete = unknown > 0;
   logger.info(`Plugin catalog: ${official} official plugin(s), ` +
               `${Object.keys(classified).length - official} third-party ` +
               `(${placeholders} placeholder package(s) listed only on exact-name search).`);
+  if (unknown > 0) {
+    logger.warn(`Plugin catalog: could not check npm provenance for ${unknown} plugin(s); ` +
+                'they are treated as third-party until a later refresh succeeds.');
+    if (normalizeThirdPartyMode(settings.pluginCatalogThirdParty) === 'hide') {
+      logger.warn('Plugin catalog: pluginCatalogThirdParty is "hide", so plugins whose ' +
+                  'provenance could not be checked are not listed. If the catalog is ' +
+                  'empty, check that this server can reach registry.npmjs.org.');
+    }
+  }
   return classified;
 };
 
@@ -526,6 +612,22 @@ export const getInstalledPluginWarnings = async (
   return warnings;
 };
 
+
+/**
+ * The catalog as the admin may browse it: {@link getAvailablePlugins} with
+ * the `pluginCatalogThirdParty` policy applied (no search term, so
+ * placeholders are left out in the default mode). The unfiltered catalog is
+ * still used internally, e.g. for update checks.
+ */
+export const getBrowsablePlugins = async (maxCacheAge: number | false) => {
+  const all = await getAvailablePlugins(maxCacheAge);
+  const mode = normalizeThirdPartyMode(settings.pluginCatalogThirdParty);
+  const out: MapArrayType<PackageInfo> = {};
+  for (const key of Object.keys(all)) {
+    if (all[key] && isListedInCatalog(all[key], mode)) out[key] = all[key];
+  }
+  return out;
+};
 
 export const search = (searchTerm: string, maxCacheAge: number) => getAvailablePlugins(maxCacheAge).then(
     (results: MapArrayType<PackageInfo>) => {
