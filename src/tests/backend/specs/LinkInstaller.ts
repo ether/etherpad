@@ -215,4 +215,136 @@ describe(__filename, function () {
       assert(fs.existsSync(victimFile), 'victim file was unlinked');
     });
   });
+  // #8532: uninstalling a plugin unlinked src/node_modules/log4js (core's own
+  // pnpm link) because listPlugins() reset log4js's dependents, dropping core.
+  describe('uninstall keeps core and shared dependency links (#8532)', function () {
+    let installer: any;
+    let li: any;
+    let createdPluginPath = false;
+    let outside: string;
+    let log4jsTarget: string | null = null;
+    const created: string[] = [];
+    const fakePkgs = ['ep_test_8532_plugin', 'ep_test_8532_helpers', 'ep_test_8532_other',
+      'test-8532-shared', 'test-8532-core-link', 'test-8532-plugin-link'];
+    const pkgInfo = (name: string, dependencies: Record<string, string> = {}) => ({
+      name,
+      version: '1.0.0',
+      location: path.join(installer.pluginInstallPath, name),
+      mainFile: 'index.js',
+      dependencies,
+      dependencyDetails: {},
+    });
+    const link = (name: string, target: string) => {
+      const linkPath = path.join(installer.node_modules, name);
+      fs.symlinkSync(target, linkPath, 'junction');
+      created.push(linkPath);
+      return linkPath;
+    };
+    const exists = (p: string) => {
+      try { fs.lstatSync(p); return true; } catch (err) { return false; }
+    };
+
+    before(async function () {
+      installer = await import('../../../static/js/pluginfw/installer');
+      li = installer.linkInstaller;
+      await li.init();
+      const log4jsLink = path.join(installer.node_modules, 'log4js');
+      if (fs.lstatSync(log4jsLink).isSymbolicLink()) log4jsTarget = fs.readlinkSync(log4jsLink);
+    });
+
+    after(function () {
+      // If a regression unlinked core's log4js, put it back so the rest of
+      // the suite can still run.
+      const log4jsLink = path.join(installer.node_modules, 'log4js');
+      if (log4jsTarget != null && !exists(log4jsLink)) {
+        fs.symlinkSync(log4jsTarget, log4jsLink, 'junction');
+      }
+    });
+
+    beforeEach(function () {
+      if (!fs.existsSync(installer.pluginInstallPath)) {
+        fs.mkdirSync(installer.pluginInstallPath, {recursive: true});
+        createdPluginPath = true;
+      }
+      // Stands in for node_modules/.pnpm: a package that is not in
+      // pluginInstallPath.
+      outside = fs.mkdtempSync(path.join(os.tmpdir(), 'ep-8532-'));
+      sinon.stub(console, 'error');
+      sinon.stub(console, 'debug');
+      sinon.stub(li.livePluginManager, 'uninstall').resolves();
+    });
+
+    afterEach(function () {
+      for (const p of created.splice(0)) fs.rmSync(p, {recursive: true, force: true});
+      for (const name of fakePkgs) li.dependenciesMap.delete(name);
+      li.dependenciesMap.get('log4js')?.delete('ep_test_8532_helpers');
+      fs.rmSync(outside, {recursive: true, force: true});
+      if (createdPluginPath) {
+        fs.rmSync(installer.pluginInstallPath, {recursive: true, force: true});
+        createdPluginPath = false;
+      }
+    });
+
+    it('listing a core dependency as a plugin package keeps core as its dependent', async function () {
+      assert(li.dependenciesMap.get('log4js').has('ep_etherpad-lite'));
+      // live-plugin-manager lists log4js itself when a plugin pulled it in.
+      await li.checkLinkedDependencies(pkgInfo('log4js'));
+      assert(li.dependenciesMap.get('log4js').has('ep_etherpad-lite'),
+          'core was dropped from log4js dependents');
+    });
+
+    it('uninstalling a plugin does not unlink log4js from node_modules', async function () {
+      const log4jsLink = path.join(installer.node_modules, 'log4js');
+      assert(exists(log4jsLink), 'test needs core log4js in node_modules');
+      const helpersDir = path.join(installer.pluginInstallPath, 'ep_test_8532_helpers');
+      fs.mkdirSync(helpersDir, {recursive: true});
+      fs.writeFileSync(path.join(helpersDir, 'package.json'),
+          JSON.stringify({name: 'ep_test_8532_helpers', dependencies: {log4js: '^6.9.1'}}));
+      created.push(helpersDir);
+      // Same order listPlugins() sees after `plugins i ep_set_title_on_pad`.
+      await li.checkLinkedDependencies(pkgInfo('ep_test_8532_helpers', {log4js: '^6.9.1'}));
+      await li.checkLinkedDependencies(pkgInfo('log4js'));
+      await li.checkLinkedDependencies(
+          pkgInfo('ep_test_8532_plugin', {ep_test_8532_helpers: '^1.0.0'}));
+      sinon.stub(li.livePluginManager, 'getInfo')
+          .returns(pkgInfo('ep_test_8532_plugin', {ep_test_8532_helpers: '^1.0.0'}));
+      link('ep_test_8532_plugin', outside);
+
+      await li.uninstallPlugin('ep_test_8532_plugin');
+
+      assert(exists(log4jsLink), 'core log4js link was removed');
+      assert(li.dependenciesMap.get('log4js').has('ep_etherpad-lite'));
+    });
+
+    it('keeps a dependency another installed plugin still uses', async function () {
+      const sharedDir = path.join(installer.pluginInstallPath, 'test-8532-shared');
+      fs.mkdirSync(sharedDir, {recursive: true});
+      fs.writeFileSync(path.join(sharedDir, 'package.json'), '{"name":"test-8532-shared"}');
+      created.push(sharedDir);
+      const sharedLink = link('test-8532-shared', sharedDir);
+      li.dependenciesMap.set('test-8532-shared', new Set(['ep_test_8532_plugin', 'ep_test_8532_other']));
+      sinon.stub(li.livePluginManager, 'getInfo')
+          .returns(pkgInfo('ep_test_8532_plugin', {'test-8532-shared': '^1.0.0'}));
+      link('ep_test_8532_plugin', outside);
+
+      await li.uninstallPlugin('ep_test_8532_plugin');
+
+      assert(exists(sharedLink), 'shared link was removed');
+      assert(fs.existsSync(path.join(sharedDir, 'package.json')), 'shared package was deleted');
+    });
+
+    it('unlinkDependency only removes links that point into pluginInstallPath', function () {
+      const coreLink = link('test-8532-core-link', outside);
+      const pluginDir = path.join(installer.pluginInstallPath, 'test-8532-plugin-link');
+      fs.mkdirSync(pluginDir, {recursive: true});
+      created.push(pluginDir);
+      const pluginLink = link('test-8532-plugin-link', pluginDir);
+
+      li.unlinkDependency('test-8532-core-link');
+      li.unlinkDependency('test-8532-plugin-link');
+
+      assert(exists(coreLink), 'link to a package outside pluginInstallPath was removed');
+      assert(!exists(pluginLink), 'plugin link was not removed');
+    });
+  });
 });
