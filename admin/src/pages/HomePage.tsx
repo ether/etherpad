@@ -5,6 +5,7 @@ import {useDebounce} from "../utils/useDebounce.ts";
 import {Trans, useTranslation} from "react-i18next";
 import {ArrowUpFromDot, Download, ExternalLink, Plug, RefreshCw, Search, Trash, X} from "lucide-react";
 import {IconButton} from "../components/IconButton.tsx";
+import * as Dialog from "@radix-ui/react-dialog";
 
 export const HomePage = () => {
   const pluginsSocket = useStore(state => state.pluginsSocket)
@@ -24,6 +25,9 @@ export const HomePage = () => {
     searchTerm: '',
   })
   const [searchTerm, setSearchTerm] = useState<string>('')
+  // Third-party plugin awaiting the admin's confirmation before install.
+  const [confirmInstall, setConfirmInstall] =
+    useState<{name: string, version?: string} | null>(null)
   const {t} = useTranslation()
 
   const updatableCount = useMemo(
@@ -140,9 +144,24 @@ export const HomePage = () => {
     setInstalledPlugins(installedPlugins.filter(i => i.name !== pluginName))
   }
 
-  const installPlugin = (pluginName: string) => {
-    pluginsSocket!.emit('install', pluginName)
+  // With a version, the server installs exactly that release: the one the
+  // catalog showed and classified, not whatever is latest by then.
+  const installPlugin = (pluginName: string, version?: string) => {
+    pluginsSocket!.emit('install', version ? {name: pluginName, version} : pluginName)
     setPlugins(plugins.filter(p => p.name !== pluginName))
+  }
+
+  // Official plugins install with one click. A third-party plugin runs code
+  // the Etherpad project has not reviewed, so the admin confirms first; the
+  // extra, deliberate click also blunts clickjacking of the Install button.
+  // Updates go through here too; an update whose target version could not
+  // be classified is treated as third-party.
+  const requestInstall = (plugin: {name: string, version?: string, official?: boolean}) => {
+    if (plugin.official === true) {
+      installPlugin(plugin.name, plugin.version)
+    } else {
+      setConfirmInstall({name: plugin.name, version: plugin.version})
+    }
   }
 
   useDebounce(() => {
@@ -151,6 +170,40 @@ export const HomePage = () => {
 
   return (
     <div className="pm-page">
+
+      <Dialog.Root
+        open={confirmInstall !== null}
+        onOpenChange={(open) => { if (!open) setConfirmInstall(null) }}
+      >
+        <Dialog.Portal>
+          <Dialog.Overlay className="dialog-confirm-overlay"/>
+          <Dialog.Content className="pm-dialog-content" data-testid="third-party-confirm">
+            <Dialog.Title className="pm-dialog-title">
+              <Trans i18nKey="admin_plugins.third_party_confirm_title"/>
+            </Dialog.Title>
+            <Dialog.Description className="pm-dialog-body">
+              {t('admin_plugins.third_party_confirm_body', {plugin: confirmInstall?.name ?? ''})}
+            </Dialog.Description>
+            <div className="pm-dialog-actions">
+              <Dialog.Close asChild>
+                <button className="pm-btn pm-btn-ghost" autoFocus>
+                  <Trans i18nKey="admin_pads.cancel"/>
+                </button>
+              </Dialog.Close>
+              <button
+                className="pm-btn pm-btn-primary"
+                onClick={() => {
+                  const target = confirmInstall
+                  setConfirmInstall(null)
+                  if (target) installPlugin(target.name, target.version)
+                }}
+              >
+                <Download size={13}/> <Trans i18nKey="admin_plugins.available_install.value"/>
+              </button>
+            </div>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
 
       {catalogDisabled && (
         <div className="pm-banner pm-banner-info" role="status">
@@ -264,7 +317,11 @@ export const HomePage = () => {
               <div className="pm-installed-actions">
                 {plugin.updatable ? (
                   <IconButton
-                    onClick={() => installPlugin(plugin.name)}
+                    onClick={() => requestInstall({
+                      name: plugin.name,
+                      version: plugin.latestVersion,
+                      official: plugin.official,
+                    })}
                     icon={<ArrowUpFromDot size={14}/>}
                     title={t('admin_plugins.update_tooltip')}
                   />
@@ -362,6 +419,17 @@ export const HomePage = () => {
                             target="_blank"
                             rel="noopener noreferrer"
                           >{plugin.name}</a>
+                          {plugin.official ? (
+                            <span
+                              className="pm-tag pm-tag--official"
+                              title={t('admin_plugins.tag_official_title')}
+                            ><Trans i18nKey="admin_plugins.tag_official"/></span>
+                          ) : (
+                            <span
+                              className="pm-tag pm-tag--third-party"
+                              title={t('admin_plugins.tag_third_party_title')}
+                            ><Trans i18nKey="admin_plugins.tag_third_party"/></span>
+                          )}
                         </div>
                       </div>
                     </td>
@@ -385,7 +453,7 @@ export const HomePage = () => {
                     <td className="pm-cell-action">
                       <button
                         className="pm-btn pm-btn-primary pm-btn--sm"
-                        onClick={() => installPlugin(plugin.name)}
+                        onClick={() => requestInstall(plugin)}
                       >
                         <Download size={13}/> <Trans i18nKey="admin_plugins.available_install.value"/>
                       </button>

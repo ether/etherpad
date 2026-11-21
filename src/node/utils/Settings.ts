@@ -207,6 +207,7 @@ export type SettingsType = {
     updateCheck: boolean,
     pluginCatalog: boolean,
   },
+  pluginCatalogThirdParty: string,
   skinName: string | null,
   skinVariants: string,
   ip: string,
@@ -495,6 +496,18 @@ const settings: SettingsType = {
     // (installer.ts). Manual install via CLI still works.
     pluginCatalog: true,
   },
+  /*
+   * How the admin plugin catalog treats plugins that are not published by
+   * the Etherpad project (see src/static/js/pluginfw/pluginTrust.ts):
+   *  - 'label' (default): list them with a "Third-party" badge and ask for
+   *    confirmation before installing; placeholder packages (0.0.0-*
+   *    versions, no repository) only show up on an exact-name search.
+   *  - 'hide': list official plugins only (empty if npm is unreachable,
+   *    since provenance cannot then be checked).
+   *  - 'all': list everything, placeholders included.
+   * Installs from the command line are never affected.
+   */
+  pluginCatalogThirdParty: 'label',
   /*
  * Skin name.
  *
