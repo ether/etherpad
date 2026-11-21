@@ -3,6 +3,7 @@
 import {strict as assert} from 'assert';
 import {
   catalogExclusion,
+  COMPATIBILITY_MIN_SAMPLE,
   filterCatalogEntries,
   installBlockReason,
   normalizeDeprecation,
@@ -115,6 +116,47 @@ describe(__filename, function () {
       filterCatalogEntries(input, new Map([['ep_old', 'gone']]));
       assert.deepEqual(Object.keys(input).sort(),
           ['ep_adminpads2', 'ep_align', 'ep_kaput', 'ep_old']);
+    });
+
+    // A feed whose compatibility run broke: nearly everything marked failed,
+    // shaped like the live feed of 2026-11-21 (175 of 180 failed).
+    const brokenRunCatalog = (size: number, healthy: number) => {
+      const out: Record<string, {name: string, version: string, compatibility?: string}> = {};
+      for (let i = 0; i < size; i++) {
+        const name = i === 0 ? 'ep_align' : `ep_plugin_${i}`;
+        const compatibility = i < size - healthy ? 'failed' : 'compatible';
+        out[name] = {name, version: '1.0.0', compatibility};
+      }
+      out.ep_adminpads2 = {name: 'ep_adminpads2', version: '2.1.110', compatibility: 'failed'};
+      return out;
+    };
+
+    it('ignores compatibility verdicts when most of the catalog is marked failed', function () {
+      const input = brokenRunCatalog(180, 5);
+      const {kept, excluded, compatibilityIgnored} = filterCatalogEntries(input);
+      assert.equal(compatibilityIgnored, true);
+      assert.ok(kept.ep_align, 'a healthy plugin must not vanish because the registry run broke');
+      assert.equal(Object.keys(kept).length, 180);
+      // The other signals still apply.
+      assert.deepEqual([...excluded.keys()], ['ep_adminpads2']);
+      assert.equal(excluded.get('ep_adminpads2')!.cause, 'superseded');
+    });
+
+    it('still trusts a plausible share of failed verdicts', function () {
+      // The real feed when #8246 landed: 10 of 174 failed.
+      const input = brokenRunCatalog(174, 164);
+      const {kept, excluded, compatibilityIgnored} = filterCatalogEntries(input);
+      assert.equal(compatibilityIgnored, false);
+      assert.equal(kept.ep_align, undefined, 'ep_align is marked failed in this fixture');
+      assert.equal(excluded.get('ep_align')!.cause, 'incompatible');
+      assert.equal(Object.keys(kept).length, 164);
+    });
+
+    it('trusts the verdicts of a catalog too small to judge', function () {
+      const input = brokenRunCatalog(COMPATIBILITY_MIN_SAMPLE - 2, 1);
+      const {kept, compatibilityIgnored} = filterCatalogEntries(input);
+      assert.equal(compatibilityIgnored, false);
+      assert.equal(Object.keys(kept).length, 1);
     });
   });
 
