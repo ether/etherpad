@@ -24,7 +24,10 @@
  *
  * Everything is fail-open: a plugin is only hidden when a signal positively
  * says it is broken. A network failure while collecting signal 3 must leave
- * the catalog populated rather than empty.
+ * the catalog populated rather than empty. The same goes for signal 1: when
+ * the feed marks most of the catalog `failed`, that says the registry's
+ * compatibility run broke, not that the plugins did, so the verdict is
+ * ignored for that feed (see {@link isCompatibilitySignalPlausible}).
  */
 
 export type CatalogEntry = {
@@ -79,13 +82,14 @@ export const normalizeDeprecation = (raw: unknown): string | null => {
 export const catalogExclusion = (
   entry: CatalogEntry,
   npmDeprecation?: string | null,
+  {trustCompatibility = true}: {trustCompatibility?: boolean} = {},
 ): CatalogExclusion | null => {
   if (!entry || typeof entry.name !== 'string') return null;
   const superseded = supersededPlugins.get(entry.name);
   if (superseded) return {cause: 'superseded', detail: superseded};
   const deprecation = normalizeDeprecation(npmDeprecation);
   if (deprecation) return {cause: 'deprecated', detail: deprecation};
-  if (entry.compatibility === 'failed') {
+  if (trustCompatibility && entry.compatibility === 'failed') {
     return {
       cause: 'incompatible',
       detail: 'The plugin registry could not get this plugin working with ' +
@@ -122,26 +126,64 @@ export class PluginDeprecatedError extends Error {
 }
 
 /**
+ * Below this many entries the share of `failed` verdicts says nothing about
+ * the health of the compatibility run, so the verdicts are always trusted.
+ */
+export const COMPATIBILITY_MIN_SAMPLE = 20;
+
+/**
+ * Largest share of the catalog the registry can plausibly mark `failed`.
+ * A healthy run fails a handful of plugins (10 of 174 when #8246 landed);
+ * on 2026-11-21 a broken run marked 175 of 180 `failed`, including ep_align,
+ * and every admin catalog went empty.
+ */
+export const COMPATIBILITY_MAX_FAILED_SHARE = 0.5;
+
+/**
+ * Whether the feed's `failed` verdicts can be believed. When most of a
+ * non-trivial catalog is marked `failed`, the registry's compatibility run
+ * itself is broken, and hiding on that signal would empty the catalog — the
+ * outcome this module is designed never to produce.
+ */
+export const isCompatibilitySignalPlausible = (
+  entries: ReadonlyArray<CatalogEntry | null | undefined>,
+): boolean => {
+  const valid = entries.filter((e): e is CatalogEntry => !!e && typeof e.name === 'string');
+  if (valid.length < COMPATIBILITY_MIN_SAMPLE) return true;
+  const failed = valid.filter((e) => e.compatibility === 'failed').length;
+  return failed / valid.length <= COMPATIBILITY_MAX_FAILED_SHARE;
+};
+
+/**
  * Applies {@link catalogExclusion} to a whole catalog.
  *
  * @param entries catalog keyed by plugin name.
  * @param deprecations plugin name -> npm deprecation message (or null).
  *   Names missing from the map are treated as "unknown", i.e. not hidden.
+ * @returns the kept and excluded entries, and whether the feed's
+ *   compatibility verdicts were ignored as implausible.
  */
 export const filterCatalogEntries = <T extends CatalogEntry>(
   entries: Record<string, T>,
   deprecations: ReadonlyMap<string, string | null> = new Map(),
-): {kept: Record<string, T>, excluded: Map<string, CatalogExclusion>} => {
+): {
+  kept: Record<string, T>,
+  excluded: Map<string, CatalogExclusion>,
+  compatibilityIgnored: boolean,
+} => {
   const kept: Record<string, T> = {};
   const excluded = new Map<string, CatalogExclusion>();
+  const trustCompatibility = isCompatibilitySignalPlausible(Object.values(entries));
   for (const key of Object.keys(entries)) {
     const entry = entries[key];
-    const exclusion = entry ? catalogExclusion(entry, deprecations.get(entry.name)) : null;
+    const exclusion = entry
+      ? catalogExclusion(entry, deprecations.get(entry.name), {trustCompatibility})
+      : null;
     if (exclusion) {
       excluded.set(key, exclusion);
     } else {
       kept[key] = entry;
     }
   }
-  return {kept, excluded};
+  return {kept, excluded, compatibilityIgnored: !trustCompatibility};
 };
