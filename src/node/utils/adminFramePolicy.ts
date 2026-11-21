@@ -25,10 +25,20 @@ export const isAdminPath = (pathname: string): boolean => {
       p === '/admin-auth' || p.startsWith('/admin-auth/');
 };
 
-// A CSP source expression must not carry characters that end the directive
-// (";"), start another policy (","), separate sources (whitespace) or quote a
-// keyword. Anything else is passed through for the browser to interpret.
-const validSource = (s: string) => s.length > 0 && !/[\s;,'"\u0000-\u001f\u007f]/.test(s);
+// CSP frame-ancestors source forms accepted here (case-insensitive):
+//   *                                      any origin
+//   https:                                 scheme-source
+//   [scheme://]host[:port][/path]          host-source; host may be "*" or
+//                                          start with "*." and port may be "*"
+// Anything else (keywords such as 'self', a bare "https://", stray
+// delimiters, whitespace) is rejected so a typo cannot weaken the header.
+const SCHEME_SOURCE = /^[a-z][a-z0-9+.-]*:$/i;
+const HOST_SOURCE = new RegExp(
+    '^(?:[a-z][a-z0-9+.-]*://)?' + // optional scheme
+    '(?:\\*|(?:\\*\\.)?[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)*)' + // host
+    '(?::(?:[0-9]{1,5}|\\*))?' + // optional port
+    '(?:/[A-Za-z0-9._~!$&()*+=:@%/-]*)?$', 'i'); // optional path, no ; , ' " or spaces
+const validSource = (s: string) => s === '*' || SCHEME_SOURCE.test(s) || HOST_SOURCE.test(s);
 
 let lastWarned = '';
 

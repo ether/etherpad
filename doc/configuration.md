@@ -183,6 +183,13 @@ Entries are CSP `frame-ancestors` sources. When the list is not empty,
 that frames the admin UI still needs to be allowed to open the admin sockets;
 see `socketIo.allowedOrigins`.
 
+If that page is on a different site (not just a different subdomain), the
+browser will not send Etherpad's session cookie into the frame with the
+default `cookie.sameSite: "Lax"`, so the admin cannot stay signed in. Set
+`cookie.sameSite` to `"None"`, serve Etherpad over HTTPS (browsers reject
+`SameSite=None` cookies without `Secure`), and set `trustProxy: true` if TLS
+ends at a reverse proxy. See the `cookie` section of `settings.json.template`.
+
 ## Self-update, email, database, and metrics
 
 These areas have their own pages:

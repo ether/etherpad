@@ -54,4 +54,22 @@ describe('adminFrameHeaders', () => {
       42,
     ])).toEqual(['https://ok.example']);
   });
+
+  it('accepts the CSP source forms', () => {
+    const ok = ['*', 'https:', 'https://portal.example.com', 'https://*.example.org',
+      'portal.example.com', 'http://localhost:8080', 'https://example.com:*',
+      'https://example.com/embed/', 'http://127.0.0.1:9001'];
+    expect(normalizeFrameAncestors(ok)).toEqual(ok);
+  });
+
+  it('drops malformed sources and keeps X-Frame-Options when none are left', () => {
+    const bad = ['https://', 'https://:443', '://example.com', 'https://exa mple.com',
+      'https://example..com', 'https://-example.com', 'https://example.com:99999x',
+      "'self'", '**.example.com'];
+    expect(normalizeFrameAncestors(bad)).toEqual([]);
+    expect(adminFrameHeaders(bad)).toEqual({
+      'Content-Security-Policy': "frame-ancestors 'self'",
+      'X-Frame-Options': 'SAMEORIGIN',
+    });
+  });
 });
