@@ -49,6 +49,13 @@ test.describe('Plugins page',  ()=> {
 
         // Install button is in the last table cell
         await pluginRow.locator('td').last().locator('button').first().click()
+        // ep_set_title_on_pad is an official plugin and installs with one
+        // click, but if npm provenance could not be checked it is shown as
+        // third-party and the confirmation dialog appears first.
+        const confirm = page.getByTestId('third-party-confirm')
+        if (await confirm.waitFor({state: 'visible', timeout: 2000}).then(() => true, () => false)) {
+            await confirm.locator('.pm-btn-primary').click()
+        }
         await page.waitForSelector('.pm-installed')
 
         // Installed plugins are now in .pm-installed-row flex items (not a table).

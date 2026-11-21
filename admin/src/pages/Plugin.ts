@@ -3,6 +3,10 @@ export type PluginDef = {
   description: string,
   version: string,
   time: string,
+  /**
+   * Published from an ether/* GitHub repository, as shown by npm provenance.
+   * Computed by the server; anything else is third-party.
+   */
   official: boolean,
   /**
    * `@feature:*` Playwright tags for core specs the plugin intentionally

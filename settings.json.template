@@ -489,6 +489,21 @@
   },
 
   /*
+   * Plugins in the admin catalog that are not published by the Etherpad
+   * project are labelled "Third-party": they are not reviewed by the project
+   * and run code on your server. "Official" means npm provenance shows the
+   * package was built from a repository in the ether GitHub org.
+   *  - "label" (default): list third-party plugins with a badge and ask for
+   *                       confirmation before installing them. Placeholder
+   *                       packages (0.0.0-* versions, no repository) are only
+   *                       listed when searched for by their exact name.
+   *  - "hide"           : list official plugins only.
+   *  - "all"            : list everything, placeholders included.
+   * `pnpm run plugins i ep_<name>` on the server is never affected.
+   */
+  "pluginCatalogThirdParty": "${PLUGIN_CATALOG_THIRD_PARTY:label}",
+
+  /*
    * Should we suppress errors from being visible in the default Pad Text?
    */
   "suppressErrorsInPadText": false,

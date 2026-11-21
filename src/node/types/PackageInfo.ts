@@ -24,6 +24,17 @@ export type PackageInfo =  {
    * `warning` or `failed`. Feed-provided; see pluginCatalogFilter.ts.
    */
   compatibility?: string,
+  /**
+   * Catalog entries only: published from an ether/* GitHub repository, as
+   * shown by npm provenance. Set by core (pluginTrust.ts); the feed's own
+   * `official` flag is overwritten because it cannot be verified.
+   */
+  official?: boolean,
+  /**
+   * Catalog entries only: a `0.0.0-*` or repository-less package, left out
+   * of browsing and listed only on an exact-name search.
+   */
+  placeholder?: boolean,
   /** Set on *installed* plugins when a newer version is available. */
   updatable?: boolean,
   /**

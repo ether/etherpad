@@ -1314,6 +1314,38 @@ a.pm-btn-primary:link, a.pm-btn-primary:visited { color: #fff; }
   cursor: help;
 }
 
+.pm-tag--official {
+  background: rgba(20,148,116,.12);
+  color: var(--ep-accent-d);
+  border: 1px solid rgba(20,148,116,.3);
+  cursor: help;
+}
+.pm-tag--third-party {
+  background: var(--line-2);
+  color: var(--ink-2);
+  border: 1px solid var(--line);
+  cursor: help;
+}
+
+/* Third-party install confirmation */
+.pm-dialog-content {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 101;
+  width: min(460px, calc(100vw - 32px));
+  background: var(--panel);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  padding: 20px;
+  box-shadow: 0 10px 38px -10px rgba(0,0,0,.35);
+}
+.pm-dialog-title { margin: 0 0 8px; font-size: 16px; font-weight: 600; }
+.pm-dialog-body { margin: 0; font-size: 13.5px; line-height: 1.5; color: var(--ink-2); }
+.pm-dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+
 /* Toolbar (search + sort) */
 .pm-toolbar {
   display: flex;
