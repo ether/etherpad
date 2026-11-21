@@ -9,6 +9,7 @@ if (target != null) {
     form.action = target;
 } else {
     // Without a valid interaction uid there is nothing to consent to.
+    document.getElementById('error')!.innerText = "Error signing in";
     form.addEventListener('submit', (event) => event.preventDefault());
     form.querySelectorAll('input[type=submit]')
         .forEach((el) => (el as HTMLInputElement).disabled = true);
