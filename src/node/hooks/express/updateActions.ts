@@ -41,6 +41,27 @@ const requireAdmin = (req: any, res: any): boolean => {
   return true;
 };
 
+/**
+ * The Tier 2 POSTs change what the server runs, so a browser request must
+ * carry more than the admin's cookie: the admin UI also sends
+ * `X-Requested-With`. Only a script can add that header, and another origin
+ * would need a CORS preflight that Etherpad never grants.
+ *
+ * Browsers send `Sec-Fetch-Site` and, on POST, `Origin`. Requests with
+ * neither (curl, scripts with basic auth) keep working without the header.
+ */
+const ADMIN_ACTION_HEADER = 'x-requested-with';
+const isBrowserRequest = (req: any): boolean =>
+  req.headers['sec-fetch-site'] != null || req.headers.origin != null;
+const requireAdminAction = (req: any, res: any): boolean => {
+  if (!requireAdmin(req, res)) return false;
+  if (isBrowserRequest(req) && !req.headers[ADMIN_ACTION_HEADER]) {
+    res.status(403).json({error: 'missing-admin-action-header'});
+    return false;
+  }
+  return true;
+};
+
 const wrapAsync =
   (fn: (req: any, res: any, next: Function) => Promise<unknown>) =>
     (req: any, res: any, next: Function) => Promise.resolve(fn(req, res, next)).catch((err) => next(err));
@@ -152,7 +173,7 @@ export const expressCreateServer = (
   app.use(['/admin/update/apply', '/admin/update/cancel', '/admin/update/acknowledge', '/admin/update/log'], tierGate);
 
   app.post('/admin/update/apply', wrapAsync(async (req: any, res: any) => {
-    if (!requireAdmin(req, res)) return;
+    if (!requireAdminAction(req, res)) return;
 
     // HTTP-specific pre-checks: produce structured 4xx error codes the UI
     // localises. The pipeline duplicates these as safety, but mapping cleanly
@@ -317,7 +338,7 @@ export const expressCreateServer = (
   }));
 
   app.post('/admin/update/cancel', wrapAsync(async (req: any, res: any) => {
-    if (!requireAdmin(req, res)) return;
+    if (!requireAdminAction(req, res)) return;
     const state = await loadState(stateFilePath());
     // Cancel is allowed only during pre-execute states. Once executing begins
     // (filesystem mutated) we either complete or rollback — see spec section
@@ -350,7 +371,7 @@ export const expressCreateServer = (
   }));
 
   app.post('/admin/update/acknowledge', wrapAsync(async (req: any, res: any) => {
-    if (!requireAdmin(req, res)) return;
+    if (!requireAdminAction(req, res)) return;
     const state = await loadState(stateFilePath());
     const terminal: ReadonlySet<string> = new Set(['rollback-failed', 'preflight-failed', 'rolled-back']);
     // A `pending-verification` left behind once this process is already up

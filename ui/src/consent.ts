@@ -1,10 +1,18 @@
 import "./style.css"
+import {interactionPath} from './interaction';
 //import {MapArrayType} from "ep_etherpad-lite/node/types/MapType";
 
 const form = document.querySelector('form')!;
-const sessionId = new URLSearchParams(window.location.search).get('state');
+const target = interactionPath(new URLSearchParams(window.location.search).get('state'));
 
-form.action = '/interaction/' + sessionId;
+if (target != null) {
+    form.action = target;
+} else {
+    // Without a valid interaction uid there is nothing to consent to.
+    form.addEventListener('submit', (event) => event.preventDefault());
+    form.querySelectorAll('input[type=submit]')
+        .forEach((el) => (el as HTMLInputElement).disabled = true);
+}
 
 /*form.addEventListener('submit', function (event) {
     event.preventDefault();

@@ -1,5 +1,6 @@
 import './style.css'
 import {MapArrayType} from "ep_etherpad-lite/node/types/MapType.ts";
+import {interactionPath} from './interaction';
 
 const searchParams = new URLSearchParams(window.location.search);
 
@@ -14,9 +15,13 @@ form.addEventListener('submit', function (event) {
     formData.forEach((value, key) => {
         data[key] = value;
     });
-    const sessionId = new URLSearchParams(window.location.search).get('state');
+    const target = interactionPath(new URLSearchParams(window.location.search).get('state'));
+    if (target == null) {
+        document.getElementById('error')!.innerText = "Error signing in";
+        return;
+    }
 
-    fetch('/interaction/' + sessionId, {
+    fetch(target, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',

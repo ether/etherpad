@@ -151,6 +151,68 @@ describe(__filename, function () {
     });
   });
 
+  // A browser request carrying the admin's cookie (even same-origin) must
+  // also send X-Requested-With.
+  describe('browser requests need the admin action header', function () {
+    const seedScheduled = async () => {
+      await saveState(statePath(), {
+        ...EMPTY_STATE,
+        latest: {
+          version: '99.0.0', tag: 'v99.0.0', body: '',
+          publishedAt: '2099-01-01T00:00:00Z', prerelease: false,
+          htmlUrl: 'https://example/r/v99.0.0',
+        },
+        execution: {
+          status: 'scheduled', targetTag: 'v99.0.0',
+          scheduledFor: new Date(Date.now() + 60_000).toISOString(),
+          startedAt: new Date().toISOString(),
+        },
+      });
+    };
+
+    for (const ep of ['apply', 'cancel', 'acknowledge']) {
+      for (const [name, value] of [['sec-fetch-site', 'same-origin'],
+        ['origin', 'http://localhost']]) {
+        it(`${ep}: rejects a browser request (${name}) without the header`, async () => {
+          installAdminAuth();
+          await seedScheduled();
+          const r = await agent.post(`/admin/update/${ep}`)
+              .auth('admin', 'admin-pw')
+              .set(name, value)
+              .set('content-type', 'application/json')
+              .send({login: 'x', password: 'y'})
+              .expect(403);
+          assert.equal(r.body.error, 'missing-admin-action-header');
+          const status = await agent.get('/admin/update/status').expect(200);
+          assert.equal(status.body.execution.status, 'scheduled');
+        });
+      }
+    }
+
+    it('still answers 401 before the header check when unauthenticated', async () => {
+      await agent.post('/admin/update/cancel').set('sec-fetch-site', 'same-origin').expect(401);
+    });
+
+    it('cancel: accepts a browser request that sends the header', async () => {
+      installAdminAuth();
+      await seedScheduled();
+      await agent.post('/admin/update/cancel')
+          .auth('admin', 'admin-pw')
+          .set('sec-fetch-site', 'same-origin')
+          .set('origin', 'http://localhost')
+          .set('x-requested-with', 'XMLHttpRequest')
+          .expect(200);
+      const status = await agent.get('/admin/update/status').expect(200);
+      assert.equal(status.body.execution.status, 'idle');
+    });
+
+    it('cancel: a non-browser client (no Origin, no Sec-Fetch-Site) needs no header', async () => {
+      installAdminAuth();
+      await seedScheduled();
+      await agent.post('/admin/update/cancel').auth('admin', 'admin-pw').expect(200);
+    });
+  });
+
   describe('POST /admin/update/acknowledge', function () {
     it('rejects unauthenticated', async () => {
       await agent.post('/admin/update/acknowledge').expect(401);
