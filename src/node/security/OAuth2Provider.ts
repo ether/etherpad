@@ -8,7 +8,7 @@ import {IncomingForm} from 'formidable'
 import express from 'express';
 import {format} from 'url'
 import {ParsedUrlQuery} from "node:querystring";
-import {verifyInteractiveLogin, resolveOidcCookieKeys, isOriginAllowedForOidcClient, clientCredentialsClaims} from "./OidcProviderSecurity";
+import {alreadyParsedBody, verifyInteractiveLogin, resolveOidcCookieKeys, isOriginAllowedForOidcClient, clientCredentialsClaims} from "./OidcProviderSecurity";
 import SecretRotator from "./SecretRotator";
 
 // Held at module scope so the rotator (and its refresh timer) is not garbage
@@ -193,10 +193,13 @@ export const expressCreateServer = async (hookName: string, args: ArgsExpressTyp
 
 
     args.app.post('/interaction/:uid', async (req, res, next) => {
-        const formid = new IncomingForm();
         try {
-            // @ts-ignore
-            const {login, password} = (await formid.parse(req))[0]
+            // The login page posts JSON, which the global express.json() in
+            // apicalls.ts has already read off the stream. Handing a consumed
+            // stream to formidable makes it wait forever, so use req.body then.
+            const fields: any = alreadyParsedBody(req) ??
+                (await new IncomingForm().parse(req))[0];
+            const {login, password} = fields;
             const {prompt, jti, session,cid, params, grantId} = await oidc.interactionDetails(req, res);
 
             const client = await oidc.Client.find(params.client_id as string);

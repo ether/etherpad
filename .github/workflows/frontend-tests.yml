@@ -48,6 +48,9 @@ jobs:
         name: Install all dependencies and symlink for ep_etherpad-lite
         run: pnpm install --frozen-lockfile
       -
+        name: Build the OIDC login pages
+        run: pnpm --filter ui run build-copy
+      -
         name: Create settings.json
         run: cp ./src/tests/settings.json settings.json
       - name: Run the frontend tests
@@ -118,6 +121,8 @@ jobs:
           cache: pnpm
       - name: Install all dependencies and symlink for ep_etherpad-lite
         run: pnpm install --frozen-lockfile
+      - name: Build the OIDC login pages
+        run: pnpm --filter ui run build-copy
       - name: Create settings.json
         run: cp ./src/tests/settings.json settings.json
       - name: Run the frontend tests
@@ -224,6 +229,8 @@ jobs:
           ep_spellcheck
           ep_subscript_and_superscript
           ep_table_of_contents
+      - name: Build the OIDC login pages
+        run: pnpm --filter ui run build-copy
       - name: Create settings.json
         run: cp ./src/tests/settings.json settings.json
       - name: Run the frontend tests
@@ -313,6 +320,8 @@ jobs:
           ep_spellcheck
           ep_subscript_and_superscript
           ep_table_of_contents
+      - name: Build the OIDC login pages
+        run: pnpm --filter ui run build-copy
       - name: Create settings.json
         run: cp ./src/tests/settings.json settings.json
       - name: Run the frontend tests

@@ -30,7 +30,7 @@ import settings from './Settings';
 import {promises as fs} from 'fs';
 import path from 'node:path';
 const plugins = require('../../static/js/pluginfw/plugin_defs');
-import sanitizePathname from './sanitizePathname';
+import sanitizePathname, {isPathInside} from './sanitizePathname';
 const logger = log4js.getLogger('Minify');
 
 const ROOT_DIR = path.join(settings.root, 'src/static/');
@@ -168,6 +168,8 @@ const _minify = async (req:any, res:any) => {
      are rewritten into ROOT_PATH_OF_MYPLUGIN/static/js/test.js,
      commonly ETHERPAD_ROOT/node_modules/ep_myplugin/static/js/test.js
   */
+  // The directory the requested file must stay inside. Checked after all rewrites below.
+  let baseDir = ROOT_DIR;
   const match = filename.match(/^plugins\/([^/]+)(\/(?:(static\/.*)|.*))?$/);
   if (match) {
     const library = match[1];
@@ -177,6 +179,7 @@ const _minify = async (req:any, res:any) => {
       const plugin = plugins.plugins[library];
       const pluginPath = plugin.package.realPath;
       filename = path.join(pluginPath, libraryPath);
+      baseDir = path.join(pluginPath, 'static');
       // On Windows, path.join converts forward slashes to backslashes. Convert them back because
       // some of the code below assumes forward slashes. Node.js treats both the backslash and the
       // forward slash characters as pathname component separators on Windows so this does not
@@ -194,10 +197,23 @@ const _minify = async (req:any, res:any) => {
       // Avoid `require.resolve()`, since 'mustache' and 'mustache/index.js'
       // would end up resolving to logically distinct resources.
       filename = path.join('../node_modules/', library, libraryPath);
+      baseDir = path.join(ROOT_DIR, '../node_modules/', library);
     }
   }
   const [, testf] = /^plugins\/ep_etherpad-lite\/(tests\/frontend\/.*)/.exec(filename) || [];
-  if (testf != null) filename = `../${testf}`;
+  if (testf != null) {
+    filename = `../${testf}`;
+    baseDir = path.join(ROOT_DIR, '../tests/frontend');
+  }
+
+  // Whatever the rewrites above did, the file that is read must resolve inside the directory it is
+  // supposed to come from.
+  if (!isPathInside(baseDir, path.resolve(ROOT_DIR, filename))) {
+    logger.error(`refusing to serve "${filename}": resolves outside of "${baseDir}"`);
+    res.writeHead(404, {});
+    res.end();
+    return;
+  }
 
   const contentType = mime.lookup(filename);
 

@@ -7,21 +7,8 @@ const clientLogger = log4js.getLogger('client');
 const {Formidable} = require('formidable');
 const apiHandler = require('../../handler/APIHandler');
 const util = require('util');
+import {objectAsString} from '../../utils/objectAsString';
 
-
-function objectAsString(obj: any): string {
-  let output = '';
-  for (const property in obj) {
-    if(obj.hasOwnProperty(property) && typeof obj[property] !== 'function') {
-      let value = obj[property];
-      if(typeof value === 'object' && !Array.isArray(value) && value !== null) {
-        value = '{' + objectAsString(value) + '}';
-      }
-      output += property + ': ' + value +'; ';
-    }
-  }
-  return output;
-}
 
 exports.expressPreSession = async (hookName:string, {app}:any) => {
   app.use(express.json());
@@ -40,6 +27,10 @@ exports.expressPreSession = async (hookName:string, {app}:any) => {
   const parseJserrorForm = async (req:any) => {
     const form = new Formidable({
       maxFileSize: 1, // Files are not expected. Not sure if 0 means unlimited, so 1 is used.
+      // Same limit as express.json(). A real client error report is a few KB;
+      // the 20MB formidable default let one unauthenticated request stall the
+      // event loop for seconds and write tens of MB to the log.
+      maxFieldsSize: 100 * 1024,
     });
     const [fields, files] = await form.parse(req);
     return fields.errorInfo;
@@ -48,11 +39,22 @@ exports.expressPreSession = async (hookName:string, {app}:any) => {
   // The Etherpad client side sends information about client side javscript errors
   app.post('/jserror', (req:any, res:any, next:Function) => {
     (async () => {
-      const data = JSON.parse(await parseJserrorForm(req));
+      let errorInfo;
+      try {
+        errorInfo = await parseJserrorForm(req);
+      } catch (err:any) {
+        if (err?.httpCode === 413) {
+          clientLogger.warn('Rejected oversized client error report');
+          res.status(413).end('Error report too large');
+          return;
+        }
+        throw err;
+      }
+      const data = JSON.parse(errorInfo);
       clientLogger.warn(`${data.msg} --`, {
         [util.inspect.custom]: (depth: number, options:any) => {
-          // Depth is forced to infinity to ensure that all of the provided data is logged.
-          options = Object.assign({}, options, {depth: Infinity, colors: true});
+          // The data is client-supplied, so keep the depth bounded.
+          options = Object.assign({}, options, {depth: 10, colors: true});
           return util.inspect(data, options);
         },
       });

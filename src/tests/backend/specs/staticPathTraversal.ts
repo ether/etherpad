@@ -21,7 +21,10 @@
  * ordinary static assets are still served.
  */
 
+import path from 'node:path';
+
 const common = require('../common');
+const settings = require('../../../node/utils/Settings');
 
 let agent: any;
 
@@ -71,5 +74,32 @@ describe(__filename, function () {
         throw new Error(`legitimate static asset should be served, got ${res.status}`);
       }
     });
+  });
+
+  describe('drive-relative and colon paths on Windows', function () {
+    // On Windows a drive-relative first component ('C:..') is neither absolute nor equal to '..'.
+    // Use the install drive so that on Windows these would resolve to settings.json.template if
+    // not rejected; on POSIX they are literal (non-existent) filenames either way.
+    const climb = `..${BS}`.repeat(10);
+    const drive = /^([A-Za-z]):/.exec(path.resolve(settings.root))?.[1] ?? 'C';
+    for (const [name, payload] of [
+      ['a drive-relative climb to the install root',
+        `${drive}:..${BS}..${BS}settings.json.template`],
+      ['a drive-relative climb with forward slashes',
+        `${drive}:../../settings.json.template`],
+      ['a drive-relative over-shoot to the drive root', `${drive}:${climb}Windows${BS}win.ini`],
+      ['an encoded colon', `${drive}%3A..${BS}..${BS}settings.json.template`],
+      ['a drive-absolute path', `${drive}:${BS}Windows${BS}win.ini`],
+      ['a UNC path', `${BS}${BS}localhost${BS}c$${BS}Windows${BS}win.ini`],
+      ['a device path', `${BS}${BS}%3F${BS}${drive}:${BS}Windows${BS}win.ini`],
+      ['an alternate data stream', 'js/pad.js::$DATA'],
+    ]) {
+      it(`returns 404 for ${name}`, async function () {
+        const res = await agent.get(`/static/${payload}`);
+        if (res.status !== 404) {
+          throw new Error(`expected 404 for ${name} payload, got ${res.status}`);
+        }
+      });
+    }
   });
 });

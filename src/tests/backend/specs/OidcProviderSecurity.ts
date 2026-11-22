@@ -12,6 +12,7 @@
 
 const assert = require('assert').strict;
 import {
+  alreadyParsedBody,
   resolveOidcCookieKeys,
   isOriginAllowedForOidcClient,
   verifyInteractiveLogin,
@@ -293,6 +294,22 @@ describe(__filename, function () {
     it('tolerates missing client configuration', function () {
       assert.deepEqual(clientCredentialsClaims(undefined, 'a'),
           {[GRANT_CLAIM]: 'client_credentials'});
+    });
+  });
+
+  describe('alreadyParsedBody', function () {
+    it('returns the body a JSON parser already produced', function () {
+      const body = {login: 'admin', password: 'pw'};
+      assert.equal(alreadyParsedBody({body, readableEnded: true}), body);
+    });
+
+    it('returns an empty object for a consumed stream with no body', function () {
+      assert.deepEqual(alreadyParsedBody({readableEnded: true}), {});
+    });
+
+    it('returns null when the stream still needs parsing', function () {
+      assert.equal(alreadyParsedBody({readableEnded: false}), null);
+      assert.equal(alreadyParsedBody({}), null);
     });
   });
 });

@@ -155,6 +155,24 @@ export const verifyInteractiveLogin = (
 };
 
 /**
+ * Returns the request body when an earlier middleware has already read it off
+ * the stream (Etherpad registers express.json() globally in apicalls.ts), or
+ * `null` when the stream is still unread and needs parsing.
+ *
+ * The interaction endpoint must not hand a consumed stream to formidable: it
+ * never sees an `end` event and the request hangs.
+ */
+export const alreadyParsedBody = (
+  req: {body?: unknown, readableEnded?: boolean},
+): Record<string, unknown> | null => {
+  if (req.body != null && typeof req.body === 'object') {
+    return req.body as Record<string, unknown>;
+  }
+  if (req.readableEnded) return {};
+  return null;
+};
+
+/**
  * Private claim the embedded provider stamps on client_credentials access
  * tokens. The HTTP API used to infer the grant from the token's `sub`: any
  * token whose `sub` equalled a configured `client_id` was treated as a

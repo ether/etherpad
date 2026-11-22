@@ -80,7 +80,12 @@ export const UpdatePage = () => {
   const post = async (path: string) => {
     setActionInFlight(true);
     try {
-      await fetch(path, {method: 'POST', credentials: 'same-origin'});
+      // The server refuses browser POSTs to update actions without this header.
+      await fetch(path, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {'X-Requested-With': 'XMLHttpRequest'},
+      });
       await refreshStatus();
     } finally {
       setActionInFlight(false);

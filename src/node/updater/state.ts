@@ -165,7 +165,12 @@ export const saveState = (filePath: string, state: UpdateState): Promise<void> =
   const next = prev.catch(() => {}).then(async () => {
     await fs.mkdir(path.dirname(filePath), {recursive: true});
     const tmp = `${filePath}.tmp`;
-    await fs.writeFile(tmp, body);
+    // Don't write through whatever already sits at the tmp path: a leftover
+    // symlink there would redirect the write to its target. Remove the entry
+    // itself (not its target), then create with O_EXCL ('wx'), which never
+    // follows an existing path.
+    await fs.rm(tmp, {force: true});
+    await fs.writeFile(tmp, body, {flag: 'wx'});
     await fs.rename(tmp, filePath);
   });
   writeQueues.set(filePath, next);

@@ -102,6 +102,18 @@ describe('saveState', () => {
     const data = JSON.parse(await fs.readFile(nested, 'utf8'));
     expect(data.schemaVersion).toBe(1);
   });
+
+  it('does not follow a symlink at the tmp path', async () => {
+    const victim = path.join(dir, 'victim.txt');
+    await fs.writeFile(victim, 'do not overwrite');
+    await fs.symlink(victim, `${statePath()}.tmp`);
+    await saveState(statePath(), EMPTY_STATE);
+    expect(await fs.readFile(victim, 'utf8')).toBe('do not overwrite');
+    const st = await fs.lstat(statePath());
+    expect(st.isSymbolicLink()).toBe(false);
+    expect(JSON.parse(await fs.readFile(statePath(), 'utf8')).schemaVersion).toBe(1);
+    await expect(fs.lstat(`${statePath()}.tmp`)).rejects.toMatchObject({code: 'ENOENT'});
+  });
 });
 
 describe('Tier 2 state extensions', () => {
