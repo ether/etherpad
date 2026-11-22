@@ -1,3 +1,26 @@
+# 3.3.22
+
+3.3.22 is a security hardening release. It tightens several admin, OIDC, updater and static-file code paths, and fixes the OIDC login page hanging, plugin uninstall breaking core, and an almost empty admin plugin catalog. Upgrading is recommended.
+
+### Security
+
+- **Diagnostics — the client error-reporting endpoints now bound what they accept (#8524).** `/jserror` limits form fields to 100KB (the same limit as `express.json()`) and logs reports with a finite depth. The connection-diagnostic log formatter caps nesting depth and output length. Normal client reports are a few KB and are unaffected. Reported by @gosusnkr.
+- **Updater — the state file is written without following symlinks (#8525).** The updater's temporary state file is now created fresh instead of written through whatever already sits at that path. Reported by @msaadraj.
+- **OIDC and admin — stricter request checks (#8526).** The OIDC login and consent pages only accept a well-formed interaction id before posting. `POST /admin/update/{apply,cancel,acknowledge}` from a browser now needs an `X-Requested-With` header, which the admin update page sends. Scripts using curl or basic auth work as before. Reported by @msaadraj.
+- **Admin — the admin UI can only be framed by Etherpad's own origin (#8527).** `/admin` and `/admin-auth` now send `Content-Security-Policy: frame-ancestors 'self'` and `X-Frame-Options: SAMEORIGIN`. Pads, the timeslider, exports and other routes are unchanged and stay embeddable. Reported by @AzhariRamadhan.
+- **Static files — stricter path checks on Windows (#8534).** `/static/*` now rejects colons on Windows (drive designators and stream names), and on every platform rejects NUL bytes and `..` components and checks the resolved file stays inside its base directory. Reported by @superbot-helper.
+
+### Upgrade notes
+
+- New setting `adminFrameAncestors` (default `[]`) lists extra CSP `frame-ancestors` sources for deployments that embed the admin UI on purpose. When it is set, `X-Frame-Options` is not sent. Invalid entries are ignored with a warning.
+- Custom clients that call `POST /admin/update/*` from a browser must send an `X-Requested-With` header. See `doc/admin/updates.md`.
+
+### Notable fixes
+
+- **OIDC — the login and consent pages no longer hang (#8529, #8528).** The JSON body they post to `/interaction/:uid` had already been read by the global JSON parser, so the request never got a response. The handler now uses the parsed body.
+- **Plugins — uninstalling a plugin no longer breaks core's dependency links (#8533, #8532).** Uninstalling a plugin such as `ep_set_title_on_pad` could unlink core's own `log4js` link, after which Etherpad would not start. Core dependencies are now never unlinked, and only links that point into `plugin_packages` are removed.
+- **Admin — the plugin catalog ignores implausible compatibility verdicts (#8530).** When the plugin feed marks more than half of its entries as `failed`, core treats it as a broken registry run and ignores the compatibility verdict for that refresh, logging a warning. The superseded list and npm deprecation still apply.
+
 # 3.3.21
 
 3.3.21 is a security hardening release. Pad socket.io connections now only use the visitor's cookies when they come from Etherpad's own pages. It also fixes pads embedded cross-site over plain http and an intermittent 404 on LibreOffice exports. Upgrading is recommended.
