@@ -153,6 +153,7 @@
 	"admin_settings.envvar_banner.title": "Este ficheiro é un modelo, non a configuración real.",
 	"admin_settings.envvar_banner.body": "Os marcadores de posición como «${VAR:default}» substitúense na memoria durante o inicio da aplicación; nunca se escribir neste ficheiro. Edita as variables no teu contorno (Docker compose, systemd, .env) para cambiar o valor resolto ou substitúe o marcador de posición aquí por unha cadea de texto literal. Cambia á lapela «Efectivo» para ver o que está a usar Etherpad agora mesmo.",
 	"admin_settings.toast.auth_error": "Non te conectaches cunha conta administrativa. Inicia sesión de novo.",
+	"admin_settings.toast.origin_rejected": "O servidor rexeitou esta conexión de administrador porque a páxina non pertence Etherpad. Para permitir outra orixe, engádea a «socketIo.allowedOrigins» en «settings.json».",
 	"admin_settings.section.general": "Xeral",
 	"admin_settings.parse_error.title": "Non se pode analizar o ficheiro «settings.json»",
 	"admin_settings.parse_error.cta": "Cambiar ao editor en bruto para editar",

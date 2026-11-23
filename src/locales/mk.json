@@ -153,6 +153,7 @@
 	"admin_settings.envvar_banner.title": "Оваа податотека е предлошка, не поставките во живо.",
 	"admin_settings.envvar_banner.body": "Пополнувачите како ${VAR:default} се заменуваат во складот при покревање; никогаш не се запишуваат назад во оваа податотека. Уредете околински променливи во вашата околина (Docker compose, systemd, .env) за да ја измените произлезената вредност, или пак да го замените пополнувачот тука со буквална низа. Прејдете на јазичето „На дело“ за да видите што во тековно користи Etherpad.",
 	"admin_settings.toast.auth_error": "Не сте заверени како администратор. Најавете се повторно.",
+	"admin_settings.toast.origin_rejected": "Опслужувачот го одби ова администраторско поврзување бидејќи страницата не потекнува од Etherpad. За да дозволите друго потекло, додајте го во socketIo.allowedOrigins во settings.json.",
 	"admin_settings.section.general": "Општо",
 	"admin_settings.parse_error.title": "Не можам да го расчленам settings.json",
 	"admin_settings.parse_error.cta": "Префрлете се на сирово за да уредувате",
