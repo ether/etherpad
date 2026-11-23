@@ -7,6 +7,15 @@ import {ArrowUpFromDot, Download, ExternalLink, Plug, RefreshCw, Search, Trash, 
 import {IconButton} from "../components/IconButton.tsx";
 import * as Dialog from "@radix-ui/react-dialog";
 
+// Direction a sort starts in when it is picked from the dropdown: names run
+// A to Z, while versions and dates start with the highest/newest first. The
+// toggle button next to the dropdown still flips it.
+const defaultSortDir: Record<SearchParams['sortBy'], SearchParams['sortDir']> = {
+  'name': 'asc',
+  'version': 'desc',
+  'last-updated': 'desc',
+}
+
 export const HomePage = () => {
   const pluginsSocket = useStore(state => state.pluginsSocket)
   const [plugins, setPlugins] = useState<PluginDef[]>([])
@@ -52,9 +61,12 @@ export const HomePage = () => {
     return [...plugins].sort((a, b) => {
       const dir = searchParams.sortDir === 'asc' ? 1 : -1
       if (searchParams.sortBy === 'version') {
-        return a.version.localeCompare(b.version) * dir
+        // numeric so 10.0.0 sorts above 9.0.0
+        return (a.version ?? '').localeCompare(b.version ?? '', undefined, {numeric: true}) * dir
       }
       if (searchParams.sortBy === 'last-updated') {
+        // Plugins with no publish date go last whichever way the list runs.
+        if (!a.time || !b.time) return (a.time ? 0 : 1) - (b.time ? 0 : 1)
         return a.time.localeCompare(b.time) * dir
       }
       return a.name.localeCompare(b.name) * dir
@@ -368,7 +380,7 @@ export const HomePage = () => {
                 setSearchParams({
                   ...searchParams,
                   sortBy,
-                  sortDir: 'asc',
+                  sortDir: defaultSortDir[sortBy],
                 })
               }}
             >
