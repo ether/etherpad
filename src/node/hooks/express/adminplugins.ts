@@ -6,6 +6,7 @@ import {QueryType} from "../../types/QueryType";
 
 import {
   getAvailablePlugins,
+  getBrowsablePlugins,
   getInstalledPluginWarnings,
   install,
   search,
@@ -28,22 +29,27 @@ exports.socketio = (hookName:string, args:ArgsExpressType, cb:Function) => {
     const {session: {user: {is_admin: isAdmin} = {}} = {}} = socket.conn.request;
     if (!isAdmin) return;
 
-    const checkPluginForUpdates = async () => {
+    const checkPluginForUpdates = async () => (await checkUpdatesAgainstCatalog()).updatable;
+
+    const checkUpdatesAgainstCatalog = async (): Promise<{
+      updatable: string[], catalog: MapArrayType<PackageInfo>,
+    }> => {
       let results: MapArrayType<PackageInfo>
       try {
         results = await getAvailablePlugins(/* maxCacheAge:*/ 60 * 10);
       } catch (error) {
         console.error('Error checking for plugin updates:', error);
-        return [];
+        return {updatable: [], catalog: {}};
       }
-      return Object.keys(pluginDefs.plugins).filter((plugin) => {
+      const updatable = Object.keys(pluginDefs.plugins).filter((plugin) => {
         if (!results[plugin]) return false;
 
         const latestVersion = results[plugin].version;
         const currentVersion = pluginDefs.plugins[plugin].package.version;
 
         return semver.gt(latestVersion, currentVersion);
-      })
+      });
+      return {updatable, catalog: results};
     }
 
     socket.on('getStats', ()=>{
@@ -62,7 +68,7 @@ exports.socketio = (hookName:string, args:ArgsExpressType, cb:Function) => {
           .map((plugin) => ({...pluginDefs.plugins[plugin].package}));
 
       if (settings.privacy.pluginCatalog) {
-        const updatable = await checkPluginForUpdates();
+        const {updatable, catalog} = await checkUpdatesAgainstCatalog();
         // An installed plugin that has since been deprecated or superseded is
         // flagged in the UI: the catalog filter only stops new installs, it
         // cannot help an admin who installed the plugin before (#8246).
@@ -75,6 +81,13 @@ exports.socketio = (hookName:string, args:ArgsExpressType, cb:Function) => {
         installed.forEach((plugin) => {
           plugin.updatable = updatable.includes(plugin.name);
           plugin.deprecated = deprecated.get(plugin.name);
+          if (plugin.updatable) {
+            // The update installs the catalog's version, so the admin UI
+            // needs that version and its classification to decide whether
+            // to ask for confirmation first.
+            plugin.latestVersion = catalog[plugin.name].version;
+            plugin.official = catalog[plugin.name].official === true;
+          }
         })
       }
       // When the catalog is disabled, `updatable` simply stays unset on
@@ -109,7 +122,7 @@ exports.socketio = (hookName:string, args:ArgsExpressType, cb:Function) => {
         return;
       }
       try {
-        const results = await getAvailablePlugins(/* maxCacheAge:*/ false);
+        const results = await getBrowsablePlugins(/* maxCacheAge:*/ false);
         socket.emit('results:available', results);
       } catch (er) {
         console.error(er);
@@ -137,7 +150,14 @@ exports.socketio = (hookName:string, args:ArgsExpressType, cb:Function) => {
       }
     });
 
-    socket.on('install', (pluginName: string) => {
+    // `install` takes a plugin name, or {name, version} to install the exact
+    // version the catalog showed (and classified as official or third-party).
+    socket.on('install', (request: string | {name?: unknown, version?: unknown}) => {
+      const pluginName = typeof request === 'string' ? request
+        : typeof request?.name === 'string' ? request.name : '';
+      const version = typeof request === 'object' && typeof request?.version === 'string'
+        ? request.version : undefined;
+      if (!pluginName) return;
       install(pluginName, (err: ErrorCaused) => {
         if (err) console.warn(err.stack || err.toString());
 
@@ -146,7 +166,7 @@ exports.socketio = (hookName:string, args:ArgsExpressType, cb:Function) => {
           code: err ? err.code : null,
           error: err ? err.message : null,
         });
-      });
+      }, version);
     });
 
 

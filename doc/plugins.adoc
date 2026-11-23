@@ -26,6 +26,43 @@ a failed lookup — if the npm registry cannot be reached the full catalog is
 listed and installs proceed — and `pnpm run plugins i ep_<name>` on the server
 installs it anyway, for an operator who knows what they are doing.
 
+==== Official and third-party plugins
+
+Anyone can publish an `ep_*` package to npm, and the Etherpad project cannot
+review all of them. The catalog marks a plugin *Official* when npm
+provenance shows that the published version was built by GitHub Actions from
+a repository in the https://github.com/ether[ether] GitHub org. Everything
+else is labelled *Third-party*: it is not maintained by the Etherpad
+project and it runs code on your server. The admin UI asks for confirmation
+before installing a third-party plugin; official plugins install with one
+click. Updates of an installed plugin follow the same rule, and an install
+always fetches the exact version the catalog showed, so a label shown for one
+release never covers a different one.
+
+The check is done when the catalog is refreshed and cached per published
+version, so it adds no latency to browsing. It relies on npm provenance
+rather than on the package's `repository` field, its maintainer list or the
+feed's own flags, because a publisher can set any of those to whatever they
+like (`src/static/js/pluginfw/pluginTrust.ts`). A plugin from the ether org
+that has not been released with provenance yet shows as third-party until its
+next release.
+
+Placeholder packages (a `0.0.0-*` version, or no `repository` in
+package.json) are left out of the list, but a search for the exact package
+name still finds them, so you can find a package you have just published.
+
+The `pluginCatalogThirdParty` setting in `settings.json` changes this:
+
+|===
+| Value | Effect
+
+| `label` (default) | List third-party plugins with a badge; placeholders only on an exact-name search.
+| `hide` | List official plugins only. Needs registry.npmjs.org: if it cannot be reached, nothing can be verified and the list is empty.
+| `all` | List everything, placeholders included.
+|===
+
+None of this affects `pnpm run plugins i ep_<name>` on the server.
+
 === Folder structure
 
 Ideally a plugin has the following folder structure:
