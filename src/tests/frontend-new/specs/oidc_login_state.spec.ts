@@ -5,6 +5,24 @@ import {expect, test} from '@playwright/test';
 const etherpad = 'http://localhost:9001';
 
 test.describe('OIDC login page state parameter', () => {
+  // /views/login.html only exists after `pnpm --filter ui run build-copy`.
+  // Plugin CI runs these specs against core without that step, so skip
+  // there. Core's frontend workflow sets CI_REQUIRE_OIDC_UI so a missing
+  // build fails instead of skipping silently.
+  test.beforeAll(async () => {
+    const res = await fetch(`${etherpad}/views/login.html`);
+    await res.body?.cancel();
+    // Only a missing build is skippable; any other error is a real failure.
+    if (res.status !== 404) {
+      expect(res.status, '/views/login.html status').toBe(200);
+      return;
+    }
+    const reason = '/views/login.html returned 404; ' +
+        'run `pnpm --filter ui run build-copy` to build the OIDC UI';
+    if (process.env.CI_REQUIRE_OIDC_UI) throw new Error(reason);
+    test.skip(true, reason);
+  });
+
   for (const state of ['../../p/other', '..%2F..%2Fp%2Fother', 'a/b']) {
     test(`does not POST anywhere for state=${state}`, async ({page}) => {
       const posts: string[] = [];

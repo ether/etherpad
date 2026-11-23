@@ -15,6 +15,8 @@ jobs:
   playwright-chrome:
     env:
       PNPM_HOME: ~/.pnpm-store
+      # Fail, not skip, oidc_login_state.spec.ts if the OIDC UI is missing.
+      CI_REQUIRE_OIDC_UI: "true"
     name: Playwright Chrome
     runs-on: ubuntu-latest
     steps:
@@ -91,6 +93,8 @@ jobs:
   playwright-firefox:
     env:
         PNPM_HOME: ~/.pnpm-store
+        # Fail, not skip, oidc_login_state.spec.ts if the OIDC UI is missing.
+        CI_REQUIRE_OIDC_UI: "true"
     name: Playwright Firefox
     runs-on: ubuntu-latest
     steps:
@@ -169,6 +173,8 @@ jobs:
   playwright-chrome-with-plugins:
     env:
       PNPM_HOME: ~/.pnpm-store
+      # Fail, not skip, oidc_login_state.spec.ts if the OIDC UI is missing.
+      CI_REQUIRE_OIDC_UI: "true"
     name: Playwright Chrome with plugins
     runs-on: ubuntu-latest
     steps:
@@ -272,6 +278,8 @@ jobs:
   playwright-firefox-with-plugins:
     env:
       PNPM_HOME: ~/.pnpm-store
+      # Fail, not skip, oidc_login_state.spec.ts if the OIDC UI is missing.
+      CI_REQUIRE_OIDC_UI: "true"
     name: Playwright Firefox with plugins
     runs-on: ubuntu-latest
     steps:
