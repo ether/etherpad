@@ -215,9 +215,10 @@ test('behind a Host-rewriting TLS proxy the pad keeps its author and edits',
     });
 
 // The two embed tests are tagged @feature:cross-origin-embed for plugins that
-// forbid framing on other origins (see doc/PLUGIN_FEATURE_DISABLES.md). Their
-// proxy, page servers and direct pad loads are also used by the untagged
-// tests, so in the honesty pass a tagged failure comes from the framing.
+// forbid framing on other origins (see doc/PLUGIN_FEATURE_DISABLES.md). The
+// untagged tests still cover the proxy, the page servers, and keeping the
+// author and edits on a top-level pad. What only these two cover is the framed
+// pad keeping its author and edits.
 test('a pad embedded on another origin of the same site keeps the visitor\'s author',
     {tag: '@feature:cross-origin-embed'}, async ({page}) => {
       const padId = `FRONTEND_TESTS${randomUUID()}`;

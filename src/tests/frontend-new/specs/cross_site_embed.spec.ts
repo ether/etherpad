@@ -10,9 +10,10 @@ import {randomUUID} from 'node:crypto';
 //
 // The embedded tests are tagged @feature:cross-origin-embed so plugins that
 // forbid framing on other origins (e.g. ep_helmet's X-Frame-Options) can
-// declare it (see doc/PLUGIN_FEATURE_DISABLES.md). Everything those tests rely
-// on apart from the framing itself is checked by the untagged test below, so
-// in the honesty pass a tagged failure can only come from the blocked frame.
+// declare it (see doc/PLUGIN_FEATURE_DISABLES.md). The untagged test below
+// loads the embedding page, and loads the pad and changes the same pref at top
+// level, so a plugin that declares the tag still runs those parts. What only
+// the tagged tests cover is the framed pad and its cookie-less pref fallback.
 
 const embedderUrl = 'http://127.0.0.1:9001/static/empty.html';
 const newPadUrl = () => `http://localhost:9001/p/FRONTEND_TESTS${randomUUID()}`;
@@ -39,18 +40,27 @@ const embedPadCrossSite = async (page: Page) => {
   return {pad, outer};
 };
 
-test('the embedding page and the pad each load on their own', async ({page}) => {
-  const pageErrors: string[] = [];
-  page.on('pageerror', (err) => pageErrors.push(err.message));
+test('the embedding page loads, and the pad loads and changes a pref at top level',
+    async ({page}) => {
+      const pageErrors: string[] = [];
+      page.on('pageerror', (err) => pageErrors.push(err.message));
 
-  expect((await page.goto(embedderUrl))!.ok()).toBe(true);
-  await page.goto(newPadUrl());
-  const inner = page.frameLocator('iframe[name="ace_outer"]').frameLocator('iframe');
-  await expect(inner.locator('#innerdocbody')).toBeVisible({timeout: 30000});
-  await expect(inner.locator('#innerdocbody')).toHaveAttribute('contenteditable', 'true');
+      expect((await page.goto(embedderUrl))!.ok()).toBe(true);
+      await page.goto(newPadUrl());
+      const inner = page.frameLocator('iframe[name="ace_outer"]').frameLocator('iframe');
+      await expect(inner.locator('#innerdocbody')).toBeVisible({timeout: 30000});
+      await expect(inner.locator('#innerdocbody')).toHaveAttribute('contenteditable', 'true');
 
-  expect(pageErrors).toEqual([]);
-});
+      const fontMenu = page.locator('#viewfontmenu');
+      await fontMenu.evaluate((el: HTMLSelectElement) => {
+        el.value = 'RobotoMono';
+        el.dispatchEvent(new Event('change'));
+      });
+      await expect(fontMenu).toHaveValue('RobotoMono');
+      await expect(inner.locator('#innerdocbody')).toHaveCSS('font-family', /RobotoMono/);
+
+      expect(pageErrors).toEqual([]);
+    });
 
 test.describe('pad embedded cross-site over http', {tag: '@feature:cross-origin-embed'}, () => {
   test('loads even though the prefs cookie cannot be stored', async ({page}) => {
