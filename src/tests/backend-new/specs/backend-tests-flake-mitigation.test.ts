@@ -3,8 +3,9 @@
 // Source-level lint pinning the one remaining Windows backend-test CI
 // invariant after the silent-ELIFECYCLE flake was root-caused and fixed
 // (the in-process process.exit path is gated in src/node/server.ts, and the
-// Windows jobs run on Node 24.16.0 to avoid the libuv TCP-connect stack
-// overrun in 24.15.0 — tracked upstream as nodejs/node#63620):
+// Windows jobs resolve the newest 24.x/26.x with check-latest so they never
+// fall back to the runner's cached 24.15.0, whose libuv has the TCP-connect
+// stack overrun tracked upstream as nodejs/node#63620):
 //
 //   mocha --exit on the Windows CI jobs, and ONLY there, so a leaked handle
 //   can't hang the job at post-suite drain. Linux/local keep natural drain so
@@ -35,6 +36,14 @@ describe('backend-tests Windows --exit invariant', () => {
     // detection stays alive on the natural-drain platforms.
     expect(workflow.includes('runs-on: ubuntu-latest'),
       'workflow no longer has any Linux jobs (sanity check)').toBe(true);
+  });
+
+  it('Windows setup-node steps keep check-latest so a cached 24.15.0 is never used', () => {
+    // A bare "24" on windows-latest resolves to the runner's pre-cached
+    // toolcache build unless check-latest is set. 24.15.0 (libuv 1.51.0)
+    // crashes the backend suite (nodejs/node#63620).
+    const checkLatest = (workflow.match(/^\s+check-latest: true$/gm) || []).length;
+    expect(checkLatest, 'both Windows jobs must set check-latest: true').toBe(2);
   });
 
   it('mocha test script does not bake --exit in globally', () => {

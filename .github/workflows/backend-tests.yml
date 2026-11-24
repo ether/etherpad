@@ -26,8 +26,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Etherpad requires Node >= 24 (see package.json engines.node).
-        node: ${{ fromJSON('[24]') }}
+        # Etherpad requires Node >= 24 (see package.json engines.node). Test the
+        # floor (24) and the current Active LTS (26).
+        node: ${{ fromJSON('[24, 26]') }}
     steps:
       -
         name: Checkout repository
@@ -83,7 +84,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: ${{ fromJSON('[24]') }}
+        node: ${{ fromJSON('[24, 26]') }}
     steps:
       -
         name: Checkout repository
@@ -152,19 +153,16 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Etherpad requires Node >= 24 (see package.json engines.node).
-        # Windows pins Node 24.16.0, not the runner-default 24.15.0. Node 24.15.0's
-        # bundled libuv (1.51.0) has a stack buffer overrun in the Windows TCP-connect
-        # path (uv__tcp_connect), proven by a /GS __fastfail full-memory dump under the
-        # backend suite's heavy localhost connection churn -- the long-standing Windows
-        # backend silent-ELIFECYCLE flake (memory corruption, so no JS/Node
-        # observability). Bisect: 24.15.0 crashes (4/4 on 127.0.0.1), 24.16.0
-        # (libuv 1.52.1) is clean (0/8). Stays on the 24 LTS line. Pin explicitly
-        # because setup-node's default check-latest:false reuses the runner's
-        # pre-cached 24.15.0 for a bare "24".
-        # Tracking: https://github.com/nodejs/node/issues/63620 — drop this pin
-        # back to plain "24" once the fix is across the supported 24.x baseline.
-        node: ${{ fromJSON('["24.16.0"]') }}
+        # Etherpad requires Node >= 24 (see package.json engines.node). Test the
+        # floor (24) and the current Active LTS (26).
+        # Windows needs libuv >= 1.52.1 (Node >= 24.16.0). Node 24.15.0's
+        # bundled libuv 1.51.0 has a stack buffer overrun in the Windows
+        # TCP-connect path (uv__tcp_connect) that the backend suite's localhost
+        # connection churn hits as a silent ELIFECYCLE crash
+        # (nodejs/node#63620, fixed in 24.16.0). The runner image can still
+        # pre-cache 24.15.0 for a bare "24", so this job sets check-latest: true
+        # to always resolve the newest 24.x / 26.x release instead of pinning.
+        node: ${{ fromJSON('[24, 26]') }}
     name: Windows without plugins
     runs-on: windows-latest
     steps:
@@ -186,6 +184,7 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: ${{ matrix.node }}
+          check-latest: true
           cache: pnpm
       -
         name: Install all dependencies and symlink for ep_etherpad-lite
@@ -217,19 +216,16 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Etherpad requires Node >= 24 (see package.json engines.node).
-        # Windows pins Node 24.16.0, not the runner-default 24.15.0. Node 24.15.0's
-        # bundled libuv (1.51.0) has a stack buffer overrun in the Windows TCP-connect
-        # path (uv__tcp_connect), proven by a /GS __fastfail full-memory dump under the
-        # backend suite's heavy localhost connection churn -- the long-standing Windows
-        # backend silent-ELIFECYCLE flake (memory corruption, so no JS/Node
-        # observability). Bisect: 24.15.0 crashes (4/4 on 127.0.0.1), 24.16.0
-        # (libuv 1.52.1) is clean (0/8). Stays on the 24 LTS line. Pin explicitly
-        # because setup-node's default check-latest:false reuses the runner's
-        # pre-cached 24.15.0 for a bare "24".
-        # Tracking: https://github.com/nodejs/node/issues/63620 — drop this pin
-        # back to plain "24" once the fix is across the supported 24.x baseline.
-        node: ${{ fromJSON('["24.16.0"]') }}
+        # Etherpad requires Node >= 24 (see package.json engines.node). Test the
+        # floor (24) and the current Active LTS (26).
+        # Windows needs libuv >= 1.52.1 (Node >= 24.16.0). Node 24.15.0's
+        # bundled libuv 1.51.0 has a stack buffer overrun in the Windows
+        # TCP-connect path (uv__tcp_connect) that the backend suite's localhost
+        # connection churn hits as a silent ELIFECYCLE crash
+        # (nodejs/node#63620, fixed in 24.16.0). The runner image can still
+        # pre-cache 24.15.0 for a bare "24", so this job sets check-latest: true
+        # to always resolve the newest 24.x / 26.x release instead of pinning.
+        node: ${{ fromJSON('[24, 26]') }}
     name: Windows with Plugins
     runs-on: windows-latest
 
@@ -252,6 +248,7 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: ${{ matrix.node }}
+          check-latest: true
           cache: pnpm
       - name: Install dependencies
         run: pnpm install
