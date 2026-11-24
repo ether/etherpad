@@ -178,7 +178,10 @@ log4js.configure({
   if (!files.includes('.git')) throw new Error('No .git folder, aborting');
   prepareRepo();
 
-  const workflows = ['backend-tests.yml', 'frontend-tests.yml', 'npmpublish.yml', 'test-and-release.yml'];
+  // test-and-release.yml calls lint.yml, so the two must be synced together.
+  const workflows = [
+    'backend-tests.yml', 'frontend-tests.yml', 'lint.yml', 'npmpublish.yml', 'test-and-release.yml',
+  ];
   await Promise.all(workflows.map(async (fn) => {
     await checkFile(`bin/plugins/lib/${fn}`, `.github/workflows/${fn}`);
   }));
@@ -192,10 +195,12 @@ log4js.configure({
     const parsedPackageJSON = JSON.parse(packageJSON);
 
     await updateDeps(parsedPackageJSON, 'devDependencies', {
-      'eslint': '^8.57.0',
-      'eslint-config-etherpad': '^4.0.4',
-      // Changing the TypeScript version can break plugin code, so leave it alone if present.
-      'typescript': {ver: '^5.4.2', overwrite: true},
+      // Match the plugin fleet, but never rewrite an existing pin: some plugins
+      // are already on newer majors (e.g. eslint 10), and changing the
+      // TypeScript version can break plugin code.
+      'eslint': {ver: '^8.57.1', overwrite: false},
+      'eslint-config-etherpad': {ver: '^5.0.0', overwrite: false},
+      'typescript': {ver: '~6.0.3', overwrite: false},
       // These were moved to eslint-config-etherpad's dependencies so they can be removed:
       '@typescript-eslint/eslint-plugin': null,
       '@typescript-eslint/parser': null,
@@ -228,8 +233,10 @@ log4js.configure({
 
     delete parsedPackageJSON.peerDependencies;
 
+    // Plugin floor. Core itself needs a newer Node, but plugins keep >=22 so
+    // they still install on older cores (CI tests Node 22 against core v2.7.3).
     await updateDeps(parsedPackageJSON, 'engines', {
-      node: '>=18.0.0',
+      node: '>=22.0.0',
     });
 
     if (parsedPackageJSON.eslintConfig != null && autoFix) {

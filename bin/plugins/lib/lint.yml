@@ -1,0 +1,39 @@
+name: Lint
+
+on:
+  workflow_call:
+
+jobs:
+  lint:
+    name: ESLint
+    runs-on: ubuntu-latest
+    # `eslint .` executes .eslintrc.cjs and every installed ESLint plugin, so
+    # don't hand it the caller's contents:write / id-token:write token.
+    permissions:
+      contents: read
+    steps:
+      - name: Check out plugin repository
+        uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        name: Install Node.js
+        with:
+          node-version: 26
+      - uses: pnpm/action-setup@v6.1.1
+        name: Install pnpm
+        with:
+          version: 10
+          run_install: false
+      - name: Get pnpm store directory
+        shell: bash
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+      - uses: actions/cache@v6
+        name: Setup pnpm cache
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+      - name: Install dependencies
+        run: pnpm install --ignore-scripts
+      - name: Run ESLint
+        run: pnpm run lint

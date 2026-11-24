@@ -7,24 +7,49 @@ on:
 
 jobs:
   test-frontend:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os || 'ubuntu-latest' }}
+    name: Playwright (Node ${{ matrix.node }} / core ${{ matrix.core_ref || 'develop' }})
+    strategy:
+      fail-fast: false
+      # Plugin floor is engines.node >=22 but current Etherpad core
+      # requires >=24 (engineStrict). Each cell pairs a Node version
+      # with a core ref that actually allows it: Node 22 against the
+      # last tag whose core floor was 22 (v2.7.3); Node 24 / 26 against
+      # current develop.
+      matrix:
+        include:
+          - node: '22'
+            core_ref: 'v2.7.3'
+            # ubuntu-latest is now 26.04, and the Playwright pinned by core
+            # v2.7.3 refuses to install chromium there.
+            os: ubuntu-24.04
+          - node: '24'
+            core_ref: ''
+          - node: '26'
+            core_ref: ''
 
     steps:
       -
         name: Check out Etherpad core
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: ether/etherpad-lite
-      - uses: pnpm/action-setup@v3
+          ref: ${{ matrix.core_ref }}
+          path: etherpad-lite
+      - uses: actions/setup-node@v7
+        name: Install Node.js
+        with:
+          node-version: ${{ matrix.node }}
+      - uses: pnpm/action-setup@v6.1.1
         name: Install pnpm
         with:
-          version: 10
+          package_json_file: ./etherpad-lite/package.json
           run_install: false
       - name: Get pnpm store directory
         shell: bash
         run: |
           echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         name: Setup pnpm cache
         with:
           path: ${{ env.STORE_PATH }}
@@ -32,63 +57,51 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pnpm-store-
       -
-        name: Check out the plugin
-        uses: actions/checkout@v4
+        name: Checkout plugin repository
+        uses: actions/checkout@v7
         with:
-          path: ./node_modules/__tmp
-      -
-        name: export GIT_HASH to env
-        id: environment
-        run: |
-          cd ./node_modules/__tmp
-          echo "::set-output name=sha_short::$(git rev-parse --short ${{ github.sha }})"
-      -
-        name: Determine plugin name
-        id: plugin_name
-        run: |
-          cd ./node_modules/__tmp
-          npx -c 'printf %s\\n "::set-output name=plugin_name::${npm_package_name}"'
-      -
-        name: Rename plugin directory
-        env:
-          PLUGIN_NAME: ${{ steps.plugin_name.outputs.plugin_name }}
-        run: |
-          mv ./node_modules/__tmp ./node_modules/"${PLUGIN_NAME}"
-      -
-        name: Install plugin dependencies
-        env:
-          PLUGIN_NAME: ${{ steps.plugin_name.outputs.plugin_name }}
-        run: |
-          cd ./node_modules/"${PLUGIN_NAME}"
-          pnpm i
-      # Etherpad core dependencies must be installed after installing the
-      # plugin's dependencies, otherwise npm will try to hoist common
-      # dependencies by removing them from src/node_modules and installing them
-      # in the top-level node_modules. As of v6.14.10, npm's hoist logic appears
-      # to be buggy, because it sometimes removes dependencies from
-      # src/node_modules but fails to add them to the top-level node_modules.
-      # Even if npm correctly hoists the dependencies, the hoisting seems to
-      # confuse tools such as `npm outdated`, `npm update`, and some ESLint
-      # rules.
+          path: plugin
       -
         name: Install Etherpad core dependencies
+        working-directory: ./etherpad-lite
         run: bin/installDeps.sh
+      - name: Install plugin
+        working-directory: ./etherpad-lite
+        run: |
+          pnpm run plugins i --path ../../plugin
       - name: Create settings.json
+        working-directory: ./etherpad-lite
         run: cp ./src/tests/settings.json settings.json
+      # Etherpad v2.7.x added a "severely outdated" version-badge that polls
+      # GitHub for the latest release and renders an absolutely-positioned
+      # banner at top-right when the running core is a full major behind.
+      # On the core v2.7.3 matrix cell that banner intercepts pointer
+      # events (e.g. #chaticon) and Playwright clicks time out. Set
+      # updates.tier=off so the badge stays hidden. Harmless no-op on cores
+      # without the updater or with the tier already off.
+      - name: Disable updater poll in test settings
+        working-directory: ./etherpad-lite
+        run: |
+          node -e 'const fs=require("fs");const s=JSON.parse(fs.readFileSync("settings.json","utf8"));s.updates={...(s.updates||{}),tier:"off"};fs.writeFileSync("settings.json",JSON.stringify(s,null,2));'
       - name: Run the frontend tests
+        working-directory: ./etherpad-lite
         shell: bash
         run: |
           pnpm run dev &
           connected=false
           can_connect() {
-          curl -sSfo /dev/null http://localhost:9001/ || return 1
-          connected=true
+            curl -sSfo /dev/null http://localhost:9001/ || return 1
+            connected=true
           }
           now() { date +%s; }
           start=$(now)
-          while [ $(($(now) - $start)) -le 15 ] && ! can_connect; do
-          sleep 1
+          while [ $(($(now) - $start)) -le 30 ] && ! can_connect; do
+            sleep 1
           done
           cd src
-          pnpm exec playwright install chromium  --with-deps
-          pnpm run test-ui --project=chromium
+          pnpm exec playwright install chromium --with-deps
+          # On the core v2.7.3 cell run only this plugin's own specs. Core
+          # v2.7.3's specs predate fixes that let them coexist with plugins
+          # that change the pad layout (enter.spec, a11y_dialogs.spec), and
+          # the develop cells already run the full core suite with the plugin.
+          pnpm run test-ui --project=chromium ${{ matrix.core_ref && 'plugin_packages/ --pass-with-no-tests' || '' }}
