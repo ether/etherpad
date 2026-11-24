@@ -26,7 +26,9 @@ test.describe('URL-param view options apply on initial load (race-free)', functi
     await expect(page.locator('#options-linenoscheck')).not.toBeChecked();
   });
 
-  test('?showLineNumbers=true keeps the gutter visible (no regression)', async function ({page}) {
+  test('?showLineNumbers=true keeps the gutter visible (no regression)', {
+    tag: '@feature:line-numbers',
+  }, async function ({page}) {
     const padId = await goToNewPad(page);
     await navigateWithParam(page, padId, 'showLineNumbers=true');
 
