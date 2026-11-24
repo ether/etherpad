@@ -4450,11 +4450,6 @@ packages:
     resolution: {integrity: sha512-sOm7K74erwg4Vti32zdvz6YCg2aW9bfuL7BMQhPInARp2QEQroo+DXpC5dBLHKuBMjbfHPcyinX2fk/6RMBShg==}
     engines: {node: '>=22.0'}
 
-  nanoid@3.3.15:
-    resolution: {integrity: sha512-y7Wygv/7mEOvxTuEQDB8StXdMRBWf1kR/tlhAzBRUFkB2jfcLOAxO/SHmOO2zgz1pVgK29/kyupn059/bCHdjA==}
-    engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
-    hasBin: true
-
   nanoid@3.3.20:
     resolution: {integrity: sha512-uKdg2G3GNCKQn9byYOpxbGqrT2fGO5KRt5J/8b3pok8rT6qxGWF6hxMyJiEYtAf+FVyYuD9hRaDqX5uPFYJ4ZQ==}
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
@@ -9154,7 +9149,7 @@ snapshots:
       jszip: 3.10.1
       lodash: 4.18.1
       mime-types: 2.1.35
-      nanoid: 3.3.15
+      nanoid: 3.3.20
       virtual-dom: 2.1.1
       xmlbuilder2: 2.1.2
     transitivePeerDependencies:
@@ -9915,8 +9910,6 @@ snapshots:
       lru.min: 1.1.4
 
   nano@11.0.8: {}
-
-  nanoid@3.3.15: {}
 
   nanoid@3.3.20: {}
 
