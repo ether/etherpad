@@ -28,6 +28,7 @@ Tags currently in use:
 - `@feature:error-gritter`
 - `@feature:line-numbers`
 - `@feature:rtl-toggle`
+- `@feature:cross-origin-embed`
 
 ### 2. A plugin declares the features it disables in its `ep.json`
 

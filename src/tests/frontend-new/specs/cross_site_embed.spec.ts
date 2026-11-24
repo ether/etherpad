@@ -7,12 +7,21 @@ import {randomUUID} from 'node:crypto';
 // cookies: in a cross-site iframe the cookies are set with SameSite=None, which
 // browsers reject without Secure, and Secure can't be set over http. The pad
 // must still load and fall back to default prefs.
+//
+// The embedded tests are tagged @feature:cross-origin-embed so plugins that
+// forbid framing on other origins (e.g. ep_helmet's X-Frame-Options) can
+// declare it (see doc/PLUGIN_FEATURE_DISABLES.md). Everything those tests rely
+// on apart from the framing itself is checked by the untagged test below, so
+// in the honesty pass a tagged failure can only come from the blocked frame.
+
+const embedderUrl = 'http://127.0.0.1:9001/static/empty.html';
+const newPadUrl = () => `http://localhost:9001/p/FRONTEND_TESTS${randomUUID()}`;
 
 const embedPadCrossSite = async (page: Page) => {
   // 127.0.0.1 and localhost are different sites, so embedding a localhost pad
   // in a 127.0.0.1 page is a cross-site embed.
-  await page.goto('http://127.0.0.1:9001/static/empty.html');
-  const padUrl = `http://localhost:9001/p/FRONTEND_TESTS${randomUUID()}`;
+  await page.goto(embedderUrl);
+  const padUrl = newPadUrl();
   await page.evaluate((src) => {
     const iframe = document.createElement('iframe');
     iframe.id = 'pad';
@@ -30,7 +39,20 @@ const embedPadCrossSite = async (page: Page) => {
   return {pad, outer};
 };
 
-test.describe('pad embedded cross-site over http', () => {
+test('the embedding page and the pad each load on their own', async ({page}) => {
+  const pageErrors: string[] = [];
+  page.on('pageerror', (err) => pageErrors.push(err.message));
+
+  expect((await page.goto(embedderUrl))!.ok()).toBe(true);
+  await page.goto(newPadUrl());
+  const inner = page.frameLocator('iframe[name="ace_outer"]').frameLocator('iframe');
+  await expect(inner.locator('#innerdocbody')).toBeVisible({timeout: 30000});
+  await expect(inner.locator('#innerdocbody')).toHaveAttribute('contenteditable', 'true');
+
+  expect(pageErrors).toEqual([]);
+});
+
+test.describe('pad embedded cross-site over http', {tag: '@feature:cross-origin-embed'}, () => {
   test('loads even though the prefs cookie cannot be stored', async ({page}) => {
     const pageErrors: string[] = [];
     page.on('pageerror', (err) => pageErrors.push(err.message));
@@ -40,9 +62,8 @@ test.describe('pad embedded cross-site over http', () => {
     expect(pageErrors).toEqual([]);
   });
 
-  // Uses the font pref because no feature tag covers it. A tagged test here
-  // would let an embed failure count as proof that a plugin disabled the
-  // tagged feature (see doc/PLUGIN_FEATURE_DISABLES.md).
+  // Uses the font pref because no other feature tag covers it, so the only
+  // feature this test can fail for is the embed itself.
   test('changing a pref works even though the prefs cookie cannot be stored', async ({page}) => {
     const pageErrors: string[] = [];
     page.on('pageerror', (err) => pageErrors.push(err.message));

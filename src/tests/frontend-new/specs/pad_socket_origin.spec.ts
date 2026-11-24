@@ -214,8 +214,12 @@ test('behind a Host-rewriting TLS proxy the pad keeps its author and edits',
       await expect.poll(() => userId(page), {timeout: 20000}).toBe(before);
     });
 
+// The two embed tests are tagged @feature:cross-origin-embed for plugins that
+// forbid framing on other origins (see doc/PLUGIN_FEATURE_DISABLES.md). Their
+// proxy, page servers and direct pad loads are also used by the untagged
+// tests, so in the honesty pass a tagged failure comes from the framing.
 test('a pad embedded on another origin of the same site keeps the visitor\'s author',
-    async ({page}) => {
+    {tag: '@feature:cross-origin-embed'}, async ({page}) => {
       const padId = `FRONTEND_TESTS${randomUUID()}`;
       const padBase = `https://pad.example.test:${proxyPort}`;
       await page.goto(`${padBase}/p/${padId}`);
@@ -229,7 +233,9 @@ test('a pad embedded on another origin of the same site keeps the visitor\'s aut
       await expect.poll(async () => await userId(padFrame()), {timeout: 20000}).toBe(visitor);
     });
 
-test('a pad embedded in a cross-site iframe works', async ({page, browser}) => {
+test('a pad embedded in a cross-site iframe works', {
+  tag: '@feature:cross-origin-embed',
+}, async ({page, browser}) => {
   const padId = `FRONTEND_TESTS${randomUUID()}`;
   const padBase = `https://pad.example.test:${proxyPort}`;
   showPage(padId, padBase);
