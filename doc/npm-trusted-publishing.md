@@ -85,11 +85,14 @@ If a package previously had an `NPM_TOKEN` secret in CI:
 
 ## Requirements
 
-- **Node.js**: >= 24 on the runner. `setup-node@v6 with version: 24`
-  resolves to the latest 24.x. The project's `engines.node` requires
-  `>=24.0.0`.
-- **npm CLI**: >= 11.5.1. The publish workflow runs `npm install -g npm@latest`
-  before publishing so the bundled npm version doesn't matter.
+- **Node.js**: the publish jobs run on Node 26 (`setup-node@v7` with
+  `node-version: 26`). Avoid odd non-LTS lines such as Node 25: npm 12
+  requires `^22.22.2 || ^24.15.0 || >=26.0.0`, so the npm upgrade fails there
+  with `EBADENGINE`.
+- **npm CLI**: >= 11.5.1. The plugin template
+  (`bin/plugins/lib/npmpublish.yml`) runs `npm install -g npm@^11.5.1`, and
+  core's release workflow runs `npm install -g npm@latest`, before
+  publishing, so the bundled npm version doesn't matter.
 - **Runner**: must be a GitHub-hosted (cloud) runner. Self-hosted runners are
   not yet supported by npm trusted publishing.
 - **`package.json`**: must declare a `repository` field pointing at the
@@ -131,6 +134,6 @@ The workflow is missing `permissions: id-token: write`. Add it to the job
 
 **`npm error need: 11.5.1`**
 
-The runner is using an older bundled npm. The workflow runs
-`npm install -g npm@latest` to fix this — make sure that step ran before the
-publish step.
+The runner is using an older bundled npm. The workflow upgrades npm
+(`npm install -g npm@^11.5.1` in plugins, `npm@latest` in core) to fix this —
+make sure that step ran before the publish step.
