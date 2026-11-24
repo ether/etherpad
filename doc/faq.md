@@ -58,7 +58,7 @@ repository to satisfy that dependency.
 
 ### From source
 
-Etherpad requires [Node.js](https://nodejs.org/) >= 24 and `pnpm`.
+Etherpad requires [Node.js](https://nodejs.org/) >= 24 (26 LTS recommended) and `pnpm`.
 
 ```bash
 git clone -b master https://github.com/ether/etherpad

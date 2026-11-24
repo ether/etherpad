@@ -21,8 +21,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Etherpad requires Node >= 24 (see package.json engines.node).
-        node: ${{ fromJSON('[24]') }}
+        # Etherpad requires Node >= 24 (see package.json engines.node). Test the
+        # floor (24) and the current Active LTS (26).
+        node: ${{ fromJSON('[24, 26]') }}
 
     steps:
       -

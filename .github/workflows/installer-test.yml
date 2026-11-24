@@ -42,7 +42,7 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
-          node-version: 24
+          node-version: '26'
 
       - name: Pre-install pnpm (avoid sudo prompt in the installer)
         run: npm install -g pnpm
@@ -126,7 +126,7 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
-          node-version: 24
+          node-version: '26'
 
       - name: Pre-install pnpm
         run: npm install -g pnpm

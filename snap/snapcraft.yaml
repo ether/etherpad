@@ -3,20 +3,20 @@
 # Design notes:
 # - base: core24 chosen because Etherpad requires Node.js >= 24 and
 #   core24 (Ubuntu 24.04 LTS) ships glibc/OpenSSL versions matching modern
-#   Node 24 binaries. core22 also works but ships older TLS/CA bundles.
+#   Node 24/26 binaries. core22 also works but ships older TLS/CA bundles.
 # - confinement: strict. Etherpad is a pure Node.js HTTP service. The only
 #   native Node module (`rusty-store-kv`) ships as a prebuilt napi-rs
 #   binary, so no node-gyp compile is performed at install time and
 #   strict confinement works cleanly.
 # - We use `dump` + a manual override-build (rather than the npm plugin)
-#   because this repo is a pnpm workspace and we pin Node.js 24 manually.
+#   because this repo is a pnpm workspace and we pin Node.js 26 manually.
 name: etherpad
 title: Etherpad
 summary: Real-time collaborative document editor
 description: |
   Etherpad is a highly customizable open-source online editor providing
   collaborative editing in real-time. This snap bundles Etherpad with a
-  pinned Node.js 24 runtime. On first launch a default `settings.json`
+  pinned Node.js 26 (LTS) runtime. On first launch a default `settings.json`
   is copied into `$SNAP_COMMON/etc` where it can be edited. Pad data is
   stored in `$SNAP_COMMON/var` and survives snap refreshes.
 
@@ -91,18 +91,28 @@ parts:
     override-build: |
       set -eu
 
-      # -- 1. Install Node.js 24 from the official tarball. Node 24 is the
-      # minimum supported runtime (see package.json engines.node).
-      NODE_VERSION=24.15.0
+      # -- 1. Install Node.js 26 (Active LTS) from the official tarball.
+      # Node 24 is still the minimum supported runtime (package.json
+      # engines.node); the snap ships the current LTS. When bumping
+      # NODE_VERSION, update both SHA256 values from
+      # https://nodejs.org/dist/v${NODE_VERSION}/SHASUMS256.txt
+      NODE_VERSION=26.13.1
       ARCH="$(dpkg --print-architecture)"
       case "${ARCH}" in
-        amd64) NODE_ARCH=x64 ;;
-        arm64) NODE_ARCH=arm64 ;;
+        amd64)
+          NODE_ARCH=x64
+          NODE_SHA256=5c063e46bab0fbc1c17cc445d7ff129cbdcd0471be6ed83b6ab864f8143bc864
+          ;;
+        arm64)
+          NODE_ARCH=arm64
+          NODE_SHA256=89e1853138db51e8b82d3e98ba9c0d3f2956a28e5e55ea1b7e12d25aae92d5dd
+          ;;
         *) echo "Unsupported arch ${ARCH}"; exit 1 ;;
       esac
       NODE_TGZ="node-v${NODE_VERSION}-linux-${NODE_ARCH}.tar.xz"
       curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/${NODE_TGZ}" \
         -o "/tmp/${NODE_TGZ}"
+      echo "${NODE_SHA256}  /tmp/${NODE_TGZ}" | sha256sum -c -
       mkdir -p "${CRAFT_PART_INSTALL}/opt/node"
       tar -xJf "/tmp/${NODE_TGZ}" -C "${CRAFT_PART_INSTALL}/opt/node" \
         --strip-components=1
