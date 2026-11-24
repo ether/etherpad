@@ -64,7 +64,7 @@ For more than a decade, Etherpad has quietly underpinned the documents that matt
 
 ### Quick install (one-liner)
 
-The fastest way to get Etherpad running. Requires `git` and Node.js >= 24.
+The fastest way to get Etherpad running. Requires `git` and Node.js >= 24 (26 LTS recommended).
 
 **macOS / Linux / WSL:**
 
@@ -158,11 +158,11 @@ volumes:
 
 ### Requirements
 
-[Node.js](https://nodejs.org/) >= 24.
+[Node.js](https://nodejs.org/) >= 24. Node.js 26 (current LTS) is recommended. CI tests 24 and 26.
 
 ### Windows, macOS, Linux
 
-1. Download the latest Node.js runtime from [nodejs.org](https://nodejs.org/).
+1. Download the latest Node.js LTS runtime (26) from [nodejs.org](https://nodejs.org/).
 2. Install pnpm: `npm install -g pnpm` (Administrator privileges may be required).
 3. Clone the repository: `git clone -b master`
 4. Run `pnpm i`
