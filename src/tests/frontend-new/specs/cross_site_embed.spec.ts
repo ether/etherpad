@@ -1,4 +1,4 @@
-import {expect, test} from '@playwright/test';
+import {expect, Page, test} from '@playwright/test';
 import {randomUUID} from 'node:crypto';
 
 // Regression test for https://github.com/ether/etherpad/issues/8513
@@ -7,29 +7,48 @@ import {randomUUID} from 'node:crypto';
 // cookies: in a cross-site iframe the cookies are set with SameSite=None, which
 // browsers reject without Secure, and Secure can't be set over http. The pad
 // must still load and fall back to default prefs.
+
+const embedPadCrossSite = async (page: Page) => {
+  // 127.0.0.1 and localhost are different sites, so embedding a localhost pad
+  // in a 127.0.0.1 page is a cross-site embed.
+  await page.goto('http://127.0.0.1:9001/static/empty.html');
+  const padUrl = `http://localhost:9001/p/FRONTEND_TESTS${randomUUID()}`;
+  await page.evaluate((src) => {
+    const iframe = document.createElement('iframe');
+    iframe.id = 'pad';
+    iframe.src = src;
+    iframe.width = '1000';
+    iframe.height = '700';
+    document.body.appendChild(iframe);
+  }, padUrl);
+
+  const pad = page.frameLocator('#pad');
+  const outer = pad.frameLocator('iframe[name="ace_outer"]');
+  const inner = outer.frameLocator('iframe');
+  await expect(inner.locator('#innerdocbody')).toBeVisible({timeout: 30000});
+  await expect(inner.locator('#innerdocbody')).toHaveAttribute('contenteditable', 'true');
+  return {pad, outer};
+};
+
 test.describe('pad embedded cross-site over http', () => {
   test('loads even though the prefs cookie cannot be stored', async ({page}) => {
     const pageErrors: string[] = [];
     page.on('pageerror', (err) => pageErrors.push(err.message));
 
-    // 127.0.0.1 and localhost are different sites, so embedding a localhost pad
-    // in a 127.0.0.1 page is a cross-site embed.
-    await page.goto('http://127.0.0.1:9001/static/empty.html');
-    const padUrl = `http://localhost:9001/p/FRONTEND_TESTS${randomUUID()}`;
-    await page.evaluate((src) => {
-      const iframe = document.createElement('iframe');
-      iframe.id = 'pad';
-      iframe.src = src;
-      iframe.width = '1000';
-      iframe.height = '700';
-      document.body.appendChild(iframe);
-    }, padUrl);
+    await embedPadCrossSite(page);
 
-    const pad = page.frameLocator('#pad');
-    const outer = pad.frameLocator('iframe[name="ace_outer"]');
-    const inner = outer.frameLocator('iframe');
-    await expect(inner.locator('#innerdocbody')).toBeVisible({timeout: 30000});
-    await expect(inner.locator('#innerdocbody')).toHaveAttribute('contenteditable', 'true');
+    expect(pageErrors).toEqual([]);
+  });
+
+  // Uses the line-numbers pref, so plugins that disable line numbers opt out
+  // of it through `disables` (see doc/PLUGIN_FEATURE_DISABLES.md).
+  test('changing a pref works even though the prefs cookie cannot be stored', {
+    tag: '@feature:line-numbers',
+  }, async ({page}) => {
+    const pageErrors: string[] = [];
+    page.on('pageerror', (err) => pageErrors.push(err.message));
+
+    const {pad, outer} = await embedPadCrossSite(page);
 
     // Changing a pref writes to padcookie; that must not throw either.
     const lineNumbers = pad.locator('#options-linenoscheck');
