@@ -69,7 +69,7 @@ Logs: `sudo snap logs etherpad -f`.
 ```
 $SNAP/                                # = /snap/etherpad/current  (read-only squashfs)
 ├── opt/
-│   ├── node/bin/node                 # pinned Node.js 22.12.0
+│   ├── node/bin/node                 # pinned Node.js 26.x LTS (NODE_VERSION in snapcraft.yaml)
 │   └── etherpad/
 │       ├── src/                      # ep_etherpad-lite workspace package (with node_modules incl. tsx)
 │       ├── admin/, ui/, doc/         # other workspace packages (built artefacts)
