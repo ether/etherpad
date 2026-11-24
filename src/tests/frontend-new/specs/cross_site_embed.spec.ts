@@ -40,24 +40,25 @@ test.describe('pad embedded cross-site over http', () => {
     expect(pageErrors).toEqual([]);
   });
 
-  // Uses the line-numbers pref, so plugins that disable line numbers opt out
-  // of it through `disables` (see doc/PLUGIN_FEATURE_DISABLES.md).
-  test('changing a pref works even though the prefs cookie cannot be stored', {
-    tag: '@feature:line-numbers',
-  }, async ({page}) => {
+  // Uses the font pref because no feature tag covers it. A tagged test here
+  // would let an embed failure count as proof that a plugin disabled the
+  // tagged feature (see doc/PLUGIN_FEATURE_DISABLES.md).
+  test('changing a pref works even though the prefs cookie cannot be stored', async ({page}) => {
     const pageErrors: string[] = [];
     page.on('pageerror', (err) => pageErrors.push(err.message));
 
     const {pad, outer} = await embedPadCrossSite(page);
 
-    // Changing a pref writes to padcookie; that must not throw either.
-    const lineNumbers = pad.locator('#options-linenoscheck');
-    await expect(lineNumbers).toBeChecked();
-    await lineNumbers.evaluate((el: HTMLInputElement) => {
-      el.checked = false;
+    // Changing a pref writes to padcookie; that must not throw, and the
+    // in-memory fallback must keep the new value.
+    const fontMenu = pad.locator('#viewfontmenu');
+    await fontMenu.evaluate((el: HTMLSelectElement) => {
+      el.value = 'RobotoMono';
       el.dispatchEvent(new Event('change'));
     });
-    await expect(outer.locator('#outerdocbody')).toHaveClass(/line-numbers-hidden/);
+    await expect(fontMenu).toHaveValue('RobotoMono');
+    await expect(outer.frameLocator('iframe').locator('#innerdocbody'))
+        .toHaveCSS('font-family', /RobotoMono/);
 
     expect(pageErrors).toEqual([]);
   });
