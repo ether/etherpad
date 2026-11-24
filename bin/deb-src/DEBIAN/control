@@ -1,9 +1,0 @@
-Package: etherpad
-Version: 1.3
-Section: base
-Priority: optional
-Architecture: i386
-Installed-Size: SIZE
-Depends:
-Maintainer: John McLear <john@mclear.co.uk>
-Description: Etherpad is a collaborative editor.  

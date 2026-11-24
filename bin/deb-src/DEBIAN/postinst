@@ -1,7 +1,0 @@
-#!/bin/bash
-# Start the services!
-
-service etherpad start
-echo "Give Etherpad about 3 minutes to install dependencies then visit http://localhost:9001 in your web browser"
-echo "To stop etherpad type 'service etherpad stop', To restart type 'service etherpad restart'".
-rm -f /tmp/etherpad.log /tmp/etherpad.err
