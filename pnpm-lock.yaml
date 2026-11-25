@@ -263,8 +263,8 @@ importers:
         specifier: ^0.5.8
         version: 0.5.8(eslint@10.15.0(supports-color@8.1.1))
       i18next:
-        specifier: ^27.2.2
-        version: 27.2.2(typescript@7.0.2)
+        specifier: ^27.2.7
+        version: 27.2.7(typescript@7.0.2)
       i18next-browser-languagedetector:
         specifier: ^8.3.1
         version: 8.3.1
@@ -282,7 +282,7 @@ importers:
         version: 7.92.0(@types/react@19.3.0)(react@19.3.1)
       react-i18next:
         specifier: ^18.0.3
-        version: 18.0.3(@types/react@19.3.0)(i18next@27.2.2(typescript@7.0.2))(react@19.3.1)(typescript@7.0.2)
+        version: 18.0.3(@types/react@19.3.0)(i18next@27.2.7(typescript@7.0.2))(react@19.3.1)(typescript@7.0.2)
       react-router-dom:
         specifier: ^7.18.6
         version: 7.18.6(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -617,8 +617,8 @@ importers:
         specifier: ^10.15.0
         version: 10.15.0(supports-color@8.1.1)
       eslint-config-etherpad:
-        specifier: ^5.0.2
-        version: 5.0.2(eslint@10.15.0(supports-color@8.1.1))(supports-color@8.1.1)(typescript@7.0.2)
+        specifier: ^5.0.3
+        version: 5.0.3(eslint@10.15.0(supports-color@8.1.1))(supports-color@8.1.1)(typescript@7.0.2)
       etherpad-cli-client:
         specifier: ^4.0.3
         version: 4.0.3(supports-color@8.1.1)
@@ -3228,8 +3228,8 @@ packages:
     peerDependencies:
       eslint: '>=6.0.0'
 
-  eslint-config-etherpad@5.0.2:
-    resolution: {integrity: sha512-D4lpqgMC974zWDgDuSwL8e0zEeYaokCzUq46Cfs8Fd9D/rucsCACx70wBOMR7TjilTPmzqc2E+Lb372udEGU3g==}
+  eslint-config-etherpad@5.0.3:
+    resolution: {integrity: sha512-vaCVWBrJMxdN47M8dqhppt4N1zavwKd0GanMkp8lt8PF/9gO3d7Lv1eSJIcafjZjzw6SbqbSFkvunwfp3uVuQQ==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
     peerDependencies:
       eslint: ^8.57.0 || ^9.0.0 || ^10.0.0
@@ -3761,8 +3761,8 @@ packages:
   i18next-browser-languagedetector@8.3.1:
     resolution: {integrity: sha512-W7dfKWlmaxuy5zsKsu8vKm7SQ0R6T1Tw7XRMKCh3bt98q9m5Q73GKF1PiqtvcwzC+AZvfUCugbfcIYQkDfHeAg==}
 
-  i18next@27.2.2:
-    resolution: {integrity: sha512-1/AJgz/bpE/YL6tqekQlZAzDhkmrUBbgU8+Xon/Lwv6c5WdYuyFZ9mb86OVfR2C2XujUDT7Rz23Ydaq4l981lA==}
+  i18next@27.2.7:
+    resolution: {integrity: sha512-q3XlM8YSo6Nmomd+MQ4JPGJGvhgHwfCRXNeFrM8l0F4TuIuoJBqhCxQrdGDHNMjObRuw5O0ReuU968ZeMVlfnw==}
     engines: {node: '>=22'}
     peerDependencies:
       typescript: ^5 || ^6 || ^7
@@ -3856,10 +3856,6 @@ packages:
 
   is-callable@1.2.7:
     resolution: {integrity: sha512-1BC0BVFhS/p0qtw6enp8e+8OD0UrK0oFLztSjNzhcKA3WDuJxxAPXzPuPtKkjEY9UUoEWlX/8fgKeu2S8i9JTA==}
-    engines: {node: '>= 0.4'}
-
-  is-core-module@2.16.2:
-    resolution: {integrity: sha512-evOr8xfXKxE6qSR0hSXL2r3sd7ALj8+7jQEUvPYcm5sgZFdJ+AYzT6yNmJenvIYQBgIGwfwz08sL8zoL7yq2BA==}
     engines: {node: '>= 0.4'}
 
   is-core-module@2.18.0:
@@ -8493,7 +8489,7 @@ snapshots:
       eslint: 10.15.0(supports-color@8.1.1)
       semver: 7.8.6
 
-  eslint-config-etherpad@5.0.2(eslint@10.15.0(supports-color@8.1.1))(supports-color@8.1.1)(typescript@7.0.2):
+  eslint-config-etherpad@5.0.3(eslint@10.15.0(supports-color@8.1.1))(supports-color@8.1.1)(typescript@7.0.2):
     dependencies:
       '@eslint/eslintrc': 3.3.7(supports-color@8.1.1)
       '@eslint/js': 9.39.5
@@ -8521,7 +8517,7 @@ snapshots:
   eslint-import-resolver-node@0.3.10(supports-color@8.1.1):
     dependencies:
       debug: 3.2.7(supports-color@8.1.1)
-      is-core-module: 2.16.2
+      is-core-module: 2.18.0
       resolve: 2.0.0-next.7
     transitivePeerDependencies:
       - supports-color
@@ -8577,7 +8573,7 @@ snapshots:
       eslint-import-resolver-node: 0.3.10(supports-color@8.1.1)
       eslint-module-utils: 2.14.0(@typescript-eslint/parser@8.73.0(eslint@10.15.0(supports-color@8.1.1))(supports-color@8.1.1)(typescript@7.0.2))(eslint-import-resolver-node@0.3.10(supports-color@8.1.1))(eslint-import-resolver-typescript@3.9.1)(eslint@10.15.0(supports-color@8.1.1))(supports-color@8.1.1)
       hasown: 2.0.4
-      is-core-module: 2.16.2
+      is-core-module: 2.18.0
       is-glob: 4.0.3
       minimatch: 3.1.5
       object.fromentries: 2.0.8
@@ -9224,7 +9220,7 @@ snapshots:
     dependencies:
       '@babel/runtime': 7.29.7
 
-  i18next@27.2.2(typescript@7.0.2):
+  i18next@27.2.7(typescript@7.0.2):
     optionalDependencies:
       typescript: 7.0.2
 
@@ -9310,10 +9306,6 @@ snapshots:
       semver: 7.8.6
 
   is-callable@1.2.7: {}
-
-  is-core-module@2.16.2:
-    dependencies:
-      hasown: 2.0.4
 
   is-core-module@2.18.0:
     dependencies:
@@ -10366,10 +10358,10 @@ snapshots:
     optionalDependencies:
       '@types/react': 19.3.0
 
-  react-i18next@18.0.3(@types/react@19.3.0)(i18next@27.2.2(typescript@7.0.2))(react@19.3.1)(typescript@7.0.2):
+  react-i18next@18.0.3(@types/react@19.3.0)(i18next@27.2.7(typescript@7.0.2))(react@19.3.1)(typescript@7.0.2):
     dependencies:
       html-parse-stringify: 4.0.1
-      i18next: 27.2.2(typescript@7.0.2)
+      i18next: 27.2.7(typescript@7.0.2)
       react: 19.3.1
     optionalDependencies:
       '@types/react': 19.3.0
@@ -10529,7 +10521,7 @@ snapshots:
   resolve@2.0.0-next.7:
     dependencies:
       es-errors: 1.3.0
-      is-core-module: 2.16.2
+      is-core-module: 2.18.0
       node-exports-info: 1.6.2
       object-keys: 1.1.1
       path-parse: 1.0.7
