@@ -111,7 +111,7 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/mime-types": "^3.0.1",
     "@types/mocha": "^10.0.9",
-    "@types/node": "^26.6.6",
+    "@types/node": "^26.6.10",
     "@types/nodemailer": "^8.0.2",
     "@types/oidc-provider": "^9.13.1",
     "@types/pdfkit": "^0.17.7",
@@ -128,12 +128,12 @@
     "mocha-froth": "^0.2.10",
     "nodeify": "^1.0.1",
     "openapi-schema-validation": "^0.4.2",
-    "set-cookie-parser": "^3.2.3",
+    "set-cookie-parser": "^4.0.0",
     "sinon": "^22.1.0",
     "split-grid": "^1.0.11",
     "supertest": "^7.3.2",
     "typescript": "^7.0.2",
-    "vitest": "^5.1.1"
+    "vitest": "^5.1.2"
   },
   "engines": {
     "node": ">=24.0.0",
