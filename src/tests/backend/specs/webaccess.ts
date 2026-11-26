@@ -142,6 +142,11 @@ describe(__filename, function () {
       }
     });
 
+    it('does not accept U+FFFD for a password with a lone surrogate', async function () {
+      settings.users.admin.password = '\ud800';
+      await agent.get('/admin-auth/').auth('admin', '\ufffd').expect(401);
+    });
+
     it('accepts a password that contains a colon', async function () {
       settings.users.admin.password = 'admin:password';
       await agent.get('/admin-auth/').auth('admin', 'admin:password').expect(200);

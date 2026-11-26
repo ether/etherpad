@@ -14,10 +14,12 @@ const hooks = require('../../../static/js/pluginfw/hooks');
 import readOnlyManager from '../../db/ReadOnlyManager';
 
 // Constant-time compare, same as the API key check in APIHandler.ts, so the
-// response time doesn't reveal how much of the password was right.
+// response time doesn't reveal how much of the password was right. UTF-16LE keeps
+// every code unit as-is; UTF-8 would turn a lone surrogate into U+FFFD, so a
+// configured "\ud800" would also accept "\ufffd".
 const passwordMatches = (expected: string, provided: string | null | undefined) => {
-  const want = Buffer.from(expected, 'utf8');
-  const got = Buffer.from(String(provided ?? ''), 'utf8');
+  const want = Buffer.from(expected, 'utf16le');
+  const got = Buffer.from(String(provided ?? ''), 'utf16le');
   return want.length === got.length && crypto.timingSafeEqual(want, got);
 };
 
