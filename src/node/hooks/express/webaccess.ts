@@ -1,6 +1,7 @@
 'use strict';
 
 import {strict as assert} from "assert";
+import crypto from 'node:crypto';
 import log4js from 'log4js';
 import {SocketClientRequest} from "../../types/SocketClientRequest";
 import {WebAccessTypes} from "../../types/WebAccessTypes";
@@ -11,6 +12,14 @@ import {anonymizeIp} from '../../utils/anonymizeIp';
 import {adminSocketToken, padCredentialBinding, padSocketToken} from '../../utils/socketOrigin';
 const hooks = require('../../../static/js/pluginfw/hooks');
 import readOnlyManager from '../../db/ReadOnlyManager';
+
+// Constant-time compare, same as the API key check in APIHandler.ts, so the
+// response time doesn't reveal how much of the password was right.
+const passwordMatches = (expected: string, provided: string | null | undefined) => {
+  const want = Buffer.from(expected, 'utf8');
+  const got = Buffer.from(String(provided ?? ''), 'utf8');
+  return want.length === got.length && crypto.timingSafeEqual(want, got);
+};
 
 hooks.deprecationNotices.authFailure = 'use the authnFailure and authzFailure hooks instead';
 
@@ -228,7 +237,7 @@ const checkAccess = async (req:any, res:any, next: Function) => {
     if (!httpBasicAuth ||
         !ctx.username ||
         password == null || password.toString() === '' ||
-        password.toString() !== ctx.password) {
+        !passwordMatches(password.toString(), ctx.password)) {
       httpLogger.info(
           `Failed authentication from IP ${anonymizeIp(req.ip, settings.ipLogging)}`);
       if (await aCallFirst0('authnFailure', {req, res})) return;
