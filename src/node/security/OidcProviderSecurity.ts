@@ -44,7 +44,11 @@ export const resolveOidcCookieKeys = (
   const {cookieKeys, rotatedSecrets, sessionKey} = opts;
 
   if (Array.isArray(cookieKeys)) {
-    const usable = cookieKeys.filter((k): k is string => typeof k === 'string' && k.length > 0);
+    const usable = cookieKeys
+      .filter((k): k is string | number | boolean =>
+        (typeof k === 'string' && k.length > 0) || typeof k === 'number' || typeof k === 'boolean')
+      .map(String)
+      .filter((k) => k.length > 0);
     if (usable.length > 0) return usable;
   }
 
