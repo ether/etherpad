@@ -78,6 +78,9 @@ export const App = () => {
       if (settings && typeof settings.flags === 'object' && settings.flags) {
         useStore.getState().setGdprAuthorErasureEnabled(
             !!settings.flags.gdprAuthorErasure);
+        if (typeof settings.flags.updatesTier === 'string') {
+          useStore.getState().setUpdatesTier(settings.flags.updatesTier);
+        }
       }
       if (settings.results === 'NOT_ALLOWED') {
         console.log('Not allowed to view settings.json')

@@ -91,6 +91,10 @@ exports.socketio = (hookName: string, {io}: any) => {
       const flags = {
         gdprAuthorErasure: !!(settings.gdprAuthorErasure &&
             settings.gdprAuthorErasure.enabled),
+        // The admin UI reads the tier from here instead of probing
+        // /admin/update/status, which is not registered when the tier is
+        // "off" (issue #8573). Sent only to admin sockets.
+        updatesTier: settings.updates.tier,
       };
       if (settings.showSettingsInAdminPage === false) {
         socket.emit('settings', {results: 'NOT_ALLOWED', flags});
@@ -161,6 +165,9 @@ exports.socketio = (hookName: string, {io}: any) => {
         installedServerHooks: mapToObject(hooks),
         installedClientHooks: mapToObject(clientHooks),
         latestVersion: getLatestVersion(),
+        // False when privacy.updateCheck is off: latestVersion is then never
+        // known, so the help page must not claim the install is up to date.
+        versionCheck: settings.privacy.updateCheck !== false,
       })
     });
 

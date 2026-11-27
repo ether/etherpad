@@ -92,6 +92,11 @@ type StoreState = {
   setAuthors: (authors: AuthorSearchResult)=>void,
   gdprAuthorErasureEnabled: boolean,
   setGdprAuthorErasureEnabled: (enabled: boolean)=>void,
+  // updates.tier as reported by the /settings socket. null until the first
+  // `settings` payload arrives; the update UI waits for it so it never
+  // requests /admin/update/status when the tier is "off".
+  updatesTier: string | null,
+  setUpdatesTier: (tier: string | null) => void,
 }
 
 
@@ -125,6 +130,8 @@ export const useStore = create<StoreState>()((set) => ({
   setAuthors: (authors)=>set({authors}),
   gdprAuthorErasureEnabled: false,
   setGdprAuthorErasureEnabled: (gdprAuthorErasureEnabled)=>set({gdprAuthorErasureEnabled}),
+  updatesTier: null,
+  setUpdatesTier: (updatesTier) => set({updatesTier}),
 }));
 
 export const useResolvedAt = (path: JSONPath): unknown =>

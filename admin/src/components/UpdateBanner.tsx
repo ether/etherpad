@@ -1,7 +1,15 @@
 import {useEffect, useState} from 'react';
-import {Link} from 'react-router-dom';
+import {Link, useLocation} from 'react-router-dom';
 import {Trans, useTranslation} from 'react-i18next';
 import {useStore} from '../store/store';
+import {UpdatesOffNotice} from './UpdatesOffNotice';
+
+// Dismissal lasts for the browser session only, so an admin who turned
+// updates off is reminded again next time they sign in.
+const OFF_DISMISS_KEY = 'etherpad.admin.updatesOffNoticeDismissed';
+const readDismissed = (): boolean => {
+  try { return window.sessionStorage.getItem(OFF_DISMISS_KEY) === '1'; } catch { return false; }
+};
 
 const fmtRemaining = (ms: number): string => {
   if (ms <= 0) return '0s';
@@ -15,15 +23,22 @@ export const UpdateBanner = () => {
   const {t} = useTranslation();
   const updateStatus = useStore((s) => s.updateStatus);
   const setUpdateStatus = useStore((s) => s.setUpdateStatus);
+  const updatesTier = useStore((s) => s.updatesTier);
+  const [offDismissed, setOffDismissed] = useState<boolean>(readDismissed);
+  // The update page renders the same notice itself; don't show it twice.
+  const onUpdatePage = useLocation().pathname.replace(/\/+$/, '').endsWith('/update');
 
   useEffect(() => {
+    // Wait for the tier from the /settings socket. With tier "off" the
+    // server does not register the status route, so do not request it.
+    if (updatesTier == null || updatesTier === 'off') return;
     let cancelled = false;
     fetch('/admin/update/status', {credentials: 'same-origin'})
       .then((r) => r.ok ? r.json() : null)
       .then((data) => { if (data && !cancelled) setUpdateStatus(data); })
       .catch(() => {});
     return () => { cancelled = true; };
-  }, [setUpdateStatus]);
+  }, [setUpdateStatus, updatesTier]);
 
   const scheduledFor = updateStatus?.execution?.status === 'scheduled'
     ? (updateStatus.execution as {scheduledFor: string}).scheduledFor
@@ -37,6 +52,16 @@ export const UpdateBanner = () => {
     const id = setInterval(() => setRemainingMs(Math.max(0, target - Date.now())), 1000);
     return () => clearInterval(id);
   }, [scheduledFor]);
+
+  if (updatesTier === 'off') {
+    if (offDismissed || onUpdatePage) return null;
+    return (
+      <UpdatesOffNotice onDismiss={() => {
+        try { window.sessionStorage.setItem(OFF_DISMISS_KEY, '1'); } catch {/* noop */}
+        setOffDismissed(true);
+      }}/>
+    );
+  }
 
   if (!updateStatus) return null;
 

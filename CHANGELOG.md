@@ -1,3 +1,9 @@
+# 3.3.23
+
+### Notable fixes
+
+- **Admin UI — no more `/admin/update/status` request when `updates.tier` is `"off"` (#8573).** The server does not register that route when the tier is off, but the admin banner and update page still requested it. The admin UI now reads the tier from its settings socket and skips the request. Instead it shows a notice that update notifications are turned off, so you may not hear about security updates, with how to turn them back on (`updates.tier` in `settings.json` or the `UPDATES_TIER` environment variable) and a link to the update docs. The notice can be dismissed for the browser session. The troubleshooting page also stops showing "Update available: undefined" when `privacy.updateCheck` is `false`. Other tiers are unchanged.
+
 # 3.3.22
 
 3.3.22 is a security hardening release. It tightens several admin, OIDC, updater and static-file code paths, and fixes the OIDC login page hanging, plugin uninstall breaking core, and an almost empty admin plugin catalog. Upgrading is recommended.

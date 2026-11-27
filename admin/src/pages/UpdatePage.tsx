@@ -1,6 +1,7 @@
 import {useEffect, useState} from 'react';
 import {Trans, useTranslation} from 'react-i18next';
 import {useStore} from '../store/store';
+import {UpdatesOffNotice} from '../components/UpdatesOffNotice';
 
 type FetchState =
   | {kind: 'loading'}
@@ -25,9 +26,11 @@ export const UpdatePage = () => {
   const setUpdateStatus = useStore((s) => s.setUpdateStatus);
   const log = useStore((s) => s.updateLog);
   const setLog = useStore((s) => s.setUpdateLog);
+  const updatesTier = useStore((s) => s.updatesTier);
   // Self-fetch so the page renders an explicit state even if UpdateBanner's
-  // best-effort fetch never landed (route returns 404 when tier=off, 401/403
-  // if requireAdminForStatus is set, or a transient network error).
+  // best-effort fetch never landed (401/403 if requireAdminForStatus is set,
+  // or a transient network error). Tier "off" never reaches the fetch: the
+  // tier comes from the /settings socket (issue #8573).
   const [fetchState, setFetchState] = useState<FetchState>(us ? {kind: 'ok'} : {kind: 'loading'});
   const [actionInFlight, setActionInFlight] = useState(false);
 
@@ -51,11 +54,19 @@ export const UpdatePage = () => {
   };
 
   useEffect(() => {
+    // The tier comes from the /settings socket. Until it arrives, keep
+    // loading. With tier "off" the status route is not registered, so show
+    // the notice without requesting it (issue #8573).
+    if (updatesTier == null) return;
+    if (updatesTier === 'off') {
+      setFetchState({kind: 'disabled'});
+      return;
+    }
     let cancelled = false;
     void refreshStatus().then(() => { if (cancelled) return; });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [updatesTier]);
 
   // Poll log + status while the executor is in flight, then stop.
   const status = us?.execution?.status ?? 'idle';
@@ -114,7 +125,7 @@ export const UpdatePage = () => {
     return (
       <div className="update-page">
         <h1><Trans i18nKey="update.page.title"/></h1>
-        <p>{t('update.page.disabled', {defaultValue: 'Update checks are disabled (updates.tier = "off").'})}</p>
+        <UpdatesOffNotice/>
       </div>
     );
   }
