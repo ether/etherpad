@@ -73,7 +73,13 @@ jobs:
           fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          pnpm i --frozen-lockfile
+          # Not every plugin commits a pnpm-lock.yaml, and --frozen-lockfile
+          # fails outright without one.
+          if [ -f pnpm-lock.yaml ]; then
+            pnpm i --frozen-lockfile
+          else
+            pnpm i
+          fi
           # `pnpm version patch` bumps package.json, makes a commit, and creates
           # a `v<new-version>` tag. Capture the new tag name from package.json
           # rather than parsing pnpm's output, which has historically varied.
@@ -82,7 +88,23 @@ jobs:
           # requested (pnpm/action-setup#225); those pre-releases either skip
           # the git commit/tag or reject --no-git-tag-version as unknown.
           # Doing the bump in Node sidesteps both failure modes.
-          NEW_VERSION=$(node -e "const fs=require('fs');const p=require('./package.json');const v=p.version.split('.');v[2]=String(Number(v[2])+1);p.version=v.join('.');fs.writeFileSync('./package.json',JSON.stringify(p,null,2)+'\n');console.log(p.version);")
+          # Same rules as `semver inc patch`: 1.2.3 -> 1.2.4, and a prerelease
+          # such as 1.2.3-beta.1 is released as 1.2.3. Splitting on dots and
+          # calling Number() on the patch part would give NaN for prereleases.
+          NEW_VERSION=$(node <<'EOF'
+          const fs = require('fs');
+          const p = require('./package.json');
+          const m = /^(\d+)\.(\d+)\.(\d+)(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$/.exec(p.version);
+          if (m == null) {
+            console.error(`package.json version '${p.version}' is not valid semver`);
+            process.exit(1);
+          }
+          const patch = m[4] ? Number(m[3]) : Number(m[3]) + 1;
+          p.version = `${m[1]}.${m[2]}.${patch}`;
+          fs.writeFileSync('./package.json', `${JSON.stringify(p, null, 2)}\n`);
+          console.log(p.version);
+          EOF
+          ) || exit 1
           NEW_TAG="v${NEW_VERSION}"
           git add package.json
           git commit -m "${NEW_TAG}"
