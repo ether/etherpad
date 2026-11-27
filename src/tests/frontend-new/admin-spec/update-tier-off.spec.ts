@@ -24,6 +24,12 @@ const forceUpdatesOff = async (page: Page) => {
     ws.onMessage((msg) => server.send(msg));
     server.onMessage((msg) => {
       const frame = parseFrame(msg);
+      // Sent on connect; the UI acts on whichever tier arrives first.
+      if (frame && frame.payload[0] === 'updatesTier') {
+        frame.payload[1] = 'off';
+        ws.send(`${PREFIX}${frame.ack}${JSON.stringify(frame.payload)}`);
+        return;
+      }
       if (frame && frame.payload[0] === 'settings') {
         const data = frame.payload[1] as {flags?: Record<string, unknown>};
         data.flags = {...(data.flags ?? {}), updatesTier: 'off'};
