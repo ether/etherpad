@@ -1,3 +1,9 @@
+# 3.3.23
+
+### Notable fixes
+
+- **Updates — pads no longer call `/api/version-status` when `updates.tier` is `"off"` (#8573).** The server does not register that endpoint when the tier is off, but the pad still requested it on every load, leaving a 404 in the browser's network tab. The server now sends `clientVars.updateCheck: false` and the pad skips the request. Other tiers are unchanged. Reported by @n-goncalves.
+
 # 3.3.22
 
 3.3.22 is a security hardening release. It tightens several admin, OIDC, updater and static-file code paths, and fixes the OIDC login page hanging, plugin uninstall breaking core, and an almost empty admin plugin catalog. Upgrading is recommended.
