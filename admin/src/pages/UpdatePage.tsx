@@ -1,4 +1,4 @@
-import {useEffect, useState} from 'react';
+import {useEffect, useRef, useState} from 'react';
 import {Trans, useTranslation} from 'react-i18next';
 import {useStore} from '../store/store';
 import {UpdatesOffNotice} from '../components/UpdatesOffNotice';
@@ -27,6 +27,11 @@ export const UpdatePage = () => {
   const log = useStore((s) => s.updateLog);
   const setLog = useStore((s) => s.setUpdateLog);
   const updatesTier = useStore((s) => s.updatesTier);
+  // Read inside async callbacks so a request that was started before the
+  // tier turned "off" can't overwrite the notice or keep polling.
+  const tierRef = useRef(updatesTier);
+  tierRef.current = updatesTier;
+  const tierOff = () => tierRef.current === 'off';
   // Self-fetch so the page renders an explicit state even if UpdateBanner's
   // best-effort fetch never landed (401/403 if requireAdminForStatus is set,
   // or a transient network error). Tier "off" never reaches the fetch: the
@@ -35,10 +40,13 @@ export const UpdatePage = () => {
   const [actionInFlight, setActionInFlight] = useState(false);
 
   const refreshStatus = async () => {
+    if (tierOff()) return;
     try {
       const r = await fetch('/admin/update/status', {credentials: 'same-origin'});
+      if (tierOff()) return;
       if (r.ok) {
         const data = await r.json();
+        if (tierOff()) return;
         setUpdateStatus(data);
         setFetchState({kind: 'ok'});
       } else if (r.status === 404) {
@@ -49,6 +57,7 @@ export const UpdatePage = () => {
         setFetchState({kind: 'error', status: r.status});
       }
     } catch {
+      if (tierOff()) return;
       setFetchState({kind: 'error', status: 0});
     }
   };
@@ -72,10 +81,10 @@ export const UpdatePage = () => {
   const status = us?.execution?.status ?? 'idle';
   const inFlight = IN_FLIGHT_STATUSES.includes(status);
   useEffect(() => {
-    if (!inFlight) return;
+    if (!inFlight || updatesTier === 'off') return;
     let cancelled = false;
     const tick = async () => {
-      if (cancelled) return;
+      if (cancelled || tierOff()) return;
       try {
         const lr = await fetch('/admin/update/log', {credentials: 'same-origin'});
         if (lr.ok) setLog(await lr.text());
@@ -86,7 +95,7 @@ export const UpdatePage = () => {
     void tick();
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [inFlight]);
+  }, [inFlight, updatesTier]);
 
   const post = async (path: string) => {
     setActionInFlight(true);

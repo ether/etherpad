@@ -81,6 +81,12 @@ exports.socketio = (hookName: string, {io}: any) => {
       return;
     }
 
+    // Sent on connect, independent of `load`: `load` emits nothing when the
+    // settings file can't be read (e.g. running on defaults without
+    // settings.json), and the update UI waits for the tier before it does
+    // anything (issue #8573).
+    socket.emit('updatesTier', settings.updates.tier);
+
     socket.on('load', async (query: string): Promise<any> => {
       let data;
       try {

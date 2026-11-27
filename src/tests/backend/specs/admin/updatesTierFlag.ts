@@ -35,6 +35,8 @@ const adminSocket = async () => {
     forceNew: true,
     query: {cookie: reqCookieHdr},
   });
+  // The server emits `updatesTier` as soon as the connection is accepted.
+  socket.tierOnConnect = new Promise<unknown>((resolve) => socket.once('updatesTier', resolve));
   await new Promise<void>((resolve, reject) => {
     socket.once('connect', resolve);
     socket.once('connect_error', reject);
@@ -108,6 +110,22 @@ describe(__filename, function () {
       assert.equal(payload.flags.updatesTier, 'off');
     } finally {
       settings.showSettingsInAdminPage = saved;
+    }
+  });
+
+  it('emits updatesTier on connect even when settings.json cannot be read', async function () {
+    settings.updates.tier = 'off';
+    settings.settingsFilename = path.join(settings.root, 'var', 'does-not-exist.json');
+    const s2 = await adminSocket();
+    try {
+      const tier = await Promise.race([
+        s2.tierOnConnect,
+        new Promise((_, rej) => setTimeout(() => rej(new Error('no updatesTier on connect')), 10000)),
+      ]);
+      assert.equal(tier, 'off');
+    } finally {
+      s2.disconnect();
+      settings.settingsFilename = path.join(settings.root, 'settings.json.template');
     }
   });
 

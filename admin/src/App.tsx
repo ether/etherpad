@@ -95,6 +95,12 @@ export const App = () => {
       useStore.getState().setShowLoading(false);
     });
 
+    // Sent by the server on every connect, even when settings.json can't be
+    // read. The update banner and page wait for it (issue #8573).
+    settingSocket.on('updatesTier', (tier: unknown) => {
+      if (typeof tier === 'string') useStore.getState().setUpdatesTier(tier);
+    });
+
     settingSocket.on('saveprogress', (status: string, payload?: {message?: string}) => {
       const {setToastState} = useStore.getState();
       if (status === 'saved') {
