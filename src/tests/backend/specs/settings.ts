@@ -321,6 +321,31 @@ describe(__filename, function () {
     });
   });
 
+  // Regression test for ether/etherpad#8574. Docker deployments must expose
+  // every setting available in the source-install template, while retaining
+  // their environment-variable overrides.
+  describe('Docker settings parity (issue #8574)', function () {
+    const dockerSettings = path.join(__dirname, '../../../../settings.json.docker');
+    const templateSettings = path.join(__dirname, '../../../../settings.json.template');
+
+    const paths = (value: any, prefix = '', result = new Set<string>()) => {
+      if (value == null || typeof value !== 'object' || Array.isArray(value)) return result;
+      for (const [key, child] of Object.entries(value)) {
+        const current = prefix ? `${prefix}.${key}` : key;
+        result.add(current);
+        paths(child, current, result);
+      }
+      return result;
+    };
+
+    it('includes every template setting', function () {
+      const template = exportedForTestingOnly.parseSettings(templateSettings, true);
+      const docker = exportedForTestingOnly.parseSettings(dockerSettings, true);
+      const missing = [...paths(template)].filter((key) => !paths(docker).has(key));
+      assert.deepEqual(missing, []);
+    });
+  });
+
   // Regression test for the jsonminify -> jsonc-parser migration.
   // The old parser was `jsonminify(str).replace(',]', ']').replace(',}', '}')`,
   // which had two correctness bugs that jsonc-parser (allowTrailingComma) fixes:
