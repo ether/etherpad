@@ -94,7 +94,12 @@ jobs:
           NEW_VERSION=$(node <<'EOF'
           const fs = require('fs');
           const p = require('./package.json');
-          const m = /^(\d+)\.(\d+)\.(\d+)(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$/.exec(p.version);
+          // The regex from semver.org: no leading zeros, no empty identifiers.
+          const id = '(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)';
+          const m = new RegExp(
+              '^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)' +
+              `(-${id}(?:\\.${id})*)?` +
+              '(\\+[0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*)?$').exec(p.version);
           if (m == null) {
             console.error(`package.json version '${p.version}' is not valid semver`);
             process.exit(1);

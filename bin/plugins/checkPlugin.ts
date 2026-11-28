@@ -218,6 +218,17 @@ log4js.configure({
   if (!files.includes('.git')) throw new Error('No .git folder, aborting');
   prepareRepo();
 
+  // The release that a pushed commit triggers can only bump a valid semver
+  // version, so stop before changing anything if the version is missing or
+  // invalid.
+  if (files.includes('package.json')) {
+    const {version} =
+        JSON.parse(await fsp.readFile(`${pluginPath}/package.json`, {encoding: 'utf8'}));
+    if (typeof version !== 'string' || semver.valid(version) == null) {
+      throw new Error(`package.json version '${version}' is not valid semver; fix it by hand`);
+    }
+  }
+
   // test-and-release.yml calls lint.yml, so the two must be synced together.
   const workflows = [
     'backend-tests.yml', 'frontend-tests.yml', 'lint.yml', 'npmpublish.yml', 'test-and-release.yml',
@@ -256,10 +267,8 @@ log4js.configure({
     });
 
     // The version is not bumped here: the plugin's npmpublish workflow bumps
-    // and tags it on every push to the default branch.
-    if (semver.valid(parsedPackageJSON.version) == null) {
-      logger.warn(`package.json version '${parsedPackageJSON.version}' is not valid semver`);
-    }
+    // and tags it on every push to the default branch. Its validity is checked
+    // before anything is changed, near the top.
 
     await updateDeps(parsedPackageJSON, 'peerDependencies', {
       // These were moved to eslint-config-etherpad's dependencies so they can be removed:

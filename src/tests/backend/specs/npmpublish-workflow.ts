@@ -116,11 +116,13 @@ describe(`${__filename} version bump`, function () {
     });
   }
 
-  it('fails instead of writing an invalid version', function () {
-    const res = bump('1.2');
-    assert.notEqual(res.status, 0);
-    assert.equal(res.written, '1.2');
-  });
+  for (const bad of ['1.2', '01.2.3', '1.2.3-01', '1.2.3-', '1.2.3-beta..1', '1.2.3+', 'v1.2.3']) {
+    it(`fails without writing anything for invalid version ${bad}`, function () {
+      const res = bump(bad);
+      assert.notEqual(res.status, 0);
+      assert.equal(res.written, bad);
+    });
+  }
 
   it('only uses --frozen-lockfile when pnpm-lock.yaml exists', function () {
     const yml = fs.readFileSync(NPMPUBLISH_YML, 'utf8');
