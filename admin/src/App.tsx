@@ -78,6 +78,9 @@ export const App = () => {
       if (settings && typeof settings.flags === 'object' && settings.flags) {
         useStore.getState().setGdprAuthorErasureEnabled(
             !!settings.flags.gdprAuthorErasure);
+        if (typeof settings.flags.updatesTier === 'string') {
+          useStore.getState().setUpdatesTier(settings.flags.updatesTier);
+        }
       }
       if (settings.results === 'NOT_ALLOWED') {
         console.log('Not allowed to view settings.json')
@@ -90,6 +93,12 @@ export const App = () => {
       // and the SPA degrades to today's behaviour when it's null.
       useStore.getState().setResolved(settings.resolved ?? null);
       useStore.getState().setShowLoading(false);
+    });
+
+    // Sent by the server on every connect, even when settings.json can't be
+    // read. The update banner and page wait for it (issue #8573).
+    settingSocket.on('updatesTier', (tier: unknown) => {
+      if (typeof tier === 'string') useStore.getState().setUpdatesTier(tier);
     });
 
     settingSocket.on('saveprogress', (status: string, payload?: {message?: string}) => {

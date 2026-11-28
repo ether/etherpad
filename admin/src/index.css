@@ -869,6 +869,33 @@ input, button, select, optgroup, textarea {
   font-weight: 500;
 }
 
+/* updates.tier "off": informational, not a warning colour (#8573). */
+.update-banner-off {
+  align-items: flex-start;
+  justify-content: space-between;
+  background: #eef6fc;
+  color: #1f3a52;
+  border-color: #b9d8f0;
+  border-left: 4px solid #0ea5e9;
+  line-height: 1.5;
+}
+.update-banner-off code {
+  font-size: 13px;
+  padding: 0 3px;
+  background: rgba(14, 165, 233, .12);
+  border-radius: 3px;
+}
+.update-banner-dismiss {
+  flex: none;
+  background: transparent;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  color: inherit;
+  font-size: 13px;
+  padding: 2px 8px;
+  cursor: pointer;
+}
+
 /* Update page layout. */
 .update-page { padding: 16px 0; }
 .update-page h1 { margin-bottom: 16px; }

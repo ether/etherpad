@@ -3,6 +3,7 @@
 ### Notable fixes
 
 - **Updates — pads no longer call `/api/version-status` when `updates.tier` is `"off"` (#8573).** The server does not register that endpoint when the tier is off, but the pad still requested it on every load, leaving a 404 in the browser's network tab. The server now sends `clientVars.updateCheck: false` and the pad skips the request. Other tiers are unchanged. Reported by @n-goncalves.
+- **Admin UI — no more `/admin/update/status` request when `updates.tier` is `"off"` (#8573).** The server does not register that route when the tier is off, but the admin banner and update page still requested it. The admin UI now reads the tier from its settings socket and skips the request. Instead it shows a notice that update notifications are turned off, so you may not hear about security updates, with how to turn them back on (`updates.tier` in `settings.json` or the `UPDATES_TIER` environment variable) and a link to the update docs. The notice can be dismissed for the browser session. The troubleshooting page also stops showing "Update available: undefined" when `privacy.updateCheck` is `false`. Other tiers are unchanged.
 
 # 3.3.22
 

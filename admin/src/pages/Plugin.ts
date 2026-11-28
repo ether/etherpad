@@ -53,5 +53,8 @@ export type HelpObj = {
   installedParts: string[],
   installedPlugins: string[],
   installedServerHooks: Record<string, never>,
-  latestVersion: string
+  // Missing when privacy.updateCheck is false or the check has not finished.
+  latestVersion?: string,
+  // False when privacy.updateCheck is false (the latest version is never fetched).
+  versionCheck?: boolean,
 }
