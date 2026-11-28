@@ -11,6 +11,10 @@ const freshPad = async (page: Page, clientVarOverrides: Record<string, unknown> 
   // padHelper.ts) so it can't race with postAceInit or steal DOM focus.
   // clientVarOverrides lets a test simulate server-side settings (e.g.
   // updateCheck:false for updates.tier "off") without restarting the server.
+  // updateCheck defaults to true because every test mocks
+  // /api/version-status: the result must not depend on the server's
+  // updates.tier (plugin CI runs core with the tier "off").
+  const overrides = {updateCheck: true, ...clientVarOverrides};
   await page.addInitScript((overrides) => {
     let stored: unknown;
     Object.defineProperty(window, 'clientVars', {
@@ -24,7 +28,7 @@ const freshPad = async (page: Page, clientVarOverrides: Record<string, unknown> 
         stored = v;
       },
     });
-  }, clientVarOverrides);
+  }, overrides);
   const padId = `FRONTEND_TESTS${randomUUID()}`;
   await page.goto(`http://localhost:9001/p/${padId}`);
   await page.waitForSelector('iframe[name="ace_outer"]');
