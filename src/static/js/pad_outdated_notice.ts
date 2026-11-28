@@ -15,7 +15,14 @@ const currentPadId = (): string | null => {
   return typeof id === 'string' && id.length > 0 ? id : null;
 };
 
+// The server sets clientVars.updateCheck=false when updates.tier is "off" and
+// /api/version-status is not registered, so skip the request entirely rather
+// than produce a 404 on every pad load (issue #8573). Anything other than an
+// explicit false keeps the check on.
+const updateCheckEnabled = (): boolean => (window as any).clientVars?.updateCheck !== false;
+
 export const maybeShowOutdatedNotice = async (): Promise<void> => {
+  if (!updateCheckEnabled()) return;
   const padId = currentPadId();
   if (!padId) return;
   const $ = (window as any).$;

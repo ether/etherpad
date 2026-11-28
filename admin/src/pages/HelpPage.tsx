@@ -45,8 +45,12 @@ export const HelpPage = () => {
 
   const totalBindings = hooks.reduce((n, h) => n + h.parts.length, 0)
 
-  const updateAvailable = helpData
-    ? helpData.epVersion.localeCompare(helpData.latestVersion, undefined, {numeric: true}) < 0
+  // latestVersion is missing when privacy.updateCheck is false (or the
+  // legacy check has not finished); don't report "update available: undefined".
+  const latestKnown = !!helpData?.latestVersion
+  const versionCheckOff = helpData?.versionCheck === false
+  const updateAvailable = helpData && latestKnown
+    ? helpData.epVersion.localeCompare(helpData.latestVersion!, undefined, {numeric: true}) < 0
     : false
 
   const copyDiag = () => {
@@ -89,17 +93,24 @@ export const HelpPage = () => {
         <div className="pm-hv-main">
           <div className="pm-hv-lbl"><Trans i18nKey="admin_plugins_info.version"/></div>
           <div className="pm-hv-num">{helpData.epVersion}</div>
-          <div className={`pm-hv-status${updateAvailable ? ' is-warn' : ' is-ok'}`}>
-            <span className="pm-hv-dot"/>
-            {updateAvailable
-              ? t('admin_plugins_info.update_available', {version: helpData.latestVersion})
-              : t('admin_plugins_info.up_to_date')}
-          </div>
+          {versionCheckOff ? (
+            <div className="pm-hv-status is-warn" data-testid="version-check-off">
+              <span className="pm-hv-dot"/>
+              <Trans i18nKey="admin_plugins_info.version_check_off" components={{code: <code/>}}/>
+            </div>
+          ) : latestKnown && (
+            <div className={`pm-hv-status${updateAvailable ? ' is-warn' : ' is-ok'}`}>
+              <span className="pm-hv-dot"/>
+              {updateAvailable
+                ? t('admin_plugins_info.update_available', {version: helpData.latestVersion})
+                : t('admin_plugins_info.up_to_date')}
+            </div>
+          )}
         </div>
         <div className="pm-hv-meta">
           <div className="pm-hv-cell">
             <div className="pm-hv-cell-lbl"><Trans i18nKey="admin_plugins_info.version_latest"/></div>
-            <div className="pm-hv-cell-val">{helpData.latestVersion}</div>
+            <div className="pm-hv-cell-val">{helpData.latestVersion ?? '—'}</div>
           </div>
           <div className="pm-hv-cell">
             <div className="pm-hv-cell-lbl"><Trans i18nKey="admin_plugins_info.git_sha"/></div>

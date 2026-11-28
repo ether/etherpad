@@ -6,10 +6,16 @@ import {randomUUID} from 'node:crypto';
 // independently of any other gritter surfaced during the pad session.
 const NOTICE = '#gritter-container.bottom .gritter-item.outdated-notice';
 
-const freshPad = async (page: Page) => {
+const freshPad = async (page: Page, clientVarOverrides: Record<string, unknown> = {}) => {
   // Suppress the pad-deletion-token modal (same technique as goToNewPad in
   // padHelper.ts) so it can't race with postAceInit or steal DOM focus.
-  await page.addInitScript(() => {
+  // clientVarOverrides lets a test simulate server-side settings (e.g.
+  // updateCheck:false for updates.tier "off") without restarting the server.
+  // updateCheck defaults to true because every test mocks
+  // /api/version-status: the result must not depend on the server's
+  // updates.tier (plugin CI runs core with the tier "off").
+  const overrides = {updateCheck: true, ...clientVarOverrides};
+  await page.addInitScript((overrides) => {
     let stored: unknown;
     Object.defineProperty(window, 'clientVars', {
       configurable: true,
@@ -17,11 +23,12 @@ const freshPad = async (page: Page) => {
       set(v) {
         if (v != null && typeof v === 'object') {
           (v as {padDeletionToken?: string | null}).padDeletionToken = null;
+          Object.assign(v, overrides);
         }
         stored = v;
       },
     });
-  });
+  }, overrides);
   const padId = `FRONTEND_TESTS${randomUUID()}`;
   await page.goto(`http://localhost:9001/p/${padId}`);
   await page.waitForSelector('iframe[name="ace_outer"]');
@@ -120,5 +127,37 @@ test.describe('outdated notice (gritter-based)', () => {
     // Wait for auto-fade (time:8000 ms in the gritter.add call).
     await page.waitForTimeout(9000);
     await expect(page.locator(NOTICE)).toHaveCount(0);
+  });
+
+  test('updateCheck:false (updates.tier "off") — no /api/version-status request',
+      async ({page}) => {
+        // Issue #8573: the server does not register the endpoint when the tier
+        // is off, so the client must not call it at all (no 404 in devtools).
+        const requests: string[] = [];
+        page.on('request', (req) => {
+          if (req.url().includes('/api/version-status')) requests.push(req.url());
+        });
+        await freshPad(page, {updateCheck: false});
+        await page.waitForTimeout(1000);
+        expect(requests).toEqual([]);
+        await expect(page.locator(NOTICE)).toHaveCount(0);
+      });
+
+  // freshPad forces updateCheck:true, so this checks the client side only. The
+  // server's tier -> clientVars.updateCheck mapping is covered by the backend
+  // spec updateCheckClientVar.ts.
+  test('updateCheck:true — the version-status request is made', async ({page}) => {
+    const requests: string[] = [];
+    await page.route('**/api/version-status*', (route) => {
+      requests.push(route.request().url());
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({outdated: null, isFirstAuthor: true}),
+      });
+    });
+    await freshPad(page);
+    await expect.poll(() => requests.length).toBe(1);
+    expect(requests[0]).toContain('padId=');
   });
 });

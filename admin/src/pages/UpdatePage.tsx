@@ -1,6 +1,7 @@
-import {useEffect, useState} from 'react';
+import {useEffect, useRef, useState} from 'react';
 import {Trans, useTranslation} from 'react-i18next';
 import {useStore} from '../store/store';
+import {UpdatesOffNotice} from '../components/UpdatesOffNotice';
 
 type FetchState =
   | {kind: 'loading'}
@@ -25,17 +26,27 @@ export const UpdatePage = () => {
   const setUpdateStatus = useStore((s) => s.setUpdateStatus);
   const log = useStore((s) => s.updateLog);
   const setLog = useStore((s) => s.setUpdateLog);
+  const updatesTier = useStore((s) => s.updatesTier);
+  // Read inside async callbacks so a request that was started before the
+  // tier turned "off" can't overwrite the notice or keep polling.
+  const tierRef = useRef(updatesTier);
+  tierRef.current = updatesTier;
+  const tierOff = () => tierRef.current === 'off';
   // Self-fetch so the page renders an explicit state even if UpdateBanner's
-  // best-effort fetch never landed (route returns 404 when tier=off, 401/403
-  // if requireAdminForStatus is set, or a transient network error).
+  // best-effort fetch never landed (401/403 if requireAdminForStatus is set,
+  // or a transient network error). Tier "off" never reaches the fetch: the
+  // tier comes from the /settings socket (issue #8573).
   const [fetchState, setFetchState] = useState<FetchState>(us ? {kind: 'ok'} : {kind: 'loading'});
   const [actionInFlight, setActionInFlight] = useState(false);
 
   const refreshStatus = async () => {
+    if (tierOff()) return;
     try {
       const r = await fetch('/admin/update/status', {credentials: 'same-origin'});
+      if (tierOff()) return;
       if (r.ok) {
         const data = await r.json();
+        if (tierOff()) return;
         setUpdateStatus(data);
         setFetchState({kind: 'ok'});
       } else if (r.status === 404) {
@@ -46,25 +57,34 @@ export const UpdatePage = () => {
         setFetchState({kind: 'error', status: r.status});
       }
     } catch {
+      if (tierOff()) return;
       setFetchState({kind: 'error', status: 0});
     }
   };
 
   useEffect(() => {
+    // The tier comes from the /settings socket. Until it arrives, keep
+    // loading. With tier "off" the status route is not registered, so show
+    // the notice without requesting it (issue #8573).
+    if (updatesTier == null) return;
+    if (updatesTier === 'off') {
+      setFetchState({kind: 'disabled'});
+      return;
+    }
     let cancelled = false;
     void refreshStatus().then(() => { if (cancelled) return; });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [updatesTier]);
 
   // Poll log + status while the executor is in flight, then stop.
   const status = us?.execution?.status ?? 'idle';
   const inFlight = IN_FLIGHT_STATUSES.includes(status);
   useEffect(() => {
-    if (!inFlight) return;
+    if (!inFlight || updatesTier === 'off') return;
     let cancelled = false;
     const tick = async () => {
-      if (cancelled) return;
+      if (cancelled || tierOff()) return;
       try {
         const lr = await fetch('/admin/update/log', {credentials: 'same-origin'});
         if (lr.ok) setLog(await lr.text());
@@ -75,7 +95,7 @@ export const UpdatePage = () => {
     void tick();
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [inFlight]);
+  }, [inFlight, updatesTier]);
 
   const post = async (path: string) => {
     setActionInFlight(true);
@@ -114,7 +134,7 @@ export const UpdatePage = () => {
     return (
       <div className="update-page">
         <h1><Trans i18nKey="update.page.title"/></h1>
-        <p>{t('update.page.disabled', {defaultValue: 'Update checks are disabled (updates.tier = "off").'})}</p>
+        <UpdatesOffNotice/>
       </div>
     );
   }

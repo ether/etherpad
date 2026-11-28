@@ -100,6 +100,7 @@
 	"admin_plugins.deprecated_title": "ایہ پلگ ان ہݨ برقرار نہیں رکھا ویندا تے ایتھر پیڈ کوں خراب کر سڳدا ہے۔ اینکوں ان انسٹال کرݨ تے غور کرو۔",
 	"admin_plugins.tag_core": "مرکزی",
 	"admin_plugins.tag_deprecated": "متروک",
+	"admin_plugins.tag_official": "دفتری",
 	"admin_plugins.update_tooltip": "اپ ڈیٹ",
 	"admin_plugins.updates_available": "اپ ڈیٹاں دستیاب ہن",
 	"admin_plugins.update_now": "اپ ڈیٹ",

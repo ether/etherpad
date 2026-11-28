@@ -231,6 +231,16 @@
   },
 
   /*
+   * Admin OpenAPI document at /admin/openapi.json.
+   *
+   * Disabled by default. Enable it for third-party tooling such as Postman or
+   * swagger-ui; the admin SPA at /admin/ works regardless of this setting.
+   */
+  "adminOpenAPI": {
+    "enabled": "${ADMIN_OPENAPI_ENABLED:false}"
+  },
+
+  /*
    * Contact address for admin notifications (updates, security advisories, future features).
    * Set to null to disable outbound mail from the updater.
    */
@@ -255,6 +265,26 @@
   "cleanup": {
     "enabled": false,
     "keepRevisions": 5
+  },
+
+  /*
+   * Pad retention: delete pads nobody has edited for `deleteAfterDays` days.
+   * Deletion is permanent: revisions, chat and read-only links are removed.
+   * Export anything you need first.
+   *
+   * `dryRun` logs pads that would be deleted without deleting them.
+   * `warnBeforeDays` controls the notice shown in pads nearing deletion.
+   * `excludeGroupPads` protects integration pads (g.xxx$name), and
+   * `excludePattern` can protect pad IDs with a regular expression.
+   */
+  "padRetention": {
+    "enabled": "${PAD_RETENTION_ENABLED:false}",
+    "dryRun": "${PAD_RETENTION_DRY_RUN:true}",
+    "deleteAfterDays": "${PAD_RETENTION_DELETE_AFTER_DAYS:365}",
+    "warnBeforeDays": "${PAD_RETENTION_WARN_BEFORE_DAYS:7}",
+    "sweepIntervalHours": "${PAD_RETENTION_SWEEP_INTERVAL_HOURS:1}",
+    "excludeGroupPads": "${PAD_RETENTION_EXCLUDE_GROUP_PADS:true}",
+    "excludePattern": "${PAD_RETENTION_EXCLUDE_PATTERN:null}"
   },
 
   /*
@@ -288,6 +318,7 @@
   * Set to false to revert to the legacy single-settings behavior.
   **/
   "enablePadWideSettings": "${ENABLE_PAD_WIDE_SETTINGS:true}",
+  "enablePluginPadOptions": "${ENABLE_PLUGIN_PAD_OPTIONS:true}",
 
   /*
    * Optional privacy banner. See settings.json.template for full field docs.
@@ -336,6 +367,8 @@
     "updateCheck": "${PRIVACY_UPDATE_CHECK:true}",
     "pluginCatalog": "${PRIVACY_PLUGIN_CATALOG:true}"
   },
+
+  "pluginCatalogThirdParty": "${PLUGIN_CATALOG_THIRD_PARTY:label}",
 
   /*
    * The type of the database.
@@ -476,6 +509,8 @@
    */
   "docxExport": "${DOCX_EXPORT:true}",
 
+  "exportPdfFonts": {},
+
   /*
    * txt, doc, docx, rtf, odt, html & htm
    */
@@ -582,7 +617,8 @@
      * this to null.
      */
     // 86400000 = 1d * 24h/d * 60m/h * 60s/m * 1000ms/s
-    "sessionRefreshInterval": "${COOKIE_SESSION_REFRESH_INTERVAL:86400000}"
+    "sessionRefreshInterval": "${COOKIE_SESSION_REFRESH_INTERVAL:86400000}",
+    "sessionCleanup": "${COOKIE_SESSION_CLEANUP:true}"
   },
 
   /*
@@ -736,7 +772,9 @@
      * You only need this to let a page on a different origin use the admin
      * namespaces.
      */
-    "allowedOrigins": "${SOCKETIO_ALLOWED_ORIGINS:}"
+    "allowedOrigins": "${SOCKETIO_ALLOWED_ORIGINS:}",
+    "padAllowedOrigins": "${SOCKETIO_PAD_ALLOWED_ORIGINS:}",
+    "crossOriginPadSockets": "${SOCKETIO_CROSS_ORIGIN_PAD_SOCKETS:anonymous}"
   },
 
   /*
@@ -798,7 +836,9 @@
     "duration": "${COMMIT_RATE_LIMIT_DURATION:1}",
 
     // maximum number of changes per IP to allow during the rate limit window
-    "points": "${COMMIT_RATE_LIMIT_POINTS:10}"
+    "points": "${COMMIT_RATE_LIMIT_POINTS:10}",
+    "burstDuration": "${COMMIT_RATE_LIMIT_BURST_DURATION:10}",
+    "burstPoints": "${COMMIT_RATE_LIMIT_BURST_POINTS:50}"
   },
 
   /*
@@ -833,12 +873,15 @@
    */
   "exposeVersion": "${EXPOSE_VERSION:false}",
 
+  "adminFrameAncestors": [],
+
   /*
    * The log level we are using.
    *
    * Valid values: DEBUG, INFO, WARN, ERROR
    */
   "loglevel": "${LOGLEVEL:INFO}",
+  "logLayoutType": "${LOG_LAYOUT_TYPE:colored}",
 
   /* Override any strings found in locale directories */
   "customLocaleStrings": {},
@@ -852,6 +895,7 @@
   "lowerCasePadIds": "${LOWER_CASE_PAD_IDS:false}",
   "sso": {
     "issuer": "${SSO_ISSUER:http://localhost:9001}",
+      "cookieKeys": ["${OIDC_COOKIE_KEY:}"],
       "clients": [
         {
           "client_id": "${ADMIN_CLIENT:admin_client}",
