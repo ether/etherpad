@@ -143,7 +143,10 @@ test.describe('outdated notice (gritter-based)', () => {
         await expect(page.locator(NOTICE)).toHaveCount(0);
       });
 
-  test('default tier — the version-status request is still made', async ({page}) => {
+  // freshPad forces updateCheck:true, so this checks the client side only. The
+  // server's tier -> clientVars.updateCheck mapping is covered by the backend
+  // spec updateCheckClientVar.ts.
+  test('updateCheck:true — the version-status request is made', async ({page}) => {
     const requests: string[] = [];
     await page.route('**/api/version-status*', (route) => {
       requests.push(route.request().url());
