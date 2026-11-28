@@ -73,6 +73,8 @@ export type ClientVarPayload = {
   padRetention?: null |
     {state: 'expiring', msRemaining: number} |
     {state: 'expired', deleteAfterDays: number},
+  // False when settings.updates.tier is "off"; the client then skips GET /api/version-status.
+  updateCheck?: boolean,
   padId: string,
   colorPalette: string[],
   accountPrivs: {

@@ -1554,6 +1554,10 @@ const handleClientReady = async (
       // would leak them to every browser. See getPublicPrivacyBanner().
       privacyBanner: getPublicPrivacyBanner(),
       padRetention,
+      // False when updates.tier is "off": the server does not register
+      // GET /api/version-status in that case, so the client must not call it
+      // (issue #8573). Every other tier keeps the existing check.
+      updateCheck: settings.updates.tier !== 'off',
       automaticReconnectionTimeout: settings.automaticReconnectionTimeout,
       initialRevisionList: [],
       initialOptions: pad.getPadSettings(),
