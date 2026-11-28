@@ -1,0 +1,31 @@
+#sidediv {
+  background-color: transparent;
+  border: none;
+  opacity: .8;
+}
+
+#sidedivinner>div:before {
+  font-family: var(--main-font-family); /* the parent div have font-family monospace (line number) */
+  color: #485365;
+  color: var(--text-color);
+  font-weight: bold;
+}
+
+#sidedivinner>div .line-number {
+  line-height: inherit;
+  font-family: RobotoMono;
+  display: inline-block;
+  color: #576273;
+  color: var(--text-soft-color);
+  height:100%;
+}
+
+#sidedivinner>div .line-number:hover {
+  background-color: var(--bg-soft-color);
+  border-radius: 5px 0 0 5px;  
+  font-weight: bold;
+  color: var(--text-color);
+}
+.plugin-ep_author_neat #sidedivinner>div .line-number:hover {
+  background-color: transparent;
+}

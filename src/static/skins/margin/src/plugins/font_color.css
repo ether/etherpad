@@ -1,0 +1,41 @@
+.font-color-icon {
+  display: none !important;
+}
+
+#font-color {
+  display: list-item !important;
+}
+.readonly #font-color {
+  display: none !important;
+}
+
+.color\:black,
+[data-color=black] {
+  color: #485365;
+  color: var(--text-color);
+}
+
+.color\:red,
+[data-color=red] {
+  color: #F44336;
+}
+
+.color\:green,
+[data-color=green] {
+  color: #66d29c;
+}
+
+.color\:blue,
+[data-color=blue] {
+  color: #2196f3;
+}
+
+.color\:yellow,
+[data-color=yellow] {
+  color: #ffeb3b;
+}
+
+.color\:orange,
+[data-color=orange] {
+  color: #FF9800;
+}
