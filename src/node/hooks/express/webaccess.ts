@@ -1,6 +1,7 @@
 'use strict';
 
 import {strict as assert} from "assert";
+import crypto from 'node:crypto';
 import log4js from 'log4js';
 import {SocketClientRequest} from "../../types/SocketClientRequest";
 import {WebAccessTypes} from "../../types/WebAccessTypes";
@@ -11,6 +12,16 @@ import {anonymizeIp} from '../../utils/anonymizeIp';
 import {adminSocketToken, padCredentialBinding, padSocketToken} from '../../utils/socketOrigin';
 const hooks = require('../../../static/js/pluginfw/hooks');
 import readOnlyManager from '../../db/ReadOnlyManager';
+
+// Constant-time compare, same as the API key check in APIHandler.ts, so the
+// response time doesn't reveal how much of the password was right. UTF-16LE keeps
+// every code unit as-is; UTF-8 would turn a lone surrogate into U+FFFD, so a
+// configured "\ud800" would also accept "\ufffd".
+const passwordMatches = (expected: string, provided: string | null | undefined) => {
+  const want = Buffer.from(expected, 'utf16le');
+  const got = Buffer.from(String(provided ?? ''), 'utf16le');
+  return want.length === got.length && crypto.timingSafeEqual(want, got);
+};
 
 hooks.deprecationNotices.authFailure = 'use the authnFailure and authzFailure hooks instead';
 
@@ -228,7 +239,7 @@ const checkAccess = async (req:any, res:any, next: Function) => {
     if (!httpBasicAuth ||
         !ctx.username ||
         password == null || password.toString() === '' ||
-        password.toString() !== ctx.password) {
+        !passwordMatches(password.toString(), ctx.password)) {
       httpLogger.info(
           `Failed authentication from IP ${anonymizeIp(req.ip, settings.ipLogging)}`);
       if (await aCallFirst0('authnFailure', {req, res})) return;

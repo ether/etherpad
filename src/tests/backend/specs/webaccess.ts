@@ -132,6 +132,26 @@ describe(__filename, function () {
       }
     });
 
+    describe('login fails if password is wrong', function () {
+      // Same length, a prefix, a longer string, and one with the same number of
+      // characters but a different byte length.
+      for (const attempt of ['admin-passwore', 'admin-pass', 'admin-password1', 'admin-passwörd']) {
+        it(`password: ${attempt}`, async function () {
+          await agent.get('/admin-auth/').auth('admin', attempt).expect(401);
+        });
+      }
+    });
+
+    it('does not accept U+FFFD for a password with a lone surrogate', async function () {
+      settings.users.admin.password = '\ud800';
+      await agent.get('/admin-auth/').auth('admin', '\ufffd').expect(401);
+    });
+
+    it('accepts a password that contains a colon', async function () {
+      settings.users.admin.password = 'admin:password';
+      await agent.get('/admin-auth/').auth('admin', 'admin:password').expect(200);
+    });
+
     describe('login fails if password is nullish', function () {
       for (const adminPassword of [undefined, null]) {
         // https://tools.ietf.org/html/rfc7617 says that the username and password are sent as

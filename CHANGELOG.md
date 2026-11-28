@@ -1,5 +1,9 @@
 # 3.3.23
 
+### Security
+
+- **Basic auth — the password is compared in constant time (#8572).** The HTTP basic auth fallback compared the submitted password with `!==`, which stops at the first differing character, so response timing could hint at how much of a guess was right. It now uses `crypto.timingSafeEqual`, like the API key check. Which passwords are accepted is unchanged. Contributed by @ofri-peretz.
+
 ### Notable fixes
 
 - **Updates — pads no longer call `/api/version-status` when `updates.tier` is `"off"` (#8573).** The server does not register that endpoint when the tier is off, but the pad still requested it on every load, leaving a 404 in the browser's network tab. The server now sends `clientVars.updateCheck: false` and the pad skips the request. Other tiers are unchanged. Reported by @n-goncalves.
