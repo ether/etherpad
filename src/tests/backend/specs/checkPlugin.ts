@@ -9,7 +9,6 @@
 import {strict as assert} from 'assert';
 import * as childProcess from 'child_process';
 import * as fs from 'fs';
-import * as os from 'os';
 import * as path from 'path';
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..', '..', '..');
@@ -25,7 +24,10 @@ describe(__filename, function () {
   let remote: string;
 
   beforeEach(function () {
-    tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'checkPlugin-'));
+    // Next to the core checkout rather than in os.tmpdir(): checkPlugin takes
+    // the plugin as a path relative to the checkout's parent, and on Windows
+    // the temp dir can be on another drive, where no relative path exists.
+    tmp = fs.mkdtempSync(path.join(path.dirname(REPO_ROOT), '.checkPlugin-test-'));
     remote = path.join(tmp, 'remote.git');
     plugin = path.join(tmp, 'ep_test_invalid_version');
     git(tmp, 'init', '-q', '--bare', '-b', 'main', remote);
