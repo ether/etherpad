@@ -37,6 +37,24 @@ describe(__filename, function () {
       assert.deepEqual(keys, ['k1', 'k2']);
     });
 
+    it('keeps numeric and boolean Docker cookie keys as strings', function () {
+      const previous = process.env.OIDC_COOKIE_KEY;
+      try {
+        for (const value of ['12345', 'true']) {
+          process.env.OIDC_COOKIE_KEY = value;
+          const dockerSettings = exportedForTestingOnly.parseSettings(
+              path.join(__dirname, '../../../../settings.json.docker'), true);
+          assert.deepEqual(resolveOidcCookieKeys({
+            cookieKeys: dockerSettings!.sso.cookieKeys,
+            sessionKey: 'fallback',
+          }), [value]);
+        }
+      } finally {
+        if (previous === undefined) delete process.env.OIDC_COOKIE_KEY;
+        else process.env.OIDC_COOKIE_KEY = previous;
+      }
+    });
+
     it('ignores empty/invalid entries in cookieKeys and falls through', function () {
       const keys = resolveOidcCookieKeys({cookieKeys: ['', null as any], sessionKey: 'secret'});
       assert.equal(keys.length, 1);

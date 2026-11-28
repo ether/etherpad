@@ -802,5 +802,5 @@ Returns an outdated-version signal intended for the pad-side gritter.
 }
 ```
 
-`outdated` is `"minor"` only when the running server is at least one minor version behind the latest published release AND the request resolves to the pad's first author. Otherwise it is `null`. Result is cached per `(padId, authorId)` for 60s. The endpoint is disabled entirely when `updates.tier = 'off'`.
+`outdated` is `"minor"` only when the running server is at least one minor version behind the latest published release AND the request resolves to the pad's first author. Otherwise it is `null`. Result is cached per `(padId, authorId)` for 60s. The endpoint is disabled entirely when `updates.tier = 'off'`; the pad client then receives `clientVars.updateCheck: false` and does not call it.
 
