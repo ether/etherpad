@@ -4,6 +4,13 @@ on:
   schedule:
     - cron: '0 6 * * *'  # Daily at 06:00 UTC
   workflow_dispatch:  # Allow manual trigger
+    inputs:
+      dry_run:
+        description: >-
+          Dry run: apply the fixes locally and print the diffs, but do not
+          commit, push or merge anything (runs without PLUGINS_PAT).
+        type: boolean
+        default: true
 
 # The cross-repo work (cloning ether/ep_* repos, pushing updates, merging
 # Dependabot PRs) is authenticated via secrets.PLUGINS_PAT. The default
@@ -11,11 +18,18 @@ on:
 permissions:
   contents: read
 
+env:
+  # Scheduled runs have no inputs, so they are never dry runs.
+  DRY_RUN: ${{ inputs.dry_run == true }}
+  # Repos the sweep never touches: ep_kaput is managed by hand, and the
+  # others use their own CI layout rather than the plugin templates.
+  SKIP_REPOS: ep_kaput ep_ai_chat ep_ai_core ep_ai_mcp ep_infos ep_plugin_helpers
+
 jobs:
   update-plugins:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out etherpad-lite
+      - name: Check out etherpad
         uses: actions/checkout@v7
 
       - uses: pnpm/action-setup@v6.1.1
@@ -39,61 +53,97 @@ jobs:
 
       - name: Clone and update all plugins
         env:
-          GH_TOKEN: ${{ secrets.PLUGINS_PAT }}
+          # Dry runs only read public repos, so they use the read-only
+          # GITHUB_TOKEN and cannot push anywhere.
+          GH_TOKEN: ${{ inputs.dry_run == true && github.token || secrets.PLUGINS_PAT }}
         run: |
-          # Configure git to use the PAT for all ether/ repos
-          git config --global url."https://x-access-token:${GH_TOKEN}@github.com/ether/".insteadOf "https://github.com/ether/"
+          set -uo pipefail
+          if [ "$DRY_RUN" = true ]; then
+            mode=autofix
+            echo "Dry run: changes are applied locally and printed, nothing is pushed."
+          else
+            mode=autopush
+            # Use the PAT for all ether/ repos so checkPlugin can push.
+            git config --global url."https://x-access-token:${GH_TOKEN}@github.com/ether/".insteadOf "https://github.com/ether/"
+          fi
 
-          cd ..
-          # List all ep_* repos from ether org
-          plugins=$(gh repo list ether --limit 200 --json name --jq '.[] | select(.name | startswith("ep_")) | .name')
+          # checkPlugin expects each plugin checkout next to the core checkout.
+          core_dir="$GITHUB_WORKSPACE"
+          plugins_dir="$(dirname "$core_dir")"
 
-          failed=""
-          succeeded=""
-          skipped=""
+          plugins=$(gh repo list ether --limit 1000 --no-archived --json name \
+            --jq '.[] | select(.name | startswith("ep_")) | .name' | sort) || {
+            echo "::error::Could not list ether/ep_* repos"
+            exit 1
+          }
+          [ -n "$plugins" ] || { echo "::error::No ether/ep_* repos found"; exit 1; }
+
+          failed=()
+          succeeded=()
+          skipped=()
 
           for plugin in $plugins; do
-            echo "============================================================"
-            echo "Processing $plugin"
-            echo "============================================================"
-
-            # Clone if not present
-            if [ ! -d "$plugin" ]; then
-              git clone "https://github.com/ether/${plugin}.git" "$plugin" || { echo "SKIP: clone failed"; skipped="$skipped $plugin"; continue; }
+            if [[ " $SKIP_REPOS " == *" $plugin "* ]]; then
+              skipped+=("$plugin")
+              continue
             fi
 
-            # Pull latest
-            (cd "$plugin" && git pull --ff-only) || { echo "SKIP: pull failed"; skipped="$skipped $plugin"; continue; }
-
-            # Run checkPlugin with autopush — continue on failure
-            if cd etherpad-lite/bin && pnpm run checkPlugin "$plugin" autopush 2>&1; then
-              succeeded="$succeeded $plugin"
+            echo "::group::$plugin"
+            plugin_dir="$plugins_dir/$plugin"
+            if [ ! -d "$plugin_dir" ] &&
+               ! git clone "https://github.com/ether/${plugin}.git" "$plugin_dir"; then
+              echo "::error::$plugin: clone failed"
+              failed+=("$plugin (clone)")
+            elif ! git -C "$plugin_dir" pull --ff-only; then
+              echo "::error::$plugin: pull failed"
+              failed+=("$plugin (pull)")
+            elif ! (cd "$core_dir/bin" && pnpm run checkPlugin "$plugin" "$mode"); then
+              echo "::error::$plugin: checkPlugin failed"
+              failed+=("$plugin (checkPlugin)")
             else
-              echo "WARN: checkPlugin failed for $plugin"
-              failed="$failed $plugin"
+              succeeded+=("$plugin")
             fi
-            cd ../..
+            echo "::endgroup::"
           done
 
-          echo ""
-          echo "============================================================"
-          echo "SUMMARY"
-          echo "============================================================"
-          echo "Succeeded:$(echo $succeeded | wc -w) -$succeeded"
-          echo "Failed:$(echo $failed | wc -w) -$failed"
-          echo "Skipped:$(echo $skipped | wc -w) -$skipped"
+          {
+            if [ "$DRY_RUN" = true ]; then
+              echo "## Plugin template sync (dry run)"
+            else
+              echo "## Plugin template sync"
+            fi
+            echo ""
+            echo "- Succeeded: ${#succeeded[@]}"
+            echo "- Failed: ${#failed[@]}"
+            echo "- Skipped: ${#skipped[@]} (${skipped[*]:-none})"
+            if [ ${#failed[@]} -gt 0 ]; then
+              echo ""
+              echo "### Failed"
+              printf -- '- %s\n' "${failed[@]}"
+            fi
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
+          if [ ${#failed[@]} -gt 0 ]; then
+            echo "::error::${#failed[@]} plugin(s) failed: ${failed[*]}"
+            exit 1
+          fi
 
       - name: Merge clean Dependabot PRs on plugin repos
+        # Run even when some plugins failed to sync; skip on dry runs.
+        if: ${{ !cancelled() && env.DRY_RUN != 'true' }}
         env:
           GH_TOKEN: ${{ secrets.PLUGINS_PAT }}
         run: |
           # For every ep_* repo under ether, merge any Dependabot PR whose
           # mergeStateStatus is CLEAN (no conflicts, branch up to date, all
           # required checks green). Anything else is left alone for a human.
-          plugins=$(gh repo list ether --limit 200 --json name --jq '.[] | select(.name | startswith("ep_")) | .name')
+          plugins=$(gh repo list ether --limit 1000 --no-archived --json name --jq '.[] | select(.name | startswith("ep_")) | .name')
 
           merged=""
+          merge_failed=""
           for plugin in $plugins; do
+            # ep_kaput is managed by hand.
+            [ "$plugin" != ep_kaput ] || continue
             repo="ether/${plugin}"
             prs=$(gh pr list --repo "$repo" \
               --author "app/dependabot" \
@@ -106,10 +156,16 @@ jobs:
               if gh pr merge --repo "$repo" --squash --delete-branch "$pr"; then
                 merged="$merged ${repo}#${pr}"
               else
-                echo "WARN: failed to merge ${repo}#${pr}"
+                echo "::warning::failed to merge ${repo}#${pr}"
+                merge_failed="$merge_failed ${repo}#${pr}"
               fi
             done
           done
 
-          echo ""
-          echo "Merged Dependabot PRs:$merged"
+          {
+            echo ""
+            echo "## Dependabot merges"
+            echo ""
+            echo "- Merged:${merged:- none}"
+            echo "- Failed to merge:${merge_failed:- none}"
+          } | tee -a "$GITHUB_STEP_SUMMARY"

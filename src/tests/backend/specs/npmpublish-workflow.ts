@@ -79,3 +79,53 @@ describe(__filename, function () {
     );
   });
 });
+
+describe(`${__filename} version bump`, function () {
+  const childProcess = require('child_process');
+  const os = require('os');
+  let script: string;
+
+  before(function () {
+    const yml = fs.readFileSync(NPMPUBLISH_YML, 'utf8');
+    const m = /NEW_VERSION=\$\(node <<'EOF'\n([\s\S]*?)\n\s*EOF\n/.exec(yml);
+    assert.ok(m, 'expected the version bump to be a `node <<\'EOF\'` heredoc');
+    script = m![1].replace(/^ {10}/gm, '');
+  });
+
+  const bump = (version: string) => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'npmpublish-bump-'));
+    try {
+      fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify({name: 'x', version}));
+      const res = childProcess.spawnSync(process.execPath, ['-'], {cwd: dir, input: script});
+      const written = JSON.parse(fs.readFileSync(path.join(dir, 'package.json'), 'utf8')).version;
+      return {status: res.status, stdout: res.stdout.toString().trim(), written};
+    } finally {
+      fs.rmSync(dir, {recursive: true, force: true});
+    }
+  };
+
+  for (const [from, to] of [
+    ['1.2.3', '1.2.4'],
+    ['1.2.9', '1.2.10'],
+    ['1.2.3-beta.1', '1.2.3'],
+    ['2.0.0-rc.0', '2.0.0'],
+    ['1.2.3+build.5', '1.2.4'],
+  ]) {
+    it(`bumps ${from} to ${to}`, function () {
+      assert.deepEqual(bump(from), {status: 0, stdout: to, written: to});
+    });
+  }
+
+  for (const bad of ['1.2', '01.2.3', '1.2.3-01', '1.2.3-', '1.2.3-beta..1', '1.2.3+', 'v1.2.3']) {
+    it(`fails without writing anything for invalid version ${bad}`, function () {
+      const res = bump(bad);
+      assert.notEqual(res.status, 0);
+      assert.equal(res.written, bad);
+    });
+  }
+
+  it('only uses --frozen-lockfile when pnpm-lock.yaml exists', function () {
+    const yml = fs.readFileSync(NPMPUBLISH_YML, 'utf8');
+    assert.match(yml, /if \[ -f pnpm-lock\.yaml \]; then\n\s*pnpm i --frozen-lockfile\n/);
+  });
+});

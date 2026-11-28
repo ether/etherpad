@@ -22,6 +22,34 @@ import log4js from 'log4js';
 import path from 'node:path';
 import semver from "semver";
 
+// Template files that some plugins deliberately customise. checkPlugin leaves
+// these alone instead of overwriting them with the copy in bin/plugins/lib/.
+// Plugins whose ep.json declares `disables` also keep their frontend-tests.yml
+// automatically (they run bin/run-frontend-tests-with-disables.sh), so they
+// are listed here only for documentation.
+const KEEP_FILES: {[plugin: string]: string[]} = {
+  // Run the declared-disables helper (doc/PLUGIN_FEATURE_DISABLES.md).
+  ep_author_neat2: ['.github/workflows/frontend-tests.yml'],
+  ep_disable_change_author_name: ['.github/workflows/frontend-tests.yml'],
+  ep_disable_chat: ['.github/workflows/frontend-tests.yml'],
+  ep_disable_error_messages: ['.github/workflows/frontend-tests.yml'],
+  ep_disable_reset_authorship_colours: ['.github/workflows/frontend-tests.yml'],
+  ep_helmet: ['.github/workflows/frontend-tests.yml'],
+  ep_hide_line_numbers: ['.github/workflows/frontend-tests.yml'],
+  ep_right_to_left: ['.github/workflows/frontend-tests.yml'],
+  // Tests need features that core v2.7.3 lacks, so no Node 22 cell.
+  ep_author_hover: ['.github/workflows/frontend-tests.yml', '.github/workflows/backend-tests.yml'],
+  ep_post_data: ['.github/workflows/frontend-tests.yml', '.github/workflows/backend-tests.yml'],
+  ep_webrtc: ['.github/workflows/frontend-tests.yml', '.github/workflows/backend-tests.yml'],
+  ep_who_did_what: ['.github/workflows/frontend-tests.yml', '.github/workflows/backend-tests.yml'],
+  // Installs ep_file_menu_toolbar, whose Edit menu this plugin extends.
+  ep_copy_paste_select_all: ['.github/workflows/frontend-tests.yml'],
+  // Runs core from the workspace root and pins pnpm via packageManager.
+  ep_dynamic_default_content: ['.github/workflows/frontend-tests.yml', '.github/workflows/lint.yml'],
+  // Builds the admin SPA for the /admin access specs.
+  ep_openid_connect: ['.github/workflows/backend-tests.yml'],
+};
+
 const logger = log4js.getLogger('checkPlugin');
 log4js.configure({
   appenders: { console: { type: "console" } },
@@ -143,7 +171,19 @@ log4js.configure({
     }
   };
 
+  const keepFiles = new Set(KEEP_FILES[pluginName] || []);
+  try {
+    const epJson = JSON.parse(await fsp.readFile(`${pluginPath}/ep.json`, 'utf8'));
+    if (Array.isArray(epJson.disables) && epJson.disables.length > 0) {
+      keepFiles.add('.github/workflows/frontend-tests.yml');
+    }
+  } catch (err) { /* no ep.json or not valid JSON; nothing to keep */ }
+
   const checkFile = async (srcFn: string, dstFn:string, overwrite = true) => {
+    if (keepFiles.has(dstFn)) {
+      logger.info(`Keeping the plugin's own ${dstFn}`);
+      return;
+    }
     const outFn = path.join(pluginPath, dstFn);
     const wantContents = await fsp.readFile(srcFn, {encoding: 'utf8'});
     let gotContents = null;
@@ -177,6 +217,17 @@ log4js.configure({
 
   if (!files.includes('.git')) throw new Error('No .git folder, aborting');
   prepareRepo();
+
+  // The release that a pushed commit triggers can only bump a valid semver
+  // version, so stop before changing anything if the version is missing or
+  // invalid.
+  if (files.includes('package.json')) {
+    const {version} =
+        JSON.parse(await fsp.readFile(`${pluginPath}/package.json`, {encoding: 'utf8'}));
+    if (typeof version !== 'string' || semver.valid(version) == null) {
+      throw new Error(`package.json version '${version}' is not valid semver; fix it by hand`);
+    }
+  }
 
   // test-and-release.yml calls lint.yml, so the two must be synced together.
   const workflows = [
@@ -215,11 +266,9 @@ log4js.configure({
       'eslint-plugin-you-dont-need-lodash-underscore': null,
     });
 
-    const currentVersion = semver.parse(parsedPackageJSON.version)!;
-    const newVersion = currentVersion.inc('patch');
-
-    await updateDeps(parsedPackageJSON, 'version', newVersion.version)
-
+    // The version is not bumped here: the plugin's npmpublish workflow bumps
+    // and tags it on every push to the default branch. Its validity is checked
+    // before anything is changed, near the top.
 
     await updateDeps(parsedPackageJSON, 'peerDependencies', {
       // These were moved to eslint-config-etherpad's dependencies so they can be removed:
@@ -490,11 +539,11 @@ log4js.configure({
   // linting ends.
 
   if (autoFix) {
-    /*const unchanged = JSON.parse(execSync(
-        'untracked=$(git ls-files -o --exclude-standard) || exit 1; ' +
-        'git diff-files --quiet && [ -z "$untracked" ] && echo true || echo false'));*/
+    // `git commit` exits non-zero when there is nothing to commit, so only
+    // commit and push when the fixes above actually changed something.
+    const changed = execSync('git status --porcelain') !== '';
 
-    if (true) {
+    if (changed) {
       // Display a diff of changes. Git doesn't diff untracked files, so they must be added to the
       // index. Use a temporary index file to avoid modifying Git's default index file.
       execSync('git read-tree HEAD', {
